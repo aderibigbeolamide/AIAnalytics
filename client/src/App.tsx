@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 import Scanner from "@/pages/scanner";
+import EventDetail from "@/pages/event-detail";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -25,6 +26,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/events/:id" component={EventDetail} />
       <Route path="/scanner" component={Scanner} />
       <Route component={NotFound} />
     </Switch>

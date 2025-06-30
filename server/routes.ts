@@ -275,9 +275,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const qrImageData = await generateQRImage(encryptQRData(qrData));
       
-      res.status(201).json({ registration, qrImageData });
+      res.status(201).json({ registration, qrImage: qrImageData });
     } catch (error) {
       res.status(400).json({ message: "Failed to register for event" });
+    }
+  });
+
+  // QR Code generation endpoint
+  app.post("/api/qr/generate", async (req: Request, res: Response) => {
+    try {
+      const { data } = req.body;
+      if (!data) {
+        return res.status(400).json({ message: "Data required for QR generation" });
+      }
+      
+      const qrImage = await generateQRImage(data);
+      res.json({ qrImage });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate QR code" });
     }
   });
 

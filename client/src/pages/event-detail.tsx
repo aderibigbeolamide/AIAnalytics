@@ -1,0 +1,202 @@
+import { useParams } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, MapPin, Users, QrCode, User } from "lucide-react";
+import { useAuthStore } from "@/lib/auth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+export default function EventDetail() {
+  const { id } = useParams();
+  const { user } = useAuthStore();
+  const { toast } = useToast();
+  const [showQR, setShowQR] = useState(false);
+  const [qrImageUrl, setQrImageUrl] = useState<string>("");
+
+  const { data: event, isLoading } = useQuery({
+    queryKey: ["/api/events", id],
+    enabled: !!id,
+  });
+
+  const { data: registrations } = useQuery({
+    queryKey: ["/api/events", id, "registrations"],
+    enabled: !!id,
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest(`/api/events/${id}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Registration successful!",
+        description: "You've been registered for this event.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/events", id, "registrations"] });
+      
+      // Show QR code
+      if (data.qrImage) {
+        setQrImageUrl(data.qrImage);
+        setShowQR(true);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Registration failed",
+        description: error.message || "Failed to register for event",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-64">Loading event...</div>;
+  }
+
+  if (!event) {
+    return <div className="text-center py-8">Event not found</div>;
+  }
+
+  const isRegistered = registrations?.some((reg: any) => reg.userId === user?.id);
+  const canRegister = user && !isRegistered;
+
+  return (
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-2xl">{event.name}</CardTitle>
+              <p className="text-muted-foreground mt-2">{event.description}</p>
+            </div>
+            <Badge variant={event.status === "active" ? "default" : "secondary"}>
+              {event.status}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span>{new Date(event.startDate).toLocaleDateString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span>{event.location}</span>
+            </div>
+          </div>
+
+          {event.eligibleAuxiliaryBodies && event.eligibleAuxiliaryBodies.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-2">Eligible Auxiliary Bodies:</h3>
+              <div className="flex flex-wrap gap-2">
+                {event.eligibleAuxiliaryBodies.map((body: string) => (
+                  <Badge key={body} variant="outline">
+                    {body}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-4 pt-4">
+            {canRegister && (
+              <Button
+                onClick={() => registerMutation.mutate()}
+                disabled={registerMutation.isPending}
+                className="flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                {registerMutation.isPending ? "Registering..." : "Register for Event"}
+              </Button>
+            )}
+            
+            {isRegistered && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const registration = registrations?.find((reg: any) => reg.userId === user?.id);
+                  if (registration?.qrCode) {
+                    // Generate QR image for existing registration
+                    fetch(`/api/qr/generate`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ data: registration.qrCode }),
+                    })
+                      .then(res => res.json())
+                      .then(data => {
+                        setQrImageUrl(data.qrImage);
+                        setShowQR(true);
+                      });
+                  }
+                }}
+                className="flex items-center gap-2"
+              >
+                <QrCode className="h-4 w-4" />
+                Show QR Code
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {registrations && registrations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Registrations ({registrations.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {registrations.map((reg: any) => (
+                <div key={reg.id} className="flex justify-between items-center p-2 border rounded">
+                  <div>
+                    <span className="font-medium">
+                      {reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Guest"}
+                    </span>
+                    <Badge variant="outline" className="ml-2">
+                      {reg.registrationType}
+                    </Badge>
+                  </div>
+                  <Badge variant={reg.status === "attended" ? "default" : "secondary"}>
+                    {reg.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={showQR} onOpenChange={setShowQR}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Your Event QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-4">
+            {qrImageUrl && (
+              <img 
+                src={qrImageUrl} 
+                alt="Event QR Code" 
+                className="w-64 h-64 border rounded"
+              />
+            )}
+            <p className="text-sm text-muted-foreground text-center">
+              Show this QR code at the event entrance for attendance validation
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

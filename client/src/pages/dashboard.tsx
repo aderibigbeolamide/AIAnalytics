@@ -11,6 +11,7 @@ import { MemberForm } from "@/components/member-form";
 import { EventForm } from "@/components/event-form";
 import { QRScanner } from "@/components/qr-scanner";
 import { getAuthHeaders } from "@/lib/auth";
+import { Link } from "wouter";
 import { 
   Users, 
   Calendar, 
@@ -200,6 +201,11 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <div className="flex space-x-2">
+                          <Link href={`/events/${event.id}`}>
+                            <Button variant="outline" size="sm">
+                              View Event
+                            </Button>
+                          </Link>
                           <Button variant="ghost" size="sm">
                             <QrCode className="h-4 w-4" />
                           </Button>
