@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
+import { Plus, X } from "lucide-react";
 
 const eventSchema = z.object({
   name: z.string().min(1, "Event name is required"),
@@ -18,6 +19,10 @@ const eventSchema = z.object({
   endDate: z.string().optional(),
   eligibleAuxiliaryBodies: z.array(z.string()).min(1, "At least one auxiliary body must be selected"),
   allowGuests: z.boolean().default(false),
+  invitations: z.array(z.object({
+    name: z.string().min(1, "Invitee name is required"),
+    email: z.string().email("Valid email is required"),
+  })).optional(),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -41,6 +46,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
       endDate: event?.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : "",
       eligibleAuxiliaryBodies: event?.eligibleAuxiliaryBodies || [],
       allowGuests: event?.allowGuests || false,
+      invitations: event?.invitations || [],
     },
   });
 
@@ -126,6 +132,11 @@ export function EventForm({ onClose, event }: EventFormProps) {
   });
 
   const auxiliaryBodies = ["Atfal", "Khuddam", "Lajna", "Ansarullah"];
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "invitations",
+  });
 
   const onSubmit = (data: EventFormData) => {
     if (event) {
@@ -277,6 +288,73 @@ export function EventForm({ onClose, event }: EventFormProps) {
             </FormItem>
           )}
         />
+
+        {/* Invitations Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <FormLabel className="text-base font-medium">Specific Invitations</FormLabel>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => append({ name: "", email: "" })}
+              className="h-8"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Invitation
+            </Button>
+          </div>
+          {fields.length > 0 && (
+            <div className="space-y-3">
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex gap-2 items-start">
+                  <div className="flex-1">
+                    <FormField
+                      control={form.control}
+                      name={`invitations.${index}.name`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="Invitee name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <FormField
+                      control={form.control}
+                      name={`invitations.${index}.email`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="Email address" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => remove(index)}
+                    className="h-10 w-10 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {fields.length === 0 && (
+            <p className="text-sm text-gray-500 italic">
+              Click "Add Invitation" to invite specific people who aren't members
+            </p>
+          )}
+        </div>
 
         <div className="flex space-x-3 pt-4">
           <Button type="button" variant="outline" onClick={onClose} className="flex-1">
