@@ -131,7 +131,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
     },
   });
 
-  const auxiliaryBodies = ["Atfal", "Khuddam", "Lajna", "Ansarullah"];
+  const auxiliaryBodies = ["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"];
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,

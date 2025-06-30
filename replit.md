@@ -48,7 +48,7 @@ The system uses PostgreSQL with the following core entities:
 
 ### Member Management
 - **Comprehensive member profiles** including personal and organizational data
-- **Auxiliary body classification** (Atfal, Khuddam, Lajna, Ansarullah)
+- **Auxiliary body classification** (Atfal, Khuddam, Lajna, Ansarullah, Nasra)
 - **Search and filtering** capabilities by auxiliary body and text search
 - **Role-based data access** with proper authorization
 

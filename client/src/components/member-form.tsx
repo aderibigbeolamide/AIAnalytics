@@ -25,7 +25,7 @@ const memberSchema = z.object({
   address: z.string().optional(),
   phoneNumber: z.string().optional(),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
-  auxiliaryBody: z.enum(["Atfal", "Khuddam", "Lajna", "Ansarullah"]),
+  auxiliaryBody: z.enum(["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"]),
   postHolding: z.string().optional(),
 });
 
@@ -245,6 +245,7 @@ export function MemberForm({ onClose, member }: MemberFormProps) {
                   <SelectItem value="Khuddam">Khuddam</SelectItem>
                   <SelectItem value="Lajna">Lajna</SelectItem>
                   <SelectItem value="Ansarullah">Ansarullah</SelectItem>
+                  <SelectItem value="Nasra">Nasra</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
