@@ -1,0 +1,169 @@
+Project Overview
+The objective is to build an AI-powered application and machine system that validates members of an organization during events using their stored profile data. The system will enable administrators to create events, generate unique QR codes for participants, and validate members using either QR code scanning or physical event card scanning.
+
+The system will use AI to identify the individual and determine their eligibility based on their auxiliary body, post, or invitee status, and track attendance efficiently.
+
+2. Goals and Objectives
+Accurate member validation using QR codes or event cards.
+
+Automated event registration and attendance tracking.
+
+Event management by admin with auxiliary body filtering.
+
+AI integration for fast and intelligent validation.
+
+Support multiple roles: Member, Guest, Invitee, Admin.
+
+Security and data privacy for sensitive member information.
+
+3. Stakeholders
+Admin: Creates events, assigns roles, and manages member records.
+
+Members (Atfal, Khuddam, Lajna, Ansarullah): Attend events.
+
+Guests & Invitees: May attend based on invitation or guest status.
+
+Event Staff/Machine Operators: Operate scanning machines during events.
+
+4. Functional Requirements
+4.1 Member Management
+Add, edit, and delete member records.
+
+Member data fields:
+
+FirstName, MiddleName, LastName
+
+Picture
+
+Username
+
+Jamaat
+
+Circuit
+
+Chanda Number
+
+Wasiyyah Number
+
+Address
+
+Phone Number
+
+Email
+
+Date of Birth
+
+Role
+
+Auxiliary Body (Atfal, Khuddam, Lajna, Ansarullah)
+
+Post Holding
+
+4.2 Event Management
+Admin can:
+
+Create, update, and delete events.
+
+Assign auxiliary bodies eligible to attend.
+
+Add invitees and guest lists.
+
+Set location and date/time.
+
+Generate a QR code for the event.
+
+Members can:
+
+Register for events.
+
+Download/print event QR code or card.
+
+4.3 Attendance Validation
+Members validate attendance by:
+
+Scanning their event QR code.
+
+Scanning a machine-readable card (NFC, barcode, etc.).
+
+System checks:
+
+Member identity from the database.
+
+Auxiliary body eligibility.
+
+Invitee or guest status.
+
+AI helps match scanned data (e.g., face from picture or card) with database for validation.
+
+4.4 QR Code Generator
+Generates unique QR for each registered user per event.
+
+QR contains encrypted reference to member ID + event ID.
+
+4.5 AI/ML Capabilities
+Use facial recognition to optionally verify identity from the picture.
+
+Use machine learning to predict guest behavior (e.g., frequent absentees, or VIPs).
+
+Real-time member lookup and validation.
+
+5. Non-Functional Requirements
+Security: End-to-end encryption of QR codes and API calls.
+
+Scalability: Must handle large events with thousands of users.
+
+Availability: High uptime, especially during event periods.
+
+Performance: Real-time validation within 1-2 seconds.
+
+Accessibility: Mobile-first responsive design + desktop dashboard.
+
+6. Technologies & Tools
+Frontend: React.js, React Native (for app)
+
+Backend: Node.js/NestJS or Django
+
+Database: PostgreSQL / MongoDB
+
+AI/ML: Python (OpenCV, face recognition)
+
+QR Code: qrcode npm package or equivalent
+
+Cloud Services: AWS/GCP/Azure
+
+Authentication: JWT/2FA/Role-based access
+
+Card Scanning: USB/NFC reader, barcode scanner support
+
+7. User Stories
+Admin
+As an admin, I want to create an event and specify who is eligible.
+
+As an admin, I want to view attendance logs per event.
+
+Member
+As a member, I want to scan my QR code to attend an event.
+
+As a guest/invitee, I want to register and receive a QR code to attend.
+
+Event Validator
+As an event staff, I want to scan a QR/card and validate the person's eligibility instantly.
+
+8. Assumptions
+Each member has a unique identifier (e.g., Chanda Number).
+
+Guests/Invitees have limited-time access to events.
+
+Internet access is available at events (or local offline sync option exists).
+
+9. Future Enhancements
+NFC-based check-ins via wristbands or event badges.
+
+Face recognition gates.
+
+Voice recognition for premium check-ins.
+
+SMS/email confirmations and reminders.
+
+Event feedback collection.
+
