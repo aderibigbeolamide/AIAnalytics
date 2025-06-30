@@ -173,7 +173,7 @@ export default function Dashboard() {
                         Create Event
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
+                    <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>Create New Event</DialogTitle>
                       </DialogHeader>
@@ -226,7 +226,7 @@ export default function Dashboard() {
                         Add Member
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
+                    <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>Add New Member</DialogTitle>
                       </DialogHeader>
