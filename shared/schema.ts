@@ -27,7 +27,7 @@ export const members = pgTable("members", {
   phoneNumber: text("phone_number"),
   email: text("email"),
   dateOfBirth: timestamp("date_of_birth"),
-  auxiliaryBody: text("auxiliary_body").notNull(), // Atfal, Khuddam, Lajna, Ansarullah
+  auxiliaryBody: text("auxiliary_body").notNull(), // Atfal, Khuddam, Lajna, Ansarullah, Nasra
   postHolding: text("post_holding"),
   status: text("status").notNull().default("active"), // active, inactive
   createdAt: timestamp("created_at").defaultNow().notNull(),
