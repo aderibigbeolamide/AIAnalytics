@@ -123,7 +123,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMember(id: number): Promise<boolean> {
     const result = await db.delete(members).where(eq(members.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Events
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: number): Promise<boolean> {
     const result = await db.delete(events).where(eq(events.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Event Registrations

@@ -178,8 +178,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/events", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
     try {
       const { invitations, ...eventData } = req.body;
-      const validatedEventData = insertEventSchema.parse(eventData);
-      validatedEventData.createdBy = req.user!.id;
+      
+      // Convert date strings to Date objects and add createdBy
+      const processedEventData = {
+        ...eventData,
+        startDate: new Date(eventData.startDate),
+        endDate: eventData.endDate ? new Date(eventData.endDate) : undefined,
+        createdBy: req.user!.id,
+      };
+      
+      const validatedEventData = insertEventSchema.parse(processedEventData);
       
       const event = await storage.createEvent(validatedEventData);
       
@@ -193,8 +201,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (invitation.name && invitation.email) {
             await storage.createInvitation({
               eventId: event.id,
-              name: invitation.name,
-              email: invitation.email,
+              inviteeName: invitation.name,
+              inviteeEmail: invitation.email,
+              invitedBy: req.user!.id,
               status: "pending",
             });
           }
