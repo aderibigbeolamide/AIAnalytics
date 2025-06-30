@@ -39,18 +39,15 @@ export function Navbar() {
               <div className="flex items-baseline space-x-4">
                 {navItems.map((item) => (
                   <Link key={item.href} href={item.href}>
-                    {(props) => (
-                      <span
-                        {...props}
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-                          isActive(item.href)
-                            ? "text-primary bg-blue-50"
-                            : "text-gray-600 hover:text-gray-900"
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    )}
+                    <span
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                        isActive(item.href)
+                          ? "text-primary bg-blue-50"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
                   </Link>
                 ))}
               </div>

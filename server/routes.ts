@@ -177,18 +177,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/events", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
     try {
-      const eventData = insertEventSchema.parse(req.body);
-      eventData.createdBy = req.user!.id;
+      const { invitations, ...eventData } = req.body;
+      const validatedEventData = insertEventSchema.parse(eventData);
+      validatedEventData.createdBy = req.user!.id;
       
-      const event = await storage.createEvent(eventData);
+      const event = await storage.createEvent(validatedEventData);
       
       // Generate QR code for the event
       const qrCode = generateQRCode();
       await storage.updateEvent(event.id, { qrCode });
       
+      // Create invitations if provided
+      if (invitations && Array.isArray(invitations)) {
+        for (const invitation of invitations) {
+          if (invitation.name && invitation.email) {
+            await storage.createInvitation({
+              eventId: event.id,
+              name: invitation.name,
+              email: invitation.email,
+              status: "pending",
+            });
+          }
+        }
+      }
+      
       const updatedEvent = await storage.getEvent(event.id);
       res.status(201).json(updatedEvent);
     } catch (error) {
+      console.error("Error creating event:", error);
       res.status(400).json({ message: "Failed to create event" });
     }
   });
