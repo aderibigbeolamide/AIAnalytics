@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -21,6 +21,7 @@ import {
   insertUserSchema, 
   insertMemberSchema, 
   insertEventSchema,
+  updateEventSchema,
   insertEventRegistrationSchema,
   insertAttendanceSchema
 } from "@shared/schema";
@@ -85,6 +86,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/me", authenticateToken, async (req: AuthenticatedRequest, res) => {
     const member = await storage.getMemberByUserId(req.user!.id);
     res.json({ user: req.user, member });
+  });
+
+  // Dashboard stats route
+  app.get("/api/dashboard/stats", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const stats = await storage.getAttendanceStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
   });
 
   // Member routes
@@ -193,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate QR code for the event
       const qrCode = generateQRCode();
-      await storage.updateEvent(event.id, { qrCode });
+      await storage.updateEvent(event.id, { qrCode } as any);
       
       // Create invitations if provided
       if (invitations && Array.isArray(invitations)) {

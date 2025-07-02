@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, QrCode, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calendar, MapPin, Users, QrCode, User, Share, Copy } from "lucide-react";
 import { useAuthStore } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -16,23 +17,21 @@ export default function EventDetail() {
   const { toast } = useToast();
   const [showQR, setShowQR] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState<string>("");
+  const [showRegistrationLink, setShowRegistrationLink] = useState(false);
 
-  const { data: event, isLoading } = useQuery({
+  const { data: event, isLoading } = useQuery<any>({
     queryKey: ["/api/events", id],
     enabled: !!id,
   });
 
-  const { data: registrations } = useQuery({
+  const { data: registrations = [] } = useQuery<any[]>({
     queryKey: ["/api/events", id, "registrations"],
     enabled: !!id,
   });
 
   const registerMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest(`/api/events/${id}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await apiRequest("POST", `/api/events/${id}/register`);
       return response.json();
     },
     onSuccess: (data) => {
@@ -107,7 +106,7 @@ export default function EventDetail() {
             </div>
           )}
 
-          <div className="flex gap-4 pt-4">
+          <div className="flex flex-wrap gap-4 pt-4">
             {canRegister && (
               <Button
                 onClick={() => registerMutation.mutate()}
@@ -142,6 +141,17 @@ export default function EventDetail() {
               >
                 <QrCode className="h-4 w-4" />
                 Show QR Code
+              </Button>
+            )}
+
+            {user?.role === "admin" && (
+              <Button
+                variant="outline"
+                onClick={() => setShowRegistrationLink(true)}
+                className="flex items-center gap-2"
+              >
+                <Share className="h-4 w-4" />
+                Share Registration Link
               </Button>
             )}
           </div>
@@ -193,6 +203,41 @@ export default function EventDetail() {
             )}
             <p className="text-sm text-muted-foreground text-center">
               Show this QR code at the event entrance for attendance validation
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRegistrationLink} onOpenChange={setShowRegistrationLink}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Registration Link</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Event Registration Link</label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={`${window.location.origin}/events/${id}`}
+                  readOnly
+                  className="flex-1"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/events/${id}`);
+                    toast({
+                      title: "Link copied!",
+                      description: "Registration link copied to clipboard",
+                    });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Share this link with members so they can register for the event. After registration, they'll receive a QR code for event validation.
             </p>
           </div>
         </DialogContent>

@@ -136,6 +136,11 @@ export const insertEventSchema = createInsertSchema(events).omit({
   qrCode: true,
 });
 
+export const updateEventSchema = createInsertSchema(events).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
 export const insertEventRegistrationSchema = createInsertSchema(eventRegistrations).omit({
   id: true,
   createdAt: true,
