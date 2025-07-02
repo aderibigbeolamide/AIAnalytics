@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 import Scanner from "@/pages/scanner";
 import EventDetail from "@/pages/event-detail";
+import EventRegistration from "@/pages/event-registration";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,17 +19,23 @@ function Router() {
     checkAuth();
   }, [checkAuth]);
 
-  if (!isAuthenticated) {
-    return <Login />;
-  }
-
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/events/:id" component={EventDetail} />
-      <Route path="/scanner" component={Scanner} />
-      <Route component={NotFound} />
+      {/* Public routes */}
+      <Route path="/register/:id" component={EventRegistration} />
+      
+      {/* Protected routes */}
+      {!isAuthenticated ? (
+        <Route component={Login} />
+      ) : (
+        <>
+          <Route path="/" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/events/:id" component={EventDetail} />
+          <Route path="/scanner" component={Scanner} />
+          <Route component={NotFound} />
+        </>
+      )}
     </Switch>
   );
 }

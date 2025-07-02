@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
 
   const { data: stats } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -176,9 +177,15 @@ export default function Dashboard() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
-                        <DialogTitle>Create New Event</DialogTitle>
+                        <DialogTitle>{editingEvent ? "Edit Event" : "Create New Event"}</DialogTitle>
                       </DialogHeader>
-                      <EventForm onClose={() => setIsEventModalOpen(false)} />
+                      <EventForm 
+                        event={editingEvent}
+                        onClose={() => {
+                          setIsEventModalOpen(false);
+                          setEditingEvent(null);
+                        }} 
+                      />
                     </DialogContent>
                   </Dialog>
                 </div>
@@ -209,7 +216,14 @@ export default function Dashboard() {
                           <Button variant="ghost" size="sm">
                             <QrCode className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setEditingEvent(event);
+                              setIsEventModalOpen(true);
+                            }}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                         </div>

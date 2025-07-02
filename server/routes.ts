@@ -254,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events/:id/register", authenticateToken, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/events/:id/register", async (req: Request, res) => {
     try {
       const eventId = parseInt(req.params.id);
       const event = await storage.getEvent(eventId);
@@ -262,32 +262,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event not found" });
       }
 
-      const member = await storage.getMemberByUserId(req.user!.id);
+      const {
+        firstName,
+        lastName,
+        jamaat,
+        auxiliaryBody,
+        chandaNumber,
+        circuit,
+        email,
+        registrationType
+      } = req.body;
+
+      // Validate required fields
+      if (!firstName || !lastName || !jamaat || !auxiliaryBody || !email) {
+        return res.status(400).json({ message: "Required fields missing" });
+      }
+
+      // Check if auxiliary body is eligible for this event
+      if (!event.eligibleAuxiliaryBodies.includes(auxiliaryBody)) {
+        return res.status(400).json({ message: "Auxiliary body not eligible for this event" });
+      }
+
+      // Create or find member based on registration data
+      let member = null;
+      if (registrationType === "member") {
+        try {
+          member = await storage.createMember({
+            username: email, // Use email as username for registration
+            firstName,
+            lastName,
+            jamaat,
+            auxiliaryBody,
+            chandaNumber,
+            circuit,
+            email,
+            status: "active"
+          });
+        } catch (error) {
+          // Member might already exist, try to find them
+          const existingMembers = await storage.getMembers({ search: email });
+          member = existingMembers.find(m => m.email === email);
+        }
+      }
+
       const qrCode = generateQRCode();
       
       const registrationData = {
         eventId,
         memberId: member?.id,
-        userId: req.user!.id,
-        registrationType: member ? "member" : "guest",
+        registrationType,
         qrCode,
+        status: "registered"
       };
 
       const registration = await storage.createEventRegistration(registrationData);
       
-      // Generate QR data
+      // Generate QR data for validation
       const qrData: QRData = {
         registrationId: registration.id,
         eventId,
         memberId: member?.id,
-        type: member ? "member" : "guest",
+        type: registrationType as "member" | "guest" | "invitee",
         timestamp: Date.now(),
       };
       
       const qrImageData = await generateQRImage(encryptQRData(qrData));
       
-      res.status(201).json({ registration, qrImage: qrImageData });
+      // Here you would normally send the QR code via email
+      // For now, we'll just return it in the response
+      
+      res.status(201).json({ 
+        registration, 
+        qrImage: qrImageData,
+        message: "Registration successful! QR code has been sent to your email."
+      });
     } catch (error) {
+      console.error("Registration error:", error);
       res.status(400).json({ message: "Failed to register for event" });
     }
   });

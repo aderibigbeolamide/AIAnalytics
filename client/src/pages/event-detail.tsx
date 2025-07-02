@@ -218,14 +218,14 @@ export default function EventDetail() {
               <label className="text-sm font-medium">Event Registration Link</label>
               <div className="flex gap-2 mt-1">
                 <Input
-                  value={`${window.location.origin}/events/${id}`}
+                  value={`${window.location.origin}/register/${id}`}
                   readOnly
                   className="flex-1"
                 />
                 <Button
                   size="sm"
                   onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/events/${id}`);
+                    navigator.clipboard.writeText(`${window.location.origin}/register/${id}`);
                     toast({
                       title: "Link copied!",
                       description: "Registration link copied to clipboard",
