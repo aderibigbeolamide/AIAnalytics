@@ -202,9 +202,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const event = await storage.createEvent(validatedEventData);
       
-      // Generate QR code for the event
-      const qrCode = generateQRCode();
-      await storage.updateEvent(event.id, { qrCode } as any);
+      // Generate QR code for the event that links to registration page
+      const registrationUrl = `${req.protocol}://${req.get('host')}/register/${event.id}`;
+      const qrCodeImage = await generateQRImage(registrationUrl);
+      await storage.updateEvent(event.id, { qrCode: qrCodeImage } as any);
       
       // Create invitations if provided
       if (invitations && Array.isArray(invitations)) {
@@ -232,14 +233,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/events/:id", authenticateToken, requireRole(["admin"]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updates = insertEventSchema.partial().parse(req.body);
+      const eventData = req.body;
+      
+      // Convert date strings to Date objects
+      const updates = {
+        ...eventData,
+        startDate: eventData.startDate ? new Date(eventData.startDate) : undefined,
+        endDate: eventData.endDate ? new Date(eventData.endDate) : undefined,
+      };
+      
       const event = await storage.updateEvent(id, updates);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
       res.json(event);
     } catch (error) {
-      res.status(400).json({ message: "Failed to update event" });
+      console.error("Event update error:", error);
+      res.status(400).json({ message: "Failed to update event", error: error.message });
     }
   });
 

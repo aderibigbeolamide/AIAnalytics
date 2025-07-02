@@ -105,8 +105,42 @@ The system uses PostgreSQL with the following core entities:
 - **Connection pooling** through Neon's serverless architecture
 - **Environment-based configuration** with validation
 
+## QR Code Flow Implementation
+
+### Complete Event Validation Workflow:
+
+1. **Event Creation & QR Generation**
+   - Admin creates event through dashboard
+   - System automatically generates Event QR Code linking to registration page (/register/[event-id])
+   - Event QR code displayed in dashboard with QR button
+
+2. **User Registration Process**
+   - Users scan Event QR code or access registration link directly
+   - Public registration form with fields: Name, Jamaat, Auxiliary Body, Chanda/Wassiya number, Circuit, Email
+   - Support for Members, Guests, and Invitees registration types
+   - Form validates auxiliary body eligibility against event requirements
+
+3. **Personal QR Code Generation**
+   - After successful registration, system generates encrypted personal QR code
+   - QR code contains: registration ID, event ID, member ID, registration type, timestamp
+   - Personal QR code displayed immediately to user for saving/printing
+
+4. **Event Validation**
+   - Admin/staff scan personal QR codes at event entrance
+   - System decrypts and validates QR data
+   - Checks registration validity, auxiliary body eligibility, and timestamp
+   - Records attendance and updates registration status to "attended"
+
+### Key Features:
+- **Two-tier QR system**: Event QR (registration link) + Personal QR (validation)
+- **Encrypted QR data** with timestamp validation (24-hour expiry)
+- **Role-based access control** with admin authentication
+- **Auxiliary body validation** ensuring only eligible members attend
+- **Real-time dashboard** with event management and statistics
+
 ## Changelog
 - June 30, 2025. Initial setup
+- July 2, 2025. Complete QR validation workflow implemented
 
 ## User Preferences
 

@@ -11,6 +11,7 @@ import { MemberForm } from "@/components/member-form";
 import { EventForm } from "@/components/event-form";
 import { QRScanner } from "@/components/qr-scanner";
 import { getAuthHeaders } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { 
   Users, 
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
+  const { toast } = useToast();
   const [memberSearch, setMemberSearch] = useState("");
   const [memberFilter, setMemberFilter] = useState("all");
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
@@ -213,7 +215,36 @@ export default function Dashboard() {
                               View Event
                             </Button>
                           </Link>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              if (event.qrCode) {
+                                // Show QR code in a modal or new window
+                                const newWindow = window.open('', '_blank');
+                                if (newWindow) {
+                                  newWindow.document.write(`
+                                    <html>
+                                      <head><title>Event QR Code - ${event.name}</title></head>
+                                      <body style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
+                                        <h2>${event.name}</h2>
+                                        <p>Scan this QR code to register for the event</p>
+                                        <img src="${event.qrCode}" alt="Event QR Code" style="max-width: 400px; max-height: 400px;"/>
+                                        <p><strong>Registration Link:</strong><br/>
+                                        ${window.location.origin}/register/${event.id}</p>
+                                      </body>
+                                    </html>
+                                  `);
+                                }
+                              } else {
+                                toast({
+                                  title: "QR Code Not Available",
+                                  description: "QR code is being generated. Please try again in a moment.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
                             <QrCode className="h-4 w-4" />
                           </Button>
                           <Button 

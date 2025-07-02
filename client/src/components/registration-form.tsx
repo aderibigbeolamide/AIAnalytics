@@ -59,7 +59,7 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
     onSuccess: (data) => {
       toast({
         title: "Registration successful!",
-        description: "You've been registered for this event. Check your email for the QR code.",
+        description: "Your personal QR code is ready! Save it to show at the event entrance.",
       });
       
       if (data.qrImage) {
