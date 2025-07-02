@@ -9,7 +9,14 @@ export default function EventRegistration() {
   const { id } = useParams();
 
   const { data: event, isLoading } = useQuery<any>({
-    queryKey: ["/api/events", id],
+    queryKey: ["/api/events", id, "public"],
+    queryFn: async () => {
+      const response = await fetch(`/api/events/${id}/public`);
+      if (!response.ok) {
+        throw new Error('Event not found');
+      }
+      return response.json();
+    },
     enabled: !!id,
   });
 
