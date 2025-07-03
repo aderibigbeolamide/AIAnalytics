@@ -413,14 +413,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let member = null;
       if (registrationType === "member") {
         try {
-          // First check if member exists by both email AND chanda number
-          const existingMembers = await storage.getMembers({ search: email });
-          member = existingMembers.find(m => m.email === email && m.chandaNumber === chandaNumber);
+          // First check if member exists by chanda number (primary identifier)
+          if (chandaNumber) {
+            member = await storage.getMemberByChandaNumber(chandaNumber);
+          }
           
           if (!member) {
             // Create new member if doesn't exist
+            // Use chanda number + timestamp for unique username if chanda number exists
+            const uniqueUsername = chandaNumber ? 
+              `${chandaNumber}_${Date.now()}` : 
+              `${email}_${Date.now()}`;
+              
             member = await storage.createMember({
-              username: email,
+              username: uniqueUsername,
               firstName,
               lastName,
               jamaat,
