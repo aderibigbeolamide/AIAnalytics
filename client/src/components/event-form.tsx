@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -131,12 +132,27 @@ export function EventForm({ onClose, event }: EventFormProps) {
     },
   });
 
-  const auxiliaryBodies = ["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"];
+  const [auxiliaryBodies, setAuxiliaryBodies] = useState(["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"]);
+  const [newAuxiliaryBody, setNewAuxiliaryBody] = useState("");
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "invitations",
   });
+
+  const addAuxiliaryBody = () => {
+    if (newAuxiliaryBody.trim() && !auxiliaryBodies.includes(newAuxiliaryBody.trim())) {
+      setAuxiliaryBodies([...auxiliaryBodies, newAuxiliaryBody.trim()]);
+      setNewAuxiliaryBody("");
+    }
+  };
+
+  const removeAuxiliaryBody = (bodyToRemove: string) => {
+    setAuxiliaryBodies(auxiliaryBodies.filter(body => body !== bodyToRemove));
+    // Remove from form if it was selected
+    const currentBodies = form.getValues("eligibleAuxiliaryBodies");
+    form.setValue("eligibleAuxiliaryBodies", currentBodies.filter(body => body !== bodyToRemove));
+  };
 
   const onSubmit = (data: EventFormData) => {
     if (event) {

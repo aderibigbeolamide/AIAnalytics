@@ -55,6 +55,17 @@ export const eventRegistrations = pgTable("event_registrations", {
   userId: integer("user_id").references(() => users.id),
   registrationType: text("registration_type").notNull(), // member, guest, invitee
   qrCode: text("qr_code").notNull().unique(),
+  uniqueId: text("unique_id").notNull().unique(), // For manual validation
+  
+  // Guest/Invitee fields
+  guestName: text("guest_name"),
+  guestEmail: text("guest_email"),
+  guestJamaat: text("guest_jamaat"),
+  guestAuxiliaryBody: text("guest_auxiliary_body"),
+  guestChandaNumber: text("guest_chanda_number"),
+  guestCircuit: text("guest_circuit"),
+  guestPost: text("guest_post"), // Optional post for invitees
+  
   status: text("status").notNull().default("registered"), // registered, attended, cancelled
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -144,7 +155,6 @@ export const updateEventSchema = createInsertSchema(events).omit({
 export const insertEventRegistrationSchema = createInsertSchema(eventRegistrations).omit({
   id: true,
   createdAt: true,
-  qrCode: true,
 });
 
 export const insertAttendanceSchema = createInsertSchema(attendance).omit({

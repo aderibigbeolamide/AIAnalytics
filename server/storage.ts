@@ -34,6 +34,7 @@ export interface IStorage {
   // Event Registrations
   getEventRegistration(id: number): Promise<EventRegistration | undefined>;
   getEventRegistrationByQR(qrCode: string): Promise<EventRegistration | undefined>;
+  getEventRegistrationByUniqueId(uniqueId: string): Promise<EventRegistration | undefined>;
   getEventRegistrations(eventId: number): Promise<EventRegistration[]>;
   getMemberRegistrations(memberId: number): Promise<EventRegistration[]>;
   createEventRegistration(registration: InsertEventRegistration): Promise<EventRegistration>;
@@ -169,6 +170,11 @@ export class DatabaseStorage implements IStorage {
 
   async getEventRegistrationByQR(qrCode: string): Promise<EventRegistration | undefined> {
     const [registration] = await db.select().from(eventRegistrations).where(eq(eventRegistrations.qrCode, qrCode));
+    return registration || undefined;
+  }
+
+  async getEventRegistrationByUniqueId(uniqueId: string): Promise<EventRegistration | undefined> {
+    const [registration] = await db.select().from(eventRegistrations).where(eq(eventRegistrations.uniqueId, uniqueId));
     return registration || undefined;
   }
 

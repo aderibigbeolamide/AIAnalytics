@@ -22,6 +22,7 @@ const registrationSchema = z.object({
   circuit: z.string().optional(),
   email: z.string().email("Valid email is required"),
   registrationType: z.enum(["member", "guest", "invitee"]),
+  post: z.string().optional(),
 });
 
 type RegistrationFormData = z.infer<typeof registrationSchema>;
@@ -48,6 +49,7 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
       circuit: "",
       email: "",
       registrationType: "member",
+      post: "",
     },
   });
 
@@ -229,6 +231,22 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                       )}
                     />
                   </>
+                )}
+
+                {registrationType === "invitee" && (
+                  <FormField
+                    control={form.control}
+                    name="post"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Post/Position (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter your post or position" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
               </div>
 

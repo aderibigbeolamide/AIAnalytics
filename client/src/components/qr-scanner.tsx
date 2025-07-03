@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
-import { Camera, CheckCircle, XCircle } from "lucide-react";
+import { Camera, CheckCircle, XCircle, Hash } from "lucide-react";
 
 interface QRScannerProps {
   onClose: () => void;
@@ -83,11 +85,58 @@ export function QRScanner({ onClose }: QRScannerProps) {
     setIsScanning(false);
   };
 
-  const handleManualInput = () => {
-    const qrData = prompt("Enter QR code data manually:");
-    if (qrData) {
-      validateQRMutation.mutate(qrData);
+  const [manualId, setManualId] = useState("");
+  const [showManualInput, setShowManualInput] = useState(false);
+
+  const validateIdMutation = useMutation({
+    mutationFn: async (uniqueId: string) => {
+      const response = await fetch("/api/validate-id", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ uniqueId }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Validation failed");
+      }
+      
+      return result;
+    },
+    onSuccess: (data) => {
+      setLastScanResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Validation Successful",
+        description: `${data.registration.guestName || (data.member?.firstName + ' ' + data.member?.lastName)} validated for ${data.event.name}`,
+      });
+      setManualId("");
+      setShowManualInput(false);
+    },
+    onError: (error: Error) => {
+      setLastScanResult({ validationStatus: "invalid", message: error.message });
+      toast({
+        title: "Validation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleManualValidation = () => {
+    if (!manualId.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid Unique ID",
+        variant: "destructive",
+      });
+      return;
     }
+    validateIdMutation.mutate(manualId.trim());
   };
 
   useEffect(() => {
@@ -140,9 +189,46 @@ export function QRScanner({ onClose }: QRScannerProps) {
         )}
       </div>
 
+      {showManualInput && (
+        <div className="space-y-4 border-t pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="uniqueId">Enter Unique ID</Label>
+            <Input
+              id="uniqueId"
+              placeholder="Enter the unique ID from registration card"
+              value={manualId}
+              onChange={(e) => setManualId(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleManualValidation()}
+            />
+          </div>
+          <div className="p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              The Unique ID is displayed on the registration card that attendees received via email.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleManualValidation} 
+              disabled={validateIdMutation.isPending || !manualId.trim()}
+              className="flex-1"
+            >
+              {validateIdMutation.isPending ? "Validating..." : "Validate ID"}
+            </Button>
+            <Button variant="outline" onClick={() => setShowManualInput(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="space-x-2">
-        <Button variant="outline" onClick={handleManualInput}>
-          Manual Entry
+        <Button 
+          variant="outline" 
+          onClick={() => setShowManualInput(!showManualInput)}
+          className="flex items-center gap-2"
+        >
+          <Hash className="h-4 w-4" />
+          {showManualInput ? "Hide Manual Entry" : "Manual Entry"}
         </Button>
         <Button variant="outline" onClick={onClose}>
           Close
