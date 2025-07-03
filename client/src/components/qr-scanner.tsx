@@ -24,12 +24,17 @@ export function QRScanner({ onClose }: QRScannerProps) {
 
   const validateQRMutation = useMutation({
     mutationFn: async (qrData: string) => {
+      const authHeaders = getAuthHeaders();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (authHeaders.Authorization) {
+        headers.Authorization = authHeaders.Authorization;
+      }
+      
       const response = await fetch("/api/scan", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
+        headers,
         body: JSON.stringify({ qrData }),
       });
       
@@ -121,12 +126,17 @@ export function QRScanner({ onClose }: QRScannerProps) {
 
   const validateIdMutation = useMutation({
     mutationFn: async (uniqueId: string) => {
+      const authHeaders = getAuthHeaders();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (authHeaders.Authorization) {
+        headers.Authorization = authHeaders.Authorization;
+      }
+      
       const response = await fetch("/api/validate-id", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
+        headers,
         body: JSON.stringify({ uniqueId }),
       });
       

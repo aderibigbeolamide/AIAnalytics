@@ -238,8 +238,18 @@ export class DatabaseStorage implements IStorage {
 
   // Event Registrations
   async getEventRegistration(id: number): Promise<EventRegistration | undefined> {
-    const [registration] = await db.select().from(eventRegistrations).where(eq(eventRegistrations.id, id));
-    return registration || undefined;
+    const results = await db.select()
+      .from(eventRegistrations)
+      .leftJoin(members, eq(eventRegistrations.memberId, members.id))
+      .where(eq(eventRegistrations.id, id));
+    
+    if (results.length === 0) return undefined;
+    
+    const result = results[0];
+    return {
+      ...result.event_registrations,
+      member: result.members
+    } as any;
   }
 
   async getEventRegistrationByQR(qrCode: string): Promise<EventRegistration | undefined> {

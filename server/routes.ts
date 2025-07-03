@@ -451,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const emailSent = await sendEmail({
         to: email,
-        from: 'noreply@eventvalidate.com',
+        from: 'admin@letbud.com',
         subject: `Registration Confirmation - ${event.name}`,
         html: emailHtml,
         text: `Registration confirmed for ${event.name}. Your unique ID is: ${registration.uniqueId}`
@@ -549,12 +549,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update registration status
       await storage.updateEventRegistration(registration.id, { status: "attended" });
+      
+      // Update member status to "online" if they exist
+      if (member) {
+        await storage.updateMember(member.id, { status: "online" });
+      }
 
       res.json({
         message: "Validation successful",
         validationStatus: "valid",
         member,
         event,
+        registration,
         attendance: attendanceRecord,
       });
 
@@ -649,10 +655,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendanceStats = await storage.getAttendanceStats();
       const totalMembers = (await storage.getMembers()).length;
       const activeEvents = (await storage.getEvents({ status: "active" })).length;
+      const totalRegistrations = (await storage.getEventRegistrations()).length;
 
       res.json({
         totalMembers,
         activeEvents,
+        totalRegistrations,
         ...attendanceStats,
       });
     } catch (error) {

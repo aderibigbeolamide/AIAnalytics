@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ interface RegistrationFormProps {
 
 export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [showRegistrationCard, setShowRegistrationCard] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
   const [qrImageBase64, setQrImageBase64] = useState<string>("");
@@ -69,6 +70,11 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
       setRegistrationData(data.registration);
       setQrImageBase64(data.qrImage);
       setShowRegistrationCard(true);
+      
+      // Invalidate queries to update dashboard and member counts
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       
       form.reset();
     },
