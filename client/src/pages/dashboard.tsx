@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,8 @@ import {
   UsersRound,
   Settings,
   Camera,
-  Bot
+  Bot,
+  Trash2
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -37,6 +38,7 @@ export default function Dashboard() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
+  const queryClient = useQueryClient();
 
   const { data: stats } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -90,6 +92,36 @@ export default function Dashboard() {
       Ansarullah: "bg-purple-100 text-purple-800",
     };
     return auxiliaryMap[auxiliaryBody as keyof typeof auxiliaryMap] || "bg-gray-100 text-gray-800";
+  };
+
+  const deleteEvent = async (eventId: number) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Event Deleted",
+          description: "The event has been successfully deleted.",
+        });
+        // Refetch events to update the UI
+        queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      } else {
+        toast({
+          title: "Delete Failed",
+          description: "Failed to delete the event. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while deleting the event.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -256,6 +288,17 @@ export default function Dashboard() {
                             }}
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete "${event.name}"?`)) {
+                                deleteEvent(event.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>

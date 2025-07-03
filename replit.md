@@ -141,6 +141,7 @@ The system uses PostgreSQL with the following core entities:
 ## Changelog
 - June 30, 2025. Initial setup
 - July 2, 2025. Complete QR validation workflow implemented
+- July 3, 2025. Added event soft-delete functionality and invitation post assignments
 
 ## User Preferences
 

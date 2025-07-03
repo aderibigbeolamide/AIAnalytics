@@ -5,7 +5,7 @@ import {
   type Attendance, type InsertAttendance, type Invitation, type InsertInvitation
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, inArray, like, ilike } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, like, ilike, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -29,7 +29,7 @@ export interface IStorage {
   getEvents(filters?: { status?: string; createdBy?: number }): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event | undefined>;
-  deleteEvent(id: number): Promise<boolean>;
+  deleteEvent(id: number): Promise<boolean>; // Soft delete
 
   // Event Registrations
   getEventRegistration(id: number): Promise<EventRegistration | undefined>;
@@ -134,17 +134,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEvents(filters?: { status?: string; createdBy?: number }): Promise<Event[]> {
-    let query = db.select().from(events);
+    const conditions = [isNull(events.deletedAt)];
     
     if (filters?.status) {
-      query = query.where(eq(events.status, filters.status));
+      conditions.push(eq(events.status, filters.status));
     }
     
     if (filters?.createdBy) {
-      query = query.where(eq(events.createdBy, filters.createdBy));
+      conditions.push(eq(events.createdBy, filters.createdBy));
     }
     
-    return await query.orderBy(desc(events.createdAt));
+    return await db.select().from(events).where(and(...conditions)).orderBy(desc(events.createdAt));
   }
 
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
@@ -158,8 +158,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEvent(id: number): Promise<boolean> {
-    const result = await db.delete(events).where(eq(events.id, id));
-    return (result.rowCount || 0) > 0;
+    // Soft delete by setting deletedAt timestamp
+    const [result] = await db.update(events)
+      .set({ deletedAt: new Date() })
+      .where(eq(events.id, id))
+      .returning();
+    return !!result;
   }
 
   // Event Registrations

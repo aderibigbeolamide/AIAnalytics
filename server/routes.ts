@@ -212,6 +212,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/events/:id", authenticateToken, requireRole(["admin"]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEvent(id);
+      if (!success) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      res.json({ message: "Event deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete event" });
+    }
+  });
+
   app.post("/api/events", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
     try {
       const { invitations, ...eventData } = req.body;

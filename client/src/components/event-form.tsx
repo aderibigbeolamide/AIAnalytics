@@ -23,6 +23,7 @@ const eventSchema = z.object({
   invitations: z.array(z.object({
     name: z.string().min(1, "Invitee name is required"),
     email: z.string().email("Valid email is required"),
+    post: z.string().optional(),
   })).optional(),
 });
 
@@ -313,7 +314,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ name: "", email: "" })}
+              onClick={() => append({ name: "", email: "", post: "" })}
               className="h-8"
             >
               <Plus className="h-4 w-4 mr-1" />
@@ -346,6 +347,20 @@ export function EventForm({ onClose, event }: EventFormProps) {
                         <FormItem>
                           <FormControl>
                             <Input placeholder="Email address" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <FormField
+                      control={form.control}
+                      name={`invitations.${index}.post`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="Post/Role (optional)" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

@@ -45,6 +45,7 @@ export const events = pgTable("events", {
   status: text("status").notNull().default("upcoming"), // upcoming, active, completed, cancelled
   createdBy: integer("created_by").references(() => users.id).notNull(),
   qrCode: text("qr_code"),
+  deletedAt: timestamp("deleted_at"), // Soft delete field
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -85,6 +86,7 @@ export const invitations = pgTable("invitations", {
   eventId: integer("event_id").references(() => events.id).notNull(),
   inviteeEmail: text("invitee_email").notNull(),
   inviteeName: text("invitee_name").notNull(),
+  inviteePost: text("invitee_post"), // Post assigned to the invitee
   invitedBy: integer("invited_by").references(() => users.id).notNull(),
   status: text("status").notNull().default("pending"), // pending, accepted, declined
   qrCode: text("qr_code"),
