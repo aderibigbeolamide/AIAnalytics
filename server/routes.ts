@@ -446,13 +446,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         registrationType,
         qrCode,
         uniqueId,
-        // Store guest/invitee data
-        guestName: registrationType !== "member" ? `${firstName} ${lastName}` : undefined,
-        guestEmail: registrationType !== "member" ? email : undefined,
-        guestJamaat: registrationType !== "member" ? jamaat : undefined,
-        guestAuxiliaryBody: registrationType !== "member" ? auxiliaryBody : undefined,
-        guestChandaNumber: registrationType !== "member" ? chandaNumber : undefined,
-        guestCircuit: registrationType !== "member" ? circuit : undefined,
+        // Store data for all registration types (including members for fallback)
+        guestName: `${firstName} ${lastName}`,
+        guestEmail: email,
+        guestJamaat: jamaat,
+        guestAuxiliaryBody: auxiliaryBody,
+        guestChandaNumber: chandaNumber,
+        guestCircuit: circuit,
         guestPost: registrationType === "invitee" ? req.body.post : undefined,
         status: "registered"
       };
