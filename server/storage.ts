@@ -1,8 +1,9 @@
 import { 
-  users, members, events, eventRegistrations, attendance, invitations,
+  users, members, events, eventRegistrations, attendance, invitations, eventReports,
   type User, type InsertUser, type Member, type InsertMember,
   type Event, type InsertEvent, type EventRegistration, type InsertEventRegistration,
-  type Attendance, type InsertAttendance, type Invitation, type InsertInvitation
+  type Attendance, type InsertAttendance, type Invitation, type InsertInvitation,
+  type EventReport, type InsertEventReport
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, inArray, like, ilike, isNull } from "drizzle-orm";
@@ -57,6 +58,12 @@ export interface IStorage {
   getEventInvitations(eventId: number): Promise<Invitation[]>;
   createInvitation(invitation: InsertInvitation): Promise<Invitation>;
   updateInvitation(id: number, updates: Partial<InsertInvitation>): Promise<Invitation | undefined>;
+
+  // Event Reports
+  getEventReport(id: number): Promise<EventReport | undefined>;
+  getEventReports(eventId: number): Promise<EventReport[]>;
+  createEventReport(report: InsertEventReport): Promise<EventReport>;
+  updateEventReport(id: number, updates: Partial<InsertEventReport>): Promise<EventReport | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -370,6 +377,27 @@ export class DatabaseStorage implements IStorage {
   async updateInvitation(id: number, updates: Partial<InsertInvitation>): Promise<Invitation | undefined> {
     const [invitation] = await db.update(invitations).set(updates).where(eq(invitations.id, id)).returning();
     return invitation || undefined;
+  }
+
+  // Event Reports
+  async getEventReport(id: number): Promise<EventReport | undefined> {
+    const [report] = await db.select().from(eventReports).where(eq(eventReports.id, id)).limit(1);
+    return report;
+  }
+
+  async getEventReports(eventId: number): Promise<EventReport[]> {
+    const reports = await db.select().from(eventReports).where(eq(eventReports.eventId, eventId)).orderBy(desc(eventReports.createdAt));
+    return reports;
+  }
+
+  async createEventReport(insertReport: InsertEventReport): Promise<EventReport> {
+    const [report] = await db.insert(eventReports).values(insertReport).returning();
+    return report;
+  }
+
+  async updateEventReport(id: number, updates: Partial<InsertEventReport>): Promise<EventReport | undefined> {
+    const [report] = await db.update(eventReports).set(updates).where(eq(eventReports.id, id)).returning();
+    return report || undefined;
   }
 }
 

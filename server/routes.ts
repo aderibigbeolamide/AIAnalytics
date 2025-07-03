@@ -168,7 +168,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status } = req.query;
       const events = await storage.getEvents({ status: status as string });
-      res.json(events);
+      
+      // Enhance events with statistics
+      const eventsWithStats = await Promise.all(events.map(async (event) => {
+        const registrations = await storage.getEventRegistrations(event.id);
+        const attendance = await storage.getAttendance(event.id);
+        
+        return {
+          ...event,
+          totalRegistrations: registrations.length,
+          totalAttendance: attendance.length,
+          memberRegistrations: registrations.filter(r => r.registrationType === 'member').length,
+          guestRegistrations: registrations.filter(r => r.registrationType === 'guest').length,
+          inviteeRegistrations: registrations.filter(r => r.registrationType === 'invitee').length,
+          attendanceRate: registrations.length > 0 ? (attendance.length / registrations.length) * 100 : 0,
+        };
+      }));
+      
+      res.json(eventsWithStats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch events" });
     }
@@ -588,6 +605,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (member) {
         await storage.updateMember(member.id, { status: "online" });
       }
+      
+      // Also update member status if registration has member data but no member record
+      if (!member && registration.memberId) {
+        const regMember = await storage.getMember(registration.memberId);
+        if (regMember) {
+          await storage.updateMember(registration.memberId, { status: "online" });
+        }
+      }
 
       res.json({
         message: "Validation successful",
@@ -607,6 +632,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual validation by unique ID
+  // Export Attendance endpoint
+  app.get("/api/events/:eventId/export-attendance", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const registrations = await storage.getEventRegistrations(eventId);
+      const attendance = await storage.getAttendance(eventId);
+      
+      // Create CSV data
+      const csvData = await Promise.all(registrations.map(async (reg) => {
+        const attendanceRecord = attendance.find(att => att.registrationId === reg.id);
+        let member = null;
+        if (reg.memberId) {
+          member = await storage.getMember(reg.memberId);
+        }
+        
+        return {
+          'Registration ID': reg.id,
+          'Name': reg.guestName || (member ? `${member.firstName} ${member.lastName}` : 'N/A'),
+          'Auxiliary Body': reg.guestAuxiliaryBody || member?.auxiliaryBody || 'N/A',
+          'Chanda Number': reg.guestChandaNumber || member?.chandaNumber || 'N/A',
+          'Email': reg.guestEmail || member?.email || 'N/A',
+          'Registration Type': reg.registrationType,
+          'Status': reg.status,
+          'Attended': attendanceRecord ? 'Yes' : 'No',
+          'Validated At': attendanceRecord?.scannedAt || '',
+          'Registered At': reg.createdAt
+        };
+      }));
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${event.name}_attendance.json"`);
+      res.json({ event, registrations: csvData });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to export attendance" });
+    }
+  });
+
+  // Analytics endpoint
+  app.get("/api/analytics", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const events = await storage.getEvents();
+      const members = await storage.getMembers();
+      const stats = await storage.getAttendanceStats();
+      
+      // Calculate analytics
+      const totalEvents = events.length;
+      const activeEvents = events.filter(e => e.status === 'active').length;
+      const completedEvents = events.filter(e => e.status === 'completed').length;
+      
+      const auxiliaryBodyDistribution = members.reduce((acc, member) => {
+        acc[member.auxiliaryBody] = (acc[member.auxiliaryBody] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const eventAnalytics = await Promise.all(events.map(async (event) => {
+        const registrations = await storage.getEventRegistrations(event.id);
+        const attendance = await storage.getAttendance(event.id);
+        return {
+          eventId: event.id,
+          name: event.name,
+          totalRegistrations: registrations.length,
+          totalAttendance: attendance.length,
+          attendanceRate: registrations.length > 0 ? (attendance.length / registrations.length) * 100 : 0,
+          memberRegistrations: registrations.filter(r => r.registrationType === 'member').length,
+          guestRegistrations: registrations.filter(r => r.registrationType === 'guest').length,
+          inviteeRegistrations: registrations.filter(r => r.registrationType === 'invitee').length,
+        };
+      }));
+
+      res.json({
+        totalEvents,
+        activeEvents,
+        completedEvents,
+        totalMembers: members.length,
+        auxiliaryBodyDistribution,
+        eventAnalytics,
+        overallStats: stats
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // Manage Invitees endpoints
+  app.get("/api/events/:eventId/invitees", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const invitees = await storage.getEventInvitations(eventId);
+      res.json(invitees);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch invitees" });
+    }
+  });
+
+  app.post("/api/events/:eventId/invitees", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const { email, name, message } = req.body;
+      
+      const invitation = await storage.createInvitation({
+        eventId,
+        inviteeEmail: email,
+        inviteeName: name,
+        invitedBy: req.user!.id,
+        status: 'sent'
+      });
+      
+      res.status(201).json(invitation);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // System Settings endpoints
+  app.get("/api/settings", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+    try {
+      // Return current system settings
+      res.json({
+        emailEnabled: !!process.env.SMTP_USER,
+        qrValidationTime: 24, // hours
+        auxiliaryBodies: ['Atfal', 'Khuddam', 'Lajna', 'Ansarullah', 'Nasra'],
+        systemVersion: '1.0.0',
+        databaseConnected: true
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  // Reports endpoints
+  app.get("/api/events/:eventId/reports", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const reports = await storage.getEventReports(eventId);
+      res.json(reports);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch reports" });
+    }
+  });
+
+  app.post("/api/events/:eventId/reports", async (req: Request, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const { name, email, phone, reportType, message } = req.body;
+      
+      const report = await storage.createEventReport({
+        eventId,
+        reporterName: name,
+        reporterEmail: email,
+        reporterPhone: phone,
+        reportType,
+        message,
+        status: 'pending'
+      });
+      
+      res.status(201).json(report);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to submit report" });
+    }
+  });
+
   app.post("/api/validate-id", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
       const { uniqueId } = req.body;

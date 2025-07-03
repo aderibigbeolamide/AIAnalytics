@@ -93,6 +93,18 @@ export const invitations = pgTable("invitations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const eventReports = pgTable("event_reports", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  reporterName: text("reporter_name").notNull(),
+  reporterEmail: text("reporter_email"),
+  reporterPhone: text("reporter_phone"),
+  reportType: text("report_type").notNull(), // 'complaint', 'suggestion', 'observation'
+  message: text("message").notNull(),
+  status: text("status").notNull().default("pending"), // 'pending', 'reviewed', 'resolved'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   member: one(members, { fields: [users.id], references: [members.userId] }),
@@ -188,3 +200,11 @@ export type Attendance = typeof attendance.$inferSelect;
 
 export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
 export type Invitation = typeof invitations.$inferSelect;
+
+export const insertEventReportSchema = createInsertSchema(eventReports).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEventReport = z.infer<typeof insertEventReportSchema>;
+export type EventReport = typeof eventReports.$inferSelect;

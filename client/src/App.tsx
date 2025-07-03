@@ -11,6 +11,10 @@ import Scanner from "@/pages/scanner";
 import EventDetail from "@/pages/event-detail";
 import EventRegistration from "@/pages/event-registration";
 import NotFound from "@/pages/not-found";
+import Members from "@/pages/members";
+import Events from "@/pages/events";
+import Analytics from "@/pages/analytics";
+import Report from "@/pages/report";
 
 function Router() {
   const { isAuthenticated, checkAuth } = useAuthStore();
@@ -31,8 +35,12 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/members" component={Members} />
+          <Route path="/events" component={Events} />
+          <Route path="/analytics" component={Analytics} />
           <Route path="/events/:id" component={EventDetail} />
           <Route path="/scanner" component={Scanner} />
+          <Route path="/report/:eventId" component={Report} />
           <Route component={NotFound} />
         </>
       )}

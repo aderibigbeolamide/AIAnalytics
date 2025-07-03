@@ -138,10 +138,87 @@ The system uses PostgreSQL with the following core entities:
 - **Auxiliary body validation** ensuring only eligible members attend
 - **Real-time dashboard** with event management and statistics
 
+## Deployment Instructions
+
+### Running in VS Code or Other Development Environments
+
+1. **Prerequisites**
+   - Node.js 18+ installed
+   - PostgreSQL database (local or remote)
+   - Git for version control
+
+2. **Project Setup**
+   ```bash
+   # Clone the repository
+   git clone <your-repo-url>
+   cd eventvalidate
+   
+   # Install dependencies
+   npm install
+   
+   # Set up environment variables
+   cp .env.example .env
+   ```
+
+3. **Environment Configuration**
+   Create a `.env` file in the root directory with:
+   ```
+   DATABASE_URL=postgresql://username:password@localhost:5432/eventvalidate
+   JWT_SECRET=your-very-secure-jwt-secret-key-here
+   NODE_ENV=development
+   SMTP_HOST=smtp.your-email-provider.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@domain.com
+   SMTP_PASS=your-email-password
+   ```
+
+4. **Database Setup**
+   ```bash
+   # Push schema to database
+   npm run db:push
+   
+   # Verify database connection
+   npm run db:studio  # Opens Drizzle Studio for database management
+   ```
+
+5. **Run Development Server**
+   ```bash
+   npm run dev
+   ```
+   The application will be available at `http://localhost:5000`
+
+### Deployment to Production Servers
+
+1. **For VPS/Dedicated Servers**
+   ```bash
+   # Build the application
+   npm run build
+   
+   # Start production server
+   npm start
+   ```
+
+2. **For Cloud Platforms (Heroku, Railway, Render)**
+   - Set environment variables in your platform's dashboard
+   - Ensure `DATABASE_URL` points to your production PostgreSQL database
+   - Deploy using platform-specific methods
+
+3. **Database Connection Options**
+   - **Neon Database** (Recommended): Serverless PostgreSQL
+   - **Supabase**: Full-stack platform with PostgreSQL
+   - **Railway**: PostgreSQL with automatic scaling
+   - **Self-hosted**: Any PostgreSQL 12+ installation
+
+### Default Admin Account
+- **Username**: admin
+- **Password**: password123
+- Change immediately after first login through the system settings
+
 ## Changelog
 - June 30, 2025. Initial setup
 - July 2, 2025. Complete QR validation workflow implemented
 - July 3, 2025. Added event soft-delete functionality and invitation post assignments
+- July 3, 2025. Implemented all missing features: Export Attendance, Analytics, Member Management, Event Management, Reports, System Settings
 
 ## User Preferences
 
