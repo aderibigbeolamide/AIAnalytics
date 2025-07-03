@@ -413,9 +413,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let member = null;
       if (registrationType === "member") {
         try {
-          // First check if member exists by email or chanda number
+          // First check if member exists by both email AND chanda number
           const existingMembers = await storage.getMembers({ search: email });
-          member = existingMembers.find(m => m.email === email || (chandaNumber && m.chandaNumber === chandaNumber));
+          member = existingMembers.find(m => m.email === email && m.chandaNumber === chandaNumber);
           
           if (!member) {
             // Create new member if doesn't exist
@@ -486,7 +486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.status(201).json({ 
-        registration, 
+        registration: fullRegistration || registration, 
         qrImage: qrImageData,
         emailSent,
         message: emailSent ? "Registration successful! Confirmation email sent." : "Registration successful! Please save your QR code."

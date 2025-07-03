@@ -10,30 +10,24 @@ interface RegistrationCardProps {
 }
 
 export function RegistrationCard({ registration, event, qrImageBase64 }: RegistrationCardProps) {
-  // For members, prefer member data over guest fields, for others use guest fields
-  const memberName = registration.member ? 
-    `${registration.member.firstName} ${registration.member.lastName}` : 
-    (registration.guest_name || 'Guest');
+  // Handle both camelCase and snake_case field names for compatibility
+  const memberName = registration.guestName || registration.guest_name || 
+    (registration.member ? `${registration.member.firstName} ${registration.member.lastName}` : 'Guest');
   
-  const auxiliaryBody = registration.member ? 
-    registration.member.auxiliaryBody : 
-    (registration.guest_auxiliary_body || 'Guest');
+  const auxiliaryBody = registration.guestAuxiliaryBody || registration.guest_auxiliary_body || 
+    (registration.member ? registration.member.auxiliaryBody : 'Guest');
   
-  const chandaNumber = registration.member ? 
-    registration.member.chandaNumber : 
-    (registration.guest_chanda_number || 'N/A');
+  const chandaNumber = registration.guestChandaNumber || registration.guest_chanda_number || 
+    (registration.member ? registration.member.chandaNumber : 'N/A');
   
-  const email = registration.member ? 
-    registration.member.email : 
-    (registration.guest_email || 'N/A');
+  const email = registration.guestEmail || registration.guest_email || 
+    (registration.member ? registration.member.email : 'N/A');
 
-  const jamaat = registration.member ? 
-    registration.member.jamaat : 
-    (registration.guest_jamaat || 'N/A');
+  const jamaat = registration.guestJamaat || registration.guest_jamaat || 
+    (registration.member ? registration.member.jamaat : 'N/A');
 
-  const circuit = registration.member ? 
-    registration.member.circuit : 
-    (registration.guest_circuit || 'N/A');
+  const circuit = registration.guestCircuit || registration.guest_circuit || 
+    (registration.member ? registration.member.circuit : 'N/A');
 
   const handleDownload = () => {
     const canvas = document.createElement('canvas');
