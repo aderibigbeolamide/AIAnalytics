@@ -1,12 +1,14 @@
-import * as mailgun from 'mailgun-js';
+import nodemailer from 'nodemailer';
 
-if (!process.env.MAILGUN_API_KEY || !process.env.MAILGUN_DOMAIN) {
-  console.warn("MAILGUN_API_KEY and MAILGUN_DOMAIN environment variables should be set for email functionality");
-}
-
-const mg = mailgun({
-  apiKey: process.env.MAILGUN_API_KEY || '',
-  domain: process.env.MAILGUN_DOMAIN || ''
+// Create transporter for SMTP email sending
+const transporter = nodemailer.createTransport({
+  host: process.env.MAILER_HOST || 'smtp.zoho.eu',
+  port: parseInt(process.env.MAILER_PORT || '587'),
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: process.env.MAILER_USER || 'admin@letbud.com',
+    pass: process.env.MAILER_PASS || 'JCrSaUVGCnyD'
+  }
 });
 
 interface EmailParams {
@@ -21,13 +23,7 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
-    if (!process.env.MAILGUN_API_KEY || !process.env.MAILGUN_DOMAIN) {
-      console.log("Email would be sent to:", params.to);
-      console.log("Subject:", params.subject);
-      return true; // Return true for development/testing
-    }
-
-    const data: any = {
+    const mailOptions: any = {
       from: params.from,
       to: params.to,
       subject: params.subject,
@@ -36,14 +32,14 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     };
 
     if (params.attachment && params.filename) {
-      data.attachment = new mg.Attachment({
-        data: params.attachment,
+      mailOptions.attachments = [{
         filename: params.filename,
+        content: params.attachment,
         contentType: 'image/png'
-      });
+      }];
     }
 
-    await mg.messages().send(data);
+    await transporter.sendMail(mailOptions);
     return true;
   } catch (error) {
     console.error('Email sending error:', error);

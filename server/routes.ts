@@ -101,10 +101,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Member routes
   app.get("/api/members", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
-      const { auxiliaryBody, search } = req.query;
+      const { auxiliaryBody, search, chandaNumber } = req.query;
       const members = await storage.getMembers({
         auxiliaryBody: auxiliaryBody as string,
         search: search as string,
+        chandaNumber: chandaNumber as string,
       });
       res.json(members);
     } catch (error) {
@@ -288,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(event);
     } catch (error) {
       console.error("Event update error:", error);
-      res.status(400).json({ message: "Failed to update event", error: error.message });
+      res.status(400).json({ message: "Failed to update event", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -309,7 +310,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/events/:id/registrations", authenticateToken, async (req, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const registrations = await storage.getEventRegistrations(eventId);
+      const { auxiliaryBody, uniqueId, chandaNumber, startDate, endDate, status } = req.query;
+      
+      const filters = {
+        auxiliaryBody: auxiliaryBody as string,
+        uniqueId: uniqueId as string,
+        chandaNumber: chandaNumber as string,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        status: status as string,
+      };
+      
+      const registrations = await storage.getEventRegistrations(eventId, filters);
+      res.json(registrations);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch registrations" });
+    }
+  });
+
+  // Global registrations filter route
+  app.get("/api/registrations", authenticateToken, async (req, res) => {
+    try {
+      const { eventId, auxiliaryBody, uniqueId, chandaNumber, startDate, endDate, status } = req.query;
+      
+      const filters = {
+        auxiliaryBody: auxiliaryBody as string,
+        uniqueId: uniqueId as string,
+        chandaNumber: chandaNumber as string,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        status: status as string,
+      };
+      
+      const registrations = await storage.getEventRegistrations(
+        eventId ? parseInt(eventId as string) : undefined, 
+        filters
+      );
       res.json(registrations);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch registrations" });
@@ -349,21 +385,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let member = null;
       if (registrationType === "member") {
         try {
-          member = await storage.createMember({
-            username: email, // Use email as username for registration
-            firstName,
-            lastName,
-            jamaat,
-            auxiliaryBody,
-            chandaNumber,
-            circuit,
-            email,
-            status: "active"
-          });
-        } catch (error) {
-          // Member might already exist, try to find them
+          // First check if member exists by email or chanda number
           const existingMembers = await storage.getMembers({ search: email });
-          member = existingMembers.find(m => m.email === email);
+          member = existingMembers.find(m => m.email === email || (chandaNumber && m.chandaNumber === chandaNumber));
+          
+          if (!member) {
+            // Create new member if doesn't exist
+            member = await storage.createMember({
+              username: email,
+              firstName,
+              lastName,
+              jamaat,
+              auxiliaryBody,
+              chandaNumber,
+              circuit,
+              email,
+              status: "active"
+            });
+          }
+        } catch (error) {
+          console.error("Member creation/lookup error:", error);
+          // Continue with registration even if member creation fails
         }
       }
 

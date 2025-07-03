@@ -19,7 +19,7 @@ export interface IStorage {
   getMemberByUserId(userId: number): Promise<Member | undefined>;
   getMemberByUsername(username: string): Promise<Member | undefined>;
   getMemberByChandaNumber(chandaNumber: string): Promise<Member | undefined>;
-  getMembers(filters?: { auxiliaryBody?: string; search?: string }): Promise<Member[]>;
+  getMembers(filters?: { auxiliaryBody?: string; search?: string; chandaNumber?: string }): Promise<Member[]>;
   createMember(member: InsertMember): Promise<Member>;
   updateMember(id: number, updates: Partial<InsertMember>): Promise<Member | undefined>;
   deleteMember(id: number): Promise<boolean>;
@@ -35,7 +35,14 @@ export interface IStorage {
   getEventRegistration(id: number): Promise<EventRegistration | undefined>;
   getEventRegistrationByQR(qrCode: string): Promise<EventRegistration | undefined>;
   getEventRegistrationByUniqueId(uniqueId: string): Promise<EventRegistration | undefined>;
-  getEventRegistrations(eventId: number): Promise<EventRegistration[]>;
+  getEventRegistrations(eventId?: number, filters?: { 
+    auxiliaryBody?: string; 
+    uniqueId?: string; 
+    chandaNumber?: string; 
+    startDate?: Date; 
+    endDate?: Date;
+    status?: string;
+  }): Promise<EventRegistration[]>;
   getMemberRegistrations(memberId: number): Promise<EventRegistration[]>;
   createEventRegistration(registration: InsertEventRegistration): Promise<EventRegistration>;
   updateEventRegistration(id: number, updates: Partial<InsertEventRegistration>): Promise<EventRegistration | undefined>;
@@ -95,18 +102,27 @@ export class DatabaseStorage implements IStorage {
     return member || undefined;
   }
 
-  async getMembers(filters?: { auxiliaryBody?: string; search?: string }): Promise<Member[]> {
+  async getMembers(filters?: { auxiliaryBody?: string; search?: string; chandaNumber?: string }): Promise<Member[]> {
     let query = db.select().from(members);
+    const conditions = [];
     
     if (filters?.auxiliaryBody) {
-      query = query.where(eq(members.auxiliaryBody, filters.auxiliaryBody));
+      conditions.push(eq(members.auxiliaryBody, filters.auxiliaryBody));
+    }
+    
+    if (filters?.chandaNumber) {
+      conditions.push(eq(members.chandaNumber, filters.chandaNumber));
     }
     
     if (filters?.search) {
       const searchTerm = `%${filters.search}%`;
-      query = query.where(
-        sql`${members.firstName} ILIKE ${searchTerm} OR ${members.lastName} ILIKE ${searchTerm} OR ${members.email} ILIKE ${searchTerm} OR ${members.chandaNumber} ILIKE ${searchTerm}`
+      conditions.push(
+        sql`${members.firstName} ILIKE ${searchTerm} OR ${members.lastName} ILIKE ${searchTerm} OR ${members.email} ILIKE ${searchTerm} OR ${members.chandaNumber} ILIKE ${searchTerm} OR ${members.username} ILIKE ${searchTerm}`
       );
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
     }
     
     return await query.orderBy(desc(members.createdAt));
@@ -127,24 +143,63 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
+  private determineEventStatus(event: Event): string {
+    const now = new Date();
+    const startDate = new Date(event.startDate);
+    const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000); // Default to 24 hours later
+    
+    if (event.status === 'cancelled') return 'cancelled';
+    
+    if (now >= startDate && now <= endDate) {
+      return 'ongoing';
+    } else if (now < startDate) {
+      return 'upcoming';
+    } else {
+      return 'completed';
+    }
+  }
+
   // Events
   async getEvent(id: number): Promise<Event | undefined> {
     const [event] = await db.select().from(events).where(eq(events.id, id));
-    return event || undefined;
+    if (!event) return undefined;
+    
+    const dynamicStatus = this.determineEventStatus(event);
+    if (dynamicStatus !== event.status) {
+      // Update status in database
+      await db.update(events).set({ status: dynamicStatus }).where(eq(events.id, id));
+      event.status = dynamicStatus;
+    }
+    
+    return event;
   }
 
   async getEvents(filters?: { status?: string; createdBy?: number }): Promise<Event[]> {
     const conditions = [isNull(events.deletedAt)];
     
-    if (filters?.status) {
-      conditions.push(eq(events.status, filters.status));
-    }
-    
     if (filters?.createdBy) {
       conditions.push(eq(events.createdBy, filters.createdBy));
     }
     
-    return await db.select().from(events).where(and(...conditions)).orderBy(desc(events.createdAt));
+    const allEvents = await db.select().from(events).where(and(...conditions)).orderBy(desc(events.createdAt));
+    
+    // Update event statuses dynamically
+    const updatedEvents = allEvents.map(event => {
+      const dynamicStatus = this.determineEventStatus(event);
+      if (dynamicStatus !== event.status) {
+        // Update in database async
+        db.update(events).set({ status: dynamicStatus }).where(eq(events.id, event.id)).execute();
+        event.status = dynamicStatus;
+      }
+      return event;
+    });
+    
+    // Apply status filter after dynamic update
+    if (filters?.status) {
+      return updatedEvents.filter(event => event.status === filters.status);
+    }
+    
+    return updatedEvents;
   }
 
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
@@ -158,12 +213,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEvent(id: number): Promise<boolean> {
-    // Soft delete by setting deletedAt timestamp
-    const [result] = await db.update(events)
-      .set({ deletedAt: new Date() })
-      .where(eq(events.id, id))
-      .returning();
-    return !!result;
+    try {
+      const deletedAt = new Date();
+      
+      // Soft delete the event
+      const [result] = await db.update(events)
+        .set({ deletedAt })
+        .where(eq(events.id, id))
+        .returning();
+      
+      if (result) {
+        // Also soft delete all registrations for this event
+        await db.update(eventRegistrations)
+          .set({ status: 'cancelled' })
+          .where(eq(eventRegistrations.eventId, id));
+      }
+      
+      return !!result;
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      return false;
+    }
   }
 
   // Event Registrations
@@ -182,8 +252,51 @@ export class DatabaseStorage implements IStorage {
     return registration || undefined;
   }
 
-  async getEventRegistrations(eventId: number): Promise<EventRegistration[]> {
-    return await db.select().from(eventRegistrations).where(eq(eventRegistrations.eventId, eventId));
+  async getEventRegistrations(eventId?: number, filters?: { 
+    auxiliaryBody?: string; 
+    uniqueId?: string; 
+    chandaNumber?: string; 
+    startDate?: Date; 
+    endDate?: Date;
+    status?: string;
+  }): Promise<EventRegistration[]> {
+    let query = db.select().from(eventRegistrations);
+    const conditions = [];
+    
+    if (eventId) {
+      conditions.push(eq(eventRegistrations.eventId, eventId));
+    }
+    
+    if (filters?.auxiliaryBody) {
+      conditions.push(eq(eventRegistrations.guestAuxiliaryBody, filters.auxiliaryBody));
+    }
+    
+    if (filters?.uniqueId) {
+      conditions.push(eq(eventRegistrations.uniqueId, filters.uniqueId));
+    }
+    
+    if (filters?.chandaNumber) {
+      conditions.push(eq(eventRegistrations.guestChandaNumber, filters.chandaNumber));
+    }
+    
+    if (filters?.status) {
+      conditions.push(eq(eventRegistrations.status, filters.status));
+    }
+    
+    if (filters?.startDate || filters?.endDate) {
+      if (filters.startDate) {
+        conditions.push(sql`${eventRegistrations.createdAt} >= ${filters.startDate}`);
+      }
+      if (filters.endDate) {
+        conditions.push(sql`${eventRegistrations.createdAt} <= ${filters.endDate}`);
+      }
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(eventRegistrations.createdAt));
   }
 
   async getMemberRegistrations(memberId: number): Promise<EventRegistration[]> {
