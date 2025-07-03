@@ -12,6 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { QrCode } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RegistrationCard } from "@/components/registration-card";
 
 const registrationSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -34,8 +35,9 @@ interface RegistrationFormProps {
 
 export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
   const { toast } = useToast();
-  const [showQR, setShowQR] = useState(false);
-  const [qrImageUrl, setQrImageUrl] = useState<string>("");
+  const [showRegistrationCard, setShowRegistrationCard] = useState(false);
+  const [registrationData, setRegistrationData] = useState<any>(null);
+  const [qrImageBase64, setQrImageBase64] = useState<string>("");
   const [registrationType, setRegistrationType] = useState<"member" | "guest" | "invitee">("member");
 
   const form = useForm<RegistrationFormData>({
@@ -61,13 +63,12 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
     onSuccess: (data) => {
       toast({
         title: "Registration successful!",
-        description: "Your personal QR code is ready! Save it to show at the event entrance.",
+        description: "Your registration card is ready! Save it to show at the event entrance.",
       });
       
-      if (data.qrImage) {
-        setQrImageUrl(data.qrImage);
-        setShowQR(true);
-      }
+      setRegistrationData(data.registration);
+      setQrImageBase64(data.qrImage);
+      setShowRegistrationCard(true);
       
       form.reset();
     },
@@ -276,28 +277,18 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
         </CardContent>
       </Card>
 
-      <Dialog open={showQR} onOpenChange={setShowQR}>
-        <DialogContent>
+      <Dialog open={showRegistrationCard} onOpenChange={setShowRegistrationCard}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Your Event QR Code</DialogTitle>
+            <DialogTitle>Registration Complete!</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col items-center space-y-4">
-            {qrImageUrl && (
-              <img 
-                src={qrImageUrl} 
-                alt="Event QR Code" 
-                className="w-64 h-64 border rounded"
-              />
-            )}
-            <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Show this QR code at the event entrance for attendance validation
-              </p>
-              <p className="text-xs text-muted-foreground">
-                A copy has also been sent to your email address
-              </p>
-            </div>
-          </div>
+          {registrationData && (
+            <RegistrationCard 
+              registration={registrationData} 
+              event={event} 
+              qrImageBase64={qrImageBase64}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>

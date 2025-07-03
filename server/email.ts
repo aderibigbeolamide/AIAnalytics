@@ -23,6 +23,9 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
+    console.log('Attempting to send email to:', params.to);
+    console.log('From:', params.from);
+    
     const mailOptions: any = {
       from: params.from,
       to: params.to,
@@ -39,10 +42,12 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       }];
     }
 
-    await transporter.sendMail(mailOptions);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', result.messageId);
     return true;
   } catch (error) {
     console.error('Email sending error:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return false;
   }
 }

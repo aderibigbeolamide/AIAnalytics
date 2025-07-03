@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
 import { Camera, CheckCircle, XCircle, Hash } from "lucide-react";
+import jsQR from "jsqr";
 
 interface QRScannerProps {
   onClose: () => void;
@@ -17,6 +18,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const scanIntervalRef = useRef<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -57,6 +59,28 @@ export function QRScanner({ onClose }: QRScannerProps) {
     },
   });
 
+  const scanQRCode = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    
+    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    
+    if (code) {
+      validateQRMutation.mutate(code.data);
+      stopCamera(); // Stop scanning after successful scan
+    }
+  };
+
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -67,6 +91,9 @@ export function QRScanner({ onClose }: QRScannerProps) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setIsScanning(true);
+        
+        // Start scanning for QR codes every 100ms
+        scanIntervalRef.current = window.setInterval(scanQRCode, 100);
       }
     } catch (error) {
       toast({
@@ -81,6 +108,10 @@ export function QRScanner({ onClose }: QRScannerProps) {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
+    }
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
     }
     setIsScanning(false);
   };
@@ -145,13 +176,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
     };
   }, []);
 
-  // This is a simplified QR scanner. In a real implementation,
-  // you would use a library like qr-scanner or jsQR to decode QR codes from the video stream
-  const simulateScan = () => {
-    // Simulate scanning a QR code for demo purposes
-    const mockQRData = "eyJyZWdpc3RyYXRpb25JZCI6MSwiZXZlbnRJZCI6MSwidHlwZSI6Im1lbWJlciIsInRpbWVzdGFtcCI6MTcwMzk3MjgwMDAwMH0=";
-    validateQRMutation.mutate(mockQRData);
-  };
+  // QR Scanner now uses jsQR library for real-time scanning
 
   return (
     <div className="space-y-4">
@@ -177,10 +202,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
             <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none">
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-white rounded-lg"></div>
             </div>
-            <div className="mt-4 space-x-2">
-              <Button onClick={simulateScan} disabled={validateQRMutation.isPending}>
-                {validateQRMutation.isPending ? "Scanning..." : "Simulate Scan"}
-              </Button>
+            <div className="mt-4">
               <Button variant="outline" onClick={stopCamera}>
                 Stop Camera
               </Button>
