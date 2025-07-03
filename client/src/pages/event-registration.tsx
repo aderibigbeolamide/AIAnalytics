@@ -51,42 +51,56 @@ export default function EventRegistration() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8">
       <div className="max-w-4xl mx-auto px-4 space-y-6">
+        {/* Event Info Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Event Registration</h1>
+          <p className="text-gray-600">Join us for an amazing event experience</p>
+        </div>
+
         {/* Event Info */}
-        <Card>
-          <CardHeader>
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-2xl">{event.name}</CardTitle>
-                <p className="text-muted-foreground mt-2">{event.description}</p>
+                <CardTitle className="text-3xl font-bold">{event.name}</CardTitle>
+                <p className="text-blue-100 mt-2 text-lg">{event.description}</p>
               </div>
-              <Badge variant={event.status === "active" ? "default" : "secondary"}>
-                {event.status}
+              <Badge variant={event.status === "active" ? "default" : "secondary"} className="bg-white/20 text-white border-white/20">
+                {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>{new Date(event.startDate).toLocaleDateString()}</span>
-                {event.endDate && (
-                  <span>- {new Date(event.endDate).toLocaleDateString()}</span>
-                )}
+          <CardContent className="space-y-6 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+                <Calendar className="h-6 w-6 text-blue-600" />
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">Event Date</p>
+                  <p className="font-semibold text-lg">
+                    {new Date(event.startDate).toLocaleDateString()}
+                    {event.endDate && event.endDate !== event.startDate && (
+                      <span> - {new Date(event.endDate).toLocaleDateString()}</span>
+                    )}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{event.location}</span>
+              <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
+                <MapPin className="h-6 w-6 text-purple-600" />
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">Location</p>
+                  <p className="font-semibold text-lg">{event.location}</p>
+                </div>
               </div>
             </div>
 
             {event.eligibleAuxiliaryBodies && event.eligibleAuxiliaryBodies.length > 0 && (
-              <div>
-                <h3 className="font-semibold mb-2">Eligible Auxiliary Bodies:</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold mb-3 text-gray-800">Eligible Auxiliary Bodies:</h3>
                 <div className="flex flex-wrap gap-2">
                   {event.eligibleAuxiliaryBodies.map((body: string) => (
-                    <Badge key={body} variant="outline">
+                    <Badge key={body} variant="outline" className="bg-white border-gray-300">
                       {body}
                     </Badge>
                   ))}
@@ -95,9 +109,12 @@ export default function EventRegistration() {
             )}
 
             {event.allowGuests && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span>Guests are welcome</span>
+              <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+                <Users className="h-6 w-6 text-green-600" />
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">Guest Policy</p>
+                  <p className="font-semibold text-green-800">Guests are welcome to attend</p>
+                </div>
               </div>
             )}
           </CardContent>
@@ -105,6 +122,11 @@ export default function EventRegistration() {
 
         {/* Registration Form */}
         <RegistrationForm eventId={id!} event={event} />
+        
+        {/* Footer */}
+        <div className="text-center py-6 text-gray-500">
+          <p>© 2024 EventValidate. Secure event registration system.</p>
+        </div>
       </div>
     </div>
   );

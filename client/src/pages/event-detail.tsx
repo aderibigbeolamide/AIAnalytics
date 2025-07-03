@@ -172,11 +172,16 @@ export default function EventDetail() {
                 <div key={reg.id} className="flex justify-between items-center p-2 border rounded">
                   <div>
                     <span className="font-medium">
-                      {reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Guest"}
+                      {reg.guest_name || (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Guest")}
                     </span>
                     <Badge variant="outline" className="ml-2">
-                      {reg.registrationType}
+                      {reg.registration_type}
                     </Badge>
+                    {reg.guest_auxiliary_body && (
+                      <Badge variant="secondary" className="ml-2">
+                        {reg.guest_auxiliary_body}
+                      </Badge>
+                    )}
                   </div>
                   <Badge variant={reg.status === "attended" ? "default" : "secondary"}>
                     {reg.status}

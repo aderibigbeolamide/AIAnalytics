@@ -10,22 +10,22 @@ interface RegistrationCardProps {
 }
 
 export function RegistrationCard({ registration, event, qrImageBase64 }: RegistrationCardProps) {
-  const memberName = registration.guestName || 
+  const memberName = registration.guest_name || 
     (registration.member ? `${registration.member.firstName} ${registration.member.lastName}` : 'Guest');
   
-  const auxiliaryBody = registration.guestAuxiliaryBody || 
+  const auxiliaryBody = registration.guest_auxiliary_body || 
     (registration.member ? registration.member.auxiliaryBody : 'Guest');
   
-  const chandaNumber = registration.guestChandaNumber || 
+  const chandaNumber = registration.guest_chanda_number || 
     (registration.member ? registration.member.chandaNumber : 'N/A');
   
-  const email = registration.guestEmail || 
+  const email = registration.guest_email || 
     (registration.member ? registration.member.email : 'N/A');
 
-  const jamaat = registration.guestJamaat || 
+  const jamaat = registration.guest_jamaat || 
     (registration.member ? registration.member.jamaat : 'N/A');
 
-  const circuit = registration.guestCircuit || 'N/A';
+  const circuit = registration.guest_circuit || 'N/A';
 
   const handleDownload = () => {
     const canvas = document.createElement('canvas');

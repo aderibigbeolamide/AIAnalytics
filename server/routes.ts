@@ -213,6 +213,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint for event details (for registration)
+  app.get("/api/events/:id/public", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const event = await storage.getEvent(id);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Return only public information
+      const publicEvent = {
+        id: event.id,
+        name: event.name,
+        description: event.description,
+        location: event.location,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        status: event.status,
+        eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
+        allowGuests: event.allowGuests,
+      };
+      
+      res.json(publicEvent);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch event" });
+    }
+  });
+
   app.delete("/api/events/:id", authenticateToken, requireRole(["admin"]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);

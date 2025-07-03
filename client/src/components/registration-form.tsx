@@ -64,17 +64,18 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
     onSuccess: (data) => {
       toast({
         title: "Registration successful!",
-        description: "Your registration card is ready! Save it to show at the event entrance.",
+        description: data.message || "Your registration card is ready! Save it to show at the event entrance.",
       });
       
       setRegistrationData(data.registration);
-      setQrImageBase64(data.qrImage);
+      setQrImageBase64(data.qrImage?.replace('data:image/png;base64,', '') || '');
       setShowRegistrationCard(true);
       
       // Invalidate queries to update dashboard and member counts
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "registrations"] });
       
       form.reset();
     },
