@@ -864,6 +864,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/reports/:id", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const reportId = parseInt(req.params.id);
+      const { status, reviewNotes } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      const validStatuses = ['pending', 'reviewed', 'closed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const updates: any = { status };
+      if (reviewNotes) {
+        updates.reviewNotes = reviewNotes;
+      }
+      
+      const updatedReport = await storage.updateEventReport(reportId, updates);
+      
+      if (!updatedReport) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      res.json(updatedReport);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update report" });
+    }
+  });
+
   app.post("/api/validate-id", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
       const { uniqueId } = req.body;
