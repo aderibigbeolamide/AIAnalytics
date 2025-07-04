@@ -27,6 +27,7 @@ function Router() {
     <Switch>
       {/* Public routes */}
       <Route path="/register/:id" component={EventRegistration} />
+      <Route path="/report/:eventId" component={Report} />
       
       {/* Protected routes */}
       {!isAuthenticated ? (
@@ -40,7 +41,6 @@ function Router() {
           <Route path="/analytics" component={Analytics} />
           <Route path="/events/:id" component={EventDetail} />
           <Route path="/scanner" component={Scanner} />
-          <Route path="/report/:eventId" component={Report} />
           <Route component={NotFound} />
         </>
       )}

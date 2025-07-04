@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar, MapPin, Users, QrCode, User, Share, Copy } from "lucide-react";
+import { Calendar, MapPin, Users, QrCode, User, Share, Copy, FileText, Camera, Upload } from "lucide-react";
 import { useAuthStore } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -189,6 +190,109 @@ export default function EventDetail() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin Tools for Validation */}
+      {user?.role === "admin" && event && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Event Validation Tools
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="csv" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="csv" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  CSV Validation
+                </TabsTrigger>
+                <TabsTrigger value="face" className="flex items-center gap-2">
+                  <Camera className="h-4 w-4" />
+                  Face Recognition
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="flex items-center gap-2">
+                  <Share className="h-4 w-4" />
+                  Reports
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="csv" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>CSV Member Validation</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Upload a CSV file containing member information to validate registrations against your member database.
+                    </p>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <p className="text-sm text-gray-600">CSV validation feature coming soon</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="face" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Face Recognition</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Upload photos to enable face recognition validation for this event.
+                    </p>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <Camera className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <p className="text-sm text-gray-600">Face recognition feature coming soon</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="reports" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Event Reports</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Public report form link for collecting feedback and complaints about this event.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        value={`${window.location.origin}/report/${id}`}
+                        readOnly
+                        className="flex-1"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/report/${id}`);
+                          toast({
+                            title: "Link copied!",
+                            description: "Report form link copied to clipboard",
+                          });
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => window.open(`/report/${id}`, '_blank')}
+                      className="w-full"
+                    >
+                      View Report Form
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}

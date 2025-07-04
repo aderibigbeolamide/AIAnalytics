@@ -25,9 +25,12 @@ export function CsvValidation({ eventId }: CsvValidationProps) {
       const formData = new FormData();
       formData.append("csvFile", file);
 
+      const authHeaders = getAuthHeaders();
       const response = await fetch(`/api/events/${eventId}/csv-validation`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          ...authHeaders,
+        },
         body: formData,
       });
 
