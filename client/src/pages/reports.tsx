@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { FileText, Search, Eye, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { FileText, Search, Eye, Clock, CheckCircle, XCircle, MessageSquare, User, Mail, Phone, Calendar } from "lucide-react";
 import { format } from "date-fns";
 
 interface Report {
@@ -30,6 +33,11 @@ export default function Reports() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: reports = [], isLoading } = useQuery<Report[]>({
     queryKey: ['/api/reports'],
@@ -38,6 +46,49 @@ export default function Reports() {
       return response.json();
     },
   });
+
+  const updateReportMutation = useMutation({
+    mutationFn: async ({ reportId, status, notes }: { reportId: number; status: string; notes?: string }) => {
+      const response = await apiRequest('PUT', `/api/reports/${reportId}`, {
+        status,
+        reviewNotes: notes
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Report updated",
+        description: `Report has been ${data.status}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
+      setShowReviewDialog(false);
+      setSelectedReport(null);
+      setReviewNotes("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to update report",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleReviewReport = (report: Report) => {
+    setSelectedReport(report);
+    setReviewNotes("");
+    setShowReviewDialog(true);
+  };
+
+  const handleStatusUpdate = (status: string) => {
+    if (selectedReport) {
+      updateReportMutation.mutate({
+        reportId: selectedReport.id,
+        status,
+        notes: reviewNotes
+      });
+    }
+  };
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = searchTerm === "" || 
@@ -194,9 +245,13 @@ export default function Reports() {
                       </div>
                     </div>
                     
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleReviewReport(report)}
+                    >
                       <Eye className="h-4 w-4 mr-2" />
-                      View Details
+                      Review
                     </Button>
                   </div>
                 </CardHeader>
@@ -216,6 +271,113 @@ export default function Reports() {
           </div>
         )}
       </div>
+
+      {/* Review Dialog */}
+      <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Review Report</DialogTitle>
+          </DialogHeader>
+          
+          {selectedReport && (
+            <div className="space-y-4">
+              {/* Report Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">{selectedReport.reporterName}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">{selectedReport.reporterEmail}</span>
+                  </div>
+                  {selectedReport.reporterPhone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">{selectedReport.reporterPhone}</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">
+                      {format(new Date(selectedReport.createdAt), 'MMM d, yyyy h:mm a')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getTypeColor(selectedReport.reportType)}>
+                      {selectedReport.reportType}
+                    </Badge>
+                    <Badge className={getStatusColor(selectedReport.status)}>
+                      {selectedReport.status}
+                    </Badge>
+                  </div>
+                  {selectedReport.event && (
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">Event:</span> {selectedReport.event.name}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Report Message */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium">Report Message</span>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 max-h-32 overflow-y-auto">
+                  <p className="text-sm text-gray-800">{selectedReport.message}</p>
+                </div>
+              </div>
+
+              {/* Review Notes */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Review Notes (Optional)</label>
+                <Textarea
+                  value={reviewNotes}
+                  onChange={(e) => setReviewNotes(e.target.value)}
+                  placeholder="Add any review notes or comments..."
+                  className="min-h-[80px]"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowReviewDialog(false)}
+                >
+                  Cancel
+                </Button>
+                
+                {selectedReport.status === 'pending' && (
+                  <Button 
+                    onClick={() => handleStatusUpdate('reviewed')}
+                    disabled={updateReportMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {updateReportMutation.isPending ? 'Updating...' : 'Mark as Reviewed'}
+                  </Button>
+                )}
+                
+                {selectedReport.status !== 'closed' && (
+                  <Button 
+                    onClick={() => handleStatusUpdate('closed')}
+                    disabled={updateReportMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {updateReportMutation.isPending ? 'Updating...' : 'Close Report'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

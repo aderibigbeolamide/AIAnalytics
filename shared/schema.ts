@@ -110,7 +110,8 @@ export const eventReports = pgTable("event_reports", {
   reporterPhone: text("reporter_phone"),
   reportType: text("report_type").notNull(), // 'complaint', 'suggestion', 'observation'
   message: text("message").notNull(),
-  status: text("status").notNull().default("pending"), // 'pending', 'reviewed', 'resolved'
+  status: text("status").notNull().default("pending"), // 'pending', 'reviewed', 'closed'
+  reviewNotes: text("review_notes"), // Admin review notes
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
