@@ -138,16 +138,16 @@ The system uses PostgreSQL with the following core entities:
 - **Auxiliary body validation** ensuring only eligible members attend
 - **Real-time dashboard** with event management and statistics
 
-## Deployment Instructions
+## Local Development Setup
 
-### Running in VS Code or Other Development Environments
+### Prerequisites
+- Node.js 18+ installed
+- PostgreSQL database (local or cloud)
+- Git for version control
 
-1. **Prerequisites**
-   - Node.js 18+ installed
-   - PostgreSQL database (local or remote)
-   - Git for version control
+### Setup Instructions
 
-2. **Project Setup**
+1. **Clone and Install**
    ```bash
    # Clone the repository
    git clone <your-repo-url>
@@ -155,59 +155,158 @@ The system uses PostgreSQL with the following core entities:
    
    # Install dependencies
    npm install
-   
-   # Set up environment variables
-   cp .env.example .env
    ```
 
-3. **Environment Configuration**
-   Create a `.env` file in the root directory with:
-   ```
+2. **Environment Configuration**
+   Create a `.env` file in the root directory:
+   ```bash
+   # Database Configuration
    DATABASE_URL=postgresql://username:password@localhost:5432/eventvalidate
+   
+   # JWT Security
    JWT_SECRET=your-very-secure-jwt-secret-key-here
+   
+   # Application Environment
    NODE_ENV=development
+   PORT=5000
+   
+   # Email Configuration (Optional)
    SMTP_HOST=smtp.your-email-provider.com
    SMTP_PORT=587
    SMTP_USER=your-email@domain.com
    SMTP_PASS=your-email-password
    ```
 
-4. **Database Setup**
+3. **Database Setup**
    ```bash
-   # Push schema to database
+   # Initialize database schema
    npm run db:push
    
-   # Verify database connection
-   npm run db:studio  # Opens Drizzle Studio for database management
+   # Create admin user
+   npm run seed
+   
+   # Optional: Open database studio
+   npm run db:studio
    ```
 
-5. **Run Development Server**
+4. **Development Server**
    ```bash
+   # Start development server (frontend + backend)
    npm run dev
    ```
-   The application will be available at `http://localhost:5000`
+   Access the application at: `http://localhost:5000`
 
-### Deployment to Production Servers
+### Local Testing
+- **Admin Login**: username: `admin`, password: `password123`
+- **Event Management**: Create events, manage registrations
+- **QR Code Flow**: Test registration → QR generation → validation
+- **Reports**: Submit and review event reports
 
-1. **For VPS/Dedicated Servers**
+## Production Deployment
+
+### Environment Variables for Production
+```bash
+# Required
+DATABASE_URL=postgresql://prod-user:password@prod-host:5432/eventvalidate_prod
+JWT_SECRET=super-secure-production-jwt-secret
+NODE_ENV=production
+
+# Optional but recommended
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-app@domain.com
+SMTP_PASS=app-password
+```
+
+### Deployment Options
+
+#### 1. **Render (Recommended)**
+```bash
+# Build command: npm install && npm run build
+# Start command: npm start
+# Environment: Node.js 20
+```
+
+#### 2. **Railway**
+```bash
+# Auto-detects Node.js
+# Set environment variables in dashboard
+# Connects to Railway PostgreSQL automatically
+```
+
+#### 3. **Heroku**
+```bash
+# Add buildpack: heroku/nodejs
+# Configure environment variables
+# Add PostgreSQL addon
+```
+
+#### 4. **VPS/Self-Hosted**
+```bash
+# Build the application
+npm run build
+
+# Use PM2 for process management
+npm install -g pm2
+pm2 start dist/index.js --name eventvalidate
+
+# Configure reverse proxy (nginx)
+```
+
+### Frontend-Backend Communication
+
+#### Development (localhost:5000)
+- Frontend and backend run on same port
+- Vite proxy handles API requests
+- No CORS configuration needed
+
+#### Production Deployment
+The application is designed as a **single-origin setup**:
+
+1. **Built Frontend**: Static files served by Express
+2. **API Routes**: Same server handles `/api/*` requests
+3. **Single Domain**: No CORS issues
+
+**Production Structure:**
+```
+Production Server (domain.com)
+├── Static Files (/) → React frontend
+├── API Routes (/api/*) → Express backend
+└── Public Routes (/register/*, /report/*) → Registration forms
+```
+
+**Environment-Specific URLs:**
+- Development: `http://localhost:5000`
+- Production: `https://your-domain.com`
+
+### Post-Deployment Setup
+
+1. **Create Admin User**
    ```bash
-   # Build the application
-   npm run build
-   
-   # Start production server
-   npm start
+   # SSH into production server
+   npm run seed
    ```
 
-2. **For Cloud Platforms (Heroku, Railway, Render)**
-   - Set environment variables in your platform's dashboard
-   - Ensure `DATABASE_URL` points to your production PostgreSQL database
-   - Deploy using platform-specific methods
+2. **Test Core Features**
+   - Admin login and dashboard
+   - Event creation
+   - Registration flow
+   - QR code generation
+   - Report submission
 
-3. **Database Connection Options**
-   - **Neon Database** (Recommended): Serverless PostgreSQL
-   - **Supabase**: Full-stack platform with PostgreSQL
-   - **Railway**: PostgreSQL with automatic scaling
-   - **Self-hosted**: Any PostgreSQL 12+ installation
+3. **Configure Email (Optional)**
+   - Set SMTP environment variables
+   - Test registration confirmation emails
+
+### Database Migration
+For production updates:
+```bash
+# Update schema
+npm run db:push
+
+# Run migrations if needed
+npm run migrate
+```
 
 ### Default Admin Account
 - **Username**: admin
