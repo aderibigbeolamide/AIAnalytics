@@ -119,6 +119,9 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
   };
 
   const auxiliaryBodies = event?.eligibleAuxiliaryBodies || ["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"];
+  
+  // Debug log to check if requiresPayment is being received
+  console.log('Event data in registration form:', event);
 
   return (
     <>
@@ -309,7 +312,8 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                         <FormControl>
                           <Input 
                             type="number" 
-                            placeholder="Enter payment amount" 
+                            placeholder={event?.paymentAmount || "Enter payment amount"} 
+                            defaultValue={event?.paymentAmount || ""}
                             {...field} 
                           />
                         </FormControl>
@@ -318,47 +322,59 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                     )}
                   />
                   
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Payment Receipt *</label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          // Validate file type
-                          if (!file.type.startsWith('image/')) {
-                            toast({
-                              title: "Invalid file type",
-                              description: "Please upload an image file (PNG, JPG, JPEG)",
-                              variant: "destructive"
-                            });
-                            return;
-                          }
-                          
-                          // Validate file size (max 5MB)
-                          if (file.size > 5 * 1024 * 1024) {
-                            toast({
-                              title: "File too large",
-                              description: "Please upload an image smaller than 5MB",
-                              variant: "destructive"
-                            });
-                            return;
-                          }
-                          
-                          setPaymentReceiptFile(file);
-                        }
-                      }}
-                      className="cursor-pointer"
-                    />
+                  <div className="space-y-3 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                    <label className="text-sm font-medium text-red-600">Payment Receipt * (Required)</label>
+                    <div className="flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-white hover:bg-gray-50">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <svg className="w-8 h-8 mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                          </svg>
+                          <p className="mb-2 text-sm text-gray-500">
+                            <span className="font-semibold">Click to upload</span> your payment receipt
+                          </p>
+                          <p className="text-xs text-gray-500">PNG, JPG or JPEG (max 5MB)</p>
+                        </div>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              // Validate file type
+                              if (!file.type.startsWith('image/')) {
+                                toast({
+                                  title: "Invalid file type",
+                                  description: "Please upload an image file (PNG, JPG, JPEG)",
+                                  variant: "destructive"
+                                });
+                                return;
+                              }
+                              
+                              // Validate file size (max 5MB)
+                              if (file.size > 5 * 1024 * 1024) {
+                                toast({
+                                  title: "File too large",
+                                  description: "Please upload an image smaller than 5MB",
+                                  variant: "destructive"
+                                });
+                                return;
+                              }
+                              
+                              setPaymentReceiptFile(file);
+                            }
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                     {paymentReceiptFile && (
-                      <p className="text-xs text-green-600">
-                        ✓ {paymentReceiptFile.name} selected
-                      </p>
+                      <div className="p-2 bg-green-50 border border-green-200 rounded-md">
+                        <p className="text-sm text-green-700 font-medium">
+                          ✓ {paymentReceiptFile.name} selected ({(paymentReceiptFile.size / 1024 / 1024).toFixed(2)}MB)
+                        </p>
+                      </div>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      Upload your payment receipt (PNG, JPG, JPEG - max 5MB)
-                    </p>
                   </div>
                 </>
               )}
