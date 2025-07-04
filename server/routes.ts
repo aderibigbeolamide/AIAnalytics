@@ -272,6 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
         allowGuests: event.allowGuests,
         requiresPayment: event.requiresPayment,
+        paymentAmount: event.paymentAmount,
       };
       
       res.json(publicEvent);
