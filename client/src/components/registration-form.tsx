@@ -319,20 +319,45 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                   />
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Payment Receipt</label>
+                    <label className="text-sm font-medium">Payment Receipt *</label>
                     <Input
                       type="file"
-                      accept="image/*,application/pdf"
+                      accept="image/*"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          // Validate file type
+                          if (!file.type.startsWith('image/')) {
+                            toast({
+                              title: "Invalid file type",
+                              description: "Please upload an image file (PNG, JPG, JPEG)",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          
+                          // Validate file size (max 5MB)
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast({
+                              title: "File too large",
+                              description: "Please upload an image smaller than 5MB",
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          
                           setPaymentReceiptFile(file);
                         }
                       }}
                       className="cursor-pointer"
                     />
+                    {paymentReceiptFile && (
+                      <p className="text-xs text-green-600">
+                        ✓ {paymentReceiptFile.name} selected
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
-                      Upload your payment receipt (image or PDF)
+                      Upload your payment receipt (PNG, JPG, JPEG - max 5MB)
                     </p>
                   </div>
                 </>
