@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Navbar } from "@/components/navbar";
 import { EventForm } from "@/components/event-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -326,14 +327,15 @@ export default function Events() {
                           <Download className="h-3 w-3 mr-1" />
                           Export
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => window.open(`/event/${event.id}`, '_blank')}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
+                        <Link href={`/events/${event.id}`}>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </CardContent>
