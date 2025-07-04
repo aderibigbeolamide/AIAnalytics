@@ -301,14 +301,14 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                 )}
               />
 
-              {event?.requiresPayment && (
+              {(event?.requiresPayment || true) && (
                 <>
                   <FormField
                     control={form.control}
                     name="paymentAmount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Payment Amount</FormLabel>
+                        <FormLabel>Payment Amount (Optional)</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 

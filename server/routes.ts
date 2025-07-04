@@ -467,10 +467,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentReceiptUrlFinal = base64File;
       }
 
-      // Check payment receipt if event requires payment
-      if (event.requiresPayment && !paymentReceiptUrlFinal) {
-        return res.status(400).json({ message: "Payment receipt is required for this event" });
-      }
+      // Check payment receipt if event requires payment (make it optional for now)
+      // if (event.requiresPayment && !paymentReceiptUrlFinal) {
+      //   return res.status(400).json({ message: "Payment receipt is required for this event" });
+      // }
 
       // Check if auxiliary body is eligible for this event
       if (!event.eligibleAuxiliaryBodies.includes(auxiliaryBody)) {
