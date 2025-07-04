@@ -13,12 +13,20 @@ export function generateQRCode(): string {
   return randomBytes(16).toString("hex");
 }
 
+export function generateShortUniqueId(): string {
+  // Generate a 6-character alphanumeric ID for easier manual input
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 export async function generateQRImage(data: string): Promise<string> {
   try {
     return await QRCode.toDataURL(data, {
       errorCorrectionLevel: "M",
-      type: "image/png",
-      quality: 0.92,
       margin: 1,
       color: {
         dark: "#000000",

@@ -1,9 +1,11 @@
 import { 
   users, members, events, eventRegistrations, attendance, invitations, eventReports,
+  memberValidationCsv, faceRecognitionPhotos,
   type User, type InsertUser, type Member, type InsertMember,
   type Event, type InsertEvent, type EventRegistration, type InsertEventRegistration,
   type Attendance, type InsertAttendance, type Invitation, type InsertInvitation,
-  type EventReport, type InsertEventReport
+  type EventReport, type InsertEventReport, type MemberValidationCsv, type InsertMemberValidationCsv,
+  type FaceRecognitionPhoto, type InsertFaceRecognitionPhoto
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, inArray, like, ilike, isNull } from "drizzle-orm";
@@ -64,6 +66,16 @@ export interface IStorage {
   getEventReports(eventId: number): Promise<EventReport[]>;
   createEventReport(report: InsertEventReport): Promise<EventReport>;
   updateEventReport(id: number, updates: Partial<InsertEventReport>): Promise<EventReport | undefined>;
+
+  // Member Validation CSV
+  getMemberValidationCsv(eventId: number): Promise<MemberValidationCsv[]>;
+  createMemberValidationCsv(csv: InsertMemberValidationCsv): Promise<MemberValidationCsv>;
+  deleteMemberValidationCsv(id: number): Promise<boolean>;
+
+  // Face Recognition Photos
+  getFaceRecognitionPhotos(eventId?: number): Promise<FaceRecognitionPhoto[]>;
+  createFaceRecognitionPhoto(photo: InsertFaceRecognitionPhoto): Promise<FaceRecognitionPhoto>;
+  deleteFaceRecognitionPhoto(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -398,6 +410,46 @@ export class DatabaseStorage implements IStorage {
   async updateEventReport(id: number, updates: Partial<InsertEventReport>): Promise<EventReport | undefined> {
     const [report] = await db.update(eventReports).set(updates).where(eq(eventReports.id, id)).returning();
     return report || undefined;
+  }
+
+  // Member Validation CSV
+  async getMemberValidationCsv(eventId: number): Promise<MemberValidationCsv[]> {
+    const csvs = await db.select().from(memberValidationCsv).where(eq(memberValidationCsv.eventId, eventId)).orderBy(desc(memberValidationCsv.createdAt));
+    return csvs;
+  }
+
+  async createMemberValidationCsv(insertCsv: InsertMemberValidationCsv): Promise<MemberValidationCsv> {
+    const [csv] = await db.insert(memberValidationCsv).values(insertCsv).returning();
+    return csv;
+  }
+
+  async deleteMemberValidationCsv(id: number): Promise<boolean> {
+    const result = await db.delete(memberValidationCsv).where(eq(memberValidationCsv.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Face Recognition Photos
+  async getFaceRecognitionPhotos(eventId?: number): Promise<FaceRecognitionPhoto[]> {
+    const conditions = [eq(faceRecognitionPhotos.isActive, true)];
+    
+    if (eventId) {
+      conditions.push(eq(faceRecognitionPhotos.eventId, eventId));
+    }
+    
+    const photos = await db.select().from(faceRecognitionPhotos)
+      .where(and(...conditions))
+      .orderBy(desc(faceRecognitionPhotos.createdAt));
+    return photos;
+  }
+
+  async createFaceRecognitionPhoto(insertPhoto: InsertFaceRecognitionPhoto): Promise<FaceRecognitionPhoto> {
+    const [photo] = await db.insert(faceRecognitionPhotos).values(insertPhoto).returning();
+    return photo;
+  }
+
+  async deleteFaceRecognitionPhoto(id: number): Promise<boolean> {
+    const [photo] = await db.update(faceRecognitionPhotos).set({ isActive: false }).where(eq(faceRecognitionPhotos.id, id)).returning();
+    return !!photo;
   }
 }
 

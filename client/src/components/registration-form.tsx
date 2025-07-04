@@ -24,6 +24,8 @@ const registrationSchema = z.object({
   email: z.string().email("Valid email is required"),
   registrationType: z.enum(["member", "guest", "invitee"]),
   post: z.string().optional(),
+  paymentReceiptUrl: z.string().optional(),
+  paymentAmount: z.string().optional(),
 });
 
 type RegistrationFormData = z.infer<typeof registrationSchema>;

@@ -12,6 +12,7 @@ import {
 import { 
   generateQRCode, 
   generateQRImage, 
+  generateShortUniqueId,
   encryptQRData, 
   decryptQRData, 
   validateQRData,
@@ -23,7 +24,10 @@ import {
   insertEventSchema,
   updateEventSchema,
   insertEventRegistrationSchema,
-  insertAttendanceSchema
+  insertAttendanceSchema,
+  insertEventReportSchema,
+  insertMemberValidationCsvSchema,
+  insertFaceRecognitionPhotoSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -290,7 +294,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate QR code for the event that links to registration page
       const registrationUrl = `${req.protocol}://${req.get('host')}/register/${event.id}`;
       const qrCodeImage = await generateQRImage(registrationUrl);
-      await storage.updateEvent(event.id, { qrCode: qrCodeImage } as any);
+      
+      // Generate report link for complaints/feedback
+      const reportLink = `${req.protocol}://${req.get('host')}/report/${event.id}`;
+      
+      await storage.updateEvent(event.id, { 
+        qrCode: qrCodeImage,
+        reportLink: reportLink
+      } as any);
       
       // Create invitations if provided
       if (invitations && Array.isArray(invitations)) {
@@ -405,6 +416,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event not found" });
       }
 
+      // Check if event registration is still open
+      if (event.endDate && new Date() > event.endDate) {
+        return res.status(400).json({ message: "Registration for this event has closed" });
+      }
+
       const {
         firstName,
         lastName,
@@ -413,12 +429,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         chandaNumber,
         circuit,
         email,
-        registrationType
+        registrationType,
+        paymentReceiptUrl,
+        paymentAmount
       } = req.body;
 
       // Validate required fields
       if (!firstName || !lastName || !jamaat || !auxiliaryBody || !email) {
         return res.status(400).json({ message: "Required fields missing" });
+      }
+
+      // Check payment receipt if event requires payment
+      if (event.requiresPayment && !paymentReceiptUrl) {
+        return res.status(400).json({ message: "Payment receipt is required for this event" });
       }
 
       // Check if auxiliary body is eligible for this event
@@ -461,7 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const qrCode = generateQRCode();
-      const uniqueId = generateQRCode(); // Generate unique ID for manual validation
+      const uniqueId = generateShortUniqueId(); // Generate shorter 6-character ID for manual validation
       
       const registrationData = {
         eventId,
@@ -477,6 +500,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         guestChandaNumber: chandaNumber,
         guestCircuit: circuit,
         guestPost: registrationType === "invitee" ? req.body.post : undefined,
+        paymentReceiptUrl,
+        paymentAmount,
+        paymentStatus: paymentReceiptUrl ? "pending" : undefined,
         status: "registered"
       };
 
@@ -598,8 +624,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const attendanceRecord = await storage.createAttendance(attendanceData);
       
-      // Update registration status
-      await storage.updateEventRegistration(registration.id, { status: "attended" });
+      // Update registration status to "online"
+      await storage.updateEventRegistration(registration.id, { 
+        status: "online",
+        validationMethod: "qr_scan"
+      });
       
       // Update member status to "online" if they exist
       if (member) {
@@ -816,7 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if already attended
-      if (registration.status === "attended") {
+      if (registration.status === "online" || registration.status === "attended") {
         return res.status(400).json({ 
           message: "This registration has already been validated",
           validationStatus: "duplicate" 
@@ -854,8 +883,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const attendanceRecord = await storage.createAttendance(attendanceData);
       
-      // Update registration status
-      await storage.updateEventRegistration(registration.id, { status: "attended" });
+      // Update registration status to "online"
+      await storage.updateEventRegistration(registration.id, { 
+        status: "online",
+        validationMethod: "manual_validation"
+      });
 
       res.json({
         message: "Validation successful",
@@ -916,6 +948,195 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       res.status(500).json({ message: "Failed to generate QR code" });
+    }
+  });
+
+  // CSV Member Import routes
+  app.get("/api/events/:eventId/csv-validation", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const csvs = await storage.getMemberValidationCsv(eventId);
+      res.json(csvs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch CSV data" });
+    }
+  });
+
+  app.post("/api/events/:eventId/csv-validation", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const { fileName, memberData } = req.body;
+      
+      if (!fileName || !memberData || !Array.isArray(memberData)) {
+        return res.status(400).json({ message: "Invalid CSV data" });
+      }
+
+      const csv = await storage.createMemberValidationCsv({
+        eventId,
+        fileName,
+        uploadedBy: req.user!.id,
+        memberData: memberData as any
+      });
+
+      res.status(201).json(csv);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to upload CSV data" });
+    }
+  });
+
+  app.delete("/api/csv-validation/:id", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteMemberValidationCsv(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "CSV data not found" });
+      }
+      
+      res.json({ message: "CSV data deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete CSV data" });
+    }
+  });
+
+  // Face Recognition routes
+  app.get("/api/events/:eventId/face-recognition", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const photos = await storage.getFaceRecognitionPhotos(eventId);
+      res.json(photos);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch face recognition photos" });
+    }
+  });
+
+  app.post("/api/events/:eventId/face-recognition", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const { photoUrl, memberName, auxiliaryBody, chandaNumber, memberId } = req.body;
+      
+      if (!photoUrl || !memberName) {
+        return res.status(400).json({ message: "Photo URL and member name are required" });
+      }
+
+      const photo = await storage.createFaceRecognitionPhoto({
+        eventId,
+        memberId,
+        photoUrl,
+        memberName,
+        auxiliaryBody,
+        chandaNumber,
+        uploadedBy: req.user!.id,
+        isActive: true
+      });
+
+      res.status(201).json(photo);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to upload face recognition photo" });
+    }
+  });
+
+  app.delete("/api/face-recognition/:id", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteFaceRecognitionPhoto(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Photo not found" });
+      }
+      
+      res.json({ message: "Photo deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete photo" });
+    }
+  });
+
+  // Enhanced validation with CSV check
+  app.post("/api/validate-enhanced", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { uniqueId, eventId, validationType } = req.body;
+      
+      if (!uniqueId || !eventId) {
+        return res.status(400).json({ message: "Unique ID and Event ID are required" });
+      }
+
+      // Find registration by unique ID
+      const registration = await storage.getEventRegistrationByUniqueId(uniqueId);
+      if (!registration) {
+        return res.status(404).json({ 
+          message: "Registration not found",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Check if event is closed
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      if (event.endDate && new Date() > event.endDate) {
+        return res.status(400).json({ 
+          message: "Event has ended",
+          validationStatus: "event_closed" 
+        });
+      }
+
+      // Check if already validated
+      if (registration.status === "online" || registration.status === "attended") {
+        return res.status(400).json({ 
+          message: "This registration has already been validated",
+          validationStatus: "duplicate" 
+        });
+      }
+
+      // Additional CSV validation if CSV data exists
+      const csvData = await storage.getMemberValidationCsv(eventId);
+      let csvValidationPassed = true;
+      
+      if (csvData.length > 0) {
+        // Check if user exists in any of the CSV files
+        csvValidationPassed = csvData.some(csv => 
+          csv.memberData.some((member: any) => 
+            member.name === registration.guestName ||
+            member.email === registration.guestEmail ||
+            member.chandaNumber === registration.guestChandaNumber
+          )
+        );
+        
+        if (!csvValidationPassed) {
+          return res.status(403).json({ 
+            message: "Member not found in validation list",
+            validationStatus: "csv_validation_failed" 
+          });
+        }
+      }
+
+      // Update registration status to "online"
+      await storage.updateEventRegistration(registration.id, { 
+        status: "online",
+        validationMethod: validationType || "manual_id"
+      });
+
+      // Create attendance record
+      await storage.createAttendance({
+        eventId,
+        registrationId: registration.id,
+        scannedBy: req.user!.id,
+        validationStatus: "valid",
+        notes: `Validated via ${validationType || 'manual_id'}`
+      });
+
+      res.json({
+        message: "Validation successful",
+        validationStatus: "valid",
+        registration,
+        event,
+        csvValidationPassed
+      });
+
+    } catch (error) {
+      res.status(500).json({ message: "Validation failed" });
     }
   });
 

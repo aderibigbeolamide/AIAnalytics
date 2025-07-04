@@ -42,9 +42,12 @@ export const events = pgTable("events", {
   endDate: timestamp("end_date"),
   eligibleAuxiliaryBodies: jsonb("eligible_auxiliary_bodies").$type<string[]>().notNull(),
   allowGuests: boolean("allow_guests").default(false),
+  requiresPayment: boolean("requires_payment").default(false),
+  paymentAmount: text("payment_amount"),
   status: text("status").notNull().default("upcoming"), // upcoming, active, completed, cancelled
   createdBy: integer("created_by").references(() => users.id).notNull(),
   qrCode: text("qr_code"),
+  reportLink: text("report_link"), // Public report form link
   deletedAt: timestamp("deleted_at"), // Soft delete field
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -56,7 +59,7 @@ export const eventRegistrations = pgTable("event_registrations", {
   userId: integer("user_id").references(() => users.id),
   registrationType: text("registration_type").notNull(), // member, guest, invitee
   qrCode: text("qr_code").notNull().unique(),
-  uniqueId: text("unique_id").notNull().unique(), // For manual validation
+  uniqueId: text("unique_id").notNull().unique(), // For manual validation (shortened)
   
   // Guest/Invitee fields
   guestName: text("guest_name"),
@@ -67,7 +70,13 @@ export const eventRegistrations = pgTable("event_registrations", {
   guestCircuit: text("guest_circuit"),
   guestPost: text("guest_post"), // Optional post for invitees
   
-  status: text("status").notNull().default("registered"), // registered, attended, cancelled
+  // Payment receipt (optional)
+  paymentReceiptUrl: text("payment_receipt_url"),
+  paymentAmount: text("payment_amount"),
+  paymentStatus: text("payment_status").default("pending"), // pending, verified, rejected
+  
+  status: text("status").notNull().default("registered"), // registered, online, attended, cancelled
+  validationMethod: text("validation_method"), // qr_code, manual_id, face_recognition, csv_verification
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -105,6 +114,34 @@ export const eventReports = pgTable("event_reports", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const memberValidationCsv = pgTable("member_validation_csv", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  fileName: text("file_name").notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
+  memberData: jsonb("member_data").$type<{
+    name: string;
+    email?: string;
+    chandaNumber?: string;
+    auxiliaryBody?: string;
+    [key: string]: any;
+  }[]>().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const faceRecognitionPhotos = pgTable("face_recognition_photos", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id),
+  memberId: integer("member_id").references(() => members.id),
+  photoUrl: text("photo_url").notNull(),
+  memberName: text("member_name").notNull(),
+  auxiliaryBody: text("auxiliary_body"),
+  chandaNumber: text("chanda_number"),
+  uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   member: one(members, { fields: [users.id], references: [members.userId] }),
@@ -124,6 +161,9 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   registrations: many(eventRegistrations),
   attendance: many(attendance),
   invitations: many(invitations),
+  reports: many(eventReports),
+  validationCsvs: many(memberValidationCsv),
+  faceRecognitionPhotos: many(faceRecognitionPhotos),
 }));
 
 export const eventRegistrationsRelations = relations(eventRegistrations, ({ one, many }) => ({
@@ -142,6 +182,21 @@ export const attendanceRelations = relations(attendance, ({ one }) => ({
 export const invitationsRelations = relations(invitations, ({ one }) => ({
   event: one(events, { fields: [invitations.eventId], references: [events.id] }),
   invitedBy: one(users, { fields: [invitations.invitedBy], references: [users.id] }),
+}));
+
+export const eventReportsRelations = relations(eventReports, ({ one }) => ({
+  event: one(events, { fields: [eventReports.eventId], references: [events.id] }),
+}));
+
+export const memberValidationCsvRelations = relations(memberValidationCsv, ({ one }) => ({
+  event: one(events, { fields: [memberValidationCsv.eventId], references: [events.id] }),
+  uploadedBy: one(users, { fields: [memberValidationCsv.uploadedBy], references: [users.id] }),
+}));
+
+export const faceRecognitionPhotosRelations = relations(faceRecognitionPhotos, ({ one }) => ({
+  event: one(events, { fields: [faceRecognitionPhotos.eventId], references: [events.id] }),
+  member: one(members, { fields: [faceRecognitionPhotos.memberId], references: [members.id] }),
+  uploadedBy: one(users, { fields: [faceRecognitionPhotos.uploadedBy], references: [users.id] }),
 }));
 
 // Schemas
@@ -206,5 +261,21 @@ export const insertEventReportSchema = createInsertSchema(eventReports).omit({
   createdAt: true,
 });
 
+export const insertMemberValidationCsvSchema = createInsertSchema(memberValidationCsv).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFaceRecognitionPhotoSchema = createInsertSchema(faceRecognitionPhotos).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertEventReport = z.infer<typeof insertEventReportSchema>;
 export type EventReport = typeof eventReports.$inferSelect;
+
+export type InsertMemberValidationCsv = z.infer<typeof insertMemberValidationCsvSchema>;
+export type MemberValidationCsv = typeof memberValidationCsv.$inferSelect;
+
+export type InsertFaceRecognitionPhoto = z.infer<typeof insertFaceRecognitionPhotoSchema>;
+export type FaceRecognitionPhoto = typeof faceRecognitionPhotos.$inferSelect;

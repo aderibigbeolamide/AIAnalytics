@@ -20,6 +20,8 @@ const eventSchema = z.object({
   endDate: z.string().optional(),
   eligibleAuxiliaryBodies: z.array(z.string()).min(1, "At least one auxiliary body must be selected"),
   allowGuests: z.boolean().default(false),
+  requiresPayment: z.boolean().default(false),
+  paymentAmount: z.string().optional(),
   invitations: z.array(z.object({
     name: z.string().min(1, "Invitee name is required"),
     email: z.string().email("Valid email is required"),
@@ -48,6 +50,8 @@ export function EventForm({ onClose, event }: EventFormProps) {
       endDate: event?.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : "",
       eligibleAuxiliaryBodies: event?.eligibleAuxiliaryBodies || [],
       allowGuests: event?.allowGuests || false,
+      requiresPayment: event?.requiresPayment || false,
+      paymentAmount: event?.paymentAmount || "",
       invitations: event?.invitations || [],
     },
   });
@@ -305,6 +309,45 @@ export function EventForm({ onClose, event }: EventFormProps) {
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="requiresPayment"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>
+                  Requires Payment
+                </FormLabel>
+              </div>
+            </FormItem>
+          )}
+        />
+
+        {form.watch("requiresPayment") && (
+          <FormField
+            control={form.control}
+            name="paymentAmount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Payment Amount</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="e.g., $50.00 or ₦5000"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* Invitations Section */}
         <div className="space-y-4">
