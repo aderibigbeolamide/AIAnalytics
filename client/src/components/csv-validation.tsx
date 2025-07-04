@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 import { Upload, Trash2, FileText } from "lucide-react";
 
 interface CsvValidationProps {
@@ -18,6 +19,10 @@ export function CsvValidation({ eventId }: CsvValidationProps) {
 
   const { data: csvFiles = [] } = useQuery({
     queryKey: [`/api/events/${eventId}/csv-validation`],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/events/${eventId}/csv-validation`);
+      return response.json();
+    },
   });
 
   const uploadMutation = useMutation({

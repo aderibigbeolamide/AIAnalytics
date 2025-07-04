@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { getAuthHeaders } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 import { Calendar, Edit, QrCode, Users, Download, BarChart3, Eye, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import QRCode from "qrcode";
@@ -29,18 +30,14 @@ export default function Events() {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.append("status", statusFilter);
       
-      const response = await fetch(`/api/events?${params.toString()}`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiRequest("GET", `/api/events?${params.toString()}`);
       return response.json();
     },
   });
 
   const exportAttendance = useMutation({
     mutationFn: async (eventId: number) => {
-      const response = await fetch(`/api/events/${eventId}/export-attendance`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiRequest("GET", `/api/events/${eventId}/export-attendance`);
       
       if (!response.ok) {
         throw new Error("Failed to export attendance");

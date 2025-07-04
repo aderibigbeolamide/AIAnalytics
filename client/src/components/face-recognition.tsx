@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 import { Upload, Trash2, Camera, User } from "lucide-react";
 
 interface FaceRecognitionProps {
@@ -18,6 +19,10 @@ export function FaceRecognition({ eventId }: FaceRecognitionProps) {
 
   const { data: photos = [] } = useQuery<any[]>({
     queryKey: [`/api/events/${eventId}/face-recognition`],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/events/${eventId}/face-recognition`);
+      return response.json();
+    },
   });
 
   const uploadMutation = useMutation({

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Calendar, MapPin, Users, QrCode, User, Share, Copy, FileText, Camera, Upload } from "lucide-react";
-import { useAuthStore } from "@/lib/auth";
+import { useAuthStore, getAuthHeaders } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -24,11 +24,19 @@ export default function EventDetail() {
 
   const { data: event, isLoading } = useQuery<any>({
     queryKey: ["/api/events", id],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/events/${id}`);
+      return response.json();
+    },
     enabled: !!id,
   });
 
   const { data: registrations = [] } = useQuery<any[]>({
     queryKey: ["/api/events", id, "registrations"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/events/${id}/registrations`);
+      return response.json();
+    },
     enabled: !!id,
   });
 
