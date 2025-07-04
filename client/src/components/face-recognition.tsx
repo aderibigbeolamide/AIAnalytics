@@ -16,15 +16,21 @@ export function FaceRecognition({ eventId }: FaceRecognitionProps) {
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
 
-  const { data: photos = [] } = useQuery({
+  const { data: photos = [] } = useQuery<any[]>({
     queryKey: [`/api/events/${eventId}/face-recognition`],
   });
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
+      const authHeaders = getAuthHeaders();
+      const headers: Record<string, string> = {};
+      if (authHeaders.Authorization) {
+        headers.Authorization = authHeaders.Authorization;
+      }
+      
       const response = await fetch(`/api/events/${eventId}/face-recognition`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers,
         body: formData,
       });
 
@@ -52,9 +58,15 @@ export function FaceRecognition({ eventId }: FaceRecognitionProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (photoId: number) => {
+      const authHeaders = getAuthHeaders();
+      const headers: Record<string, string> = {};
+      if (authHeaders.Authorization) {
+        headers.Authorization = authHeaders.Authorization;
+      }
+      
       const response = await fetch(`/api/face-recognition/${photoId}`, {
         method: "DELETE",
-        headers: getAuthHeaders(),
+        headers,
       });
 
       if (!response.ok) {
@@ -94,7 +106,7 @@ export function FaceRecognition({ eventId }: FaceRecognitionProps) {
         }
 
         const formData = new FormData();
-        formData.append("photo", file);
+        formData.append("photoFile", file);
         
         // Extract member info from filename if possible (format: "FirstName_LastName.jpg")
         const nameFromFile = file.name.split('.')[0].replace(/_/g, ' ');

@@ -42,6 +42,7 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
   const [registrationData, setRegistrationData] = useState<any>(null);
   const [qrImageBase64, setQrImageBase64] = useState<string>("");
   const [registrationType, setRegistrationType] = useState<"member" | "guest" | "invitee">("member");
+  const [paymentReceiptFile, setPaymentReceiptFile] = useState<File | null>(null);
 
   const form = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
@@ -60,7 +61,29 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegistrationFormData) => {
-      const response = await apiRequest("POST", `/api/events/${eventId}/register`, data);
+      const formData = new FormData();
+      
+      // Add all form fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          formData.append(key, value);
+        }
+      });
+      
+      // Add payment receipt file if present
+      if (paymentReceiptFile) {
+        formData.append('paymentReceipt', paymentReceiptFile);
+      }
+      
+      const response = await fetch(`/api/events/${eventId}/register`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Registration failed');
+      }
+      
       return response.json();
     },
     onSuccess: (data) => {
@@ -273,6 +296,46 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                   </FormItem>
                 )}
               />
+
+              {event?.requiresPayment && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="paymentAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Amount</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Enter payment amount" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Payment Receipt</label>
+                    <Input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setPaymentReceiptFile(file);
+                        }
+                      }}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Upload your payment receipt (image or PDF)
+                    </p>
+                  </div>
+                </>
+              )}
 
               <Button
                 type="submit"

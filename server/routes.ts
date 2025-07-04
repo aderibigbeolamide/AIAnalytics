@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
 import { storage } from "./storage";
 import { 
   hashPassword, 
@@ -34,6 +35,22 @@ import { z } from "zod";
 const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
+});
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow images and PDFs
+    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image and PDF files are allowed'));
+    }
+  }
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -254,6 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: event.status,
         eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
         allowGuests: event.allowGuests,
+        requiresPayment: event.requiresPayment,
       };
       
       res.json(publicEvent);
@@ -408,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events/:id/register", async (req: Request, res) => {
+  app.post("/api/events/:id/register", upload.single('paymentReceipt'), async (req: Request, res) => {
     try {
       const eventId = parseInt(req.params.id);
       const event = await storage.getEvent(eventId);
@@ -439,8 +457,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Required fields missing" });
       }
 
+      // Handle payment receipt upload
+      let paymentReceiptUrlFinal = paymentReceiptUrl;
+      if (req.file) {
+        // Convert file to base64 for storage (in production, use cloud storage)
+        const fileBuffer = req.file.buffer;
+        const base64File = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`;
+        paymentReceiptUrlFinal = base64File;
+      }
+
       // Check payment receipt if event requires payment
-      if (event.requiresPayment && !paymentReceiptUrl) {
+      if (event.requiresPayment && !paymentReceiptUrlFinal) {
         return res.status(400).json({ message: "Payment receipt is required for this event" });
       }
 
@@ -500,9 +527,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         guestChandaNumber: chandaNumber,
         guestCircuit: circuit,
         guestPost: registrationType === "invitee" ? req.body.post : undefined,
-        paymentReceiptUrl,
+        paymentReceiptUrl: paymentReceiptUrlFinal,
         paymentAmount,
-        paymentStatus: paymentReceiptUrl ? "pending" : undefined,
+        paymentStatus: paymentReceiptUrlFinal ? "pending" : undefined,
         status: "registered"
       };
 
@@ -962,18 +989,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events/:eventId/csv-validation", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/events/:eventId/csv-validation", authenticateToken, requireRole(["admin"]), upload.single('csvFile'), async (req: AuthenticatedRequest, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
-      const { fileName, memberData } = req.body;
       
-      if (!fileName || !memberData || !Array.isArray(memberData)) {
-        return res.status(400).json({ message: "Invalid CSV data" });
+      if (!req.file) {
+        return res.status(400).json({ message: "CSV file is required" });
       }
+
+      // Parse CSV file
+      const csvData = req.file.buffer.toString('utf8');
+      const lines = csvData.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV file must contain header and at least one data row" });
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim());
+      const memberData = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const member: any = {};
+        headers.forEach((header, index) => {
+          member[header] = values[index] || '';
+        });
+        return member;
+      });
 
       const csv = await storage.createMemberValidationCsv({
         eventId,
-        fileName,
+        fileName: req.file.originalname,
         uploadedBy: req.user!.id,
         memberData: memberData as any
       });
@@ -1010,18 +1054,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events/:eventId/face-recognition", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/events/:eventId/face-recognition", authenticateToken, requireRole(["admin"]), upload.single('photoFile'), async (req: AuthenticatedRequest, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
-      const { photoUrl, memberName, auxiliaryBody, chandaNumber, memberId } = req.body;
+      const { memberName, auxiliaryBody, chandaNumber, memberId } = req.body;
       
-      if (!photoUrl || !memberName) {
-        return res.status(400).json({ message: "Photo URL and member name are required" });
+      if (!req.file || !memberName) {
+        return res.status(400).json({ message: "Photo file and member name are required" });
       }
+
+      // Convert photo to base64 for storage
+      const photoBuffer = req.file.buffer;
+      const photoUrl = `data:${req.file.mimetype};base64,${photoBuffer.toString('base64')}`;
 
       const photo = await storage.createFaceRecognitionPhoto({
         eventId,
-        memberId,
+        memberId: memberId ? parseInt(memberId) : undefined,
         photoUrl,
         memberName,
         auxiliaryBody,

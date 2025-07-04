@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CsvValidation } from "@/components/csv-validation";
+import { FaceRecognition } from "@/components/face-recognition";
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -221,37 +223,11 @@ export default function EventDetail() {
               </TabsList>
               
               <TabsContent value="csv" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>CSV Member Validation</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Upload a CSV file containing member information to validate registrations against your member database.
-                    </p>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <p className="text-sm text-gray-600">CSV validation feature coming soon</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <CsvValidation eventId={id!} />
               </TabsContent>
               
               <TabsContent value="face" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Face Recognition</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Upload photos to enable face recognition validation for this event.
-                    </p>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <Camera className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <p className="text-sm text-gray-600">Face recognition feature coming soon</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <FaceRecognition eventId={id!} />
               </TabsContent>
               
               <TabsContent value="reports" className="mt-4">
