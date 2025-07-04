@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,8 +34,7 @@ export default function Reports() {
   const { data: reports = [], isLoading } = useQuery<Report[]>({
     queryKey: ['/api/reports'],
     queryFn: async () => {
-      const response = await fetch('/api/reports');
-      if (!response.ok) throw new Error('Failed to fetch reports');
+      const response = await apiRequest('GET', '/api/reports');
       return response.json();
     },
   });
