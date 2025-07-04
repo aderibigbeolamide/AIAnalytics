@@ -128,6 +128,7 @@ export function CsvValidation({ eventId }: CsvValidationProps) {
           
           <div className="flex items-center gap-2">
             <Input
+              id="csv-file-input"
               type="file"
               accept=".csv"
               onChange={handleFileUpload}
@@ -139,6 +140,7 @@ export function CsvValidation({ eventId }: CsvValidationProps) {
               variant="outline"
               size="sm"
               disabled={uploading}
+              onClick={() => document.getElementById('csv-file-input')?.click()}
             >
               <Upload className="h-4 w-4 mr-2" />
               {uploading ? "Uploading..." : "Upload CSV"}

@@ -823,6 +823,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reports endpoints
+  app.get("/api/reports", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Get all reports with event information
+      const reports = await storage.getAllEventReports();
+      res.json(reports);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch reports" });
+    }
+  });
+
   app.get("/api/events/:eventId/reports", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
       const eventId = parseInt(req.params.eventId);

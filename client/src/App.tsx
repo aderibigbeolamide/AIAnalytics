@@ -15,6 +15,7 @@ import Members from "@/pages/members";
 import Events from "@/pages/events";
 import Analytics from "@/pages/analytics";
 import Report from "@/pages/report";
+import Reports from "@/pages/reports";
 
 function Router() {
   const { isAuthenticated, checkAuth } = useAuthStore();
@@ -39,6 +40,7 @@ function Router() {
           <Route path="/members" component={Members} />
           <Route path="/events" component={Events} />
           <Route path="/analytics" component={Analytics} />
+          <Route path="/reports" component={Reports} />
           <Route path="/events/:id" component={EventDetail} />
           <Route path="/scanner" component={Scanner} />
           <Route component={NotFound} />

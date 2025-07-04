@@ -64,6 +64,7 @@ export interface IStorage {
   // Event Reports
   getEventReport(id: number): Promise<EventReport | undefined>;
   getEventReports(eventId: number): Promise<EventReport[]>;
+  getAllEventReports(): Promise<EventReport[]>;
   createEventReport(report: InsertEventReport): Promise<EventReport>;
   updateEventReport(id: number, updates: Partial<InsertEventReport>): Promise<EventReport | undefined>;
 
@@ -399,6 +400,28 @@ export class DatabaseStorage implements IStorage {
 
   async getEventReports(eventId: number): Promise<EventReport[]> {
     const reports = await db.select().from(eventReports).where(eq(eventReports.eventId, eventId)).orderBy(desc(eventReports.createdAt));
+    return reports;
+  }
+
+  async getAllEventReports(): Promise<EventReport[]> {
+    const reports = await db.select({
+      id: eventReports.id,
+      eventId: eventReports.eventId,
+      reporterName: eventReports.reporterName,
+      reporterEmail: eventReports.reporterEmail,
+      reporterPhone: eventReports.reporterPhone,
+      reportType: eventReports.reportType,
+      message: eventReports.message,
+      status: eventReports.status,
+      createdAt: eventReports.createdAt,
+      event: {
+        id: events.id,
+        name: events.name
+      }
+    })
+    .from(eventReports)
+    .leftJoin(events, eq(eventReports.eventId, events.id))
+    .orderBy(desc(eventReports.createdAt));
     return reports;
   }
 

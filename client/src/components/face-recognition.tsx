@@ -143,6 +143,7 @@ export function FaceRecognition({ eventId }: FaceRecognitionProps) {
           
           <div className="flex items-center gap-2">
             <Input
+              id="photo-file-input"
               type="file"
               accept="image/*"
               multiple
@@ -155,6 +156,7 @@ export function FaceRecognition({ eventId }: FaceRecognitionProps) {
               variant="outline"
               size="sm"
               disabled={uploading}
+              onClick={() => document.getElementById('photo-file-input')?.click()}
             >
               <Upload className="h-4 w-4 mr-2" />
               {uploading ? "Uploading..." : "Upload Photos"}
