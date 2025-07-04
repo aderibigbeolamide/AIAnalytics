@@ -7,14 +7,39 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Get auth token from localStorage
+function getAuthToken(): string | null {
+  try {
+    const authState = localStorage.getItem('auth-storage');
+    if (authState) {
+      const parsed = JSON.parse(authState);
+      return parsed.state?.token || null;
+    }
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+  }
+  return null;
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {};
+  
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
