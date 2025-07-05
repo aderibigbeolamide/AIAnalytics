@@ -43,6 +43,7 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
   const [qrImageBase64, setQrImageBase64] = useState<string>("");
   const [registrationType, setRegistrationType] = useState<"member" | "guest" | "invitee">("member");
   const [paymentReceiptFile, setPaymentReceiptFile] = useState<File | null>(null);
+  const [paymentReceiptPreview, setPaymentReceiptPreview] = useState<string | null>(null);
 
   const form = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
@@ -362,6 +363,13 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                               }
                               
                               setPaymentReceiptFile(file);
+                              
+                              // Generate preview
+                              const reader = new FileReader();
+                              reader.onload = (e) => {
+                                setPaymentReceiptPreview(e.target?.result as string);
+                              };
+                              reader.readAsDataURL(file);
                             }
                           }}
                           className="hidden"
@@ -369,10 +377,38 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                       </label>
                     </div>
                     {paymentReceiptFile && (
-                      <div className="p-2 bg-green-50 border border-green-200 rounded-md">
-                        <p className="text-sm text-green-700 font-medium">
-                          ✓ {paymentReceiptFile.name} selected ({(paymentReceiptFile.size / 1024 / 1024).toFixed(2)}MB)
-                        </p>
+                      <div className="space-y-3">
+                        <div className="p-2 bg-green-50 border border-green-200 rounded-md">
+                          <p className="text-sm text-green-700 font-medium">
+                            ✓ {paymentReceiptFile.name} selected ({(paymentReceiptFile.size / 1024 / 1024).toFixed(2)}MB)
+                          </p>
+                        </div>
+                        
+                        {paymentReceiptPreview && (
+                          <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-medium text-gray-700">Payment Receipt Preview:</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setPaymentReceiptFile(null);
+                                  setPaymentReceiptPreview(null);
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                            <div className="max-w-md mx-auto">
+                              <img 
+                                src={paymentReceiptPreview} 
+                                alt="Payment Receipt Preview" 
+                                className="w-full h-auto border border-gray-300 rounded-md shadow-sm"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

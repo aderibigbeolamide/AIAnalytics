@@ -397,9 +397,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const registrations = await storage.getEventRegistrations(eventId, filters);
-      res.json(registrations);
+      // Filter out cancelled registrations
+      const activeRegistrations = registrations.filter(reg => reg.status !== 'cancelled');
+      res.json(activeRegistrations);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch registrations" });
+    }
+  });
+
+  // Delete registration route
+  app.delete("/api/events/:id/registrations/:registrationId", authenticateToken, requireRole(["admin"]), async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      const registrationId = parseInt(req.params.registrationId);
+      
+      // Get the registration to verify it exists and belongs to the event
+      const registration = await storage.getEventRegistration(registrationId);
+      if (!registration) {
+        return res.status(404).json({ message: "Registration not found" });
+      }
+      
+      if (registration.eventId !== eventId) {
+        return res.status(400).json({ message: "Registration does not belong to this event" });
+      }
+      
+      // Note: We don't actually delete from database, just mark as deleted
+      // For data integrity, we should keep records but mark them as inactive
+      await storage.updateEventRegistration(registrationId, { 
+        status: "cancelled"
+      });
+      
+      res.json({ message: "Registration deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting registration:", error);
+      res.status(500).json({ message: "Failed to delete registration" });
     }
   });
 

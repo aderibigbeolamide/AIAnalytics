@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar, MapPin, Users, QrCode, User, Share, Copy, FileText, Camera, Upload } from "lucide-react";
+import { Calendar, MapPin, Users, QrCode, User, Share, Copy, FileText, Camera, Upload, Eye, Trash2 } from "lucide-react";
 import { useAuthStore, getAuthHeaders } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,9 @@ export default function EventDetail() {
   const [showQR, setShowQR] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState<string>("");
   const [showRegistrationLink, setShowRegistrationLink] = useState(false);
+  const [showPaymentReceipt, setShowPaymentReceipt] = useState(false);
+  const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string>("");
+  const [selectedReceiptUser, setSelectedReceiptUser] = useState<string>("");
 
   const { data: event, isLoading } = useQuery<any>({
     queryKey: ["/api/events", id],
@@ -39,6 +42,28 @@ export default function EventDetail() {
       return response.json();
     },
     enabled: !!id,
+  });
+
+  const deleteRegistrationMutation = useMutation({
+    mutationFn: async (registrationId: number) => {
+      const response = await apiRequest("DELETE", `/api/events/${id}/registrations/${registrationId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Registration deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/events", id, "registrations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete registration",
+        variant: "destructive",
+      });
+    },
   });
 
   const registerMutation = useMutation({
@@ -181,27 +206,90 @@ export default function EventDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {registrations.map((reg: any) => (
-                <div key={reg.id} className="flex justify-between items-center p-2 border rounded">
-                  <div>
-                    <span className="font-medium">
-                      {reg.guestName || reg.guest_name || (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Guest")}
-                    </span>
-                    <Badge variant="outline" className="ml-2">
-                      {reg.registrationType || reg.registration_type}
-                    </Badge>
-                    {(reg.guestAuxiliaryBody || reg.guest_auxiliary_body) && (
-                      <Badge variant="secondary" className="ml-2">
-                        {reg.guestAuxiliaryBody || reg.guest_auxiliary_body}
-                      </Badge>
-                    )}
-                  </div>
-                  <Badge variant={reg.status === "attended" ? "default" : "secondary"}>
-                    {reg.status}
-                  </Badge>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 font-medium">Name</th>
+                    <th className="text-left p-2 font-medium">Type</th>
+                    <th className="text-left p-2 font-medium">Auxiliary Body</th>
+                    <th className="text-left p-2 font-medium">Status</th>
+                    <th className="text-left p-2 font-medium">Payment</th>
+                    {user?.role === "admin" && <th className="text-left p-2 font-medium">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {registrations.map((reg: any) => (
+                    <tr key={reg.id} className="border-b">
+                      <td className="p-2">
+                        <span className="font-medium">
+                          {reg.guestName || reg.guest_name || (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Guest")}
+                        </span>
+                        {reg.guestEmail && (
+                          <div className="text-sm text-muted-foreground">{reg.guestEmail}</div>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        <Badge variant="outline">
+                          {reg.registrationType || reg.registration_type}
+                        </Badge>
+                      </td>
+                      <td className="p-2">
+                        {(reg.guestAuxiliaryBody || reg.guest_auxiliary_body) && (
+                          <Badge variant="secondary">
+                            {reg.guestAuxiliaryBody || reg.guest_auxiliary_body}
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        <Badge variant={reg.status === "attended" ? "default" : "secondary"}>
+                          {reg.status}
+                        </Badge>
+                      </td>
+                      <td className="p-2">
+                        {reg.paymentReceiptUrl ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-green-600">
+                              ${reg.paymentAmount || 'N/A'}
+                            </span>
+                            {user?.role === "admin" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedReceiptUrl(reg.paymentReceiptUrl);
+                                  setSelectedReceiptUser(reg.guestName || reg.guest_name || `${reg.member?.firstName} ${reg.member?.lastName}` || "Unknown");
+                                  setShowPaymentReceipt(true);
+                                }}
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No payment</span>
+                        )}
+                      </td>
+                      {user?.role === "admin" && (
+                        <td className="p-2">
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete the registration for ${reg.guestName || reg.guest_name || `${reg.member?.firstName} ${reg.member?.lastName}` || "Unknown"}?`)) {
+                                deleteRegistrationMutation.mutate(reg.id);
+                              }
+                            }}
+                            disabled={deleteRegistrationMutation.isPending}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
@@ -334,6 +422,28 @@ export default function EventDetail() {
             </div>
             <p className="text-sm text-muted-foreground">
               Share this link with members so they can register for the event. After registration, they'll receive a QR code for event validation.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPaymentReceipt} onOpenChange={setShowPaymentReceipt}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Payment Receipt - {selectedReceiptUser}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-4">
+            {selectedReceiptUrl && (
+              <div className="w-full max-w-lg">
+                <img 
+                  src={selectedReceiptUrl} 
+                  alt="Payment Receipt" 
+                  className="w-full h-auto border border-gray-300 rounded-md shadow-sm"
+                />
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground text-center">
+              Payment receipt uploaded by {selectedReceiptUser}
             </p>
           </div>
         </DialogContent>
