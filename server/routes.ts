@@ -493,10 +493,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle payment receipt upload
       let paymentReceiptUrlFinal = paymentReceiptUrl;
       if (req.file) {
-        // Convert file to base64 for storage (in production, use cloud storage)
-        const fileBuffer = req.file.buffer;
-        const base64File = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`;
-        paymentReceiptUrlFinal = base64File;
+        try {
+          const { fileStorage } = await import('./storage-handler');
+          const uploadedFile = await fileStorage.saveFile(req.file, 'payment-receipts');
+          paymentReceiptUrlFinal = uploadedFile.url;
+        } catch (error) {
+          console.error('File upload error:', error);
+          return res.status(400).json({ message: "Failed to upload payment receipt" });
+        }
       }
 
       // Check payment receipt if event requires payment (make it optional for now)

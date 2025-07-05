@@ -42,6 +42,14 @@ SMTP_PASS=your-app-password
 
 # Security Keys
 ENCRYPTION_KEY=your-32-character-encryption-key-here
+
+# File Upload - Cloudinary (Production)
+CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+
+# File Upload - Local Storage (Development)
+UPLOAD_DIR=./uploads
 ```
 
 ### 3. Database Setup
@@ -200,6 +208,43 @@ The application automatically generates the following links:
 
 These links are automatically generated using the `APP_DOMAIN` environment variable, ensuring they work correctly in both local and production environments.
 
+## File Upload Configuration
+
+The application supports two file storage options:
+
+### Local Storage (Development)
+For local development, files are stored in the `./uploads` directory:
+
+```bash
+# Local file storage
+UPLOAD_DIR=./uploads
+```
+
+### Cloudinary (Production Recommended)
+For production deployments, use Cloudinary for optimized image delivery:
+
+1. **Create Cloudinary Account**: Sign up at [cloudinary.com](https://cloudinary.com)
+2. **Get API Credentials**: Go to Dashboard → API Keys
+3. **Set Environment Variables**:
+
+```bash
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
+
+### Features:
+- **Automatic Optimization**: Images are automatically optimized for web delivery
+- **CDN Delivery**: Global CDN ensures fast image loading
+- **Format Conversion**: Automatic format conversion (WebP, AVIF) for better performance
+- **Responsive Images**: Automatic responsive image generation
+- **Security**: Secure upload with access controls
+
+### How It Works:
+- **Development**: If Cloudinary credentials are not set, files are stored locally
+- **Production**: If Cloudinary credentials are provided, all uploads go to Cloudinary
+- **Fallback**: System gracefully falls back to local storage if Cloudinary fails
+
 ### Security Considerations
 
 1. **JWT Secret**: Use a strong, unique JWT secret for production
@@ -207,6 +252,7 @@ These links are automatically generated using the `APP_DOMAIN` environment varia
 3. **HTTPS**: Always use HTTPS in production (set APP_DOMAIN with https://)
 4. **Environment Variables**: Never commit .env files to version control
 5. **Email Security**: Use app-specific passwords for email services
+6. **File Upload Security**: Cloudinary provides secure upload with access controls
 
 ### Troubleshooting
 
