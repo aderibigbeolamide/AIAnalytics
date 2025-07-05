@@ -958,6 +958,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validationMethod: "manual_validation"
       });
 
+      // Update member status to "online" if member exists
+      if (member) {
+        await storage.updateMember(member.id, { status: "online" });
+      }
+
       res.json({
         message: "Validation successful",
         validationStatus: "valid",
@@ -1207,6 +1212,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "online",
         validationMethod: validationType || "manual_id"
       });
+
+      // Update member status to "online" if member exists
+      if (registration.memberId) {
+        const member = await storage.getMember(registration.memberId);
+        if (member) {
+          await storage.updateMember(registration.memberId, { status: "online" });
+        }
+      }
 
       // Create attendance record
       await storage.createAttendance({
