@@ -2,12 +2,12 @@ import nodemailer from 'nodemailer';
 
 // Create transporter for SMTP email sending
 const transporter = nodemailer.createTransport({
-  host: process.env.MAILER_HOST || 'smtp.zoho.eu',
-  port: parseInt(process.env.MAILER_PORT || '587'),
+  host: process.env.MAILER_HOST,
+  port: parseInt(process.env.MAILER_PORT || "587"),
   secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.MAILER_USER || 'admin@letbud.com',
-    pass: process.env.MAILER_PASS || 'JCrSaUVGCnyD'
+    user: process.env.MAILER_USER,
+    pass: process.env.MAILER_PASS
   }
 });
 
