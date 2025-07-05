@@ -3,10 +3,13 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
 import path from "path";
+// import { seed } from "./seed";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// await seed();
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(fileStorage.getUploadDirectory()));
