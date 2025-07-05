@@ -1,99 +1,226 @@
-# EventValidate - AI-Powered Member Validation System
+# EventValidate - Local Development & Deployment Guide
 
-A comprehensive event management and validation system with QR code scanning, member management, and reporting capabilities.
+## Local Development Setup
 
-## Features
+### Prerequisites
+- Node.js 18+ installed
+- PostgreSQL database (local or cloud)
+- Git for version control
 
-- **Event Management**: Create and manage events with auxiliary body filtering
-- **QR Code Registration**: Automatic QR generation for event validation
-- **Member Validation**: Multiple validation methods (QR scan, manual ID, CSV import)
-- **Payment Receipt Upload**: Image upload for paid events
-- **Report Management**: Public feedback forms with admin review system
-- **Dashboard Analytics**: Real-time event and attendance statistics
+### 1. Clone and Install Dependencies
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd eventvalidate
 
-## Quick Start
+# Install dependencies
+npm install
+```
 
-### Local Development
+### 2. Environment Configuration
+Create a `.env` file in the root directory:
 
-1. **Auto Setup** (Recommended)
-   ```bash
-   node setup-local.js
-   npm run dev
-   ```
+```bash
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/eventvalidate
 
-2. **Manual Setup**
-   ```bash
-   # Install dependencies
-   npm install
-   
-   # Create .env file with your database URL
-   echo "DATABASE_URL=postgresql://user:pass@localhost:5432/eventvalidate" > .env
-   echo "JWT_SECRET=your-secret-key" >> .env
-   
-   # Setup database
-   npm run db:push
-   npm run seed
-   
-   # Start development server
-   npm run dev
-   ```
+# JWT Security
+JWT_SECRET=your-very-secure-jwt-secret-key-here
 
-3. **Access Application**
-   - URL: http://localhost:5000
-   - Admin Login: `admin` / `password123`
+# Application Environment
+NODE_ENV=development
+PORT=5000
 
-### Production Deployment
+# Application Domain (for link generation)
+APP_DOMAIN=http://localhost:5000
 
-#### Render (Recommended)
-1. Connect your Git repository
-2. Set build command: `npm install && npm run build`
-3. Set start command: `npm start`
-4. Add environment variables:
-   - `DATABASE_URL`: Your PostgreSQL connection string
-   - `JWT_SECRET`: Secure random string
-   - `NODE_ENV`: production
+# Email Configuration (Optional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
 
-#### Other Platforms
-- **Railway**: Auto-detects Node.js, add PostgreSQL addon
-- **Heroku**: Add Node.js buildpack and PostgreSQL addon
-- **VPS**: Use PM2 for process management
+# Security Keys
+ENCRYPTION_KEY=your-32-character-encryption-key-here
+```
 
-## Environment Variables
+### 3. Database Setup
+```bash
+# Initialize database schema
+npm run db:push
+
+# Create admin user
+tsx scripts/seed.ts
+
+# Optional: Open database studio
+npm run db:studio
+```
+
+### 4. Start Development Server
+```bash
+# Start development server (frontend + backend)
+npm run dev
+```
+
+Access the application at: `http://localhost:5000`
+
+### 5. Default Admin Login
+- **Username**: admin
+- **Password**: password123
+
+## Production Deployment
+
+### Environment Variables for Production
+
+Create a `.env` file with production values:
 
 ```bash
 # Required
-DATABASE_URL=postgresql://user:pass@host:port/database
-JWT_SECRET=your-super-secure-secret
+DATABASE_URL=postgresql://prod-user:password@prod-host:5432/eventvalidate_prod
+JWT_SECRET=super-secure-production-jwt-secret
+NODE_ENV=production
+PORT=5000
 
-# Optional
+# Application Domain (IMPORTANT: Set your actual domain)
+APP_DOMAIN=https://your-domain.com
+
+# Email Configuration (Recommended)
 SMTP_HOST=smtp.gmail.com
-SMTP_USER=your-email@domain.com
-SMTP_PASS=your-app-password
+SMTP_PORT=587
+SMTP_USER=your-app@domain.com
+SMTP_PASS=app-password
+
+# Security
+ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
-## Architecture
+### Deployment Options
 
-- **Frontend**: React 18 + TypeScript + Tailwind CSS
-- **Backend**: Express.js + TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: JWT with role-based access
-- **Deployment**: Single-origin (frontend + backend on same domain)
+#### 1. Render (Recommended)
+```bash
+# Build command: npm install && npm run build
+# Start command: npm start
+# Environment: Node.js 20
 
-## Key Workflows
+# Set environment variables in Render dashboard:
+# - APP_DOMAIN=https://your-app-name.onrender.com
+# - DATABASE_URL=your-postgres-connection-string
+# - JWT_SECRET=your-jwt-secret
+# - ENCRYPTION_KEY=your-encryption-key
+```
 
-1. **Event Creation** → QR Code Generation → Public Registration Link
-2. **User Registration** → Personal QR Code → Payment Receipt Upload
-3. **Event Validation** → QR/ID Scanning → Attendance Recording
-4. **Report Submission** → Admin Review → Status Updates
+#### 2. Railway
+```bash
+# Railway auto-detects Node.js projects
+# Set environment variables in Railway dashboard:
+# - APP_DOMAIN=https://your-app-name.railway.app
+# - DATABASE_URL=your-postgres-connection-string
+# - JWT_SECRET=your-jwt-secret
+```
 
-## Support
+#### 3. Vercel
+```bash
+# Install Vercel CLI
+npm install -g vercel
 
-For technical issues or deployment questions, refer to the complete documentation in `replit.md`.
+# Deploy
+vercel
 
-## Security
+# Set environment variables in Vercel dashboard:
+# - APP_DOMAIN=https://your-app-name.vercel.app
+# - DATABASE_URL=your-postgres-connection-string
+# - JWT_SECRET=your-jwt-secret
+```
 
-- JWT-based authentication
-- Role-based access control
-- Input validation and sanitization
-- Secure file upload handling
-- Environment-based configuration
+#### 4. VPS/Self-Hosted
+```bash
+# Build the application
+npm run build
+
+# Use PM2 for process management
+npm install -g pm2
+pm2 start dist/index.js --name eventvalidate
+
+# Configure reverse proxy (nginx)
+# Set APP_DOMAIN=https://your-domain.com
+```
+
+### Important: Domain Configuration
+
+The `APP_DOMAIN` environment variable controls link generation:
+
+**Local Development:**
+```bash
+APP_DOMAIN=http://localhost:5000
+```
+
+**Production Examples:**
+```bash
+# Render
+APP_DOMAIN=https://your-app-name.onrender.com
+
+# Railway
+APP_DOMAIN=https://your-app-name.railway.app
+
+# Vercel
+APP_DOMAIN=https://your-app-name.vercel.app
+
+# Custom Domain
+APP_DOMAIN=https://your-domain.com
+```
+
+### Post-Deployment Steps
+
+1. **Set Environment Variables**: Ensure all required environment variables are set in your deployment platform
+
+2. **Database Migration**: Run database migrations if needed:
+```bash
+npm run db:push
+```
+
+3. **Create Admin User**: Create the initial admin user:
+```bash
+tsx scripts/seed.ts
+```
+
+4. **Test Core Features**:
+   - Admin login and dashboard
+   - Event creation
+   - Registration link generation
+   - QR code functionality
+   - Email notifications
+
+### Link Generation
+
+The application automatically generates the following links:
+
+- **Registration Links**: `{APP_DOMAIN}/register/{event-id}`
+- **Report Links**: `{APP_DOMAIN}/report/{event-id}`
+- **QR Code Links**: `{APP_DOMAIN}/qr/{registration-id}`
+
+These links are automatically generated using the `APP_DOMAIN` environment variable, ensuring they work correctly in both local and production environments.
+
+### Security Considerations
+
+1. **JWT Secret**: Use a strong, unique JWT secret for production
+2. **Database Security**: Use secure database credentials and connection strings
+3. **HTTPS**: Always use HTTPS in production (set APP_DOMAIN with https://)
+4. **Environment Variables**: Never commit .env files to version control
+5. **Email Security**: Use app-specific passwords for email services
+
+### Troubleshooting
+
+**Links not working?**
+- Check that `APP_DOMAIN` is set correctly
+- Ensure the domain includes the protocol (http:// or https://)
+- Verify the domain is accessible from external networks
+
+**Database connection issues?**
+- Verify `DATABASE_URL` is correct
+- Check database server is running and accessible
+- Ensure database user has proper permissions
+
+**Email not sending?**
+- Check SMTP credentials are correct
+- Verify email provider allows app-specific passwords
+- Check spam/junk folders for test emails

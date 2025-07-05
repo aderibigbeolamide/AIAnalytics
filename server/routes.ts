@@ -311,11 +311,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const event = await storage.createEvent(validatedEventData);
       
       // Generate QR code for the event that links to registration page
-      const registrationUrl = `${req.protocol}://${req.get('host')}/register/${event.id}`;
+      const { getRegistrationUrl, getReportUrl } = await import('./utils');
+      const registrationUrl = getRegistrationUrl(event.id, req);
       const qrCodeImage = await generateQRImage(registrationUrl);
       
       // Generate report link for complaints/feedback
-      const reportLink = `${req.protocol}://${req.get('host')}/report/${event.id}`;
+      const reportLink = getReportUrl(event.id, req);
       
       await storage.updateEvent(event.id, { 
         qrCode: qrCodeImage,

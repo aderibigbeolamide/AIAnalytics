@@ -170,11 +170,17 @@ The system uses PostgreSQL with the following core entities:
    NODE_ENV=development
    PORT=5000
    
+   # Application Domain (for link generation)
+   APP_DOMAIN=http://localhost:5000
+   
    # Email Configuration (Optional)
    SMTP_HOST=smtp.your-email-provider.com
    SMTP_PORT=587
    SMTP_USER=your-email@domain.com
    SMTP_PASS=your-email-password
+   
+   # Security Keys
+   ENCRYPTION_KEY=your-32-character-encryption-key-here
    ```
 
 3. **Database Setup**
@@ -211,11 +217,17 @@ DATABASE_URL=postgresql://prod-user:password@prod-host:5432/eventvalidate_prod
 JWT_SECRET=super-secure-production-jwt-secret
 NODE_ENV=production
 
+# Application Domain (CRITICAL for link generation)
+APP_DOMAIN=https://your-domain.com
+
 # Optional but recommended
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-app@domain.com
 SMTP_PASS=app-password
+
+# Security
+ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
 ### Deployment Options
