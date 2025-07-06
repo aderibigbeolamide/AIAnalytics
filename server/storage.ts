@@ -225,12 +225,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
-    const [event] = await db.insert(events).values(insertEvent).returning();
+    const [event] = await db.insert(events).values(insertEvent as any).returning();
     return event;
   }
 
   async updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event | undefined> {
-    const [event] = await db.update(events).set(updates).where(eq(events.id, id)).returning();
+    const [event] = await db.update(events).set(updates as any).where(eq(events.id, id)).returning();
     return event || undefined;
   }
 
@@ -447,7 +447,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMemberValidationCsv(insertCsv: InsertMemberValidationCsv): Promise<MemberValidationCsv> {
-    const [csv] = await db.insert(memberValidationCsv).values(insertCsv).returning();
+    const [csv] = await db.insert(memberValidationCsv).values(insertCsv as any).returning();
     return csv;
   }
 
