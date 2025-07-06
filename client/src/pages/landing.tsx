@@ -93,7 +93,7 @@ export function LandingPage() {
   const pricingPlans = [
     {
       name: "Event Rental",
-      price: "₦50,000",
+      price: "$50,000",
       period: "per event",
       description: "Perfect for single events and conferences",
       features: [
@@ -108,7 +108,7 @@ export function LandingPage() {
     },
     {
       name: "Monthly License",
-      price: "₦150,000",
+      price: "$150,000",
       period: "per month",
       description: "Ideal for organizations with regular events",
       features: [
