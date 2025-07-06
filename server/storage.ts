@@ -123,26 +123,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMembers(filters?: { auxiliaryBody?: string; search?: string; chandaNumber?: string }): Promise<Member[]> {
-    let query = db.select().from(members);
     const conditions = [isNull(members.deletedAt)]; // Exclude soft-deleted members
-    
+
     if (filters?.auxiliaryBody) {
       conditions.push(eq(members.auxiliaryBody, filters.auxiliaryBody));
     }
-    
+
     if (filters?.chandaNumber) {
       conditions.push(eq(members.chandaNumber, filters.chandaNumber));
     }
-    
+
     if (filters?.search) {
       const searchTerm = `%${filters.search}%`;
       conditions.push(
         sql`${members.firstName} ILIKE ${searchTerm} OR ${members.lastName} ILIKE ${searchTerm} OR ${members.email} ILIKE ${searchTerm} OR ${members.chandaNumber} ILIKE ${searchTerm} OR ${members.username} ILIKE ${searchTerm}`
       );
     }
-    
-    query = query.where(and(...conditions));
-    
+
+    const query = db.select().from(members).where(and(...conditions));
+
     return await query.orderBy(desc(members.createdAt));
   }
 
@@ -293,7 +292,6 @@ export class DatabaseStorage implements IStorage {
     endDate?: Date;
     status?: string;
   }): Promise<EventRegistration[]> {
-    let query = db.select().from(eventRegistrations);
     const conditions = [];
     
     if (eventId) {
@@ -325,8 +323,11 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
+    let query;
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      query = db.select().from(eventRegistrations).where(and(...conditions));
+    } else {
+      query = db.select().from(eventRegistrations);
     }
     
     return await query.orderBy(desc(eventRegistrations.createdAt));
@@ -417,6 +418,7 @@ export class DatabaseStorage implements IStorage {
       message: eventReports.message,
       status: eventReports.status,
       createdAt: eventReports.createdAt,
+      reviewNotes: eventReports.reviewNotes,
       event: {
         id: events.id,
         name: events.name
@@ -450,8 +452,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMemberValidationCsv(id: number): Promise<boolean> {
-    const result = await db.delete(memberValidationCsv).where(eq(memberValidationCsv.id, id));
-    return result.rowCount > 0;
+    const result = await db.delete(memberValidationCsv).where(eq(memberValidationCsv.id, id)).returning();
+    return result.length > 0;
   }
 
   // Face Recognition Photos

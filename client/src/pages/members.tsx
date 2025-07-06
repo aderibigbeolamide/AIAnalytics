@@ -25,9 +25,7 @@ export default function Members() {
 
   const deleteMemberMutation = useMutation({
     mutationFn: async (memberId: number) => {
-      return apiRequest(`/api/members/${memberId}`, {
-        method: "DELETE",
-      });
+      return apiRequest("DELETE", `/api/members/${memberId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
@@ -52,8 +50,13 @@ export default function Members() {
       if (memberFilter !== "all") params.append("auxiliaryBody", memberFilter);
       if (memberSearch) params.append("search", memberSearch);
       
+      const authHeaders = getAuthHeaders();
+      const headers: Record<string, string> = {};
+      if (authHeaders.Authorization) {
+        headers.Authorization = authHeaders.Authorization;
+      }
       const response = await fetch(`/api/members?${params.toString()}`, {
-        headers: getAuthHeaders(),
+        headers,
       });
       return response.json();
     },
@@ -62,8 +65,13 @@ export default function Members() {
   const { data: events = [] } = useQuery({
     queryKey: ["/api/events"],
     queryFn: async () => {
+      const authHeaders = getAuthHeaders();
+      const headers: Record<string, string> = {};
+      if (authHeaders.Authorization) {
+        headers.Authorization = authHeaders.Authorization;
+      }
       const response = await fetch("/api/events", {
-        headers: getAuthHeaders(),
+        headers,
       });
       return response.json();
     },
