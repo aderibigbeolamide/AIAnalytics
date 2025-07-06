@@ -361,6 +361,14 @@ npm run migrate
   - Resolved login functionality - admin account now accessible (admin/password123)
   - Updated file upload filter to accept CSV files for member validation feature
   - System now supports image, PDF, and CSV file uploads
+- July 6, 2025. Enhanced validation system with smart CSV-based member verification:
+  - Implemented intelligent CSV validation that only applies to members when CSV data exists
+  - Members registering as "member" must be found in uploaded CSV files to be validated
+  - Guests and invitees can be validated regardless of CSV content (bypass CSV requirement)
+  - Events without CSV files allow all registration types to be validated normally
+  - Enhanced both QR scan and manual ID validation with consistent logic
+  - Improved error messages to clearly explain validation requirements
+  - Default admin credentials confirmed: username=admin, password=password123
 
 ## User Preferences
 

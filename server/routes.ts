@@ -707,6 +707,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Enhanced CSV validation logic based on registration type
+      const csvData = await storage.getMemberValidationCsv(qrData.eventId);
+      console.log(`CSV Data found: ${csvData.length} files for event ${qrData.eventId}`);
+      console.log(`Registration type: ${registration.registrationType}`);
+      
+      let csvValidationPassed = true;
+      let validationRequired = false;
+      
+      // Determine if CSV validation is required
+      if (csvData.length > 0 && registration.registrationType === 'member') {
+        // CSV validation is required only for members when CSV exists
+        validationRequired = true;
+        console.log(`CSV validation required for member registration:`, {
+          name: registration.guestName,
+          email: registration.guestEmail,
+          chanda: registration.guestChandaNumber
+        });
+        
+        // Check if user exists in any of the CSV files
+        csvValidationPassed = csvData.some(csv => 
+          csv.memberData.some((csvMember: any) => {
+            // Support multiple possible field names for CSV data
+            const csvName = csvMember.name || csvMember.Fullname || csvMember.fullName || csvMember.fullname;
+            const csvEmail = csvMember.email || csvMember.Email || csvMember.emailAddress;
+            const csvChanda = csvMember.chandaNumber || csvMember.ChandaNO || csvMember.chandaNo || csvMember.chanda_number;
+            
+            // Compare name (case insensitive)
+            const nameMatch = csvName && registration.guestName && 
+              csvName.toLowerCase().trim() === registration.guestName.toLowerCase().trim();
+            
+            // Compare email (case insensitive)
+            const emailMatch = csvEmail && registration.guestEmail && 
+              csvEmail.toLowerCase().trim() === registration.guestEmail.toLowerCase().trim();
+            
+            // Compare chanda number
+            const chandaMatch = csvChanda && registration.guestChandaNumber && 
+              csvChanda.toString().trim() === registration.guestChandaNumber.toString().trim();
+            
+            console.log(`CSV QR Validation Check:
+              CSV Member: ${csvName} | ${csvEmail} | ${csvChanda}
+              Registration: ${registration.guestName} | ${registration.guestEmail} | ${registration.guestChandaNumber}
+              Matches: name=${nameMatch}, email=${emailMatch}, chanda=${chandaMatch}`);
+            
+            return nameMatch || emailMatch || chandaMatch;
+          })
+        );
+        
+        if (!csvValidationPassed) {
+          return res.status(403).json({ 
+            message: "Member validation failed. Your information was not found in the member validation list. Please contact the event organizer.",
+            validationStatus: "csv_validation_failed",
+            details: "Members must be validated against the uploaded member list for this event." 
+          });
+        }
+      } else if (registration.registrationType === 'guest' || registration.registrationType === 'invitee') {
+        // Guests and invitees are allowed regardless of CSV content
+        console.log(`Allowing ${registration.registrationType} registration - CSV validation not required`);
+        csvValidationPassed = true;
+      } else if (csvData.length === 0) {
+        // No CSV uploaded - allow all registrations
+        console.log(`No CSV validation data found - allowing all registration types`);
+        csvValidationPassed = true;
+      }
+      
+      console.log(`CSV QR Validation Result: Required=${validationRequired}, Passed=${csvValidationPassed}`);
+
       // Create attendance record
       const attendanceData = {
         eventId: qrData.eventId,
@@ -1007,17 +1073,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Additional CSV validation if CSV data exists
+      // Enhanced CSV validation logic based on registration type
       const csvData = await storage.getMemberValidationCsv(registration.eventId);
-      console.log(`CSV Data found: ${csvData.length} files`);
-      let csvValidationPassed = true;
+      console.log(`CSV Data found: ${csvData.length} files for event ${registration.eventId}`);
+      console.log(`Registration type: ${registration.registrationType}`);
       
-      if (csvData.length > 0) {
-        console.log(`Starting CSV validation for registration:`, {
+      let csvValidationPassed = true;
+      let validationRequired = false;
+      
+      // Determine if CSV validation is required
+      if (csvData.length > 0 && registration.registrationType === 'member') {
+        // CSV validation is required only for members when CSV exists
+        validationRequired = true;
+        console.log(`CSV validation required for member registration:`, {
           name: registration.guestName,
           email: registration.guestEmail,
           chanda: registration.guestChandaNumber
         });
+        
         // Check if user exists in any of the CSV files
         csvValidationPassed = csvData.some(csv => 
           csv.memberData.some((member: any) => {
@@ -1049,11 +1122,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!csvValidationPassed) {
           return res.status(403).json({ 
-            message: "Member not found in validation list. Please ensure your name, email, or chanda number matches our records.",
-            validationStatus: "csv_validation_failed" 
+            message: "Member validation failed. Your information was not found in the member validation list. Please contact the event organizer.",
+            validationStatus: "csv_validation_failed",
+            details: "Members must be validated against the uploaded member list for this event." 
           });
         }
+      } else if (registration.registrationType === 'guest' || registration.registrationType === 'invitee') {
+        // Guests and invitees are allowed regardless of CSV content
+        console.log(`Allowing ${registration.registrationType} registration - CSV validation not required`);
+        csvValidationPassed = true;
+      } else if (csvData.length === 0) {
+        // No CSV uploaded - allow all registrations
+        console.log(`No CSV validation data found - allowing all registration types`);
+        csvValidationPassed = true;
       }
+      
+      console.log(`CSV Validation Result: Required=${validationRequired}, Passed=${csvValidationPassed}`);
 
       // Create attendance record
       const attendanceData = {
