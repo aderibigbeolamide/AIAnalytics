@@ -26,8 +26,10 @@ export default function Login() {
         title: "Login successful",
         description: "Welcome to EventValidate",
       });
-      // Redirect to dashboard after successful login
-      setLocation("/dashboard");
+      // Small delay to ensure state is updated before redirect
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 100);
     } catch (error) {
       toast({
         title: "Login failed",

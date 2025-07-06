@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
+  console.log('Dashboard component rendering...');
   const { toast } = useToast();
   const [memberSearch, setMemberSearch] = useState("");
   const [memberFilter, setMemberFilter] = useState("all");

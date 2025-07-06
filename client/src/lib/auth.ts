@@ -44,13 +44,18 @@ export const useAuthStore = create<AuthState>()(
           
           const data = await response.json();
           
+          console.log('Login successful, setting auth state:', data);
+          
           set({
             token: data.token,
             user: data.user,
             member: data.member,
             isAuthenticated: true,
           });
+          
+          console.log('Auth state after login:', get());
         } catch (error) {
+          console.error('Login error:', error);
           throw new Error('Login failed');
         }
       },
@@ -112,7 +117,7 @@ export const useAuthStore = create<AuthState>()(
 );
 
 // Add token to API requests
-export function getAuthHeaders() {
+export function getAuthHeaders(): Record<string, string> {
   const token = useAuthStore.getState().token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

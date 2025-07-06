@@ -25,6 +25,8 @@ function Router() {
     checkAuth();
   }, [checkAuth]);
 
+  console.log('Router - isAuthenticated:', isAuthenticated);
+
   return (
     <Switch>
       {/* Public routes - always accessible */}
