@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/auth";
@@ -19,13 +19,20 @@ import {
   Star,
   Zap,
   Target,
-  Globe
+  Globe,
+  Menu,
+  X
 } from "lucide-react";
 import logoPath from "@assets/Screenshot from 2025-07-06 08-06-04_1751785727840.png";
 
 export function LandingPage() {
   const [activeTab, setActiveTab] = useState("features");
-  const { isAuthenticated } = useAuthStore();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated, checkAuth } = useAuthStore();
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const features = [
     {
@@ -161,8 +168,70 @@ export function LandingPage() {
                 </Link>
               )}
             </div>
+            
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </div>
           </div>
         </div>
+        
+        {/* Mobile navigation menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-sm">
+            <div className="px-4 py-3 space-y-3">
+              <a 
+                href="#features" 
+                className="block text-gray-600 hover:text-gray-900 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Features
+              </a>
+              <a 
+                href="#benefits" 
+                className="block text-gray-600 hover:text-gray-900 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Benefits
+              </a>
+              <a 
+                href="#pricing" 
+                className="block text-gray-600 hover:text-gray-900 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Pricing
+              </a>
+              <a 
+                href="#contact" 
+                className="block text-gray-600 hover:text-gray-900 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Contact
+              </a>
+              <div className="pt-2 border-t border-gray-200">
+                {isAuthenticated ? (
+                  <Link href="/dashboard">
+                    <Button size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                      Dashboard
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href="/login">
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                      Login
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
