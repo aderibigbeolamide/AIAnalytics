@@ -16,6 +16,7 @@ import Events from "@/pages/events";
 import Analytics from "@/pages/analytics";
 import Report from "@/pages/report";
 import Reports from "@/pages/reports";
+import { LandingPage } from "@/pages/landing";
 
 function Router() {
   const { isAuthenticated, checkAuth } = useAuthStore();
@@ -27,12 +28,17 @@ function Router() {
   return (
     <Switch>
       {/* Public routes */}
+      <Route path="/landing" component={LandingPage} />
       <Route path="/register/:id" component={EventRegistration} />
       <Route path="/report/:eventId" component={Report} />
       
       {/* Protected routes */}
       {!isAuthenticated ? (
-        <Route component={Login} />
+        <>
+          <Route path="/" component={LandingPage} />
+          <Route path="/login" component={Login} />
+          <Route component={LandingPage} />
+        </>
       ) : (
         <>
           <Route path="/" component={Dashboard} />
