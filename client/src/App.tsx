@@ -19,14 +19,19 @@ import Reports from "@/pages/reports";
 import { LandingPage } from "@/pages/landing";
 
 function Router() {
-  const { isAuthenticated, checkAuth } = useAuthStore();
+  const { isAuthenticated, checkAuth, loadFromStorage } = useAuthStore();
 
   useEffect(() => {
-    // Only check auth if not already authenticated
-    if (!isAuthenticated) {
+    // First load from storage, then check if needed
+    loadFromStorage();
+    const currentState = useAuthStore.getState();
+    console.log('Initial auth state after loading from storage:', currentState);
+    
+    // Only check auth via API if we have a token but need to validate it
+    if (currentState.token && !currentState.isAuthenticated) {
       checkAuth();
     }
-  }, [checkAuth, isAuthenticated]);
+  }, []);
 
   console.log('Router - isAuthenticated:', isAuthenticated);
 

@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { apiRequest } from './queryClient';
 
 interface User {
@@ -25,126 +24,159 @@ interface AuthState {
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  loadFromStorage: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+// Simple localStorage functions
+const saveAuthState = (token: string, user: User, member: Member | null) => {
+  try {
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('auth_user', JSON.stringify(user));
+    if (member) {
+      localStorage.setItem('auth_member', JSON.stringify(member));
+    }
+    console.log('Saved auth state to localStorage');
+  } catch (error) {
+    console.error('Failed to save auth state:', error);
+  }
+};
+
+const clearAuthState = () => {
+  try {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_member');
+    console.log('Cleared auth state from localStorage');
+  } catch (error) {
+    console.error('Failed to clear auth state:', error);
+  }
+};
+
+const loadAuthState = () => {
+  try {
+    const token = localStorage.getItem('auth_token');
+    const userStr = localStorage.getItem('auth_user');
+    const memberStr = localStorage.getItem('auth_member');
+    
+    if (token && userStr) {
+      const user = JSON.parse(userStr);
+      const member = memberStr ? JSON.parse(memberStr) : null;
+      console.log('Loaded auth state from localStorage:', { token: !!token, user, member });
+      return { token, user, member, isAuthenticated: true };
+    }
+  } catch (error) {
+    console.error('Failed to load auth state:', error);
+  }
+  return { token: null, user: null, member: null, isAuthenticated: false };
+};
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  token: null,
+  user: null,
+  member: null,
+  isAuthenticated: false,
+
+  loadFromStorage: () => {
+    const stored = loadAuthState();
+    set(stored);
+    console.log('Auth state loaded from storage:', stored);
+  },
+
+  login: async (username: string, password: string) => {
+    try {
+      const response = await apiRequest('POST', '/api/auth/login', {
+        username,
+        password,
+      });
+      
+      const data = await response.json();
+      
+      console.log('Login successful:', data);
+      
+      const { token, user, member } = data;
+      
+      // Save to localStorage
+      saveAuthState(token, user, member);
+      
+      // Update store state
+      set({
+        token,
+        user,
+        member,
+        isAuthenticated: true,
+      });
+      
+      console.log('Auth state updated after login');
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      throw new Error('Login failed');
+    }
+  },
+
+  logout: () => {
+    clearAuthState();
+    set({
       token: null,
       user: null,
       member: null,
       isAuthenticated: false,
+    });
+    console.log('Logged out successfully');
+  },
 
-      login: async (username: string, password: string) => {
-        try {
-          const response = await apiRequest('POST', '/api/auth/login', {
-            username,
-            password,
-          });
-          
-          const data = await response.json();
-          
-          console.log('Login successful, setting auth state:', data);
-          
-          // Force a synchronous update to ensure persistence
-          const newState = {
-            token: data.token,
-            user: data.user,
-            member: data.member,
-            isAuthenticated: true,
-          };
-          
-          set(newState);
-          
-          // Verify the state was set correctly
-          const currentState = get();
-          console.log('Auth state after login:', currentState);
-          
-          // Manually save to localStorage to ensure persistence
-          try {
-            localStorage.setItem('auth-storage', JSON.stringify({
-              state: newState,
-              version: 0
-            }));
-            console.log('Manually saved to localStorage');
-          } catch (e) {
-            console.error('Failed to save to localStorage:', e);
-          }
-          
-        } catch (error) {
-          console.error('Login error:', error);
-          throw new Error('Login failed');
-        }
-      },
+  checkAuth: async () => {
+    const { token } = get();
+    console.log('checkAuth called with token:', !!token);
+    
+    if (!token) {
+      console.log('No token found');
+      set({ isAuthenticated: false });
+      return;
+    }
 
-      logout: () => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include',
+      });
+
+      console.log('Auth check response status:', response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Auth check successful');
+        set({
+          user: data.user,
+          member: data.member,
+          isAuthenticated: true,
+        });
+        // Update localStorage with fresh data
+        saveAuthState(token, data.user, data.member);
+      } else {
+        console.log('Auth check failed, clearing state');
+        clearAuthState();
         set({
           token: null,
           user: null,
           member: null,
           isAuthenticated: false,
         });
-      },
-
-      checkAuth: async () => {
-        const { token } = get();
-        console.log('checkAuth called with token:', !!token);
-        
-        if (!token) {
-          console.log('No token found, setting authenticated to false');
-          set({ isAuthenticated: false });
-          return;
-        }
-
-        try {
-          const response = await fetch('/api/auth/me', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            credentials: 'include',
-          });
-
-          console.log('Auth check response status:', response.status);
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Auth check successful, updating state');
-            set({
-              user: data.user,
-              member: data.member,
-              isAuthenticated: true,
-            });
-          } else {
-            console.log('Auth check failed, clearing state');
-            set({
-              token: null,
-              user: null,
-              member: null,
-              isAuthenticated: false,
-            });
-          }
-        } catch (error) {
-          console.error('Auth check error:', error);
-          set({
-            token: null,
-            user: null,
-            member: null,
-            isAuthenticated: false,
-          });
-        }
-      },
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({ 
-        token: state.token,
-        user: state.user,
-        member: state.member,
-        isAuthenticated: state.isAuthenticated 
-      }),
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      clearAuthState();
+      set({
+        token: null,
+        user: null,
+        member: null,
+        isAuthenticated: false,
+      });
     }
-  )
-);
+  },
+}));
 
 // Add token to API requests
 export function getAuthHeaders(): Record<string, string> {
