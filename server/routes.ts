@@ -112,9 +112,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard stats route
   app.get("/api/dashboard/stats", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
-      const stats = await storage.getAttendanceStats();
+      const attendanceStats = await storage.getAttendanceStats();
+      const events = await storage.getEvents();
+      const members = await storage.getMembers();
+      
+      const stats = {
+        ...attendanceStats,
+        totalMembers: members.length,
+        activeEvents: events.filter(e => e.status === 'active').length,
+        totalEvents: events.length,
+        activeMembers: members.filter(m => m.status === 'active').length,
+      };
+      
       res.json(stats);
     } catch (error) {
+      console.error('Dashboard stats error:', error);
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
