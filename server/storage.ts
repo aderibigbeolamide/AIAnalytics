@@ -360,10 +360,11 @@ export class DatabaseStorage implements IStorage {
   async getAttendanceStats(): Promise<{ totalScans: number; validationRate: number; scansToday: number }> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString();
     
     const [totalScansResult] = await db.select({ count: sql<number>`count(*)` }).from(attendance);
     const [validScansResult] = await db.select({ count: sql<number>`count(*)` }).from(attendance).where(eq(attendance.validationStatus, 'valid'));
-    const [todayScansResult] = await db.select({ count: sql<number>`count(*)` }).from(attendance).where(sql`${attendance.scannedAt} >= ${today}`);
+    const [todayScansResult] = await db.select({ count: sql<number>`count(*)` }).from(attendance).where(sql`${attendance.scannedAt} >= ${todayISO}`);
     
     const totalScans = totalScansResult.count || 0;
     const validScans = validScansResult.count || 0;
