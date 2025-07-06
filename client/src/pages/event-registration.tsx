@@ -50,22 +50,23 @@ export default function EventRegistration() {
     );
   }
 
-  // Check event timing - registration is closed once event starts
+  // Check event timing - registration is only allowed during the event
   const now = new Date();
   const eventStarted = now >= new Date(event.startDate);
   const eventEnded = event.endDate && now > new Date(event.endDate);
 
-  if (eventStarted && !eventEnded) {
+  // Block registration if event hasn't started yet
+  if (!eventStarted) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <Card>
           <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold mb-2">Registration Closed</h2>
+            <h2 className="text-xl font-semibold mb-2">Registration Not Yet Open</h2>
             <p className="text-muted-foreground mb-4">
-              Registration for this event is closed because the event has already started.
+              Registration for this event is not yet open. Please wait until the event starts.
             </p>
             <p className="text-sm text-gray-500">
-              Event started on {new Date(event.startDate).toLocaleDateString()} at {new Date(event.startDate).toLocaleTimeString()}.
+              Event starts on {new Date(event.startDate).toLocaleDateString()} at {new Date(event.startDate).toLocaleTimeString()}.
             </p>
           </CardContent>
         </Card>
