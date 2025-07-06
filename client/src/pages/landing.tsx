@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -24,6 +25,7 @@ import logoPath from "@assets/Screenshot from 2025-07-06 08-06-04_1751785727840.
 
 export function LandingPage() {
   const [activeTab, setActiveTab] = useState("features");
+  const { isAuthenticated } = useAuthStore();
 
   const features = [
     {
@@ -149,9 +151,15 @@ export function LandingPage() {
               <a href="#benefits" className="text-gray-600 hover:text-gray-900 transition-colors">Benefits</a>
               <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
               <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</a>
-              <Link href="/login">
-                <Button variant="outline" size="sm">Login</Button>
-              </Link>
+              {isAuthenticated ? (
+                <Link href="/dashboard">
+                  <Button size="sm">Dashboard</Button>
+                </Link>
+              ) : (
+                <Link href="/login">
+                  <Button variant="outline" size="sm">Login</Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

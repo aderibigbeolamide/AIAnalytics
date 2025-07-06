@@ -27,20 +27,16 @@ function Router() {
 
   return (
     <Switch>
-      {/* Public routes */}
-      <Route path="/landing" component={LandingPage} />
+      {/* Public routes - always accessible */}
       <Route path="/register/:id" component={EventRegistration} />
       <Route path="/report/:eventId" component={Report} />
+      <Route path="/login" component={Login} />
+      <Route path="/landing" component={LandingPage} />
       
-      {/* Protected routes */}
-      {!isAuthenticated ? (
+      {/* Conditional routes based on authentication */}
+      {isAuthenticated ? (
         <>
-          <Route path="/" component={LandingPage} />
-          <Route path="/login" component={Login} />
-          <Route component={LandingPage} />
-        </>
-      ) : (
-        <>
+          {/* Authenticated users get dashboard and protected routes */}
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/members" component={Members} />
@@ -50,6 +46,12 @@ function Router() {
           <Route path="/events/:id" component={EventDetail} />
           <Route path="/scanner" component={Scanner} />
           <Route component={NotFound} />
+        </>
+      ) : (
+        <>
+          {/* Non-authenticated users get landing page for root */}
+          <Route path="/" component={LandingPage} />
+          <Route component={LandingPage} />
         </>
       )}
     </Switch>
