@@ -147,15 +147,15 @@ export default function EventRegistration() {
               </div>
             )}
 
-            {event.allowGuests && (
-              <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
-                <Users className="h-6 w-6 text-green-600" />
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">Guest Policy</p>
-                  <p className="font-semibold text-green-800">Guests are welcome to attend</p>
-                </div>
+            <div className={`flex items-center gap-3 p-4 rounded-lg ${event.allowGuests ? 'bg-green-50' : 'bg-red-50'}`}>
+              <Users className={`h-6 w-6 ${event.allowGuests ? 'text-green-600' : 'text-red-600'}`} />
+              <div>
+                <p className="text-sm text-gray-600 font-medium">Guest Policy</p>
+                <p className={`font-semibold ${event.allowGuests ? 'text-green-800' : 'text-red-800'}`}>
+                  {event.allowGuests ? 'Guests are welcome to attend' : 'Guests are not welcome'}
+                </p>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
