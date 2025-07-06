@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,18 +14,46 @@ import { QrCode } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RegistrationCard } from "@/components/registration-card";
 
-const registrationSchema = z.object({
+// Base schema for all registration types
+const baseRegistrationSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  jamaat: z.string().min(1, "Jamaat is required"),
-  auxiliaryBody: z.string().min(1, "Auxiliary body is required"),
-  chandaNumber: z.string().optional(),
-  circuit: z.string().optional(),
-  email: z.string().email("Valid email is required"),
   registrationType: z.enum(["member", "guest", "invitee"]),
   post: z.string().optional(),
   paymentReceiptUrl: z.string().optional(),
   paymentAmount: z.string().optional(),
+});
+
+// Create dynamic schema based on registration type
+const createRegistrationSchema = (registrationType: string) => {
+  if (registrationType === "member") {
+    // Members need all fields
+    return baseRegistrationSchema.extend({
+      jamaat: z.string().min(1, "Jamaat is required"),
+      auxiliaryBody: z.string().min(1, "Auxiliary body is required"),
+      chandaNumber: z.string().optional(),
+      circuit: z.string().optional(),
+      email: z.string().email("Valid email is required"),
+    });
+  } else {
+    // Guests and invitees only need basic info
+    return baseRegistrationSchema.extend({
+      jamaat: z.string().optional(),
+      auxiliaryBody: z.string().optional(),
+      chandaNumber: z.string().optional(),
+      circuit: z.string().optional(),
+      email: z.string().email().optional().or(z.literal("")),
+    });
+  }
+};
+
+// Use full schema for TypeScript types
+const registrationSchema = baseRegistrationSchema.extend({
+  jamaat: z.string().optional(),
+  auxiliaryBody: z.string().optional(),
+  chandaNumber: z.string().optional(),
+  circuit: z.string().optional(),
+  email: z.string().optional(),
 });
 
 type RegistrationFormData = z.infer<typeof registrationSchema>;
@@ -46,7 +74,7 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
   const [paymentReceiptPreview, setPaymentReceiptPreview] = useState<string | null>(null);
 
   const form = useForm<RegistrationFormData>({
-    resolver: zodResolver(registrationSchema),
+    resolver: zodResolver(createRegistrationSchema(registrationType)),
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -58,7 +86,15 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
       registrationType: "member",
       post: "",
     },
+    mode: "onChange",
   });
+
+  // Update validation schema when registration type changes
+  React.useEffect(() => {
+    form.clearErrors();
+    const newSchema = createRegistrationSchema(registrationType);
+    form.trigger(); // Re-validate with new schema
+  }, [registrationType, form]);
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegistrationFormData) => {
@@ -164,45 +200,7 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="jamaat"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Jamaat</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your jamaat" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="auxiliaryBody"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Auxiliary Body</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select auxiliary body" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {auxiliaryBodies.map((body: string) => (
-                          <SelectItem key={body} value={body}>
-                            {body}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
+              {/* Registration Type Selection */}
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium">Registration Type</label>
@@ -212,7 +210,10 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                         type="radio"
                         value="member"
                         checked={registrationType === "member"}
-                        onChange={(e) => setRegistrationType(e.target.value as "member")}
+                        onChange={(e) => {
+                          setRegistrationType(e.target.value as "member");
+                          form.setValue("registrationType", "member");
+                        }}
                       />
                       <span>Member</span>
                     </label>
@@ -222,7 +223,10 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                           type="radio"
                           value="guest"
                           checked={registrationType === "guest"}
-                          onChange={(e) => setRegistrationType(e.target.value as "guest")}
+                          onChange={(e) => {
+                            setRegistrationType(e.target.value as "guest");
+                            form.setValue("registrationType", "guest");
+                          }}
                         />
                         <span>Guest</span>
                       </label>
@@ -232,68 +236,127 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                         type="radio"
                         value="invitee"
                         checked={registrationType === "invitee"}
-                        onChange={(e) => setRegistrationType(e.target.value as "invitee")}
+                        onChange={(e) => {
+                          setRegistrationType(e.target.value as "invitee");
+                          form.setValue("registrationType", "invitee");
+                        }}
                       />
                       <span>Invitee</span>
                     </label>
                   </div>
                 </div>
+              </div>
 
-                {(registrationType === "member" || registrationType === "guest") && (
-                  <>
-                    <FormField
-                      control={form.control}
-                      name="chandaNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Chanda/Wassiya Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter chanda/wassiya number" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="circuit"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Circuit</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your circuit" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
-
-                {registrationType === "invitee" && (
+              {/* Member-specific fields */}
+              {registrationType === "member" && (
+                <>
                   <FormField
                     control={form.control}
-                    name="post"
+                    name="jamaat"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Post/Position (Optional)</FormLabel>
+                        <FormLabel>Jamaat</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter your post or position" {...field} />
+                          <Input placeholder="Enter your jamaat" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
-              </div>
 
+                  <FormField
+                    control={form.control}
+                    name="auxiliaryBody"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Auxiliary Body</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select auxiliary body" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {auxiliaryBodies.map((body: string) => (
+                              <SelectItem key={body} value={body}>
+                                {body}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="chandaNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Chanda/Wassiya Number (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter chanda/wassiya number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="circuit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Circuit (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter your circuit" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="Enter your email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
+              {/* Invitee-specific fields */}
+              {registrationType === "invitee" && (
+                <FormField
+                  control={form.control}
+                  name="post"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Post/Position (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your post or position" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Email field for all types - required for members, optional for guests/invitees */}
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email Address</FormLabel>
+                    <FormLabel>Email {registrationType === "member" ? "" : "(Optional)"}</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="Enter your email" {...field} />
                     </FormControl>

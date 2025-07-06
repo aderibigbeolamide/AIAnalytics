@@ -1,6 +1,6 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { RegistrationForm } from "@/components/registration-form";
+import { SimpleRegistrationForm } from "@/components/simple-registration-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users } from "lucide-react";
@@ -160,7 +160,7 @@ export default function EventRegistration() {
         </Card>
 
         {/* Registration Form */}
-        <RegistrationForm eventId={id!} event={event} />
+        <SimpleRegistrationForm eventId={id!} event={event} />
         
         {/* Footer */}
         <div className="text-center py-6 text-gray-500">
