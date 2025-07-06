@@ -41,6 +41,8 @@ export const events = pgTable("events", {
   location: text("location").notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date"),
+  registrationStartDate: timestamp("registration_start_date"), // When registration opens
+  registrationEndDate: timestamp("registration_end_date"), // When registration closes
   eligibleAuxiliaryBodies: jsonb("eligible_auxiliary_bodies").$type<string[]>().notNull(),
   allowGuests: boolean("allow_guests").default(false),
   requiresPayment: boolean("requires_payment").default(false),

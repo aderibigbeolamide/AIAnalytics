@@ -50,6 +50,46 @@ export default function EventRegistration() {
     );
   }
 
+  // Check registration timing
+  const now = new Date();
+  const registrationNotStarted = event.registrationStartDate && now < new Date(event.registrationStartDate);
+  const registrationEnded = event.registrationEndDate && now > new Date(event.registrationEndDate);
+  const eventEnded = event.endDate && now > new Date(event.endDate);
+
+  if (registrationNotStarted) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h2 className="text-xl font-semibold mb-2">Registration Not Yet Open</h2>
+            <p className="text-muted-foreground mb-4">
+              Registration for this event will open on {new Date(event.registrationStartDate).toLocaleDateString()} at {new Date(event.registrationStartDate).toLocaleTimeString()}.
+            </p>
+            <p className="text-sm text-gray-500">Please check back later to register.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (registrationEnded || eventEnded) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h2 className="text-xl font-semibold mb-2">Registration Closed</h2>
+            <p className="text-muted-foreground">
+              {registrationEnded 
+                ? `Registration for this event closed on ${new Date(event.registrationEndDate).toLocaleDateString()}.`
+                : `This event has already ended on ${new Date(event.endDate).toLocaleDateString()}.`
+              }
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8">
       <div className="max-w-4xl mx-auto px-4 space-y-6">

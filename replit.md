@@ -350,6 +350,12 @@ npm run migrate
   - Implemented mobile hamburger navigation menu with responsive design
   - Successfully seeded database with default admin account
   - All features now using persistent database storage instead of memory
+- July 6, 2025. Event registration timing controls:
+  - Added registrationStartDate and registrationEndDate fields to events schema
+  - Implemented registration period validation in API endpoints
+  - Updated event creation/editing forms to include registration timing fields
+  - Added frontend validation to prevent early/late registration attempts
+  - Registration now respects configured start/end dates separate from event dates
 
 ## User Preferences
 
