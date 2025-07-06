@@ -35,7 +35,7 @@ export function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/dashboard">
+            <Link href="/">
               <div className="flex-shrink-0 flex items-center cursor-pointer hover:opacity-80 transition-opacity">
                 <img 
                   src={logoPath} 
