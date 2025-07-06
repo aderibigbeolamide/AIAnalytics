@@ -356,6 +356,11 @@ npm run migrate
   - Registration remains open during the event but closes when event ends
   - Both frontend and backend now enforce "no registration before event starts" policy
   - Simplified validation to use event start/end dates directly
+- July 6, 2025. Authentication and file upload fixes:
+  - Fixed authentication token storage mismatch between frontend storage and API request headers
+  - Resolved login functionality - admin account now accessible (admin/password123)
+  - Updated file upload filter to accept CSV files for member validation feature
+  - System now supports image, PDF, and CSV file uploads
 
 ## User Preferences
 
