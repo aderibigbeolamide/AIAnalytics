@@ -124,7 +124,7 @@ export class DatabaseStorage implements IStorage {
 
   async getMembers(filters?: { auxiliaryBody?: string; search?: string; chandaNumber?: string }): Promise<Member[]> {
     let query = db.select().from(members);
-    const conditions = [];
+    const conditions = [isNull(members.deletedAt)]; // Exclude soft-deleted members
     
     if (filters?.auxiliaryBody) {
       conditions.push(eq(members.auxiliaryBody, filters.auxiliaryBody));
@@ -141,9 +141,7 @@ export class DatabaseStorage implements IStorage {
       );
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
+    query = query.where(and(...conditions));
     
     return await query.orderBy(desc(members.createdAt));
   }
@@ -159,8 +157,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMember(id: number): Promise<boolean> {
-    const result = await db.delete(members).where(eq(members.id, id));
-    return (result.rowCount || 0) > 0;
+    // Soft delete by setting deletedAt timestamp
+    const [result] = await db
+      .update(members)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(members.id, id), isNull(members.deletedAt)))
+      .returning();
+    return !!result;
   }
 
   private determineEventStatus(event: Event): string {

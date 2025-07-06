@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { getAuthHeaders } from "@/lib/auth";
-import { UserPlus, Edit, QrCode, Users, Filter } from "lucide-react";
+import { UserPlus, Edit, QrCode, Users, Filter, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Members() {
   const { toast } = useToast();
@@ -20,6 +22,28 @@ export default function Members() {
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
   const queryClient = useQueryClient();
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (memberId: number) => {
+      return apiRequest(`/api/members/${memberId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      toast({
+        title: "Success",
+        description: "Member has been temporarily removed from the system",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove member. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: members = [] } = useQuery({
     queryKey: ["/api/members", memberFilter, memberSearch],
@@ -250,20 +274,51 @@ export default function Members() {
                         {member.jamaat}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="mr-2"
-                          onClick={() => {
-                            setEditingMember(member);
-                            setIsMemberModalOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <QrCode className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setEditingMember(member);
+                              setIsMemberModalOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to temporarily remove <strong>{member.firstName} {member.lastName}</strong> from the system? 
+                                  This action will hide the member from the active list, but their data will be preserved and can be restored later.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMemberMutation.mutate(member.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                  disabled={deleteMemberMutation.isPending}
+                                >
+                                  {deleteMemberMutation.isPending ? "Removing..." : "Remove Member"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </td>
                     </tr>
                   ))}

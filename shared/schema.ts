@@ -30,6 +30,7 @@ export const members = pgTable("members", {
   auxiliaryBody: text("auxiliary_body").notNull(), // Atfal, Khuddam, Lajna, Ansarullah, Nasra
   postHolding: text("post_holding"),
   status: text("status").notNull().default("active"), // active, inactive
+  deletedAt: timestamp("deleted_at"), // Soft delete field
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
