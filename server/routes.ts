@@ -48,10 +48,13 @@ const upload = multer({
     if (file.mimetype.startsWith('image/') || 
         file.mimetype === 'application/pdf' || 
         file.mimetype === 'text/csv' ||
-        file.mimetype === 'application/csv') {
+        file.mimetype === 'application/csv' ||
+        file.mimetype === 'text/plain' ||
+        file.mimetype === 'application/octet-stream' ||
+        file.originalname.toLowerCase().endsWith('.csv')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image, PDF, and CSV files are allowed'));
+      cb(new Error(`File type not allowed: ${file.mimetype}. Only image, PDF, and CSV files are accepted.`));
     }
   }
 });
