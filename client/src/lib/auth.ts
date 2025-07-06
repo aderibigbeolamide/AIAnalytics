@@ -46,14 +46,31 @@ export const useAuthStore = create<AuthState>()(
           
           console.log('Login successful, setting auth state:', data);
           
-          set({
+          // Force a synchronous update to ensure persistence
+          const newState = {
             token: data.token,
             user: data.user,
             member: data.member,
             isAuthenticated: true,
-          });
+          };
           
-          console.log('Auth state after login:', get());
+          set(newState);
+          
+          // Verify the state was set correctly
+          const currentState = get();
+          console.log('Auth state after login:', currentState);
+          
+          // Manually save to localStorage to ensure persistence
+          try {
+            localStorage.setItem('auth-storage', JSON.stringify({
+              state: newState,
+              version: 0
+            }));
+            console.log('Manually saved to localStorage');
+          } catch (e) {
+            console.error('Failed to save to localStorage:', e);
+          }
+          
         } catch (error) {
           console.error('Login error:', error);
           throw new Error('Login failed');

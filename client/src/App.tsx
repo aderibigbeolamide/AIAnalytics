@@ -22,8 +22,11 @@ function Router() {
   const { isAuthenticated, checkAuth } = useAuthStore();
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    // Only check auth if not already authenticated
+    if (!isAuthenticated) {
+      checkAuth();
+    }
+  }, [checkAuth, isAuthenticated]);
 
   console.log('Router - isAuthenticated:', isAuthenticated);
 
