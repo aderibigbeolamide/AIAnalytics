@@ -35,14 +35,16 @@ export function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center">
-              <img 
-                src={logoPath} 
-                alt="EventValidate Logo" 
-                className="h-10 w-auto" 
-              />
-              <span className="ml-2 text-xl font-semibold text-gray-900">EventValidate</span>
-            </div>
+            <Link href="/">
+              <div className="flex-shrink-0 flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+                <img 
+                  src={logoPath} 
+                  alt="EventValidate Logo" 
+                  className="h-10 w-auto" 
+                />
+                <span className="ml-2 text-xl font-semibold text-gray-900">EventValidate</span>
+              </div>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}

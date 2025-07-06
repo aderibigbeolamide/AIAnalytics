@@ -138,10 +138,12 @@ export function LandingPage() {
       <nav className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <img src={logoPath} alt="EventValidate Logo" className="h-10 w-auto" />
-              <span className="ml-2 text-xl font-bold text-gray-900">EventValidate</span>
-            </div>
+            <Link href="/">
+              <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+                <img src={logoPath} alt="EventValidate Logo" className="h-10 w-auto" />
+                <span className="ml-2 text-xl font-bold text-gray-900">EventValidate</span>
+              </div>
+            </Link>
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
               <a href="#benefits" className="text-gray-600 hover:text-gray-900 transition-colors">Benefits</a>
@@ -171,11 +173,19 @@ export function LandingPage() {
             real-time analytics, and comprehensive attendance tracking for organizations worldwide.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+            <Button 
+              size="lg" 
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+            >
               <Target className="h-5 w-5 mr-2" />
               Start Free Demo
             </Button>
-            <Button variant="outline" size="lg">
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss EventValidate for my organization.', '_blank')}
+            >
               <Phone className="h-5 w-5 mr-2" />
               Schedule Call
             </Button>
@@ -293,7 +303,18 @@ export function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Button className={`w-full ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`}>
+                  <Button 
+                    className={`w-full ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                    onClick={() => {
+                      if (plan.price === "Custom") {
+                        // Open WhatsApp for enterprise inquiries
+                        window.open(`https://wa.me/2348107183206?text=Hi! I'm interested in the ${plan.name} plan for EventValidate. Can you provide more details?`, '_blank');
+                      } else {
+                        // Open email for standard plans
+                        window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate ${plan.name} Inquiry&body=Hello,%0D%0A%0D%0AI'm interested in the ${plan.name} plan (${plan.price}/${plan.period}) for EventValidate.%0D%0A%0D%0APlease provide more information about:%0D%0A- Setup process%0D%0A- Payment options%0D%0A- Implementation timeline%0D%0A%0D%0AThank you!`, '_blank');
+                      }
+                    }}
+                  >
                     {plan.price === "Custom" ? "Contact Sales" : "Get Started"}
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -365,7 +386,11 @@ export function LandingPage() {
             </Card>
           </div>
           <div className="text-center mt-12">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+            <Button 
+              size="lg" 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Consultation Request&body=Hello,%0D%0A%0D%0AI would like to request a free consultation about EventValidate for my organization.%0D%0A%0D%0APlease let me know:%0D%0A- Available consultation times%0D%0A- What information I should prepare%0D%0A- Expected duration%0D%0A%0D%0AOrganization: [Your organization name]%0D%0AContact: [Your phone number]%0D%0A%0D%0AThank you!`, '_blank')}
+            >
               <Mail className="h-5 w-5 mr-2" />
               Get Free Consultation
             </Button>
@@ -377,10 +402,12 @@ export function LandingPage() {
       <footer className="bg-gray-950 text-gray-300 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-4 md:mb-0">
-              <img src={logoPath} alt="EventValidate Logo" className="h-8 w-auto" />
-              <span className="ml-2 text-lg font-semibold text-white">EventValidate</span>
-            </div>
+            <Link href="/">
+              <div className="flex items-center mb-4 md:mb-0 cursor-pointer hover:opacity-80 transition-opacity">
+                <img src={logoPath} alt="EventValidate Logo" className="h-8 w-auto" />
+                <span className="ml-2 text-lg font-semibold text-white">EventValidate</span>
+              </div>
+            </Link>
             <div className="flex space-x-6">
               <Link href="/login" className="hover:text-white transition-colors">Login</Link>
               <a href="#features" className="hover:text-white transition-colors">Features</a>
