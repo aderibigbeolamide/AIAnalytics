@@ -10,11 +10,7 @@ async function throwIfResNotOk(res: Response) {
 // Get auth token from localStorage
 function getAuthToken(): string | null {
   try {
-    const authState = localStorage.getItem('auth-storage');
-    if (authState) {
-      const parsed = JSON.parse(authState);
-      return parsed.state?.token || null;
-    }
+    return localStorage.getItem('auth_token');
   } catch (error) {
     console.error('Error getting auth token:', error);
   }
