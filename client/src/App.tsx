@@ -17,6 +17,7 @@ import Analytics from "@/pages/analytics";
 import Report from "@/pages/report";
 import Reports from "@/pages/reports";
 import { LandingPage } from "@/pages/landing";
+import { ProtectedRoute } from "@/components/protected-route";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage } = useAuthStore();
@@ -41,29 +42,50 @@ function Router() {
       <Route path="/register/:id" component={EventRegistration} />
       <Route path="/report/:eventId" component={Report} />
       <Route path="/login" component={Login} />
+      
+      {/* Root and landing route always go to landing page */}
+      <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
       
-      {/* Conditional routes based on authentication */}
-      {isAuthenticated ? (
-        <>
-          {/* Authenticated users get dashboard and protected routes */}
-          <Route path="/" component={Dashboard} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/members" component={Members} />
-          <Route path="/events" component={Events} />
-          <Route path="/analytics" component={Analytics} />
-          <Route path="/reports" component={Reports} />
-          <Route path="/events/:id" component={EventDetail} />
-          <Route path="/scanner" component={Scanner} />
-          <Route component={NotFound} />
-        </>
-      ) : (
-        <>
-          {/* Non-authenticated users get landing page for root */}
-          <Route path="/" component={LandingPage} />
-          <Route component={LandingPage} />
-        </>
-      )}
+      {/* Protected routes - only accessible to authenticated users */}
+      <Route path="/dashboard">
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/members">
+        <ProtectedRoute>
+          <Members />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/events">
+        <ProtectedRoute>
+          <Events />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/analytics">
+        <ProtectedRoute>
+          <Analytics />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/reports">
+        <ProtectedRoute>
+          <Reports />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/events/:id">
+        <ProtectedRoute>
+          <EventDetail />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/scanner">
+        <ProtectedRoute>
+          <Scanner />
+        </ProtectedRoute>
+      </Route>
+      
+      {/* Fallback route */}
+      <Route component={NotFound} />
     </Switch>
   );
 }
