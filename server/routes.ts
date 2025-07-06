@@ -249,6 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: event.endDate,
         eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
         allowGuests: event.allowGuests,
+        requiresPayment: event.requiresPayment,
         status: event.status,
       };
       res.json(publicEvent);
@@ -514,9 +515,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentAmount
       } = req.body;
 
-      // Validate required fields
-      if (!firstName || !lastName || !jamaat || !auxiliaryBody || !email) {
-        return res.status(400).json({ message: "Required fields missing" });
+      // Validate required fields based on registration type
+      if (!firstName || !lastName) {
+        return res.status(400).json({ message: "First name and last name are required" });
+      }
+
+      // For members, additional fields are required
+      if (registrationType === "member") {
+        if (!jamaat || !auxiliaryBody || !email) {
+          return res.status(400).json({ message: "Jamaat, auxiliary body, and email are required for members" });
+        }
+        
+        // Check if payment receipt is required for members
+        if (event.requiresPayment && !paymentReceiptUrlFinal) {
+          return res.status(400).json({ message: "Payment receipt is required for members in paid events" });
+        }
       }
 
       // Handle payment receipt upload

@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { RegistrationCard } from "@/components/registration-card";
 
 // Dynamic validation schemas
-const memberSchema = z.object({
+const createMemberSchema = (requiresPayment: boolean) => z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   jamaat: z.string().min(1, "Jamaat is required"),
@@ -25,9 +25,14 @@ const memberSchema = z.object({
   email: z.string().email("Valid email is required"),
   registrationType: z.literal("member"),
   post: z.string().optional(),
+  paymentAmount: z.string().optional(),
+  paymentReceipt: requiresPayment ? z.any().refine(
+    (file) => file && file.length > 0,
+    "Payment receipt is required for members"
+  ) : z.any().optional(),
 });
 
-const guestInviteeSchema = z.object({
+const createGuestInviteeSchema = (requiresPayment: boolean) => z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   jamaat: z.string().optional(),
@@ -37,10 +42,12 @@ const guestInviteeSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   registrationType: z.enum(["guest", "invitee"]),
   post: z.string().optional(),
+  paymentAmount: z.string().optional(),
+  paymentReceipt: z.any().optional(), // Always optional for guests/invitees
 });
 
-type MemberFormData = z.infer<typeof memberSchema>;
-type GuestInviteeFormData = z.infer<typeof guestInviteeSchema>;
+type MemberFormData = z.infer<ReturnType<typeof createMemberSchema>>;
+type GuestInviteeFormData = z.infer<ReturnType<typeof createGuestInviteeSchema>>;
 type RegistrationFormData = MemberFormData | GuestInviteeFormData;
 
 interface SimpleRegistrationFormProps {
@@ -56,7 +63,9 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
   const [qrImageBase64, setQrImageBase64] = useState<string>("");
   const [registrationType, setRegistrationType] = useState<"member" | "guest" | "invitee">("member");
 
-  const schema = registrationType === "member" ? memberSchema : guestInviteeSchema;
+  const schema = registrationType === "member" 
+    ? createMemberSchema(event?.requiresPayment || false)
+    : createGuestInviteeSchema(event?.requiresPayment || false);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -70,6 +79,8 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       email: "",
       registrationType,
       post: "",
+      paymentAmount: "",
+      paymentReceipt: undefined,
     },
     mode: "onChange",
   });
@@ -86,7 +97,9 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       const formData = new FormData();
       
       Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') {
+        if (key === 'paymentReceipt' && value && value.length > 0) {
+          formData.append(key, value[0]); // File input returns FileList
+        } else if (value !== undefined && value !== '') {
           formData.append(key, value as string);
         }
       });
@@ -310,6 +323,53 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                     </FormItem>
                   )}
                 />
+              )}
+
+              {/* Payment fields - shown if event requires payment */}
+              {event?.requiresPayment && (
+                <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="font-semibold text-blue-900">Payment Information</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="paymentAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Amount (Optional)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Enter payment amount" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="paymentReceipt"
+                    render={({ field: { onChange, value, ...fieldProps } }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Payment Receipt 
+                          {registrationType === "member" ? " (Required)" : " (Optional)"}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            accept="image/*,.pdf"
+                            onChange={(e) => onChange(e.target.files)}
+                            {...fieldProps}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               )}
 
               <Button
