@@ -1007,6 +1007,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Additional CSV validation if CSV data exists
+      const csvData = await storage.getMemberValidationCsv(registration.eventId);
+      console.log(`CSV Data found: ${csvData.length} files`);
+      let csvValidationPassed = true;
+      
+      if (csvData.length > 0) {
+        console.log(`Starting CSV validation for registration:`, {
+          name: registration.guestName,
+          email: registration.guestEmail,
+          chanda: registration.guestChandaNumber
+        });
+        // Check if user exists in any of the CSV files
+        csvValidationPassed = csvData.some(csv => 
+          csv.memberData.some((member: any) => {
+            // Support multiple possible field names for CSV data
+            const csvName = member.name || member.Fullname || member.fullName || member.fullname;
+            const csvEmail = member.email || member.Email || member.emailAddress;
+            const csvChanda = member.chandaNumber || member.ChandaNO || member.chandaNo || member.chanda_number;
+            
+            // Compare name (case insensitive)
+            const nameMatch = csvName && registration.guestName && 
+              csvName.toLowerCase().trim() === registration.guestName.toLowerCase().trim();
+            
+            // Compare email (case insensitive)
+            const emailMatch = csvEmail && registration.guestEmail && 
+              csvEmail.toLowerCase().trim() === registration.guestEmail.toLowerCase().trim();
+            
+            // Compare chanda number
+            const chandaMatch = csvChanda && registration.guestChandaNumber && 
+              csvChanda.toString().trim() === registration.guestChandaNumber.toString().trim();
+            
+            console.log(`CSV Validation Check:
+              CSV Member: ${csvName} | ${csvEmail} | ${csvChanda}
+              Registration: ${registration.guestName} | ${registration.guestEmail} | ${registration.guestChandaNumber}
+              Matches: name=${nameMatch}, email=${emailMatch}, chanda=${chandaMatch}`);
+            
+            return nameMatch || emailMatch || chandaMatch;
+          })
+        );
+        
+        if (!csvValidationPassed) {
+          return res.status(403).json({ 
+            message: "Member not found in validation list. Please ensure your name, email, or chanda number matches our records.",
+            validationStatus: "csv_validation_failed" 
+          });
+        }
+      }
+
       // Create attendance record
       const attendanceData = {
         eventId: registration.eventId,
@@ -1252,21 +1300,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Additional CSV validation if CSV data exists
       const csvData = await storage.getMemberValidationCsv(eventId);
+      console.log(`CSV Data found: ${csvData.length} files`);
       let csvValidationPassed = true;
       
       if (csvData.length > 0) {
+        console.log(`Starting CSV validation for registration:`, {
+          name: registration.guestName,
+          email: registration.guestEmail,
+          chanda: registration.guestChandaNumber
+        });
         // Check if user exists in any of the CSV files
         csvValidationPassed = csvData.some(csv => 
-          csv.memberData.some((member: any) => 
-            member.name === registration.guestName ||
-            member.email === registration.guestEmail ||
-            member.chandaNumber === registration.guestChandaNumber
-          )
+          csv.memberData.some((member: any) => {
+            // Support multiple possible field names for CSV data
+            const csvName = member.name || member.Fullname || member.fullName || member.fullname;
+            const csvEmail = member.email || member.Email || member.emailAddress;
+            const csvChanda = member.chandaNumber || member.ChandaNO || member.chandaNo || member.chanda_number;
+            
+            // Compare name (case insensitive)
+            const nameMatch = csvName && registration.guestName && 
+              csvName.toLowerCase().trim() === registration.guestName.toLowerCase().trim();
+            
+            // Compare email (case insensitive)
+            const emailMatch = csvEmail && registration.guestEmail && 
+              csvEmail.toLowerCase().trim() === registration.guestEmail.toLowerCase().trim();
+            
+            // Compare chanda number
+            const chandaMatch = csvChanda && registration.guestChandaNumber && 
+              csvChanda.toString().trim() === registration.guestChandaNumber.toString().trim();
+            
+            console.log(`CSV Validation Check:
+              CSV Member: ${csvName} | ${csvEmail} | ${csvChanda}
+              Registration: ${registration.guestName} | ${registration.guestEmail} | ${registration.guestChandaNumber}
+              Matches: name=${nameMatch}, email=${emailMatch}, chanda=${chandaMatch}`);
+            
+            return nameMatch || emailMatch || chandaMatch;
+          })
         );
         
         if (!csvValidationPassed) {
           return res.status(403).json({ 
-            message: "Member not found in validation list",
+            message: "Member not found in validation list. Please ensure your name, email, or chanda number matches our records.",
             validationStatus: "csv_validation_failed" 
           });
         }
