@@ -71,7 +71,10 @@ export const useAuthStore = create<AuthState>()(
 
       checkAuth: async () => {
         const { token } = get();
+        console.log('checkAuth called with token:', !!token);
+        
         if (!token) {
+          console.log('No token found, setting authenticated to false');
           set({ isAuthenticated: false });
           return;
         }
@@ -84,14 +87,18 @@ export const useAuthStore = create<AuthState>()(
             credentials: 'include',
           });
 
+          console.log('Auth check response status:', response.status);
+
           if (response.ok) {
             const data = await response.json();
+            console.log('Auth check successful, updating state');
             set({
               user: data.user,
               member: data.member,
               isAuthenticated: true,
             });
           } else {
+            console.log('Auth check failed, clearing state');
             set({
               token: null,
               user: null,
@@ -100,6 +107,7 @@ export const useAuthStore = create<AuthState>()(
             });
           }
         } catch (error) {
+          console.error('Auth check error:', error);
           set({
             token: null,
             user: null,
@@ -111,7 +119,12 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ token: state.token }),
+      partialize: (state) => ({ 
+        token: state.token,
+        user: state.user,
+        member: state.member,
+        isAuthenticated: state.isAuthenticated 
+      }),
     }
   )
 );
