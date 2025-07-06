@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { QrCode, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -14,6 +14,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuthStore();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +26,8 @@ export default function Login() {
         title: "Login successful",
         description: "Welcome to EventValidate",
       });
+      // Redirect to dashboard after successful login
+      setLocation("/dashboard");
     } catch (error) {
       toast({
         title: "Login failed",
