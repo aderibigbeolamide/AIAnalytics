@@ -35,16 +35,19 @@ export function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/">
-              <div className="flex-shrink-0 flex items-center cursor-pointer hover:opacity-80 transition-opacity">
-                <img 
-                  src={logoPath} 
-                  alt="EventValidate Logo" 
-                  className="h-10 w-auto" 
-                />
-                <span className="ml-2 text-xl font-semibold text-gray-900">EventValidate</span>
-              </div>
-            </Link>
+            <div 
+              className="flex-shrink-0 flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => {
+                logout(); // Log out user when clicking logo to return to landing page
+              }}
+            >
+              <img 
+                src={logoPath} 
+                alt="EventValidate Logo" 
+                className="h-10 w-auto" 
+              />
+              <span className="ml-2 text-xl font-semibold text-gray-900">EventValidate</span>
+            </div>
           </div>
 
           {/* Desktop Navigation */}
