@@ -280,8 +280,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: event.location,
         startDate: event.startDate,
         endDate: event.endDate,
-        registrationStartDate: event.registrationStartDate,
-        registrationEndDate: event.registrationEndDate,
         status: event.status,
         eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
         allowGuests: event.allowGuests,
@@ -317,8 +315,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...eventData,
         startDate: new Date(eventData.startDate),
         endDate: eventData.endDate ? new Date(eventData.endDate) : undefined,
-        registrationStartDate: eventData.registrationStartDate ? new Date(eventData.registrationStartDate) : undefined,
-        registrationEndDate: eventData.registrationEndDate ? new Date(eventData.registrationEndDate) : undefined,
         createdBy: req.user!.id,
       };
       
@@ -372,8 +368,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...eventData,
         startDate: eventData.startDate ? new Date(eventData.startDate) : undefined,
         endDate: eventData.endDate ? new Date(eventData.endDate) : undefined,
-        registrationStartDate: eventData.registrationStartDate ? new Date(eventData.registrationStartDate) : undefined,
-        registrationEndDate: eventData.registrationEndDate ? new Date(eventData.registrationEndDate) : undefined,
       };
       
       const event = await storage.updateEvent(id, updates);
@@ -487,23 +481,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const now = new Date();
 
-      // Check if registration has started
-      if (event.registrationStartDate && now < event.registrationStartDate) {
+      // Check if event has started (members cannot register after event has started)
+      if (now >= event.startDate) {
         return res.status(400).json({ 
-          message: "Registration for this event has not started yet",
-          registrationStartDate: event.registrationStartDate
+          message: "Registration is closed. The event has already started.",
+          eventStartDate: event.startDate
         });
       }
 
-      // Check if registration has ended
-      if (event.registrationEndDate && now > event.registrationEndDate) {
-        return res.status(400).json({ 
-          message: "Registration for this event has closed",
-          registrationEndDate: event.registrationEndDate
-        });
-      }
-
-      // Fallback: Check if event has ended (legacy check)
+      // Check if event has ended (additional safety check)
       if (event.endDate && now > event.endDate) {
         return res.status(400).json({ message: "This event has already ended" });
       }

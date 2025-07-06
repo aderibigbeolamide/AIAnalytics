@@ -351,11 +351,11 @@ npm run migrate
   - Successfully seeded database with default admin account
   - All features now using persistent database storage instead of memory
 - July 6, 2025. Event registration timing controls:
-  - Added registrationStartDate and registrationEndDate fields to events schema
-  - Implemented registration period validation in API endpoints
-  - Updated event creation/editing forms to include registration timing fields
-  - Added frontend validation to prevent early/late registration attempts
-  - Registration now respects configured start/end dates separate from event dates
+  - Simplified registration validation to use event start/end dates directly
+  - Registration automatically closes when event starts (no early registration after event begins)
+  - Registration remains open until event start date, then closes
+  - Updated validation logic in both backend API and frontend registration form
+  - Removed separate registration date fields - now uses event timing for validation
 
 ## User Preferences
 

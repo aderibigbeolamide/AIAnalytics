@@ -18,8 +18,6 @@ const eventSchema = z.object({
   location: z.string().min(1, "Location is required"),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
-  registrationStartDate: z.string().optional(),
-  registrationEndDate: z.string().optional(),
   eligibleAuxiliaryBodies: z.array(z.string()).min(1, "At least one auxiliary body must be selected"),
   allowGuests: z.boolean().default(false),
   requiresPayment: z.boolean().default(false),
@@ -50,8 +48,6 @@ export function EventForm({ onClose, event }: EventFormProps) {
       location: event?.location || "",
       startDate: event?.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : "",
       endDate: event?.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : "",
-      registrationStartDate: event?.registrationStartDate ? new Date(event.registrationStartDate).toISOString().slice(0, 16) : "",
-      registrationEndDate: event?.registrationEndDate ? new Date(event.registrationEndDate).toISOString().slice(0, 16) : "",
       eligibleAuxiliaryBodies: event?.eligibleAuxiliaryBodies || [],
       allowGuests: event?.allowGuests || false,
       requiresPayment: event?.requiresPayment || false,
@@ -66,8 +62,6 @@ export function EventForm({ onClose, event }: EventFormProps) {
         ...data,
         startDate: new Date(data.startDate).toISOString(),
         endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
-        registrationStartDate: data.registrationStartDate ? new Date(data.registrationStartDate).toISOString() : null,
-        registrationEndDate: data.registrationEndDate ? new Date(data.registrationEndDate).toISOString() : null,
       };
 
       const response = await fetch("/api/events", {
@@ -109,8 +103,6 @@ export function EventForm({ onClose, event }: EventFormProps) {
         ...data,
         startDate: new Date(data.startDate).toISOString(),
         endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
-        registrationStartDate: data.registrationStartDate ? new Date(data.registrationStartDate).toISOString() : null,
-        registrationEndDate: data.registrationEndDate ? new Date(data.registrationEndDate).toISOString() : null,
       };
 
       const response = await fetch(`/api/events/${event.id}`, {
@@ -243,36 +235,6 @@ export function EventForm({ onClose, event }: EventFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Event End Date & Time (Optional)</FormLabel>
-                <FormControl>
-                  <Input type="datetime-local" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="registrationStartDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Registration Start Date & Time (Optional)</FormLabel>
-                <FormControl>
-                  <Input type="datetime-local" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="registrationEndDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Registration End Date & Time (Optional)</FormLabel>
                 <FormControl>
                   <Input type="datetime-local" {...field} />
                 </FormControl>

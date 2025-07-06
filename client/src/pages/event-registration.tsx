@@ -50,39 +50,37 @@ export default function EventRegistration() {
     );
   }
 
-  // Check registration timing
+  // Check event timing - registration is closed once event starts
   const now = new Date();
-  const registrationNotStarted = event.registrationStartDate && now < new Date(event.registrationStartDate);
-  const registrationEnded = event.registrationEndDate && now > new Date(event.registrationEndDate);
+  const eventStarted = now >= new Date(event.startDate);
   const eventEnded = event.endDate && now > new Date(event.endDate);
 
-  if (registrationNotStarted) {
+  if (eventStarted && !eventEnded) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <Card>
           <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold mb-2">Registration Not Yet Open</h2>
+            <h2 className="text-xl font-semibold mb-2">Registration Closed</h2>
             <p className="text-muted-foreground mb-4">
-              Registration for this event will open on {new Date(event.registrationStartDate).toLocaleDateString()} at {new Date(event.registrationStartDate).toLocaleTimeString()}.
+              Registration for this event is closed because the event has already started.
             </p>
-            <p className="text-sm text-gray-500">Please check back later to register.</p>
+            <p className="text-sm text-gray-500">
+              Event started on {new Date(event.startDate).toLocaleDateString()} at {new Date(event.startDate).toLocaleTimeString()}.
+            </p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (registrationEnded || eventEnded) {
+  if (eventEnded) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <Card>
           <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold mb-2">Registration Closed</h2>
+            <h2 className="text-xl font-semibold mb-2">Event Ended</h2>
             <p className="text-muted-foreground">
-              {registrationEnded 
-                ? `Registration for this event closed on ${new Date(event.registrationEndDate).toLocaleDateString()}.`
-                : `This event has already ended on ${new Date(event.endDate).toLocaleDateString()}.`
-              }
+              This event has already ended on {new Date(event.endDate).toLocaleDateString()}.
             </p>
           </CardContent>
         </Card>
