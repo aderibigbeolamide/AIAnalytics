@@ -122,10 +122,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendanceStats = await storage.getAttendanceStats();
       const events = await storage.getEvents();
       const members = await storage.getMembers();
+      const allRegistrations = await storage.getEventRegistrations();
+      
+      // Count unique members from registrations (both members and guests)
+      const uniqueRegisteredMembers = new Set();
+      allRegistrations.forEach(reg => {
+        if (reg.memberId) {
+          uniqueRegisteredMembers.add(reg.memberId);
+        } else {
+          // For guests/invitees, use email as unique identifier
+          uniqueRegisteredMembers.add(reg.guestEmail);
+        }
+      });
       
       const stats = {
         ...attendanceStats,
         totalMembers: members.length,
+        totalRegistrations: allRegistrations.length,
+        uniqueRegisteredMembers: uniqueRegisteredMembers.size,
         activeEvents: events.filter(e => e.status === 'active').length,
         totalEvents: events.length,
         activeMembers: members.filter(m => m.status === 'active').length,

@@ -147,6 +147,9 @@ export default function Dashboard() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Members</p>
                   <p className="text-2xl font-bold text-gray-900">{stats?.totalMembers || 0}</p>
+                  <p className="text-xs text-gray-500">
+                    {stats?.totalRegistrations || 0} registrations
+                  </p>
                 </div>
               </div>
             </CardContent>
