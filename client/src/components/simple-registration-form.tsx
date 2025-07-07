@@ -63,6 +63,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
   const [qrImageBase64, setQrImageBase64] = useState<string>("");
   const [registrationType, setRegistrationType] = useState<"member" | "guest" | "invitee">("member");
 
+  // Create form with proper validation
   const form = useForm({
     defaultValues: {
       firstName: "",
@@ -77,22 +78,14 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       paymentAmount: "",
       paymentReceipt: undefined,
     },
-    mode: "onBlur",
+    mode: "onChange",
   });
 
-  // Update form validation and registration type when it changes
+  // Update form validation when registration type changes
   React.useEffect(() => {
-    const schema = registrationType === "member" 
-      ? createMemberSchema(event?.requiresPayment || false)
-      : createGuestInviteeSchema(event?.requiresPayment || false);
-    
-    // Update the form resolver with new schema
     form.setValue("registrationType", registrationType);
     form.clearErrors();
-    
-    // Re-validate with new schema
-    form.trigger();
-  }, [registrationType, event?.requiresPayment, form]);
+  }, [registrationType, form]);
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -155,10 +148,29 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
     }
 
     if (registrationType === "member") {
-      if (!data.jamaat?.trim() || !data.auxiliaryBody?.trim() || !data.email?.trim()) {
+      // For members, validate all required fields
+      if (!data.jamaat?.trim()) {
         toast({
           title: "Validation Error", 
-          description: "Jamaat, auxiliary body, and email are required for members",
+          description: "Jamaat is required for members",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data.auxiliaryBody?.trim()) {
+        toast({
+          title: "Validation Error", 
+          description: "Auxiliary body is required for members",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data.email?.trim()) {
+        toast({
+          title: "Validation Error", 
+          description: "Email is required for members",
           variant: "destructive",
         });
         return;
@@ -170,6 +182,16 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
         toast({
           title: "Validation Error",
           description: "Please enter a valid email address",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Payment receipt validation for members when required
+      if (event?.requiresPayment && (!data.paymentReceipt || data.paymentReceipt.length === 0)) {
+        toast({
+          title: "Validation Error",
+          description: "Payment receipt is required for members",
           variant: "destructive",
         });
         return;
@@ -279,7 +301,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Email {registrationType === "member" ? "" : "(Optional)"}
+                      Email {registrationType === "member" ? <span className="text-red-500">*</span> : "(Optional)"}
                     </FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="Enter your email" {...field} />
@@ -297,7 +319,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                     name="jamaat"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Jamaat</FormLabel>
+                        <FormLabel>Jamaat <span className="text-red-500">*</span></FormLabel>
                         <FormControl>
                           <Input placeholder="Enter your jamaat" {...field} />
                         </FormControl>
@@ -311,7 +333,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                     name="auxiliaryBody"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Auxiliary Body</FormLabel>
+                        <FormLabel>Auxiliary Body <span className="text-red-500">*</span></FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
