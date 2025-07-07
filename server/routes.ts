@@ -520,19 +520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "First name and last name are required" });
       }
 
-      // For members, additional fields are required
-      if (registrationType === "member") {
-        if (!jamaat || !auxiliaryBody || !email) {
-          return res.status(400).json({ message: "Jamaat, auxiliary body, and email are required for members" });
-        }
-        
-        // Check if payment receipt is required for members
-        if (event.requiresPayment && !paymentReceiptUrlFinal) {
-          return res.status(400).json({ message: "Payment receipt is required for members in paid events" });
-        }
-      }
-
-      // Handle payment receipt upload
+      // Handle payment receipt upload first
       let paymentReceiptUrlFinal = paymentReceiptUrl;
       if (req.file) {
         try {
@@ -545,13 +533,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // For members, additional fields are required
+      if (registrationType === "member") {
+        if (!jamaat || !auxiliaryBody || !email) {
+          return res.status(400).json({ message: "Jamaat, auxiliary body, and email are required for members" });
+        }
+        
+        // Check if payment receipt is required for members
+        if (event.requiresPayment && !paymentReceiptUrlFinal) {
+          return res.status(400).json({ message: "Payment receipt is required for members in paid events" });
+        }
+      }
+
       // Check payment receipt if event requires payment (make it optional for now)
       // if (event.requiresPayment && !paymentReceiptUrlFinal) {
       //   return res.status(400).json({ message: "Payment receipt is required for this event" });
       // }
 
-      // Check if auxiliary body is eligible for this event
-      if (!event.eligibleAuxiliaryBodies.includes(auxiliaryBody)) {
+      // Check if auxiliary body is eligible for this event (only for members)
+      if (registrationType === "member" && auxiliaryBody && !event.eligibleAuxiliaryBodies.includes(auxiliaryBody)) {
         return res.status(400).json({ message: "Auxiliary body not eligible for this event" });
       }
 
