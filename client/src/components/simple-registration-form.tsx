@@ -187,6 +187,26 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
         return;
       }
 
+      // Chanda/Wassiya number validation for members
+      if (!data.chandaNumber?.trim()) {
+        toast({
+          title: "Validation Error", 
+          description: "Chanda/Wassiya number is required for members",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Circuit validation for members
+      if (!data.circuit?.trim()) {
+        toast({
+          title: "Validation Error", 
+          description: "Circuit is required for members",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Payment receipt validation for members when required
       if (event?.requiresPayment && (!data.paymentReceipt || data.paymentReceipt.length === 0)) {
         toast({
@@ -270,7 +290,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>First Name</FormLabel>
+                      <FormLabel>First Name <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="Enter first name" {...field} />
                       </FormControl>
@@ -284,7 +304,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Last Name</FormLabel>
+                      <FormLabel>Last Name <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="Enter last name" {...field} />
                       </FormControl>
@@ -359,7 +379,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                       name="chandaNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Chanda/Wassiya Number (Optional)</FormLabel>
+                          <FormLabel>Chanda/Wassiya Number <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
                             <Input placeholder="Enter chanda/wassiya number" {...field} />
                           </FormControl>
@@ -373,7 +393,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                       name="circuit"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Circuit (Optional)</FormLabel>
+                          <FormLabel>Circuit <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
                             <Input placeholder="Enter your circuit" {...field} />
                           </FormControl>
