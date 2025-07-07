@@ -96,14 +96,10 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log('=== CLIENT DEBUG ===');
-      console.log('Data received from form:', data);
-      
-      // Use plain object instead of FormData for better debugging
       const payload = {
         firstName: data.firstName || '',
         lastName: data.lastName || '',
-        registrationType: registrationType, // Use state value
+        registrationType: registrationType,
         jamaat: data.jamaat || '',
         auxiliaryBody: data.auxiliaryBody || '',
         chandaNumber: data.chandaNumber || '',
@@ -113,9 +109,6 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
         paymentAmount: data.paymentAmount || '',
       };
       
-      console.log('Payload to send:', payload);
-      
-      // Send as JSON instead of FormData for now
       const response = await fetch(`/api/events/${eventId}/register`, {
         method: 'POST',
         headers: {
@@ -151,10 +144,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
   });
 
   const onSubmit = (data: any) => {
-    console.log('Form submit data:', data);
-    console.log('Registration type:', registrationType);
-    
-    // Manual validation since schema might not be working properly
+    // Manual validation for required fields
     if (!data.firstName?.trim() || !data.lastName?.trim()) {
       toast({
         title: "Validation Error",
@@ -186,7 +176,6 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       }
     }
     
-    console.log('Manual validation passed, submitting...');
     registerMutation.mutate({ ...data, registrationType });
   };
 

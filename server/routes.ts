@@ -515,20 +515,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentAmount
       } = req.body;
 
-      // Debug log to see exactly what's being received
-      console.log('=== REGISTRATION DEBUG ===');
-      console.log('Request body:', JSON.stringify(req.body, null, 2));
-      console.log('firstName value:', `"${firstName}"`, 'type:', typeof firstName);
-      console.log('lastName value:', `"${lastName}"`, 'type:', typeof lastName);
-      console.log('registrationType:', registrationType);
-      
       // Validate required fields based on registration type
       if (!firstName || !lastName || firstName.trim() === '' || lastName.trim() === '') {
-        console.log('Validation failed - rejecting request');
         return res.status(400).json({ message: "First name and last name are required" });
       }
-      
-      console.log('Validation passed - proceeding with registration');
 
       // Handle payment receipt upload first
       let paymentReceiptUrlFinal = paymentReceiptUrl;
