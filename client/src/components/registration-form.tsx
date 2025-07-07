@@ -102,8 +102,13 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
       
       // Add all form fields
       Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') {
-          formData.append(key, value);
+        if (value !== undefined) {
+          // Always include firstName and lastName, even if empty
+          if (key === 'firstName' || key === 'lastName') {
+            formData.append(key, value);
+          } else if (value !== '') {
+            formData.append(key, value);
+          }
         }
       });
       

@@ -515,6 +515,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentAmount
       } = req.body;
 
+
+
       // Validate required fields based on registration type
       if (!firstName || !lastName) {
         return res.status(400).json({ message: "First name and last name are required" });
