@@ -63,12 +63,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
   const [qrImageBase64, setQrImageBase64] = useState<string>("");
   const [registrationType, setRegistrationType] = useState<"member" | "guest" | "invitee">("member");
 
-  const schema = registrationType === "member" 
-    ? createMemberSchema(event?.requiresPayment || false)
-    : createGuestInviteeSchema(event?.requiresPayment || false);
-
   const form = useForm({
-    resolver: zodResolver(schema),
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -82,33 +77,51 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       paymentAmount: "",
       paymentReceipt: undefined,
     },
-    mode: "onBlur", // Change to onBlur for better UX
+    mode: "onBlur",
   });
 
-  // Update form when registration type changes
+  // Update form validation and registration type when it changes
   React.useEffect(() => {
+    const schema = registrationType === "member" 
+      ? createMemberSchema(event?.requiresPayment || false)
+      : createGuestInviteeSchema(event?.requiresPayment || false);
+    
+    // Update the form resolver with new schema
     form.setValue("registrationType", registrationType);
     form.clearErrors();
+    
+    // Re-validate with new schema
     form.trigger();
-  }, [registrationType, form]);
+  }, [registrationType, event?.requiresPayment, form]);
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log('=== CLIENT DEBUG ===');
+      console.log('Data received from form:', data);
+      
       const formData = new FormData();
       
       // Always include required fields, even if empty (for proper server validation)
       const requiredFields = ['firstName', 'lastName', 'registrationType'];
       
       Object.entries(data).forEach(([key, value]) => {
+        console.log(`Processing ${key}:`, value, typeof value);
         if (key === 'paymentReceipt' && value && value.length > 0) {
           formData.append(key, value[0]); // File input returns FileList
         } else if (value !== undefined) {
           // Include required fields even if empty, and non-empty optional fields
           if (requiredFields.includes(key) || value !== '') {
             formData.append(key, value as string);
+            console.log(`Added to FormData: ${key} = "${value}"`);
           }
         }
       });
+
+      // Log all FormData entries
+      console.log('FormData contents:');
+      for (const [key, value] of formData.entries()) {
+        console.log(`  ${key}: "${value}"`);
+      }
 
       const response = await apiRequest('POST', `/api/events/${eventId}/register`, formData);
       return response.json();
@@ -133,16 +146,42 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
   });
 
   const onSubmit = (data: any) => {
-    // Additional client-side validation for required fields
-    if (!data.firstName || !data.lastName || data.firstName.trim() === '' || data.lastName.trim() === '') {
+    console.log('Form submit data:', data);
+    console.log('Registration type:', registrationType);
+    
+    // Manual validation since schema might not be working properly
+    if (!data.firstName?.trim() || !data.lastName?.trim()) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "First name and last name are required",
         variant: "destructive",
       });
       return;
     }
+
+    if (registrationType === "member") {
+      if (!data.jamaat?.trim() || !data.auxiliaryBody?.trim() || !data.email?.trim()) {
+        toast({
+          title: "Validation Error", 
+          description: "Jamaat, auxiliary body, and email are required for members",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.email)) {
+        toast({
+          title: "Validation Error",
+          description: "Please enter a valid email address",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     
+    console.log('Manual validation passed, submitting...');
     registerMutation.mutate({ ...data, registrationType });
   };
 
@@ -397,7 +436,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
               <Button
                 type="submit"
                 className="w-full"
-                disabled={registerMutation.isPending || !form.formState.isValid}
+                disabled={registerMutation.isPending}
               >
                 {registerMutation.isPending ? "Registering..." : "Register"}
               </Button>
