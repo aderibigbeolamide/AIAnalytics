@@ -365,7 +365,7 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                 )}
               />
 
-              {(event?.requiresPayment || true) && (
+              {event?.requiresPayment && (
                 <>
                   <FormField
                     control={form.control}
