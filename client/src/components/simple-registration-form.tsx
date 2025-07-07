@@ -99,31 +99,36 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       console.log('=== CLIENT DEBUG ===');
       console.log('Data received from form:', data);
       
-      const formData = new FormData();
+      // Use plain object instead of FormData for better debugging
+      const payload = {
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
+        registrationType: registrationType, // Use state value
+        jamaat: data.jamaat || '',
+        auxiliaryBody: data.auxiliaryBody || '',
+        chandaNumber: data.chandaNumber || '',
+        circuit: data.circuit || '',
+        email: data.email || '',
+        post: data.post || '',
+        paymentAmount: data.paymentAmount || '',
+      };
       
-      // Always include required fields, even if empty (for proper server validation)
-      const requiredFields = ['firstName', 'lastName', 'registrationType'];
+      console.log('Payload to send:', payload);
       
-      Object.entries(data).forEach(([key, value]) => {
-        console.log(`Processing ${key}:`, value, typeof value);
-        if (key === 'paymentReceipt' && value && value.length > 0) {
-          formData.append(key, value[0]); // File input returns FileList
-        } else if (value !== undefined) {
-          // Include required fields even if empty, and non-empty optional fields
-          if (requiredFields.includes(key) || value !== '') {
-            formData.append(key, value as string);
-            console.log(`Added to FormData: ${key} = "${value}"`);
-          }
-        }
+      // Send as JSON instead of FormData for now
+      const response = await fetch(`/api/events/${eventId}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
-
-      // Log all FormData entries
-      console.log('FormData contents:');
-      for (const [key, value] of formData.entries()) {
-        console.log(`  ${key}: "${value}"`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Registration failed');
       }
-
-      const response = await apiRequest('POST', `/api/events/${eventId}/register`, formData);
+      
       return response.json();
     },
     onSuccess: (data) => {

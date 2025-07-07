@@ -479,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events/:id/register", upload.single('paymentReceipt'), async (req: Request, res) => {
+  app.post("/api/events/:id/register", async (req: Request, res) => {
     try {
       const eventId = parseInt(req.params.id);
       const event = await storage.getEvent(eventId);
