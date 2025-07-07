@@ -101,12 +101,12 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
       const formData = new FormData();
       
       // Add all form fields
+      const requiredFields = ['firstName', 'lastName', 'registrationType'];
+      
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined) {
-          // Always include firstName and lastName, even if empty
-          if (key === 'firstName' || key === 'lastName') {
-            formData.append(key, value);
-          } else if (value !== '') {
+          // Include required fields even if empty, and non-empty optional fields
+          if (requiredFields.includes(key) || value !== '') {
             formData.append(key, value);
           }
         }

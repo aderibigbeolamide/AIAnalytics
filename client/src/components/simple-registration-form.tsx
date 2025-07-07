@@ -82,7 +82,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       paymentAmount: "",
       paymentReceipt: undefined,
     },
-    mode: "onChange",
+    mode: "onBlur", // Change to onBlur for better UX
   });
 
   // Update form when registration type changes
@@ -96,11 +96,17 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
     mutationFn: async (data: any) => {
       const formData = new FormData();
       
+      // Always include required fields, even if empty (for proper server validation)
+      const requiredFields = ['firstName', 'lastName', 'registrationType'];
+      
       Object.entries(data).forEach(([key, value]) => {
         if (key === 'paymentReceipt' && value && value.length > 0) {
           formData.append(key, value[0]); // File input returns FileList
-        } else if (value !== undefined && value !== '') {
-          formData.append(key, value as string);
+        } else if (value !== undefined) {
+          // Include required fields even if empty, and non-empty optional fields
+          if (requiredFields.includes(key) || value !== '') {
+            formData.append(key, value as string);
+          }
         }
       });
 
@@ -127,7 +133,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
   });
 
   const onSubmit = (data: any) => {
-    // Validate that required fields are not empty
+    // Additional client-side validation for required fields
     if (!data.firstName || !data.lastName || data.firstName.trim() === '' || data.lastName.trim() === '') {
       toast({
         title: "Validation Error",
@@ -136,6 +142,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       });
       return;
     }
+    
     registerMutation.mutate({ ...data, registrationType });
   };
 
@@ -150,7 +157,13 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+              toast({
+                title: "Validation Error", 
+                description: "Please fill in all required fields correctly",
+                variant: "destructive",
+              });
+            })} className="space-y-6">
               {/* Registration Type Selection */}
               <div className="space-y-4">
                 <div>
@@ -384,7 +397,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
               <Button
                 type="submit"
                 className="w-full"
-                disabled={registerMutation.isPending}
+                disabled={registerMutation.isPending || !form.formState.isValid}
               >
                 {registerMutation.isPending ? "Registering..." : "Register"}
               </Button>
