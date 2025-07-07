@@ -99,13 +99,8 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       Object.entries(data).forEach(([key, value]) => {
         if (key === 'paymentReceipt' && value && value.length > 0) {
           formData.append(key, value[0]); // File input returns FileList
-        } else if (value !== undefined) {
-          // Always include firstName and lastName, even if empty
-          if (key === 'firstName' || key === 'lastName') {
-            formData.append(key, value as string);
-          } else if (value !== '') {
-            formData.append(key, value as string);
-          }
+        } else if (value !== undefined && value !== '') {
+          formData.append(key, value as string);
         }
       });
 
@@ -132,6 +127,15 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
   });
 
   const onSubmit = (data: any) => {
+    // Validate that required fields are not empty
+    if (!data.firstName || !data.lastName || data.firstName.trim() === '' || data.lastName.trim() === '') {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
     registerMutation.mutate({ ...data, registrationType });
   };
 
