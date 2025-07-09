@@ -177,6 +177,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all events (public endpoint)
+  app.get("/api/events/public", async (req: Request, res) => {
+    try {
+      const events = await storage.getEvents();
+      
+      // Filter out deleted events and only return necessary fields
+      const publicEvents = events
+        .filter(event => !event.deletedAt)
+        .map(event => ({
+          id: event.id,
+          name: event.name,
+          description: event.description,
+          location: event.location,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          registrationStart: event.registrationStart,
+          registrationEnd: event.registrationEnd,
+          auxiliaryBodies: event.auxiliaryBodies,
+          allowGuests: event.allowGuests,
+          allowInvitees: event.allowInvitees,
+          maxAttendees: event.maxAttendees,
+          requiresPayment: event.requiresPayment,
+          paymentAmount: event.paymentAmount,
+          status: event.status
+        }));
+      
+      res.json(publicEvents);
+    } catch (error) {
+      console.error("Error fetching public events:", error);
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+
   // Dashboard stats route
   app.get("/api/dashboard/stats", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {

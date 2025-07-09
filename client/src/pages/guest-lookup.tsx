@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, Calendar, QrCode } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Search, Calendar, QrCode, ArrowLeft, MapPin, Clock, Users } from 'lucide-react';
 import { CountdownTimer } from '@/components/countdown-timer';
 import { Link } from 'wouter';
 
@@ -13,7 +14,20 @@ export default function GuestLookup() {
   const [searchValue, setSearchValue] = useState('');
   const [shouldSearch, setShouldSearch] = useState(false);
 
-  const { data: registrations = [], isLoading, error } = useQuery({
+  // Get all public events (visible to everyone)
+  const { data: allEvents = [], isLoading: eventsLoading } = useQuery({
+    queryKey: ['/api/events/public'],
+    queryFn: async () => {
+      const response = await fetch('/api/events/public');
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+      return response.json();
+    },
+  });
+
+  // Get user's specific registrations (only when searching)
+  const { data: registrations = [], isLoading: registrationsLoading, error } = useQuery({
     queryKey: ['/api/my-registrations', searchType, searchValue],
     queryFn: async () => {
       if (!searchValue.trim()) return [];
@@ -47,15 +61,36 @@ export default function GuestLookup() {
     return 'ended';
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'upcoming':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Upcoming</Badge>;
+      case 'live':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 animate-pulse">Live Now</Badge>;
+      case 'ended':
+        return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">Ended</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Find My Events</h1>
-          <p className="text-gray-600">
-            Enter your email address or unique registration ID to view your registered events
-          </p>
+        {/* Header with Back Navigation */}
+        <div className="flex items-center mb-8">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="mr-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Button>
+          </Link>
+          <div className="flex-1 text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Find My Events</h1>
+            <p className="text-gray-600">
+              Browse all events or search with your email/ID to see your registrations
+            </p>
+          </div>
         </div>
 
         {/* Search Form */}
@@ -105,14 +140,99 @@ export default function GuestLookup() {
                 />
               </div>
               
-              <Button type="submit" disabled={!searchValue.trim() || isLoading}>
-                {isLoading ? 'Searching...' : 'Find My Events'}
+              <Button type="submit" disabled={!searchValue.trim() || registrationsLoading}>
+                {registrationsLoading ? 'Searching...' : 'Find My Events'}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Results */}
+        {/* All Events Section (visible to everyone) */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">All Events</h2>
+          
+          {eventsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading events...</p>
+            </div>
+          ) : allEvents.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Events Available</h3>
+                <p className="text-gray-600">No events are currently scheduled.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {allEvents.map((event: any) => {
+                const eventStatus = getEventStatus(event);
+                return (
+                  <Card key={event.id} className="hover:shadow-lg transition-shadow duration-200">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{event.name}</CardTitle>
+                          <p className="text-sm text-gray-600 mt-1">{event.description}</p>
+                        </div>
+                        {getStatusBadge(eventStatus)}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-gray-500" />
+                          <span>{event.location}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-gray-500" />
+                          <span>{new Date(event.startDate).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-gray-500" />
+                          <span>{event.auxiliaryBodies?.join(', ') || 'All Members'}</span>
+                        </div>
+                        {event.requiresPayment && (
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-green-600">
+                              ${event.paymentAmount}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {eventStatus === 'upcoming' && (
+                        <CountdownTimer
+                          event={event}
+                          registration={null}
+                          showEventDetails={false}
+                          size="compact"
+                        />
+                      )}
+                      
+                      <div className="flex gap-2 pt-2">
+                        <Link href={`/register/${event.id}`}>
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            Register
+                          </Button>
+                        </Link>
+                        <Link href={`/event-view/${event.id}`}>
+                          <Button variant="ghost" size="sm" className="flex-1">
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Personal Registration Search Results */}
         {error && (
           <Card className="mb-6">
             <CardContent className="p-6 text-center">
@@ -138,7 +258,7 @@ export default function GuestLookup() {
 
         {registrations.length > 0 && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Your Registered Events</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Your Personal Registrations</h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {registrations.map((registration: any) => {
