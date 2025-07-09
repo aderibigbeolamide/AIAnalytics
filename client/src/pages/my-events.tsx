@@ -46,6 +46,19 @@ export default function MyEvents() {
     },
   });
 
+  // Get all events for admin users if they have no registrations
+  const { data: allEvents = [], isLoading: eventsLoading } = useQuery({
+    queryKey: ["/api/events/public"],
+    queryFn: async () => {
+      const response = await fetch("/api/events/public");
+      if (!response.ok) {
+        throw new Error("Failed to fetch events");
+      }
+      return response.json();
+    },
+    enabled: user?.role === "admin" && registrations.length === 0,
+  });
+
   const getEventStatus = (event: any) => {
     const now = new Date();
     const start = new Date(event.startDate);
@@ -56,7 +69,11 @@ export default function MyEvents() {
     return 'ended';
   };
 
-  const filteredRegistrations = registrations.filter((registration: any) => {
+  // Create a unified events array for display
+  const displayEvents = registrations.length > 0 ? registrations : 
+    (user?.role === "admin" ? allEvents.map((event: any) => ({ event })) : []);
+  
+  const filteredRegistrations = displayEvents.filter((registration: any) => {
     const eventStatus = getEventStatus(registration.event);
     const matchesSearch = search === "" || 
       registration.event.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -112,7 +129,13 @@ export default function MyEvents() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Events</h1>
-          <p className="text-gray-600">Track your registered events and upcoming activities</p>
+          <p className="text-gray-600">
+            {registrations.length > 0 
+              ? "Track your registered events and upcoming activities"
+              : user?.role === "admin" 
+                ? "Overview of all events in the system"
+                : "You haven't registered for any events yet"}
+          </p>
         </div>
 
         {/* Quick Stats */}
@@ -123,7 +146,7 @@ export default function MyEvents() {
                 <Calendar className="h-8 w-8 text-blue-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Events</p>
-                  <p className="text-2xl font-bold text-gray-900">{registrations.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{displayEvents.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -136,7 +159,7 @@ export default function MyEvents() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Upcoming</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {registrations.filter((r: any) => getEventStatus(r.event) === 'upcoming').length}
+                    {displayEvents.filter((r: any) => getEventStatus(r.event) === 'upcoming').length}
                   </p>
                 </div>
               </div>
@@ -150,7 +173,7 @@ export default function MyEvents() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Attended</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {registrations.filter((r: any) => r.status === 'attended').length}
+                    {displayEvents.filter((r: any) => r.status === 'attended').length}
                   </p>
                 </div>
               </div>
@@ -164,7 +187,7 @@ export default function MyEvents() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Live Events</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {registrations.filter((r: any) => getEventStatus(r.event) === 'live').length}
+                    {displayEvents.filter((r: any) => getEventStatus(r.event) === 'live').length}
                   </p>
                 </div>
               </div>
@@ -233,7 +256,7 @@ export default function MyEvents() {
             {filteredRegistrations.map((registration: any) => {
               const eventStatus = getEventStatus(registration.event);
               return (
-                <div key={registration.id} className="space-y-4">
+                <div key={registration.id || registration.event.id} className="space-y-4">
                   {/* Countdown Timer */}
                   {(eventStatus === 'upcoming' || eventStatus === 'live') && (
                     <CountdownTimer
@@ -266,25 +289,29 @@ export default function MyEvents() {
                       <div className="space-y-3">
                         <p className="text-gray-700">{registration.event.description}</p>
                         
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-gray-600">Registration Status</p>
-                            {getRegistrationBadge(registration.status)}
+                        {registration.id && (
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-gray-600">Registration Status</p>
+                              {getRegistrationBadge(registration.status)}
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-600">Type</p>
+                              <Badge variant="outline" className="capitalize">
+                                {registration.registrationType}
+                              </Badge>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Type</p>
-                            <Badge variant="outline" className="capitalize">
-                              {registration.registrationType}
-                            </Badge>
-                          </div>
-                        </div>
+                        )}
 
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-gray-600">Unique ID</p>
-                            <p className="font-mono text-sm font-bold">{registration.uniqueId}</p>
+                        {registration.id && (
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-gray-600">Unique ID</p>
+                              <p className="font-mono text-sm font-bold">{registration.uniqueId}</p>
+                            </div>
                           </div>
-                        </div>
+                        )}
 
                         <div className="flex gap-2 pt-2">
                           <Link href={`/events/${registration.event.id}`}>
