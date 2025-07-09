@@ -651,9 +651,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         text: `Registration confirmed for ${event.name}. Your unique ID is: ${registration.uniqueId}`
       });
       
+      // Extract base64 data from the data URL
+      const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
+      
       res.status(201).json({ 
         registration: fullRegistration || registration, 
         qrImage: qrImageData,
+        qrImageBase64: qrImageBase64,
         emailSent,
         message: emailSent ? "Registration successful! Confirmation email sent." : "Registration successful! Please save your QR code."
       });
