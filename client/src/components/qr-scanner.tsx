@@ -88,6 +88,11 @@ export function QRScanner({ onClose }: QRScannerProps) {
 
   const startCamera = async () => {
     try {
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera API not available in this browser");
+      }
+
       // First try with back camera, fallback to any available camera
       let stream;
       try {
@@ -100,31 +105,76 @@ export function QRScanner({ onClose }: QRScannerProps) {
         });
       } catch (backCameraError) {
         console.log("Back camera not available, trying front camera");
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: "user",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        });
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+              facingMode: "user",
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          });
+        } catch (frontCameraError) {
+          console.log("Front camera not available, trying any camera");
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true
+          });
+        }
       }
       
-      if (videoRef.current) {
+      if (videoRef.current && stream) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setIsScanning(true);
         
-        // Wait for video to load before starting scan
+        // Ensure video plays and wait for metadata
         videoRef.current.onloadedmetadata = () => {
-          // Start scanning for QR codes every 100ms
-          scanIntervalRef.current = window.setInterval(scanQRCode, 100);
+          if (videoRef.current) {
+            videoRef.current.play().then(() => {
+              console.log("Video started playing");
+              // Start scanning for QR codes every 100ms
+              scanIntervalRef.current = window.setInterval(scanQRCode, 100);
+            }).catch(playError => {
+              console.error("Video play error:", playError);
+              toast({
+                title: "Video Error",
+                description: "Unable to start video playback. Please try again.",
+                variant: "destructive",
+              });
+            });
+          }
+        };
+        
+        // Handle video errors
+        videoRef.current.onerror = (error) => {
+          console.error("Video element error:", error);
+          toast({
+            title: "Video Error",
+            description: "Video playback failed. Please try again.",
+            variant: "destructive",
+          });
         };
       }
     } catch (error) {
       console.error("Camera access error:", error);
+      let errorMessage = "Unable to access camera. ";
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage += "Permission denied. Please allow camera access.";
+      } else if (error.name === 'NotFoundError') {
+        errorMessage += "No camera found on this device.";
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage += "Camera not supported in this browser.";
+      } else if (error.name === 'NotReadableError') {
+        errorMessage += "Camera is already in use by another application.";
+      } else if (!window.location.protocol.startsWith('https') && window.location.hostname !== 'localhost') {
+        errorMessage += "Camera requires HTTPS or localhost.";
+      } else {
+        errorMessage += "Please check browser permissions and try again.";
+      }
+      
       toast({
         title: "Camera Error",
-        description: "Unable to access camera. Please check browser permissions and ensure you're using HTTPS.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
