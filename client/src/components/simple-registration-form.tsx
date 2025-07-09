@@ -229,6 +229,21 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
         <CardHeader>
           <CardTitle>Register for {event?.name}</CardTitle>
           <p className="text-muted-foreground">{event?.description}</p>
+          
+          {/* Registration Period Reminder */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-700">
+              <strong>Registration Period:</strong> {
+                event?.registrationStartDate 
+                  ? new Date(event.registrationStartDate).toLocaleDateString()
+                  : new Date(event?.startDate).toLocaleDateString()
+              } - {
+                event?.registrationEndDate 
+                  ? new Date(event.registrationEndDate).toLocaleDateString()
+                  : (event?.endDate ? new Date(event.endDate).toLocaleDateString() : "No end date")
+              }
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>

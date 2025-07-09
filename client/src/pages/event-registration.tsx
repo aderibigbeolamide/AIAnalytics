@@ -163,6 +163,37 @@ export default function EventRegistration() {
           </CardContent>
         </Card>
 
+        {/* Registration Period Information */}
+        <Card className="shadow-lg border-0 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Calendar className="h-6 w-6 text-green-600" />
+              <h3 className="text-xl font-semibold text-green-800">Registration Period</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white/70 p-4 rounded-lg">
+                <p className="text-sm text-gray-600 font-medium">Registration Opens</p>
+                <p className="font-semibold text-lg text-green-800">
+                  {registrationStart.toLocaleDateString()} at {registrationStart.toLocaleTimeString()}
+                </p>
+              </div>
+              {registrationEnd && (
+                <div className="bg-white/70 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 font-medium">Registration Closes</p>
+                  <p className="font-semibold text-lg text-orange-800">
+                    {registrationEnd.toLocaleDateString()} at {registrationEnd.toLocaleTimeString()}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 p-3 bg-green-100 rounded-lg">
+              <p className="text-sm text-green-700">
+                ✅ Registration is currently <strong>OPEN</strong>. You can register for this event now.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Registration Form */}
         <SimpleRegistrationForm eventId={id!} event={event} />
         
