@@ -138,6 +138,10 @@ export function QRScanner({ onClose }: QRScannerProps) {
         setIsScanning(true);
         setCameraError(null);
         
+        // Force video to be visible
+        videoRef.current.style.display = 'block';
+        videoRef.current.style.visibility = 'visible';
+        
         // Ensure video plays and wait for metadata
         videoRef.current.onloadedmetadata = () => {
           if (videoRef.current) {
@@ -172,6 +176,28 @@ export function QRScanner({ onClose }: QRScannerProps) {
         videoRef.current.onloadstart = () => {
           console.log("Video load started");
         };
+        
+        // Force play after a short delay if metadata doesn't load
+        setTimeout(() => {
+          if (videoRef.current && videoRef.current.readyState >= 2) {
+            console.log("Force playing video after timeout");
+            videoRef.current.play().catch(console.error);
+          }
+          
+          // Debug video state
+          if (videoRef.current) {
+            console.log("Video element state:", {
+              srcObject: !!videoRef.current.srcObject,
+              readyState: videoRef.current.readyState,
+              paused: videoRef.current.paused,
+              width: videoRef.current.videoWidth,
+              height: videoRef.current.videoHeight,
+              currentTime: videoRef.current.currentTime,
+              duration: videoRef.current.duration,
+              played: videoRef.current.played.length > 0
+            });
+          }
+        }, 1000);
         
         // Handle video errors
         videoRef.current.onerror = (error) => {
@@ -310,12 +336,14 @@ export function QRScanner({ onClose }: QRScannerProps) {
               playsInline
               muted
               controls={false}
-              className="w-full h-80 bg-black rounded-lg object-cover"
+              className="w-full bg-black rounded-lg"
               style={{ 
-                minHeight: '320px',
-                maxHeight: '480px',
-                aspectRatio: '16/9',
-                transform: 'scaleX(-1)' // Mirror the video for better UX
+                height: '320px',
+                width: '100%',
+                objectFit: 'cover',
+                transform: 'scaleX(-1)', // Mirror the video for better UX
+                backgroundColor: '#000000',
+                border: '2px solid #ff0000' // Red border for debugging
               }}
               onLoadStart={() => console.log("Video load started")}
               onLoadedMetadata={() => console.log("Video metadata loaded")}
