@@ -131,15 +131,19 @@ export function QRScanner({ onClose }: QRScannerProps) {
         }
       }
       
-      console.log("Checking video ref:", !!videoRef.current);
-      if (videoRef.current && stream) {
-        console.log("Setting video source object");
-        const video = videoRef.current;
-        console.log("Video element found:", video);
-        video.srcObject = stream;
-        streamRef.current = stream;
-        setIsScanning(true);
-        setCameraError(null);
+      // Set scanning state first to render video element
+      setIsScanning(true);
+      setCameraError(null);
+      
+      // Wait for video element to be rendered
+      setTimeout(() => {
+        console.log("Checking video ref after render:", !!videoRef.current);
+        if (videoRef.current && stream) {
+          console.log("Setting video source object");
+          const video = videoRef.current;
+          console.log("Video element found:", video);
+          video.srcObject = stream;
+          streamRef.current = stream;
         
         // Force video to be visible
         video.style.display = 'block';
@@ -235,13 +239,14 @@ export function QRScanner({ onClose }: QRScannerProps) {
           });
         };
       } else {
-        console.error("Video element not found or stream is null:", {
-          videoRef: !!videoRef.current,
-          stream: !!stream
-        });
-        setCameraError("Video element not available");
-        setCameraStatus('error');
-      }
+          console.error("Video element not found or stream is null:", {
+            videoRef: !!videoRef.current,
+            stream: !!stream
+          });
+          setCameraError("Video element not available");
+          setCameraStatus('error');
+        }
+      }, 100); // Wait 100ms for React to render the video element
     } catch (error) {
       console.error("Camera access error:", error);
       setCameraStatus('error');
