@@ -118,9 +118,6 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
       return response.json();
     },
     onSuccess: (data) => {
-      console.log('Registration response data:', data);
-      console.log('QR Image Base64:', data.qrImageBase64);
-      
       setRegistrationData(data.registration);
       setQrImageBase64(data.qrImageBase64);
       setShowRegistrationCard(true);
