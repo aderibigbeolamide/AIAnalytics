@@ -10,6 +10,11 @@ interface RegistrationCardProps {
 }
 
 export function RegistrationCard({ registration, event, qrImageBase64 }: RegistrationCardProps) {
+  console.log('RegistrationCard props:', { registration, event, qrImageBase64 });
+  console.log('QR Image Base64 value:', qrImageBase64);
+  console.log('QR Image Base64 type:', typeof qrImageBase64);
+  console.log('QR Image Base64 length:', qrImageBase64?.length);
+  
   // Handle both camelCase and snake_case field names for compatibility
   const memberName = registration.guestName || registration.guest_name || 
     (registration.member ? `${registration.member.firstName} ${registration.member.lastName}` : 'Guest');
