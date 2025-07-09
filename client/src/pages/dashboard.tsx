@@ -10,6 +10,7 @@ import { Navbar } from "@/components/navbar";
 import { MemberForm } from "@/components/member-form";
 import { EventForm } from "@/components/event-form";
 import { QRScanner } from "@/components/qr-scanner";
+import { CountdownTimer } from "@/components/countdown-timer";
 import { getAuthHeaders } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -197,6 +198,59 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Upcoming Events with Countdown */}
+        {events.filter((event: any) => 
+          event.status === 'upcoming' && new Date(event.startDate) > new Date()
+        ).length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Upcoming Events</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {events
+                .filter((event: any) => 
+                  event.status === 'upcoming' && new Date(event.startDate) > new Date()
+                )
+                .slice(0, 3)
+                .map((event: any) => (
+                  <CountdownTimer
+                    key={event.id}
+                    event={event}
+                    showEventDetails={true}
+                    size="normal"
+                  />
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Live Events */}
+        {events.filter((event: any) => {
+          const now = new Date();
+          const start = new Date(event.startDate);
+          const end = new Date(event.endDate);
+          return now >= start && now < end;
+        }).length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Live Events</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {events
+                .filter((event: any) => {
+                  const now = new Date();
+                  const start = new Date(event.startDate);
+                  const end = new Date(event.endDate);
+                  return now >= start && now < end;
+                })
+                .map((event: any) => (
+                  <CountdownTimer
+                    key={event.id}
+                    event={event}
+                    showEventDetails={true}
+                    size="normal"
+                  />
+                ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}

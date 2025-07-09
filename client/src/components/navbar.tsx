@@ -19,6 +19,7 @@ export function Navbar() {
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard" },
+    { href: "/my-events", label: "My Events" },
     { href: "/members", label: "Members" },
     { href: "/events", label: "Events" },
     { href: "/scanner", label: "Scan QR" },

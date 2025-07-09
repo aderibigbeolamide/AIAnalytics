@@ -120,6 +120,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ user: req.user, member });
   });
 
+  // Get user's registrations
+  app.get("/api/my-registrations", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const registrations = await storage.getEventRegistrations();
+      // Filter registrations for current user (either by userId or by email for guests)
+      const userRegistrations = registrations.filter(reg => {
+        if (req.user?.id && reg.memberId) {
+          // Check by member ID for authenticated members
+          const member = storage.getMemberByUserId(req.user.id);
+          return member && reg.memberId === member.id;
+        }
+        // For guests/invitees, we could match by email if we had the user's email
+        return false;
+      });
+
+      // Get event details for each registration
+      const registrationsWithEvents = await Promise.all(
+        userRegistrations.map(async (registration) => {
+          const event = await storage.getEvent(registration.eventId);
+          return {
+            ...registration,
+            event
+          };
+        })
+      );
+
+      res.json(registrationsWithEvents);
+    } catch (error) {
+      console.error("Error fetching user registrations:", error);
+      res.status(500).json({ message: "Failed to fetch registrations" });
+    }
+  });
+
   // Dashboard stats route
   app.get("/api/dashboard/stats", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {

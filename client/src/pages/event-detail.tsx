@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CsvValidation } from "@/components/csv-validation";
 import { FaceRecognition } from "@/components/face-recognition";
+import { CountdownTimer } from "@/components/countdown-timer";
 import { Navbar } from "@/components/navbar";
 
 export default function EventDetail() {
@@ -196,6 +197,13 @@ export default function EventDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Countdown Timer */}
+      <CountdownTimer
+        event={event}
+        showEventDetails={false}
+        size="large"
+      />
 
       {registrations && registrations.length > 0 && (
         <Card>

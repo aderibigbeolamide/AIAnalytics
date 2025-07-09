@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 import Scanner from "@/pages/scanner";
+import MyEvents from "@/pages/my-events";
 import EventDetail from "@/pages/event-detail";
 import EventRegistration from "@/pages/event-registration";
 import NotFound from "@/pages/not-found";
@@ -66,6 +67,11 @@ function Router() {
       <Route path="/analytics">
         <ProtectedRoute>
           <Analytics />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/my-events">
+        <ProtectedRoute>
+          <MyEvents />
         </ProtectedRoute>
       </Route>
       <Route path="/reports">
