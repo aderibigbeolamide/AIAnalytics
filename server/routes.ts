@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { 
   events,
   eventRegistrations,
@@ -253,36 +253,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all events (public endpoint) - optimized for performance
+  // Get all events (public endpoint) - use raw PostgreSQL query
   app.get("/api/events/public", async (req: Request, res) => {
     try {
-      // Use direct database query for better performance
-      const eventsData = await db.select({
-        id: events.id,
-        name: events.name,
-        description: events.description,
-        location: events.location,
-        startDate: events.startDate,
-        endDate: events.endDate,
-        registrationStart: events.registrationStart,
-        registrationEnd: events.registrationEnd,
-        auxiliaryBodies: events.auxiliaryBodies,
-        allowGuests: events.allowGuests,
-        allowInvitees: events.allowInvitees,
-        maxAttendees: events.maxAttendees,
-        requiresPayment: events.requiresPayment,
-        paymentAmount: events.paymentAmount,
-        status: events.status
-      })
-      .from(events)
-      .where(isNull(events.deletedAt))
-      .orderBy(desc(events.createdAt));
+      // Use raw PostgreSQL query to bypass all Drizzle issues
+      const result = await pool.query(
+        'SELECT * FROM events WHERE deleted_at IS NULL ORDER BY created_at DESC'
+      );
+      
+      const eventsData = result.rows;
       
       // Update status on-the-fly without database calls
-      const publicEvents = eventsData.map(event => {
+      const publicEvents = eventsData.map((event: any) => {
         const now = new Date();
-        const startDate = new Date(event.startDate);
-        const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+        const startDate = new Date(event.start_date);
+        const endDate = event.end_date ? new Date(event.end_date) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
         
         let dynamicStatus = event.status;
         if (event.status !== 'cancelled') {
@@ -296,8 +281,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         return {
-          ...event,
-          status: dynamicStatus
+          id: event.id,
+          name: event.name,
+          description: event.description,
+          location: event.location,
+          startDate: event.start_date,
+          endDate: event.end_date,
+          registrationStartDate: event.registration_start_date,
+          registrationEndDate: event.registration_end_date,
+          eligibleAuxiliaryBodies: event.eligible_auxiliary_bodies,
+          allowGuests: event.allow_guests,
+          requiresPayment: event.requires_payment,
+          paymentAmount: event.payment_amount,
+          status: dynamicStatus,
+          createdBy: event.created_by,
+          qrCode: event.qr_code,
+          reportLink: event.report_link,
+          createdAt: event.created_at
         };
       });
       
