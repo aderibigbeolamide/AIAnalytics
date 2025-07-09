@@ -512,17 +512,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const now = new Date();
 
-      // Check if event has started (members cannot register before event starts)
-      if (now < event.startDate) {
+      // Check registration timing - use registration dates if available, otherwise fall back to event dates
+      const registrationStart = event.registrationStartDate || event.startDate;
+      const registrationEnd = event.registrationEndDate || event.endDate;
+
+      // Check if registration period has started
+      if (now < registrationStart) {
         return res.status(400).json({ 
-          message: "Registration is not yet open. Please wait until the event starts.",
-          eventStartDate: event.startDate
+          message: "Registration is not yet open. Please wait until the registration period starts.",
+          registrationStartDate: registrationStart
         });
       }
 
-      // Check if event has ended (additional safety check)
-      if (event.endDate && now > event.endDate) {
-        return res.status(400).json({ message: "This event has already ended" });
+      // Check if registration period has ended
+      if (registrationEnd && now > registrationEnd) {
+        return res.status(400).json({ 
+          message: "Registration period has ended.",
+          registrationEndDate: registrationEnd
+        });
       }
 
       const {
