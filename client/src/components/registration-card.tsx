@@ -214,24 +214,38 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
         </div>
         
         {/* QR Code Section */}
-        {qrImageBase64 && (
-          <div className="text-center p-6 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold mb-4 flex items-center justify-center gap-2">
-              <QrCode className="h-5 w-5" />
-              Your Registration QR Code
-            </h3>
+        <div className="text-center p-6 bg-gray-50 rounded-lg">
+          <h3 className="font-semibold mb-4 flex items-center justify-center gap-2">
+            <QrCode className="h-5 w-5" />
+            Your Registration QR Code
+          </h3>
+          {qrImageBase64 ? (
             <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
               <img 
                 src={`data:image/png;base64,${qrImageBase64}`} 
                 alt="Registration QR Code" 
                 className="w-48 h-48 mx-auto"
+                onError={(e) => {
+                  console.error('QR Image failed to load:', e);
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </div>
-            <p className="text-sm text-gray-600 mt-4">
-              Save this QR code or take a screenshot. Present it at the event entrance for quick check-in.
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
+              <div className="w-48 h-48 mx-auto flex items-center justify-center bg-gray-100 rounded">
+                <div className="text-center">
+                  <QrCode className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">QR Code Loading...</p>
+                  <p className="text-xs text-gray-400 mt-1">Please use your Unique ID below for now</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <p className="text-sm text-gray-600 mt-4">
+            Save this QR code or take a screenshot. Present it at the event entrance for quick check-in.
+          </p>
+        </div>
         
         {/* Instructions */}
         <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
