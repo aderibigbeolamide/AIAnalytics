@@ -65,8 +65,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = loginSchema.parse(req.body);
       
-      const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePassword(password, user.password))) {
+      // Trim whitespace from username and password
+      const trimmedUsername = username.trim();
+      const trimmedPassword = password.trim();
+      
+      const user = await storage.getUserByUsername(trimmedUsername);
+      if (!user || !(await comparePassword(trimmedPassword, user.password))) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
