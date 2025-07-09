@@ -337,6 +337,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...eventData,
         startDate: new Date(eventData.startDate),
         endDate: eventData.endDate ? new Date(eventData.endDate) : undefined,
+        registrationStartDate: eventData.registrationStartDate ? new Date(eventData.registrationStartDate) : undefined,
+        registrationEndDate: eventData.registrationEndDate ? new Date(eventData.registrationEndDate) : undefined,
         createdBy: req.user!.id,
       };
       
@@ -376,7 +378,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(updatedEvent);
     } catch (error) {
       console.error("Error creating event:", error);
-      res.status(400).json({ message: "Failed to create event" });
+      if (error instanceof Error) {
+        res.status(400).json({ message: "Failed to create event", error: error.message });
+      } else {
+        res.status(400).json({ message: "Failed to create event", error: String(error) });
+      }
     }
   });
 
@@ -390,6 +396,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...eventData,
         startDate: eventData.startDate ? new Date(eventData.startDate) : undefined,
         endDate: eventData.endDate ? new Date(eventData.endDate) : undefined,
+        registrationStartDate: eventData.registrationStartDate ? new Date(eventData.registrationStartDate) : undefined,
+        registrationEndDate: eventData.registrationEndDate ? new Date(eventData.registrationEndDate) : undefined,
       };
       
       const event = await storage.updateEvent(id, updates);

@@ -80,7 +80,9 @@ export function EventForm({ onClose, event }: EventFormProps) {
       });
       
       if (!response.ok) {
-        throw new Error("Failed to create event");
+        const errorData = await response.text();
+        console.error("Event creation failed:", response.status, errorData);
+        throw new Error(`Failed to create event: ${response.status} ${errorData}`);
       }
       
       return response.json();
@@ -94,10 +96,11 @@ export function EventForm({ onClose, event }: EventFormProps) {
       });
       onClose();
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Create event mutation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create event",
+        description: error.message || "Failed to create event",
         variant: "destructive",
       });
     },
@@ -178,10 +181,20 @@ export function EventForm({ onClose, event }: EventFormProps) {
   };
 
   const onSubmit = (data: EventFormData) => {
+    console.log("Form data being submitted:", data);
+    
+    // Set the eligible auxiliary bodies from our state
+    const submissionData = {
+      ...data,
+      eligibleAuxiliaryBodies: auxiliaryBodies,
+    };
+    
+    console.log("Final submission data:", submissionData);
+    
     if (event) {
-      updateEventMutation.mutate(data);
+      updateEventMutation.mutate(submissionData);
     } else {
-      createEventMutation.mutate(data);
+      createEventMutation.mutate(submissionData);
     }
   };
 
