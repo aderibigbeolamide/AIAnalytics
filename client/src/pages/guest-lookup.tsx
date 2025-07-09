@@ -191,7 +191,19 @@ export default function GuestLookup() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-gray-500" />
-                          <span>{event.auxiliaryBodies?.join(', ') || 'All Members'}</span>
+                          <span>{event.eligibleAuxiliaryBodies?.join(', ') || 'All Members'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {event.allowGuests && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Guests Welcome
+                            </span>
+                          )}
+                          {event.allowInvitees && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              Invitees Welcome
+                            </span>
+                          )}
                         </div>
                         {event.requiresPayment && (
                           <div className="flex items-center gap-2">
@@ -284,10 +296,6 @@ export default function GuestLookup() {
                       <CardContent className="space-y-3">
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <p className="font-medium text-gray-600">Registration ID</p>
-                            <p className="font-mono font-bold">{registration.uniqueId}</p>
-                          </div>
-                          <div>
                             <p className="font-medium text-gray-600">Type</p>
                             <p className="capitalize">{registration.registrationType}</p>
                           </div>
@@ -298,6 +306,10 @@ export default function GuestLookup() {
                           <div>
                             <p className="font-medium text-gray-600">Status</p>
                             <p className="capitalize">{registration.status}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-600">Registration Date</p>
+                            <p>{new Date(registration.createdAt).toLocaleDateString()}</p>
                           </div>
                         </div>
                         
