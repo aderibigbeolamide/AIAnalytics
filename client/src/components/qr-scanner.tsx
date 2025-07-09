@@ -133,71 +133,95 @@ export function QRScanner({ onClose }: QRScannerProps) {
       
       if (videoRef.current && stream) {
         console.log("Setting video source object");
-        videoRef.current.srcObject = stream;
+        const video = videoRef.current;
+        video.srcObject = stream;
         streamRef.current = stream;
         setIsScanning(true);
         setCameraError(null);
         
         // Force video to be visible
-        videoRef.current.style.display = 'block';
-        videoRef.current.style.visibility = 'visible';
+        video.style.display = 'block';
+        video.style.visibility = 'visible';
+        
+        // Immediate check
+        console.log("Video immediately after setting srcObject:", {
+          srcObject: !!video.srcObject,
+          readyState: video.readyState,
+          videoWidth: video.videoWidth,
+          videoHeight: video.videoHeight
+        });
         
         // Ensure video plays and wait for metadata
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current) {
-            console.log("Video metadata loaded, dimensions:", videoRef.current.videoWidth, "x", videoRef.current.videoHeight);
-            setCameraStatus('ready');
-            videoRef.current.play().then(() => {
-              console.log("Video started playing successfully");
-              // Start scanning for QR codes every 100ms
-              scanIntervalRef.current = window.setInterval(scanQRCode, 100);
-            }).catch(playError => {
-              console.error("Video play error:", playError);
-              setCameraError("Unable to start video playback");
-              setCameraStatus('error');
-              toast({
-                title: "Video Error",
-                description: "Unable to start video playback. Please try again.",
-                variant: "destructive",
-              });
+        video.onloadedmetadata = () => {
+          console.log("Video metadata loaded, dimensions:", video.videoWidth, "x", video.videoHeight);
+          setCameraStatus('ready');
+          video.play().then(() => {
+            console.log("Video started playing successfully");
+            // Start scanning for QR codes every 100ms
+            scanIntervalRef.current = window.setInterval(scanQRCode, 100);
+          }).catch(playError => {
+            console.error("Video play error:", playError);
+            setCameraError("Unable to start video playback");
+            setCameraStatus('error');
+            toast({
+              title: "Video Error",
+              description: "Unable to start video playback. Please try again.",
+              variant: "destructive",
             });
-          }
+          });
         };
         
         // Additional event listeners for debugging
-        videoRef.current.oncanplay = () => {
+        video.oncanplay = () => {
           console.log("Video can play");
         };
         
-        videoRef.current.onplaying = () => {
+        video.onplaying = () => {
           console.log("Video is playing");
         };
         
-        videoRef.current.onloadstart = () => {
+        video.onloadstart = () => {
           console.log("Video load started");
+        };
+        
+        video.onerror = (e) => {
+          console.error("Video element error:", e);
+        };
+        
+        video.onstalled = () => {
+          console.log("Video stalled");
+        };
+        
+        video.onsuspend = () => {
+          console.log("Video suspended");
         };
         
         // Force play after a short delay if metadata doesn't load
         setTimeout(() => {
-          if (videoRef.current && videoRef.current.readyState >= 2) {
+          if (video && video.readyState >= 2) {
             console.log("Force playing video after timeout");
-            videoRef.current.play().catch(console.error);
+            video.play().catch(console.error);
           }
           
           // Debug video state
-          if (videoRef.current) {
-            console.log("Video element state:", {
-              srcObject: !!videoRef.current.srcObject,
-              readyState: videoRef.current.readyState,
-              paused: videoRef.current.paused,
-              width: videoRef.current.videoWidth,
-              height: videoRef.current.videoHeight,
-              currentTime: videoRef.current.currentTime,
-              duration: videoRef.current.duration,
-              played: videoRef.current.played.length > 0
+          if (video) {
+            console.log("Video element state after 1s:", {
+              srcObject: !!video.srcObject,
+              readyState: video.readyState,
+              paused: video.paused,
+              width: video.videoWidth,
+              height: video.videoHeight,
+              currentTime: video.currentTime,
+              duration: video.duration,
+              played: video.played.length > 0,
+              stream: stream.active,
+              tracks: stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState }))
             });
           }
         }, 1000);
+        
+        // Also try manual load
+        video.load();
         
         // Handle video errors
         videoRef.current.onerror = (error) => {
