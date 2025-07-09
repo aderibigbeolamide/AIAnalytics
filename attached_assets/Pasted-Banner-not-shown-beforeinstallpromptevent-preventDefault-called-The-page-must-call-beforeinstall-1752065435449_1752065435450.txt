@@ -1,0 +1,96 @@
+Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+2_app-47f5cf28e18519c8.js:38 WARN: A component changed from uncontrolled to controlled.
+(anonymous) @ _app-47f5cf28e18519c8.js:38Understand this warning
+7Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'battery'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'web-share'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+framework-2c5ea3c6193269ac.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-2c5ea3c6193269ac.js:1Understand this warning
+gravatar.com/avatar/1a72a1b809d631101bec3cc1716ed5ba?d=404:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+gravatar.com/avatar/1a72a1b809d631101bec3cc1716ed5ba?d=404:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+2656-904607e63ea35bd1.js:1 WebSocket connection to 'wss://eval.kirk.platform.replit.com/wsv2/v2.public.Q2dZSXU2ZTV3d1lTQmdqYXc3bkRCaUlFYTJseWF6QUFPczhCQ2lRek5qVTFaV1ptTXkwd05UUmpMVFF3Tm1RdFlUTTRNQzAxTnpVM1pqRTJZMkk0TjJZU0EyNXBlQm9XY21Wd2JHbDBMWEpsY0d3dFptbHNaWE10YTJseWF5SUxRVWxCYm1Gc2VYUnBZM01xRDNSNWNHbGpZV3h4ZFdGcGJHVnZZVUpPQ2hkeVpYQnNhWFF0Y21Wd2JDMWliRzlqYTNNdGEybHlheElWY21Wd2JHbDBMWEpsY0d3dGJXVjBZUzFyYVhKckdoeHlaWEJzYVhRdGJXRnlaMkZ5YVc1bExXSnNiMk5yY3kxcmFYSnJTZ2NJbGRXdUZSQUJVQUJhRDJsdWRHVnVkRjl3WlhKemIyNWhiSGdBVWlRSUFSQ0FnSUNBQ0JrQUFBQUFBQUFRUUNFQUFBQUFBQUFRUUNpQWdJQ0FFREFDT0FCZ0FHb1dDSlhWcmhVU0QzUjVjR2xqWVd4eGRXRnBiR1Z2WVlJQkFpb0FtZ0VLQ2dnd0xqQXVNVFE0T0tBQkFBPT3JCc6tCAV60NtyTF9AbuaNqtW3zWlgUDzYbs4BFm38qVeA3hAzN8DWTfcXI0P21grOeB7RUUw8eRaXE7sPBvwM.Q2dad2NtOWtPak1pQ25KbGNHeHBkQzVqYjIwPQ' failed: 
+connect @ 2656-904607e63ea35bd1.js:1Understand this error
+2656-904607e63ea35bd1.js:1 WebSocket connection to 'wss://eval.kirk.platform.replit.com/wsv2/v2.public.Q2dZSXU2ZTV3d1lTQmdqYXc3bkRCaUlFYTJseWF6QUFPczhCQ2lRek5qVTFaV1ptTXkwd05UUmpMVFF3Tm1RdFlUTTRNQzAxTnpVM1pqRTJZMkk0TjJZU0EyNXBlQm9XY21Wd2JHbDBMWEpsY0d3dFptbHNaWE10YTJseWF5SUxRVWxCYm1Gc2VYUnBZM01xRDNSNWNHbGpZV3h4ZFdGcGJHVnZZVUpPQ2hkeVpYQnNhWFF0Y21Wd2JDMWliRzlqYTNNdGEybHlheElWY21Wd2JHbDBMWEpsY0d3dGJXVjBZUzFyYVhKckdoeHlaWEJzYVhRdGJXRnlaMkZ5YVc1bExXSnNiMk5yY3kxcmFYSnJTZ2NJbGRXdUZSQUJVQUJhRDJsdWRHVnVkRjl3WlhKemIyNWhiSGdBVWlRSUFSQ0FnSUNBQ0JrQUFBQUFBQUFRUUNFQUFBQUFBQUFRUUNpQWdJQ0FFREFDT0FCZ0FHb1dDSlhWcmhVU0QzUjVjR2xqWVd4eGRXRnBiR1Z2WVlJQkFpb0FtZ0VLQ2dnd0xqQXVNVFE0T0tBQkFBPT3JCc6tCAV60NtyTF9AbuaNqtW3zWlgUDzYbs4BFm38qVeA3hAzN8DWTfcXI0P21grOeB7RUUw8eRaXE7sPBvwM.Q2dad2NtOWtPak1pQ25KbGNHeHBkQzVqYjIwPQ' failed: WebSocket is closed before the connection is established.
+cleanupSocket @ 2656-904607e63ea35bd1.js:1Understand this warning
+/data/repls/3655eff3-054c-406d-a380-5757f16cb87f/get_connection_metadata:1  Failed to load resource: net::ERR_INTERNET_DISCONNECTEDUnderstand this error
+_app-47f5cf28e18519c8.js:25 WebSocket connection to 'wss://replit.com/graphql_subscriptions' failed: 
+(anonymous) @ _app-47f5cf28e18519c8.js:25Understand this error
+_app-47f5cf28e18519c8.js:25 WebSocket connection to 'wss://replit.com/graphql_subscriptions' failed: 
+(anonymous) @ _app-47f5cf28e18519c8.js:25Understand this error
+_app-47f5cf28e18519c8.js:25 WebSocket connection to 'wss://replit.com/graphql_subscriptions' failed: 
+(anonymous) @ _app-47f5cf28e18519c8.js:25Understand this error
+_app-47f5cf28e18519c8.js:25 WebSocket connection to 'wss://replit.com/graphql_subscriptions' failed: 
+(anonymous) @ _app-47f5cf28e18519c8.js:25Understand this error
+gravatar.com/avatar/1a72a1b809d631101bec3cc1716ed5ba?d=404:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+gravatar.com/avatar/1a72a1b809d631101bec3cc1716ed5ba?d=404:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+stallwart.build.js:1 stallwart: failed ping 1
+stallwart.build.js:1 stallwart: failed ping 2
+stallwart.build.js:1 stallwart: failed ping 3
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'battery'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'web-share'.Understand this warning
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+Console.js:61 Router - isAuthenticated: false
+Console.js:61 checkAuth called with token: false
+Console.js:61 No token found
+Console.js:61 Loaded auth state from localStorage: Object
+Console.js:61 Auth state loaded from storage: Object
+Console.js:61 Initial auth state after loading from storage: Object
+Console.js:61 Router - isAuthenticated: true
+5Console.js:61 Dashboard component rendering...
+Console.js:61 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Mt.forEach.n.<computed> @ Console.js:61Understand this warning
+Console.js:61 Starting camera...
+Console.js:61 Trying back camera...
+Console.js:61 Back camera successful
+Console.js:61 Starting camera...
+Console.js:61 Trying back camera...
+Console.js:61 Back camera successful
+Console.js:61 Starting camera...
+Console.js:61 Trying back camera...
+Console.js:61 Back camera successful
+Console.js:61 Starting camera...
+Console.js:61 Trying back camera...
+Console.js:61 Back camera successful
+Console.js:61 Starting camera...
+Console.js:61 Trying back camera...
+Console.js:61 Back camera successful

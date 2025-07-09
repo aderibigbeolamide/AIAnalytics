@@ -131,9 +131,11 @@ export function QRScanner({ onClose }: QRScannerProps) {
         }
       }
       
+      console.log("Checking video ref:", !!videoRef.current);
       if (videoRef.current && stream) {
         console.log("Setting video source object");
         const video = videoRef.current;
+        console.log("Video element found:", video);
         video.srcObject = stream;
         streamRef.current = stream;
         setIsScanning(true);
@@ -224,7 +226,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
         video.load();
         
         // Handle video errors
-        videoRef.current.onerror = (error) => {
+        video.onerror = (error) => {
           console.error("Video element error:", error);
           toast({
             title: "Video Error",
@@ -232,6 +234,13 @@ export function QRScanner({ onClose }: QRScannerProps) {
             variant: "destructive",
           });
         };
+      } else {
+        console.error("Video element not found or stream is null:", {
+          videoRef: !!videoRef.current,
+          stream: !!stream
+        });
+        setCameraError("Video element not available");
+        setCameraStatus('error');
       }
     } catch (error) {
       console.error("Camera access error:", error);
