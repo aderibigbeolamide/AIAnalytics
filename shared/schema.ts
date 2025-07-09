@@ -45,6 +45,7 @@ export const events = pgTable("events", {
   registrationEndDate: timestamp("registration_end_date"),
   eligibleAuxiliaryBodies: jsonb("eligible_auxiliary_bodies").$type<string[]>().notNull(),
   allowGuests: boolean("allow_guests").default(false),
+  allowInvitees: boolean("allow_invitees").default(false),
   requiresPayment: boolean("requires_payment").default(false),
   paymentAmount: text("payment_amount"),
   status: text("status").notNull().default("upcoming"), // upcoming, active, completed, cancelled

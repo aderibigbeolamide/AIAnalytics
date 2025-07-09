@@ -150,47 +150,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const member = await storage.getMemberByUserId(user.id);
           
           if (member) {
-            // Use optimized database query with joins
-            userRegistrations = await db.select({
-              id: eventRegistrations.id,
-              eventId: eventRegistrations.eventId,
-              memberId: eventRegistrations.memberId,
-              registrationType: eventRegistrations.registrationType,
-              firstName: eventRegistrations.firstName,
-              lastName: eventRegistrations.lastName,
-              jamaat: eventRegistrations.jamaat,
-              auxiliaryBody: eventRegistrations.auxiliaryBody,
-              guestEmail: eventRegistrations.guestEmail,
-              circuit: eventRegistrations.circuit,
-              uniqueId: eventRegistrations.uniqueId,
-              status: eventRegistrations.status,
-              qrCode: eventRegistrations.qrCode,
-              createdAt: eventRegistrations.createdAt,
-              // Event details
-              event: {
-                id: events.id,
-                name: events.name,
-                description: events.description,
-                location: events.location,
-                startDate: events.startDate,
-                endDate: events.endDate,
-                registrationStart: events.registrationStart,
-                registrationEnd: events.registrationEnd,
-                auxiliaryBodies: events.auxiliaryBodies,
-                allowGuests: events.allowGuests,
-                allowInvitees: events.allowInvitees,
-                maxAttendees: events.maxAttendees,
-                requiresPayment: events.requiresPayment,
-                paymentAmount: events.paymentAmount,
-                status: events.status
-              }
-            })
-            .from(eventRegistrations)
-            .innerJoin(events, eq(eventRegistrations.eventId, events.id))
-            .where(and(
-              eq(eventRegistrations.memberId, member.id),
-              isNull(events.deletedAt)
-            ));
+            // Get member registrations and fetch events separately
+            const registrations = await storage.getEventRegistrations();
+            const memberRegistrations = registrations.filter(reg => reg.memberId === member.id);
+            
+            // Get event details for each registration
+            userRegistrations = await Promise.all(
+              memberRegistrations.map(async (registration) => {
+                const event = await storage.getEvent(registration.eventId);
+                return {
+                  ...registration,
+                  event
+                };
+              })
+            );
           }
         } catch (err) {
           // Token invalid, continue with unauthenticated flow
@@ -207,43 +180,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           conditions.push(eq(eventRegistrations.guestEmail, email));
         }
         
-        userRegistrations = await db.select({
-          id: eventRegistrations.id,
-          eventId: eventRegistrations.eventId,
-          memberId: eventRegistrations.memberId,
-          registrationType: eventRegistrations.registrationType,
-          firstName: eventRegistrations.firstName,
-          lastName: eventRegistrations.lastName,
-          jamaat: eventRegistrations.jamaat,
-          auxiliaryBody: eventRegistrations.auxiliaryBody,
-          guestEmail: eventRegistrations.guestEmail,
-          circuit: eventRegistrations.circuit,
-          uniqueId: eventRegistrations.uniqueId,
-          status: eventRegistrations.status,
-          qrCode: eventRegistrations.qrCode,
-          createdAt: eventRegistrations.createdAt,
-          // Event details
-          event: {
-            id: events.id,
-            name: events.name,
-            description: events.description,
-            location: events.location,
-            startDate: events.startDate,
-            endDate: events.endDate,
-            registrationStart: events.registrationStart,
-            registrationEnd: events.registrationEnd,
-            auxiliaryBodies: events.auxiliaryBodies,
-            allowGuests: events.allowGuests,
-            allowInvitees: events.allowInvitees,
-            maxAttendees: events.maxAttendees,
-            requiresPayment: events.requiresPayment,
-            paymentAmount: events.paymentAmount,
-            status: events.status
+        const registrations = await storage.getEventRegistrations();
+        const filteredRegistrations = registrations.filter(reg => {
+          if (uniqueId) {
+            return reg.uniqueId === uniqueId;
           }
-        })
-        .from(eventRegistrations)
-        .innerJoin(events, eq(eventRegistrations.eventId, events.id))
-        .where(and(...conditions));
+          if (email) {
+            return reg.guestEmail === email;
+          }
+          return false;
+        });
+        
+        // Get event details for each registration
+        userRegistrations = await Promise.all(
+          filteredRegistrations.map(async (registration) => {
+            const event = await storage.getEvent(registration.eventId);
+            return {
+              ...registration,
+              event
+            };
+          })
+        );
       }
 
       res.json(userRegistrations);
@@ -256,50 +213,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all events (public endpoint) - optimized for performance
   app.get("/api/events/public", async (req: Request, res) => {
     try {
-      // Use direct database query for better performance
-      const eventsData = await db.select({
-        id: events.id,
-        name: events.name,
-        description: events.description,
-        location: events.location,
-        startDate: events.startDate,
-        endDate: events.endDate,
-        registrationStart: events.registrationStart,
-        registrationEnd: events.registrationEnd,
-        auxiliaryBodies: events.auxiliaryBodies,
-        allowGuests: events.allowGuests,
-        allowInvitees: events.allowInvitees,
-        maxAttendees: events.maxAttendees,
-        requiresPayment: events.requiresPayment,
-        paymentAmount: events.paymentAmount,
-        status: events.status
-      })
-      .from(events)
-      .where(isNull(events.deletedAt))
-      .orderBy(desc(events.createdAt));
+      // Use storage method but with optimized filtering
+      const allEvents = await storage.getEvents();
       
-      // Update status on-the-fly without database calls
-      const publicEvents = eventsData.map(event => {
-        const now = new Date();
-        const startDate = new Date(event.startDate);
-        const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
-        
-        let dynamicStatus = event.status;
-        if (event.status !== 'cancelled') {
-          if (now >= startDate && now <= endDate) {
-            dynamicStatus = 'ongoing';
-          } else if (now < startDate) {
-            dynamicStatus = 'upcoming';
-          } else {
-            dynamicStatus = 'completed';
+      // Filter out deleted events and return only necessary fields
+      const publicEvents = allEvents
+        .filter(event => !event.deletedAt)
+        .map(event => {
+          const now = new Date();
+          const startDate = new Date(event.startDate);
+          const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+          
+          let dynamicStatus = event.status;
+          if (event.status !== 'cancelled') {
+            if (now >= startDate && now <= endDate) {
+              dynamicStatus = 'ongoing';
+            } else if (now < startDate) {
+              dynamicStatus = 'upcoming';
+            } else {
+              dynamicStatus = 'completed';
+            }
           }
-        }
-        
-        return {
-          ...event,
-          status: dynamicStatus
-        };
-      });
+          
+          return {
+            id: event.id,
+            name: event.name,
+            description: event.description,
+            location: event.location,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            registrationStart: event.registrationStartDate,
+            registrationEnd: event.registrationEndDate,
+            auxiliaryBodies: event.eligibleAuxiliaryBodies,
+            allowGuests: event.allowGuests,
+            allowInvitees: event.allowInvitees,
+            maxAttendees: event.maxAttendees,
+            requiresPayment: event.requiresPayment,
+            paymentAmount: event.paymentAmount,
+            status: dynamicStatus
+          };
+        });
       
       res.json(publicEvents);
     } catch (error) {
