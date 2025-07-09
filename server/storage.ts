@@ -203,50 +203,23 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(events.createdBy, filters.createdBy));
     }
     
-    try {
-      const allEvents = await db.select({
-        id: events.id,
-        name: events.name,
-        description: events.description,
-        location: events.location,
-        startDate: events.startDate,
-        endDate: events.endDate,
-        registrationStartDate: events.registrationStartDate,
-        registrationEndDate: events.registrationEndDate,
-        eligibleAuxiliaryBodies: events.eligibleAuxiliaryBodies,
-        allowGuests: events.allowGuests,
-        allowInvitees: events.allowInvitees,
-        requiresPayment: events.requiresPayment,
-        paymentAmount: events.paymentAmount,
-        status: events.status,
-        createdBy: events.createdBy,
-        qrCode: events.qrCode,
-        reportLink: events.reportLink,
-        deletedAt: events.deletedAt,
-        createdAt: events.createdAt
-      }).from(events)
-      .where(and(...conditions))
-      .orderBy(desc(events.createdAt));
-      
-      // Update event statuses dynamically
-      const updatedEvents = allEvents.map(event => {
-        const dynamicStatus = this.determineEventStatus(event);
-        if (dynamicStatus !== event.status) {
-          event.status = dynamicStatus;
-        }
-        return event;
-      });
-      
-      // Apply status filter after dynamic update
-      if (filters?.status) {
-        return updatedEvents.filter(event => event.status === filters.status);
+    const allEvents = await db.select().from(events).where(and(...conditions)).orderBy(desc(events.createdAt));
+    
+    // Update event statuses dynamically but more efficiently
+    const updatedEvents = allEvents.map(event => {
+      const dynamicStatus = this.determineEventStatus(event);
+      if (dynamicStatus !== event.status) {
+        event.status = dynamicStatus;
       }
-      
-      return updatedEvents;
-    } catch (error) {
-      console.error('Error in getEvents:', error);
-      throw new Error('Failed to fetch events');
+      return event;
+    });
+    
+    // Apply status filter after dynamic update
+    if (filters?.status) {
+      return updatedEvents.filter(event => event.status === filters.status);
     }
+    
+    return updatedEvents;
   }
 
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
