@@ -150,47 +150,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const member = await storage.getMemberByUserId(user.id);
           
           if (member) {
-            // Use optimized database query with joins
-            userRegistrations = await db.select({
-              id: eventRegistrations.id,
-              eventId: eventRegistrations.eventId,
-              memberId: eventRegistrations.memberId,
-              registrationType: eventRegistrations.registrationType,
-              firstName: eventRegistrations.firstName,
-              lastName: eventRegistrations.lastName,
-              jamaat: eventRegistrations.jamaat,
-              auxiliaryBody: eventRegistrations.auxiliaryBody,
-              guestEmail: eventRegistrations.guestEmail,
-              circuit: eventRegistrations.circuit,
-              uniqueId: eventRegistrations.uniqueId,
-              status: eventRegistrations.status,
-              qrCode: eventRegistrations.qrCode,
-              createdAt: eventRegistrations.createdAt,
-              // Event details
-              event: {
-                id: events.id,
-                name: events.name,
-                description: events.description,
-                location: events.location,
-                startDate: events.startDate,
-                endDate: events.endDate,
-                registrationStart: events.registrationStart,
-                registrationEnd: events.registrationEnd,
-                auxiliaryBodies: events.auxiliaryBodies,
-                allowGuests: events.allowGuests,
-                allowInvitees: events.allowInvitees,
-                maxAttendees: events.maxAttendees,
-                requiresPayment: events.requiresPayment,
-                paymentAmount: events.paymentAmount,
-                status: events.status
-              }
-            })
-            .from(eventRegistrations)
-            .innerJoin(events, eq(eventRegistrations.eventId, events.id))
-            .where(and(
-              eq(eventRegistrations.memberId, member.id),
-              isNull(events.deletedAt)
-            ));
+            // Use raw query to avoid Drizzle ORM issues
+            const result = await pool.query(
+              'SELECT r.*, e.* FROM event_registrations r JOIN events e ON r.event_id = e.id WHERE r.member_id = $1 AND e.deleted_at IS NULL',
+              [member.id]
+            );
+            
+            for (const row of result.rows) {
+              userRegistrations.push({
+                id: row.id,
+                eventId: row.event_id,
+                memberId: row.member_id,
+                registrationType: row.registration_type,
+                guestName: row.guest_name,
+                guestEmail: row.guest_email,
+                guestJamaat: row.guest_jamaat,
+                guestAuxiliaryBody: row.guest_auxiliary_body,
+                guestChandaNumber: row.guest_chanda_number,
+                guestCircuit: row.guest_circuit,
+                uniqueId: row.unique_id,
+                status: row.status,
+                qrCode: row.qr_code,
+                createdAt: row.created_at,
+                event: {
+                  id: row.event_id,
+                  name: row.name,
+                  description: row.description,
+                  location: row.location,
+                  startDate: row.start_date,
+                  endDate: row.end_date,
+                  registrationStartDate: row.registration_start_date,
+                  registrationEndDate: row.registration_end_date,
+                  eligibleAuxiliaryBodies: row.eligible_auxiliary_bodies,
+                  allowGuests: row.allow_guests,
+                  requiresPayment: row.requires_payment,
+                  paymentAmount: row.payment_amount,
+                  status: row.status
+                }
+              });
+            }
           }
         } catch (err) {
           // Token invalid, continue with unauthenticated flow
@@ -198,52 +196,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (userRegistrations.length === 0 && (uniqueId || email)) {
-        // Unauthenticated user - lookup by unique ID or email with joins
-        const conditions = [isNull(events.deletedAt)];
+        // Unauthenticated user - lookup by unique ID or email using raw query
         if (uniqueId) {
-          conditions.push(eq(eventRegistrations.uniqueId, uniqueId));
-        }
-        if (email) {
-          conditions.push(eq(eventRegistrations.guestEmail, email));
+          const result = await pool.query(
+            'SELECT r.*, e.* FROM event_registrations r JOIN events e ON r.event_id = e.id WHERE r.unique_id = $1 AND e.deleted_at IS NULL',
+            [uniqueId]
+          );
+          
+          for (const row of result.rows) {
+            userRegistrations.push({
+              id: row.id,
+              eventId: row.event_id,
+              memberId: row.member_id,
+              registrationType: row.registration_type,
+              guestName: row.guest_name,
+              guestEmail: row.guest_email,
+              guestJamaat: row.guest_jamaat,
+              guestAuxiliaryBody: row.guest_auxiliary_body,
+              guestChandaNumber: row.guest_chanda_number,
+              guestCircuit: row.guest_circuit,
+              uniqueId: row.unique_id,
+              status: row.status,
+              qrCode: row.qr_code,
+              createdAt: row.created_at,
+              event: {
+                id: row.event_id,
+                name: row.name,
+                description: row.description,
+                location: row.location,
+                startDate: row.start_date,
+                endDate: row.end_date,
+                registrationStartDate: row.registration_start_date,
+                registrationEndDate: row.registration_end_date,
+                eligibleAuxiliaryBodies: row.eligible_auxiliary_bodies,
+                allowGuests: row.allow_guests,
+                requiresPayment: row.requires_payment,
+                paymentAmount: row.payment_amount,
+                status: row.status
+              }
+            });
+          }
         }
         
-        userRegistrations = await db.select({
-          id: eventRegistrations.id,
-          eventId: eventRegistrations.eventId,
-          memberId: eventRegistrations.memberId,
-          registrationType: eventRegistrations.registrationType,
-          firstName: eventRegistrations.firstName,
-          lastName: eventRegistrations.lastName,
-          jamaat: eventRegistrations.jamaat,
-          auxiliaryBody: eventRegistrations.auxiliaryBody,
-          guestEmail: eventRegistrations.guestEmail,
-          circuit: eventRegistrations.circuit,
-          uniqueId: eventRegistrations.uniqueId,
-          status: eventRegistrations.status,
-          qrCode: eventRegistrations.qrCode,
-          createdAt: eventRegistrations.createdAt,
-          // Event details
-          event: {
-            id: events.id,
-            name: events.name,
-            description: events.description,
-            location: events.location,
-            startDate: events.startDate,
-            endDate: events.endDate,
-            registrationStart: events.registrationStart,
-            registrationEnd: events.registrationEnd,
-            auxiliaryBodies: events.auxiliaryBodies,
-            allowGuests: events.allowGuests,
-            allowInvitees: events.allowInvitees,
-            maxAttendees: events.maxAttendees,
-            requiresPayment: events.requiresPayment,
-            paymentAmount: events.paymentAmount,
-            status: events.status
+        if (email) {
+          const result = await pool.query(
+            'SELECT r.*, e.* FROM event_registrations r JOIN events e ON r.event_id = e.id WHERE r.guest_email = $1 AND e.deleted_at IS NULL',
+            [email]
+          );
+          
+          for (const row of result.rows) {
+            userRegistrations.push({
+              id: row.id,
+              eventId: row.event_id,
+              memberId: row.member_id,
+              registrationType: row.registration_type,
+              guestName: row.guest_name,
+              guestEmail: row.guest_email,
+              guestJamaat: row.guest_jamaat,
+              guestAuxiliaryBody: row.guest_auxiliary_body,
+              guestChandaNumber: row.guest_chanda_number,
+              guestCircuit: row.guest_circuit,
+              uniqueId: row.unique_id,
+              status: row.status,
+              qrCode: row.qr_code,
+              createdAt: row.created_at,
+              event: {
+                id: row.event_id,
+                name: row.name,
+                description: row.description,
+                location: row.location,
+                startDate: row.start_date,
+                endDate: row.end_date,
+                registrationStartDate: row.registration_start_date,
+                registrationEndDate: row.registration_end_date,
+                eligibleAuxiliaryBodies: row.eligible_auxiliary_bodies,
+                allowGuests: row.allow_guests,
+                requiresPayment: row.requires_payment,
+                paymentAmount: row.payment_amount,
+                status: row.status
+              }
+            });
           }
-        })
-        .from(eventRegistrations)
-        .innerJoin(events, eq(eventRegistrations.eventId, events.id))
-        .where(and(...conditions));
+        }
       }
 
       res.json(userRegistrations);
