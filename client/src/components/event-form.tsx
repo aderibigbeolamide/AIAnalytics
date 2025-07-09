@@ -16,8 +16,10 @@ const eventSchema = z.object({
   name: z.string().min(1, "Event name is required"),
   description: z.string().optional(),
   location: z.string().min(1, "Location is required"),
-  startDate: z.string().min(1, "Start date is required"),
+  startDate: z.string().min(1, "Event start date is required"),
   endDate: z.string().optional(),
+  registrationStartDate: z.string().min(1, "Registration start date is required"),
+  registrationEndDate: z.string().min(1, "Registration end date is required"),
   eligibleAuxiliaryBodies: z.array(z.string()).min(1, "At least one auxiliary body must be selected"),
   allowGuests: z.boolean().default(false),
   requiresPayment: z.boolean().default(false),
@@ -48,6 +50,8 @@ export function EventForm({ onClose, event }: EventFormProps) {
       location: event?.location || "",
       startDate: event?.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : "",
       endDate: event?.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : "",
+      registrationStartDate: event?.registrationStartDate ? new Date(event.registrationStartDate).toISOString().slice(0, 16) : "",
+      registrationEndDate: event?.registrationEndDate ? new Date(event.registrationEndDate).toISOString().slice(0, 16) : "",
       eligibleAuxiliaryBodies: event?.eligibleAuxiliaryBodies || [],
       allowGuests: event?.allowGuests || false,
       requiresPayment: event?.requiresPayment || false,
@@ -62,6 +66,8 @@ export function EventForm({ onClose, event }: EventFormProps) {
         ...data,
         startDate: new Date(data.startDate).toISOString(),
         endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
+        registrationStartDate: new Date(data.registrationStartDate).toISOString(),
+        registrationEndDate: new Date(data.registrationEndDate).toISOString(),
       };
 
       const response = await fetch("/api/events", {
@@ -103,6 +109,8 @@ export function EventForm({ onClose, event }: EventFormProps) {
         ...data,
         startDate: new Date(data.startDate).toISOString(),
         endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
+        registrationStartDate: new Date(data.registrationStartDate).toISOString(),
+        registrationEndDate: new Date(data.registrationEndDate).toISOString(),
       };
 
       const response = await fetch(`/api/events/${event.id}`, {
@@ -244,12 +252,66 @@ export function EventForm({ onClose, event }: EventFormProps) {
           />
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="registrationStartDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Registration Opens</FormLabel>
+                <FormControl>
+                  <Input type="datetime-local" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="registrationEndDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Registration Closes</FormLabel>
+                <FormControl>
+                  <Input type="datetime-local" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <FormField
           control={form.control}
           name="eligibleAuxiliaryBodies"
           render={() => (
             <FormItem>
               <FormLabel>Eligible Groups</FormLabel>
+              
+              {/* Add new auxiliary body */}
+              <div className="flex gap-2 mb-3">
+                <Input
+                  placeholder="Add new group (e.g., Youth, Students)"
+                  value={newAuxiliaryBody}
+                  onChange={(e) => setNewAuxiliaryBody(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addAuxiliaryBody();
+                    }
+                  }}
+                />
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={addAuxiliaryBody}
+                  disabled={!newAuxiliaryBody.trim()}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              
               <div className="space-y-2">
                 {auxiliaryBodies.map((body) => (
                   <FormField
@@ -260,25 +322,38 @@ export function EventForm({ onClose, event }: EventFormProps) {
                       return (
                         <FormItem
                           key={body}
-                          className="flex flex-row items-start space-x-3 space-y-0"
+                          className="flex flex-row items-center justify-between space-x-3 space-y-0 p-2 border rounded"
                         >
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(body)}
-                              onCheckedChange={(checked) => {
-                                return checked
-                                  ? field.onChange([...field.value, body])
-                                  : field.onChange(
-                                      field.value?.filter(
-                                        (value) => value !== body
-                                      )
-                                    );
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal">
-                            {body}
-                          </FormLabel>
+                          <div className="flex items-center space-x-3">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(body)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...field.value, body])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== body
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">
+                              {body}
+                            </FormLabel>
+                          </div>
+                          {!["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"].includes(body) && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeAuxiliaryBody(body)}
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </FormItem>
                       );
                     }}

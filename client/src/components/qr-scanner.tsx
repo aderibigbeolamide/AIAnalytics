@@ -88,22 +88,43 @@ export function QRScanner({ onClose }: QRScannerProps) {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }, // Use back camera if available
-      });
+      // First try with back camera, fallback to any available camera
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+      } catch (backCameraError) {
+        console.log("Back camera not available, trying front camera");
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+      }
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setIsScanning(true);
         
-        // Start scanning for QR codes every 100ms
-        scanIntervalRef.current = window.setInterval(scanQRCode, 100);
+        // Wait for video to load before starting scan
+        videoRef.current.onloadedmetadata = () => {
+          // Start scanning for QR codes every 100ms
+          scanIntervalRef.current = window.setInterval(scanQRCode, 100);
+        };
       }
     } catch (error) {
+      console.error("Camera access error:", error);
       toast({
         title: "Camera Error",
-        description: "Unable to access camera. Please check permissions.",
+        description: "Unable to access camera. Please check browser permissions and ensure you're using HTTPS.",
         variant: "destructive",
       });
     }

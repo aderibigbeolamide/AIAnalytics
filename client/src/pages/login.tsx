@@ -21,7 +21,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(username, password);
+      await login(username.trim(), password.trim());
       toast({
         title: "Login successful",
         description: "Welcome to EventValidate",

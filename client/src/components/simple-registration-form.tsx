@@ -381,7 +381,15 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                         <FormItem>
                           <FormLabel>Chanda/Wassiya Number <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter chanda/wassiya number" {...field} />
+                            <Input 
+                              placeholder="Enter chanda/wassiya number" 
+                              {...field}
+                              onChange={(e) => {
+                                // Allow only numbers and remove any non-numeric characters
+                                const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                                field.onChange(numericValue);
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -435,9 +443,13 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                         <FormLabel>Payment Amount (Optional)</FormLabel>
                         <FormControl>
                           <Input 
-                            type="number" 
-                            placeholder="Enter payment amount" 
-                            {...field} 
+                            placeholder="Enter payment amount (numbers only)" 
+                            {...field}
+                            onChange={(e) => {
+                              // Allow only numbers and decimal points for payment amounts
+                              const numericValue = e.target.value.replace(/[^0-9.]/g, '');
+                              field.onChange(numericValue);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
