@@ -50,23 +50,26 @@ export default function EventRegistration() {
     );
   }
 
-  // Check event timing - registration is only allowed during the event
+  // Check registration timing - use registration dates if available, otherwise fall back to event dates
   const now = new Date();
-  const eventStarted = now >= new Date(event.startDate);
-  const eventEnded = event.endDate && now > new Date(event.endDate);
+  const registrationStart = event.registrationStartDate ? new Date(event.registrationStartDate) : new Date(event.startDate);
+  const registrationEnd = event.registrationEndDate ? new Date(event.registrationEndDate) : (event.endDate ? new Date(event.endDate) : null);
+  
+  const registrationStarted = now >= registrationStart;
+  const registrationEnded = registrationEnd && now > registrationEnd;
 
-  // Block registration if event hasn't started yet
-  if (!eventStarted) {
+  // Block registration if registration period hasn't started yet
+  if (!registrationStarted) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <Card>
           <CardContent className="text-center py-8">
             <h2 className="text-xl font-semibold mb-2">Registration Not Yet Open</h2>
             <p className="text-muted-foreground mb-4">
-              Registration for this event is not yet open. Please wait until the event starts.
+              Registration for this event is not yet open. Please wait until the registration period starts.
             </p>
             <p className="text-sm text-gray-500">
-              Event starts on {new Date(event.startDate).toLocaleDateString()} at {new Date(event.startDate).toLocaleTimeString()}.
+              Registration opens on {registrationStart.toLocaleDateString()} at {registrationStart.toLocaleTimeString()}.
             </p>
           </CardContent>
         </Card>
@@ -74,14 +77,14 @@ export default function EventRegistration() {
     );
   }
 
-  if (eventEnded) {
+  if (registrationEnded) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <Card>
           <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold mb-2">Event Ended</h2>
+            <h2 className="text-xl font-semibold mb-2">Registration Period Ended</h2>
             <p className="text-muted-foreground">
-              This event has already ended on {new Date(event.endDate).toLocaleDateString()}.
+              The registration period for this event has ended on {registrationEnd.toLocaleDateString()}.
             </p>
           </CardContent>
         </Card>

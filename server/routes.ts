@@ -294,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event not found" });
       }
       
-      // Return only public information
+      // Return only public information including registration dates
       const publicEvent = {
         id: event.id,
         name: event.name,
@@ -302,6 +302,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: event.location,
         startDate: event.startDate,
         endDate: event.endDate,
+        registrationStartDate: event.registrationStartDate,
+        registrationEndDate: event.registrationEndDate,
         status: event.status,
         eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
         allowGuests: event.allowGuests,
