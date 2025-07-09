@@ -269,6 +269,27 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
           </Button>
         </div>
         
+        {/* View Event Details */}
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-800 font-medium mb-2">Track Your Event</p>
+          <p className="text-xs text-blue-600 mb-3">
+            View countdown timer and event details using the link below:
+          </p>
+          <div className="flex flex-col gap-2">
+            <a 
+              href={`/event-view/${event.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-mono text-blue-700 hover:text-blue-900 underline break-all"
+            >
+              {window.location.origin}/event-view/{event.id}
+            </a>
+            <p className="text-xs text-blue-500">
+              Bookmark this link to track your event countdown timer
+            </p>
+          </div>
+        </div>
+        
         <div className="text-center pt-4 border-t">
           <p className="text-sm text-gray-500">
             Event: {event.name} | Location: {event.location}

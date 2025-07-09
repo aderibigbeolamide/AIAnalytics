@@ -21,7 +21,8 @@ import {
   Target,
   Globe,
   Menu,
-  X
+  X,
+  Search
 } from "lucide-react";
 import logoPath from "@assets/Screenshot from 2025-07-06 08-06-04_1751785727840.png";
 
@@ -266,6 +267,12 @@ export function LandingPage() {
               <Phone className="h-5 w-5 mr-2" />
               Schedule Call
             </Button>
+            <Link href="/guest-lookup">
+              <Button variant="outline" size="lg" className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100">
+                <Search className="h-5 w-5 mr-2" />
+                Find My Events
+              </Button>
+            </Link>
           </div>
           <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>

@@ -9,6 +9,8 @@ import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 import Scanner from "@/pages/scanner";
 import MyEvents from "@/pages/my-events";
+import PublicEventDetail from "@/pages/public-event-detail";
+import GuestLookup from "@/pages/guest-lookup";
 import EventDetail from "@/pages/event-detail";
 import EventRegistration from "@/pages/event-registration";
 import NotFound from "@/pages/not-found";
@@ -69,11 +71,9 @@ function Router() {
           <Analytics />
         </ProtectedRoute>
       </Route>
-      <Route path="/my-events">
-        <ProtectedRoute>
-          <MyEvents />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/my-events" component={MyEvents} />
+      <Route path="/event-view/:id" component={PublicEventDetail} />
+      <Route path="/guest-lookup" component={GuestLookup} />
       <Route path="/reports">
         <ProtectedRoute>
           <Reports />

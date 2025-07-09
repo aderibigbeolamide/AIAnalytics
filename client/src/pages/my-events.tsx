@@ -24,19 +24,26 @@ export default function MyEvents() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all, upcoming, live, ended
 
-  // Get user's registrations
+  // Get user's registrations (supports both authenticated and unauthenticated access)
   const { data: registrations = [], isLoading } = useQuery({
-    queryKey: ["/api/my-registrations"],
+    queryKey: ["/api/my-registrations", user?.id],
     queryFn: async () => {
+      const headers: Record<string, string> = {};
+      
+      // Add auth headers if user is logged in
+      if (user) {
+        Object.assign(headers, getAuthHeaders());
+      }
+      
       const response = await fetch("/api/my-registrations", {
-        headers: getAuthHeaders(),
+        headers,
       });
+      
       if (!response.ok) {
         throw new Error("Failed to fetch registrations");
       }
       return response.json();
     },
-    enabled: !!user,
   });
 
   const getEventStatus = (event: any) => {

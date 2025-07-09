@@ -120,20 +120,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ user: req.user, member });
   });
 
-  // Get user's registrations
-  app.get("/api/my-registrations", authenticateToken, async (req: AuthenticatedRequest, res) => {
+  // Get user's registrations (supports both authenticated users and registration lookup by ID)
+  app.get("/api/my-registrations", async (req: Request, res) => {
     try {
-      const registrations = await storage.getEventRegistrations();
-      // Filter registrations for current user (either by userId or by email for guests)
-      const userRegistrations = registrations.filter(reg => {
-        if (req.user?.id && reg.memberId) {
-          // Check by member ID for authenticated members
-          const member = storage.getMemberByUserId(req.user.id);
-          return member && reg.memberId === member.id;
+      const { uniqueId, email } = req.query;
+      const authHeader = req.headers.authorization;
+      
+      let userRegistrations: any[] = [];
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // Authenticated user - get their registrations via member ID
+        const token = authHeader.split(' ')[1];
+        try {
+          const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET || 'fallback-secret');
+          const user = decoded as { id: number };
+          const member = await storage.getMemberByUserId(user.id);
+          
+          const registrations = await storage.getEventRegistrations();
+          userRegistrations = registrations.filter(reg => 
+            reg.memberId === member?.id
+          );
+        } catch (err) {
+          // Token invalid, continue with unauthenticated flow
         }
-        // For guests/invitees, we could match by email if we had the user's email
-        return false;
-      });
+      }
+      
+      if (userRegistrations.length === 0 && (uniqueId || email)) {
+        // Unauthenticated user - lookup by unique ID or email
+        const registrations = await storage.getEventRegistrations();
+        userRegistrations = registrations.filter(reg => {
+          if (uniqueId) {
+            return reg.uniqueId === uniqueId;
+          }
+          if (email) {
+            return reg.guestEmail === email;
+          }
+          return false;
+        });
+      }
 
       // Get event details for each registration
       const registrationsWithEvents = await Promise.all(

@@ -17,14 +17,26 @@ export function Navbar() {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navItems = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/my-events", label: "My Events" },
-    { href: "/members", label: "Members" },
-    { href: "/events", label: "Events" },
-    { href: "/scanner", label: "Scan QR" },
-    { href: "/reports", label: "Reports" },
-  ];
+  // Filter navigation items based on user role
+  const getNavItems = () => {
+    const baseItems = [
+      { href: "/my-events", label: "My Events", roles: ["admin", "member", "guest", "invitee"] }
+    ];
+
+    const adminItems = [
+      { href: "/dashboard", label: "Dashboard", roles: ["admin"] },
+      { href: "/members", label: "Members", roles: ["admin"] },
+      { href: "/events", label: "Events", roles: ["admin"] },
+      { href: "/scanner", label: "Scan QR", roles: ["admin"] },
+      { href: "/reports", label: "Reports", roles: ["admin"] },
+    ];
+
+    return [...baseItems, ...adminItems].filter(item => 
+      item.roles.includes(user?.role || 'guest')
+    );
+  };
+
+  const navItems = getNavItems();
 
   const isActive = (href: string) => {
     return location === href || (href === "/dashboard" && location === "/");
