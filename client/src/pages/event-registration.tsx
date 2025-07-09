@@ -52,6 +52,7 @@ export default function EventRegistration() {
 
   // Check registration timing - use registration dates if available, otherwise fall back to event dates
   const now = new Date();
+  
   const registrationStart = event.registrationStartDate ? new Date(event.registrationStartDate) : new Date(event.startDate);
   const registrationEnd = event.registrationEndDate ? new Date(event.registrationEndDate) : (event.endDate ? new Date(event.endDate) : null);
   
