@@ -2,6 +2,19 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
+import { db } from "./db";
+import { 
+  events,
+  eventRegistrations,
+  users,
+  members,
+  attendance,
+  eventReports,
+  invitations,
+  memberValidationCsv,
+  faceRecognitionPhotos
+} from "@shared/schema";
+import { eq, and, isNull, desc, or, ilike, gte, lte, sql } from "drizzle-orm";
 import { 
   hashPassword, 
   comparePassword, 
@@ -136,72 +149,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const user = decoded as { id: number };
           const member = await storage.getMemberByUserId(user.id);
           
-          const registrations = await storage.getEventRegistrations();
-          userRegistrations = registrations.filter(reg => 
-            reg.memberId === member?.id
-          );
+          if (member) {
+            // Use optimized database query with joins
+            userRegistrations = await db.select({
+              id: eventRegistrations.id,
+              eventId: eventRegistrations.eventId,
+              memberId: eventRegistrations.memberId,
+              registrationType: eventRegistrations.registrationType,
+              firstName: eventRegistrations.firstName,
+              lastName: eventRegistrations.lastName,
+              jamaat: eventRegistrations.jamaat,
+              auxiliaryBody: eventRegistrations.auxiliaryBody,
+              guestEmail: eventRegistrations.guestEmail,
+              circuit: eventRegistrations.circuit,
+              uniqueId: eventRegistrations.uniqueId,
+              status: eventRegistrations.status,
+              qrCode: eventRegistrations.qrCode,
+              createdAt: eventRegistrations.createdAt,
+              // Event details
+              event: {
+                id: events.id,
+                name: events.name,
+                description: events.description,
+                location: events.location,
+                startDate: events.startDate,
+                endDate: events.endDate,
+                registrationStart: events.registrationStart,
+                registrationEnd: events.registrationEnd,
+                auxiliaryBodies: events.auxiliaryBodies,
+                allowGuests: events.allowGuests,
+                allowInvitees: events.allowInvitees,
+                maxAttendees: events.maxAttendees,
+                requiresPayment: events.requiresPayment,
+                paymentAmount: events.paymentAmount,
+                status: events.status
+              }
+            })
+            .from(eventRegistrations)
+            .innerJoin(events, eq(eventRegistrations.eventId, events.id))
+            .where(and(
+              eq(eventRegistrations.memberId, member.id),
+              isNull(events.deletedAt)
+            ));
+          }
         } catch (err) {
           // Token invalid, continue with unauthenticated flow
         }
       }
       
       if (userRegistrations.length === 0 && (uniqueId || email)) {
-        // Unauthenticated user - lookup by unique ID or email
-        const registrations = await storage.getEventRegistrations();
-        userRegistrations = registrations.filter(reg => {
-          if (uniqueId) {
-            return reg.uniqueId === uniqueId;
+        // Unauthenticated user - lookup by unique ID or email with joins
+        const conditions = [isNull(events.deletedAt)];
+        if (uniqueId) {
+          conditions.push(eq(eventRegistrations.uniqueId, uniqueId));
+        }
+        if (email) {
+          conditions.push(eq(eventRegistrations.guestEmail, email));
+        }
+        
+        userRegistrations = await db.select({
+          id: eventRegistrations.id,
+          eventId: eventRegistrations.eventId,
+          memberId: eventRegistrations.memberId,
+          registrationType: eventRegistrations.registrationType,
+          firstName: eventRegistrations.firstName,
+          lastName: eventRegistrations.lastName,
+          jamaat: eventRegistrations.jamaat,
+          auxiliaryBody: eventRegistrations.auxiliaryBody,
+          guestEmail: eventRegistrations.guestEmail,
+          circuit: eventRegistrations.circuit,
+          uniqueId: eventRegistrations.uniqueId,
+          status: eventRegistrations.status,
+          qrCode: eventRegistrations.qrCode,
+          createdAt: eventRegistrations.createdAt,
+          // Event details
+          event: {
+            id: events.id,
+            name: events.name,
+            description: events.description,
+            location: events.location,
+            startDate: events.startDate,
+            endDate: events.endDate,
+            registrationStart: events.registrationStart,
+            registrationEnd: events.registrationEnd,
+            auxiliaryBodies: events.auxiliaryBodies,
+            allowGuests: events.allowGuests,
+            allowInvitees: events.allowInvitees,
+            maxAttendees: events.maxAttendees,
+            requiresPayment: events.requiresPayment,
+            paymentAmount: events.paymentAmount,
+            status: events.status
           }
-          if (email) {
-            return reg.guestEmail === email;
-          }
-          return false;
-        });
+        })
+        .from(eventRegistrations)
+        .innerJoin(events, eq(eventRegistrations.eventId, events.id))
+        .where(and(...conditions));
       }
 
-      // Get event details for each registration
-      const registrationsWithEvents = await Promise.all(
-        userRegistrations.map(async (registration) => {
-          const event = await storage.getEvent(registration.eventId);
-          return {
-            ...registration,
-            event
-          };
-        })
-      );
-
-      res.json(registrationsWithEvents);
+      res.json(userRegistrations);
     } catch (error) {
       console.error("Error fetching user registrations:", error);
       res.status(500).json({ message: "Failed to fetch registrations" });
     }
   });
 
-  // Get all events (public endpoint)
+  // Get all events (public endpoint) - optimized for performance
   app.get("/api/events/public", async (req: Request, res) => {
     try {
-      const events = await storage.getEvents();
+      // Use direct database query for better performance
+      const eventsData = await db.select({
+        id: events.id,
+        name: events.name,
+        description: events.description,
+        location: events.location,
+        startDate: events.startDate,
+        endDate: events.endDate,
+        registrationStart: events.registrationStart,
+        registrationEnd: events.registrationEnd,
+        auxiliaryBodies: events.auxiliaryBodies,
+        allowGuests: events.allowGuests,
+        allowInvitees: events.allowInvitees,
+        maxAttendees: events.maxAttendees,
+        requiresPayment: events.requiresPayment,
+        paymentAmount: events.paymentAmount,
+        status: events.status
+      })
+      .from(events)
+      .where(isNull(events.deletedAt))
+      .orderBy(desc(events.createdAt));
       
-      // Filter out deleted events and only return necessary fields
-      const publicEvents = events
-        .filter(event => !event.deletedAt)
-        .map(event => ({
-          id: event.id,
-          name: event.name,
-          description: event.description,
-          location: event.location,
-          startDate: event.startDate,
-          endDate: event.endDate,
-          registrationStart: event.registrationStart,
-          registrationEnd: event.registrationEnd,
-          auxiliaryBodies: event.auxiliaryBodies,
-          allowGuests: event.allowGuests,
-          allowInvitees: event.allowInvitees,
-          maxAttendees: event.maxAttendees,
-          requiresPayment: event.requiresPayment,
-          paymentAmount: event.paymentAmount,
-          status: event.status
-        }));
+      // Update status on-the-fly without database calls
+      const publicEvents = eventsData.map(event => {
+        const now = new Date();
+        const startDate = new Date(event.startDate);
+        const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+        
+        let dynamicStatus = event.status;
+        if (event.status !== 'cancelled') {
+          if (now >= startDate && now <= endDate) {
+            dynamicStatus = 'ongoing';
+          } else if (now < startDate) {
+            dynamicStatus = 'upcoming';
+          } else {
+            dynamicStatus = 'completed';
+          }
+        }
+        
+        return {
+          ...event,
+          status: dynamicStatus
+        };
+      });
       
       res.json(publicEvents);
     } catch (error) {

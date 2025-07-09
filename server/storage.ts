@@ -205,12 +205,10 @@ export class DatabaseStorage implements IStorage {
     
     const allEvents = await db.select().from(events).where(and(...conditions)).orderBy(desc(events.createdAt));
     
-    // Update event statuses dynamically
+    // Update event statuses dynamically but more efficiently
     const updatedEvents = allEvents.map(event => {
       const dynamicStatus = this.determineEventStatus(event);
       if (dynamicStatus !== event.status) {
-        // Update in database async
-        db.update(events).set({ status: dynamicStatus }).where(eq(events.id, event.id)).execute();
         event.status = dynamicStatus;
       }
       return event;
