@@ -251,14 +251,17 @@ export function QRScanner({ onClose }: QRScannerProps) {
       console.error("Camera access error:", error);
       setCameraStatus('error');
       let errorMessage = "Unable to access camera. ";
-      
-      if (error.name === 'NotAllowedError') {
+
+      // Type guard for error object
+      const err = error as { name?: string };
+
+      if (err && err.name === 'NotAllowedError') {
         errorMessage += "Permission denied. Please allow camera access.";
-      } else if (error.name === 'NotFoundError') {
+      } else if (err && err.name === 'NotFoundError') {
         errorMessage += "No camera found on this device.";
-      } else if (error.name === 'NotSupportedError') {
+      } else if (err && err.name === 'NotSupportedError') {
         errorMessage += "Camera not supported in this browser.";
-      } else if (error.name === 'NotReadableError') {
+      } else if (err && err.name === 'NotReadableError') {
         errorMessage += "Camera is already in use by another application.";
       } else if (!window.location.protocol.startsWith('https') && window.location.hostname !== 'localhost') {
         errorMessage += "Camera requires HTTPS or localhost.";
