@@ -122,6 +122,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
       }
       
       if (videoRef.current && stream) {
+        console.log("Setting video source object");
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setIsScanning(true);
@@ -129,8 +130,9 @@ export function QRScanner({ onClose }: QRScannerProps) {
         // Ensure video plays and wait for metadata
         videoRef.current.onloadedmetadata = () => {
           if (videoRef.current) {
+            console.log("Video metadata loaded, dimensions:", videoRef.current.videoWidth, "x", videoRef.current.videoHeight);
             videoRef.current.play().then(() => {
-              console.log("Video started playing");
+              console.log("Video started playing successfully");
               // Start scanning for QR codes every 100ms
               scanIntervalRef.current = window.setInterval(scanQRCode, 100);
             }).catch(playError => {
@@ -142,6 +144,19 @@ export function QRScanner({ onClose }: QRScannerProps) {
               });
             });
           }
+        };
+        
+        // Additional event listeners for debugging
+        videoRef.current.oncanplay = () => {
+          console.log("Video can play");
+        };
+        
+        videoRef.current.onplaying = () => {
+          console.log("Video is playing");
+        };
+        
+        videoRef.current.onloadstart = () => {
+          console.log("Video load started");
         };
         
         // Handle video errors
@@ -277,14 +292,26 @@ export function QRScanner({ onClose }: QRScannerProps) {
               ref={videoRef}
               autoPlay
               playsInline
-              className="w-full h-64 bg-black rounded-lg"
+              muted
+              controls={false}
+              className="w-full h-80 bg-black rounded-lg object-cover"
+              style={{ 
+                minHeight: '320px',
+                maxHeight: '480px',
+                aspectRatio: '16/9'
+              }}
             />
             <canvas ref={canvasRef} className="hidden" />
             <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none">
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-white rounded-lg"></div>
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-white rounded-lg shadow-lg">
+                <div className="absolute top-0 left-0 w-6 h-6 border-l-2 border-t-2 border-white"></div>
+                <div className="absolute top-0 right-0 w-6 h-6 border-r-2 border-t-2 border-white"></div>
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-l-2 border-b-2 border-white"></div>
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-r-2 border-b-2 border-white"></div>
+              </div>
             </div>
-            <div className="mt-4">
-              <Button variant="outline" onClick={stopCamera}>
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+              <Button variant="outline" onClick={stopCamera} className="bg-white/90 backdrop-blur-sm">
                 Stop Camera
               </Button>
             </div>
