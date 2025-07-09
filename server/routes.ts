@@ -336,12 +336,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processedEventData = {
         ...eventData,
         startDate: new Date(eventData.startDate),
-        endDate: eventData.endDate ? new Date(eventData.endDate) : undefined,
-        registrationStartDate: eventData.registrationStartDate ? new Date(eventData.registrationStartDate) : undefined,
-        registrationEndDate: eventData.registrationEndDate ? new Date(eventData.registrationEndDate) : undefined,
+        endDate: eventData.endDate ? new Date(eventData.endDate) : null,
+        registrationStartDate: eventData.registrationStartDate ? new Date(eventData.registrationStartDate) : null,
+        registrationEndDate: eventData.registrationEndDate ? new Date(eventData.registrationEndDate) : null,
         createdBy: req.user!.id,
       };
       
+      console.log("Processed event data before validation:", processedEventData);
       const validatedEventData = insertEventSchema.parse(processedEventData);
       
       const event = await storage.createEvent(validatedEventData);
