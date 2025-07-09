@@ -145,7 +145,17 @@ export function EventForm({ onClose, event }: EventFormProps) {
     },
   });
 
-  const [auxiliaryBodies, setAuxiliaryBodies] = useState(["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"]);
+  const [auxiliaryBodies, setAuxiliaryBodies] = useState(() => {
+    // Always start with default bodies, user can remove them if needed
+    const defaultBodies = ["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"];
+    if (event?.eligibleAuxiliaryBodies && event.eligibleAuxiliaryBodies.length > 0) {
+      // If editing an event, use existing auxiliary bodies plus any defaults not already included
+      const existingBodies = event.eligibleAuxiliaryBodies;
+      const allBodies = [...new Set([...defaultBodies, ...existingBodies])];
+      return allBodies;
+    }
+    return defaultBodies;
+  });
   const [newAuxiliaryBody, setNewAuxiliaryBody] = useState("");
 
   const { fields, append, remove } = useFieldArray({
@@ -290,26 +300,31 @@ export function EventForm({ onClose, event }: EventFormProps) {
               <FormLabel>Eligible Groups</FormLabel>
               
               {/* Add new auxiliary body */}
-              <div className="flex gap-2 mb-3">
-                <Input
-                  placeholder="Add new group (e.g., Youth, Students)"
-                  value={newAuxiliaryBody}
-                  onChange={(e) => setNewAuxiliaryBody(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addAuxiliaryBody();
-                    }
-                  }}
-                />
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={addAuxiliaryBody}
-                  disabled={!newAuxiliaryBody.trim()}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+              <div className="space-y-2 mb-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add new group (e.g., Youth, Students, Committee)"
+                    value={newAuxiliaryBody}
+                    onChange={(e) => setNewAuxiliaryBody(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addAuxiliaryBody();
+                      }
+                    }}
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={addAuxiliaryBody}
+                    disabled={!newAuxiliaryBody.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  You can add custom groups and remove any groups (including defaults) that don't apply to your event.
+                </p>
               </div>
               
               <div className="space-y-2">
@@ -343,17 +358,16 @@ export function EventForm({ onClose, event }: EventFormProps) {
                               {body}
                             </FormLabel>
                           </div>
-                          {!["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"].includes(body) && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeAuxiliaryBody(body)}
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeAuxiliaryBody(body)}
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                            title={`Remove ${body} from available groups`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </FormItem>
                       );
                     }}
