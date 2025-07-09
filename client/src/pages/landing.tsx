@@ -94,7 +94,7 @@ export function LandingPage() {
   const pricingPlans = [
     {
       name: "Event Rental",
-      price: "$100",
+      price: "$50",
       period: "per event",
       description: "Perfect for single events and conferences",
       features: [
@@ -109,7 +109,7 @@ export function LandingPage() {
     },
     {
       name: "Monthly License",
-      price: "$300",
+      price: "$150",
       period: "per month",
       description: "Ideal for organizations with regular events",
       features: [
