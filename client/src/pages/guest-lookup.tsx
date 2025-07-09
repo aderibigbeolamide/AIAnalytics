@@ -243,7 +243,7 @@ export default function GuestLookup() {
           </Card>
         )}
 
-        {shouldSearch && !isLoading && registrations.length === 0 && !error && (
+        {shouldSearch && !registrationsLoading && registrations.length === 0 && !error && (
           <Card className="mb-6">
             <CardContent className="p-6 text-center">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
