@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuthStore } from "./lib/auth";
 import { useEffect } from "react";
+// Analytics will be enabled when VITE_GA_MEASUREMENT_ID is provided
+// import { initGA } from "@/lib/analytics";
+// import { useAnalytics } from "@/hooks/use-analytics";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 import Scanner from "@/pages/scanner";
@@ -24,6 +27,9 @@ import { ProtectedRoute } from "@/components/protected-route";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage } = useAuthStore();
+  
+  // Analytics tracking disabled until VITE_GA_MEASUREMENT_ID is configured
+  // useAnalytics();
 
   useEffect(() => {
     // First load from storage, then check if needed
@@ -97,11 +103,20 @@ function Router() {
 }
 
 function App() {
+  // Google Analytics initialization disabled until VITE_GA_MEASUREMENT_ID is configured
+  // useEffect(() => {
+  //   if (!import.meta.env.VITE_GA_MEASUREMENT_ID) {
+  //     console.warn('Missing required Google Analytics key: VITE_GA_MEASUREMENT_ID');
+  //   } else {
+  //     initGA();
+  //   }
+  // }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
         <Router />
+        <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
   );

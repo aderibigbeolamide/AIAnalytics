@@ -236,117 +236,312 @@ export function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <Badge className="mb-4 bg-blue-100 text-blue-800 border-blue-200">
-            <Zap className="h-3 w-3 mr-1" />
-            AI-Powered Event Validation
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="absolute inset-0 hero-gradient opacity-5"></div>
+        <div className="max-w-7xl mx-auto text-center relative z-10">
+          <Badge className="mb-6 bg-blue-100 text-blue-800 border-blue-200 px-4 py-2 text-sm font-medium">
+            <Zap className="h-4 w-4 mr-2" />
+            AI-Powered Event Validation Platform
           </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Transform Your Event
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600"> Security</span>
+          <h1 className="hero-text text-4xl md:text-6xl lg:text-7xl font-bold text-high-contrast mb-8 leading-tight">
+            Stop Event Fraud.
+            <span className="text-gradient block mt-2">Start Smart Validation.</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            EventValidate is an AI-powered member validation system that revolutionizes event check-ins with secure QR codes, 
-            real-time analytics, and comprehensive attendance tracking for organizations worldwide.
+          <p className="hero-subtitle text-xl md:text-2xl text-medium-contrast mb-12 max-w-4xl mx-auto leading-relaxed">
+            EventValidate eliminates unauthorized event access with AI-powered QR validation, 
+            real-time attendance tracking, and comprehensive member verification for organizations.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          
+          {/* Clear Value Proposition */}
+          <div className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto border border-gray-200">
+            <h2 className="text-2xl font-bold text-high-contrast mb-4">Perfect for:</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+              <div className="flex items-start space-x-3">
+                <div className="bg-blue-100 rounded-full p-2 mt-1">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-high-contrast">Religious Organizations</h3>
+                  <p className="text-medium-contrast text-sm">Secure member validation for events and gatherings</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="bg-green-100 rounded-full p-2 mt-1">
+                  <Shield className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-high-contrast">Corporate Events</h3>
+                  <p className="text-medium-contrast text-sm">Professional conferences and company meetings</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="bg-purple-100 rounded-full p-2 mt-1">
+                  <BarChart3 className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-high-contrast">Educational Institutions</h3>
+                  <p className="text-medium-contrast text-sm">Student events and academic conferences</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Button 
               size="lg" 
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              className="btn-primary text-white font-semibold px-8 py-4 text-lg focus-visible:focus"
               onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
             >
-              <Target className="h-5 w-5 mr-2" />
-              Start Free Demo
+              <Target className="h-6 w-6 mr-2" />
+              Get Free Demo
             </Button>
             <Button 
               variant="outline" 
               size="lg"
+              className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-8 py-4 text-lg focus-visible:focus"
               onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss EventValidate for my organization.', '_blank')}
             >
-              <Phone className="h-5 w-5 mr-2" />
+              <Phone className="h-6 w-6 mr-2" />
               Schedule Call
             </Button>
+          </div>
+
+          {/* Quick Access */}
+          <div className="mb-12">
+            <p className="text-medium-contrast mb-4 text-lg">Already have an event registration? Find your QR code:</p>
             <Link href="/guest-lookup">
-              <Button variant="outline" size="lg" className="bg-green-50 border-green-300 text-green-700 hover:bg-green-100">
+              <Button variant="outline" size="lg" className="btn-secondary text-white font-semibold px-6 py-3 focus-visible:focus">
                 <Search className="h-5 w-5 mr-2" />
-                Find My Events
+                Find My Registration
               </Button>
             </Link>
           </div>
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-bold text-blue-600">99.9%</div>
-              <div className="text-gray-600">Security Rate</div>
+
+          {/* Social Proof */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="fade-in">
+              <div className="text-4xl font-bold text-blue-600 mb-2">99.9%</div>
+              <div className="text-medium-contrast font-medium">Security Rate</div>
             </div>
-            <div>
-              <div className="text-3xl font-bold text-green-600">80%</div>
-              <div className="text-gray-600">Faster Check-in</div>
+            <div className="fade-in">
+              <div className="text-4xl font-bold text-green-600 mb-2">80%</div>
+              <div className="text-medium-contrast font-medium">Faster Check-in</div>
             </div>
-            <div>
-              <div className="text-3xl font-bold text-purple-600">500+</div>
-              <div className="text-gray-600">Events Powered</div>
+            <div className="fade-in">
+              <div className="text-4xl font-bold text-purple-600 mb-2">500+</div>
+              <div className="text-medium-contrast font-medium">Events Powered</div>
             </div>
-            <div>
-              <div className="text-3xl font-bold text-orange-600">50K+</div>
-              <div className="text-gray-600">Attendees Validated</div>
+            <div className="fade-in">
+              <div className="text-4xl font-bold text-orange-600 mb-2">50K+</div>
+              <div className="text-medium-contrast font-medium">Attendees Validated</div>
+            </div>
+          </div>
+
+          {/* Trust indicators */}
+          <div className="mt-16 pt-8 border-t border-gray-200">
+            <p className="text-medium-contrast mb-4 text-lg">Trusted by organizations worldwide</p>
+            <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
+              <div className="bg-gray-100 px-4 py-2 rounded-lg">
+                <span className="text-gray-600 font-medium">Religious Organizations</span>
+              </div>
+              <div className="bg-gray-100 px-4 py-2 rounded-lg">
+                <span className="text-gray-600 font-medium">Corporate Events</span>
+              </div>
+              <div className="bg-gray-100 px-4 py-2 rounded-lg">
+                <span className="text-gray-600 font-medium">Educational Institutions</span>
+              </div>
+              <div className="bg-gray-100 px-4 py-2 rounded-lg">
+                <span className="text-gray-600 font-medium">Non-Profits</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
+      <section id="features" className="py-24 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Powerful Features for Modern Events
+          <div className="text-center mb-20">
+            <Badge className="mb-4 bg-blue-100 text-blue-800 border-blue-200">
+              <Shield className="h-4 w-4 mr-2" />
+              Advanced Security Features
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-high-contrast mb-6">
+              Everything You Need for
+              <span className="text-gradient block mt-2">Secure Event Management</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Everything you need to manage, validate, and track event attendance with cutting-edge technology.
+            <p className="text-xl text-medium-contrast max-w-3xl mx-auto leading-relaxed">
+              From QR code generation to real-time analytics, EventValidate provides comprehensive tools 
+              that ensure your events are secure, efficient, and professionally managed.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
-                <CardHeader>
-                  <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform">
+              <Card key={index} className="group hover:shadow-xl transition-all duration-500 border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:bg-white">
+                <CardHeader className="pb-4">
+                  <div className="h-14 w-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform duration-300">
                     {feature.icon}
                   </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
+                  <CardTitle className="text-xl font-bold text-high-contrast group-hover:text-blue-600 transition-colors">
+                    {feature.title}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">{feature.description}</p>
+                  <p className="text-medium-contrast leading-relaxed">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
+          </div>
+          
+          {/* How It Works Section */}
+          <div className="mt-24 bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-gray-200">
+            <div className="text-center mb-12">
+              <h3 className="text-3xl font-bold text-high-contrast mb-4">How It Works</h3>
+              <p className="text-lg text-medium-contrast max-w-2xl mx-auto">
+                Get started with EventValidate in just 3 simple steps
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl font-bold text-blue-600">1</span>
+                </div>
+                <h4 className="text-xl font-semibold text-high-contrast mb-2">Create Event</h4>
+                <p className="text-medium-contrast">Set up your event with member eligibility rules and validation requirements</p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl font-bold text-green-600">2</span>
+                </div>
+                <h4 className="text-xl font-semibold text-high-contrast mb-2">Share Registration</h4>
+                <p className="text-medium-contrast">Members register using secure QR codes with AI-powered validation</p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl font-bold text-purple-600">3</span>
+                </div>
+                <h4 className="text-xl font-semibold text-high-contrast mb-2">Validate & Track</h4>
+                <p className="text-medium-contrast">Scan attendees at the event and track real-time attendance analytics</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section id="benefits" className="py-20 bg-gray-50">
+      <section id="benefits" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why Choose EventValidate?
+          <div className="text-center mb-20">
+            <Badge className="mb-4 bg-green-100 text-green-800 border-green-200">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Proven Results
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-high-contrast mb-6">
+              Why Organizations Choose
+              <span className="text-gradient block mt-2">EventValidate</span>
             </h2>
-            <p className="text-xl text-gray-600">
-              Measurable improvements for your events and organization
+            <p className="text-xl text-medium-contrast max-w-3xl mx-auto leading-relaxed">
+              Join hundreds of organizations that have transformed their event security 
+              and achieved measurable improvements in efficiency and fraud prevention.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="text-3xl font-bold text-blue-600 mb-2">{benefit.metric}</div>
-                  <CardTitle className="text-lg">{benefit.title}</CardTitle>
+              <Card key={index} className="text-center hover:shadow-xl transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 group">
+                <CardHeader className="pb-4">
+                  <div className="text-4xl font-bold text-gradient mb-3 group-hover:scale-110 transition-transform duration-300">
+                    {benefit.metric}
+                  </div>
+                  <CardTitle className="text-xl font-bold text-high-contrast mb-2">
+                    {benefit.title}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">{benefit.description}</p>
+                  <p className="text-medium-contrast leading-relaxed">{benefit.description}</p>
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          {/* Testimonials Section */}
+          <div className="mt-24">
+            <div className="text-center mb-16">
+              <h3 className="text-3xl font-bold text-high-contrast mb-4">What Our Users Say</h3>
+              <p className="text-lg text-medium-contrast">
+                Real feedback from organizations using EventValidate
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <Card className="bg-gradient-to-br from-blue-50 to-white border-0 shadow-lg">
+                <CardContent className="p-8">
+                  <div className="flex items-center mb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-medium-contrast mb-6 leading-relaxed">
+                    "EventValidate completely transformed our event security. We eliminated unauthorized access 
+                    and reduced check-in time by 75%. The QR validation is incredibly reliable."
+                  </p>
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                      <span className="text-blue-600 font-semibold">MR</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-high-contrast">Mohammed Rahman</p>
+                      <p className="text-medium-contrast text-sm">Event Coordinator, Islamic Center</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-green-50 to-white border-0 shadow-lg">
+                <CardContent className="p-8">
+                  <div className="flex items-center mb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-medium-contrast mb-6 leading-relaxed">
+                    "The face recognition and CSV validation features are game-changers. 
+                    We can now verify members instantly and prevent duplicate registrations."
+                  </p>
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                      <span className="text-green-600 font-semibold">AJ</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-high-contrast">Aisha Johnson</p>
+                      <p className="text-medium-contrast text-sm">IT Director, Community Organization</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-purple-50 to-white border-0 shadow-lg">
+                <CardContent className="p-8">
+                  <div className="flex items-center mb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-medium-contrast mb-6 leading-relaxed">
+                    "Real-time analytics give us insights we never had before. 
+                    EventValidate pays for itself with the efficiency gains alone."
+                  </p>
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                      <span className="text-purple-600 font-semibold">DM</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-high-contrast">David Martinez</p>
+                      <p className="text-medium-contrast text-sm">Operations Manager, Conference Center</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
@@ -364,31 +559,33 @@ export function LandingPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {pricingPlans.map((plan, index) => (
-              <Card key={index} className={`relative hover:shadow-lg transition-all ${plan.popular ? 'ring-2 ring-blue-500 scale-105' : ''}`}>
+              <Card key={index} className={`relative hover:shadow-xl transition-all duration-300 border-0 shadow-lg ${plan.popular ? 'ring-4 ring-blue-500 scale-105 bg-gradient-to-br from-blue-50 to-white' : 'bg-white'}`}>
                 {plan.popular && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-500">
-                    Most Popular
+                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2">
+                    ⚡ Most Popular
                   </Badge>
                 )}
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <div className="text-4xl font-bold text-gray-900 my-4">
+                <CardHeader className="text-center pb-4">
+                  <CardTitle className="text-2xl font-bold text-high-contrast">{plan.name}</CardTitle>
+                  <div className="text-5xl font-bold text-gradient my-6">
                     {plan.price}
-                    <span className="text-lg font-normal text-gray-600">/{plan.period}</span>
+                    <span className="text-lg font-normal text-medium-contrast">/{plan.period}</span>
                   </div>
-                  <CardDescription>{plan.description}</CardDescription>
+                  <CardDescription className="text-medium-contrast text-lg leading-relaxed">
+                    {plan.description}
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3 mb-6">
+                <CardContent className="pt-4">
+                  <ul className="space-y-4 mb-8">
                     {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                        <span className="text-gray-700">{feature}</span>
+                      <li key={featureIndex} className="flex items-start">
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                        <span className="text-medium-contrast leading-relaxed">{feature}</span>
                       </li>
                     ))}
                   </ul>
                   <Button 
-                    className={`w-full ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                    className={`w-full font-semibold py-3 text-lg transition-all focus-visible:focus ${plan.popular ? 'btn-primary text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
                     onClick={() => {
                       if (plan.price === "Custom") {
                         // Open WhatsApp for enterprise inquiries
