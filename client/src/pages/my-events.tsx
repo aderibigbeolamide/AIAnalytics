@@ -289,6 +289,33 @@ export default function MyEvents() {
                       <div className="space-y-3">
                         <p className="text-gray-700">{registration.event.description}</p>
                         
+                        {/* Registration counts */}
+                        {registration.event.registrationCounts && (
+                          <div className="bg-gray-50 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Registration Summary</p>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Total:</span>
+                                <span className="font-medium">{registration.event.registrationCounts.totalRegistrations || 0}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Members:</span>
+                                <span className="font-medium text-blue-600">{registration.event.registrationCounts.memberCount || 0}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Guests:</span>
+                                <span className="font-medium text-green-600">{registration.event.registrationCounts.guestCount || 0}</span>
+                              </div>
+                              {registration.event.registrationCounts.inviteeCount > 0 && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-600">Invitees:</span>
+                                  <span className="font-medium text-purple-600">{registration.event.registrationCounts.inviteeCount}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
                         {registration.id && (
                           <div className="flex items-center justify-between">
                             <div>

@@ -298,6 +298,14 @@ export default function Dashboard() {
                             </Badge>
                             <span className="text-sm text-gray-600">Location: {event.location}</span>
                           </div>
+                          <div className="flex items-center mt-2 space-x-4 text-sm text-gray-600">
+                            <span>📊 {event.totalRegistrations || 0} total</span>
+                            <span>👥 {event.memberRegistrations || 0} members</span>
+                            <span>🎫 {event.guestRegistrations || 0} guests</span>
+                            {event.inviteeRegistrations > 0 && (
+                              <span>📧 {event.inviteeRegistrations} invitees</span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex space-x-2">
                           <Link href={`/events/${event.id}`}>

@@ -297,8 +297,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const eventsData = result.rows;
       
-      // Update status on-the-fly without database calls
-      const publicEvents = eventsData.map((event: any) => {
+      // Get registration counts for each event
+      const eventsWithCounts = [];
+      
+      for (const event of eventsData) {
         const now = new Date();
         const startDate = new Date(event.start_date);
         const endDate = event.end_date ? new Date(event.end_date) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
@@ -314,7 +316,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        return {
+        // Get registration counts for this event
+        const registrationsResult = await pool.query(
+          'SELECT registration_type, COUNT(*) as count FROM event_registrations WHERE event_id = $1 GROUP BY registration_type',
+          [event.id]
+        );
+        
+        const registrationCounts = {
+          totalRegistrations: 0,
+          memberCount: 0,
+          guestCount: 0,
+          inviteeCount: 0
+        };
+        
+        registrationsResult.rows.forEach(row => {
+          registrationCounts.totalRegistrations += parseInt(row.count);
+          if (row.registration_type === 'member') {
+            registrationCounts.memberCount = parseInt(row.count);
+          } else if (row.registration_type === 'guest') {
+            registrationCounts.guestCount = parseInt(row.count);
+          } else if (row.registration_type === 'invitee') {
+            registrationCounts.inviteeCount = parseInt(row.count);
+          }
+        });
+        
+        eventsWithCounts.push({
           id: event.id,
           name: event.name,
           description: event.description,
@@ -331,11 +357,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdBy: event.created_by,
           qrCode: event.qr_code,
           reportLink: event.report_link,
-          createdAt: event.created_at
-        };
-      });
+          createdAt: event.created_at,
+          registrationCounts
+        });
+      }
       
-      res.json(publicEvents);
+      res.json(eventsWithCounts);
     } catch (error) {
       console.error("Error fetching public events:", error);
       res.status(500).json({ message: "Failed to fetch events" });
@@ -375,6 +402,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Dashboard stats error:', error);
       res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // Get event registration counts
+  app.get("/api/events/:eventId/registration-counts", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const registrations = await storage.getEventRegistrations(eventId);
+      
+      const counts = {
+        totalRegistrations: registrations.length,
+        memberCount: registrations.filter(r => r.registrationType === 'member').length,
+        guestCount: registrations.filter(r => r.registrationType === 'guest').length,
+        inviteeCount: registrations.filter(r => r.registrationType === 'invitee').length,
+        attendedCount: registrations.filter(r => r.status === 'attended').length,
+        registeredCount: registrations.filter(r => r.status === 'registered').length,
+      };
+      
+      res.json(counts);
+    } catch (error) {
+      console.error('Error fetching event registration counts:', error);
+      res.status(500).json({ message: "Failed to fetch registration counts" });
     }
   });
 
