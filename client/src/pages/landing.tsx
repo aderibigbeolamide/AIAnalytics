@@ -24,7 +24,7 @@ import {
   X,
   Search
 } from "lucide-react";
-import logoPath from "@assets/Screenshot from 2025-07-06 08-06-04_1751785727840.png";
+// Logo image placed in public folder for proper asset handling
 
 export function LandingPage() {
   const [activeTab, setActiveTab] = useState("features");
@@ -150,7 +150,7 @@ export function LandingPage() {
           <div className="flex justify-between items-center h-16">
             <Link href="/">
               <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
-                <img src={logoPath} alt="EventValidate Logo" className="h-10 w-auto" />
+                <img src="/logo.png" alt="EventValidate Logo" className="h-10 w-auto" />
                 <span className="ml-2 text-xl font-bold text-gray-900">EventValidate</span>
               </div>
             </Link>
@@ -488,7 +488,7 @@ export function LandingPage() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <Link href="/">
               <div className="flex items-center mb-4 md:mb-0 cursor-pointer hover:opacity-80 transition-opacity">
-                <img src={logoPath} alt="EventValidate Logo" className="h-8 w-auto" />
+                <img src="/logo.png" alt="EventValidate Logo" className="h-8 w-auto" />
                 <span className="ml-2 text-lg font-semibold text-white">EventValidate</span>
               </div>
             </Link>

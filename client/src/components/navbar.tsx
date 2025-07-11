@@ -1,6 +1,6 @@
 import { Bell, Menu, X } from "lucide-react";
 import { useState } from "react";
-import logoPath from "@assets/Screenshot from 2025-07-06 08-06-04_1751785727840.png";
+// Logo image placed in public folder for proper asset handling
 import { useAuthStore } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -51,7 +51,7 @@ export function Navbar() {
             <Link href="/landing">
               <div className="flex-shrink-0 flex items-center cursor-pointer hover:opacity-80 transition-opacity">
                 <img 
-                  src={logoPath} 
+                  src="/logo.png" 
                   alt="EventValidate Logo" 
                   className="h-10 w-auto" 
                 />
