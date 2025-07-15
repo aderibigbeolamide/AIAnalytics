@@ -6,6 +6,8 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequest } from "@/lib/queryClient";
@@ -206,51 +208,44 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
               </div>
 
               {/* Registration Type Selection */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Registration Type</label>
-                  <div className="flex gap-4 mt-2">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        value="member"
-                        checked={registrationType === "member"}
-                        onChange={(e) => {
-                          setRegistrationType(e.target.value as "member");
-                          form.setValue("registrationType", "member");
+              <FormField
+                control={form.control}
+                name="registrationType"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Registration Type</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setRegistrationType(value as "member" | "guest" | "invitee");
+                          form.setValue("registrationType", value);
+                          // Clear validation errors when registration type changes
+                          setTimeout(() => form.trigger(), 100);
                         }}
-                      />
-                      <span>Member</span>
-                    </label>
-                    {event?.allowGuests && (
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="guest"
-                          checked={registrationType === "guest"}
-                          onChange={(e) => {
-                            setRegistrationType(e.target.value as "guest");
-                            form.setValue("registrationType", "guest");
-                          }}
-                        />
-                        <span>Guest</span>
-                      </label>
-                    )}
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        value="invitee"
-                        checked={registrationType === "invitee"}
-                        onChange={(e) => {
-                          setRegistrationType(e.target.value as "invitee");
-                          form.setValue("registrationType", "invitee");
-                        }}
-                      />
-                      <span>Invitee</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
+                        value={field.value}
+                        className="flex flex-col space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="member" id="member" />
+                          <Label htmlFor="member">Member</Label>
+                        </div>
+                        {event?.allowGuests && (
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="guest" id="guest" />
+                            <Label htmlFor="guest">Guest</Label>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="invitee" id="invitee" />
+                          <Label htmlFor="invitee">Invitee</Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Member-specific fields */}
               {registrationType === "member" && (

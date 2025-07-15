@@ -6,6 +6,8 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequest } from "@/lib/queryClient";
@@ -255,48 +257,42 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
               });
             })} className="space-y-6">
               {/* Registration Type Selection */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Registration Type</label>
-                  <div className="flex gap-4 mt-2">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        value="member"
-                        checked={registrationType === "member"}
-                        onChange={(e) => {
-                          setRegistrationType(e.target.value as "member");
+              <FormField
+                control={form.control}
+                name="registrationType"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Registration Type</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setRegistrationType(value as "member" | "guest" | "invitee");
+                          form.setValue("registrationType", value);
                         }}
-                      />
-                      <span>Member</span>
-                    </label>
-                    {event?.allowGuests && (
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          value="guest"
-                          checked={registrationType === "guest"}
-                          onChange={(e) => {
-                            setRegistrationType(e.target.value as "guest");
-                          }}
-                        />
-                        <span>Guest</span>
-                      </label>
-                    )}
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        value="invitee"
-                        checked={registrationType === "invitee"}
-                        onChange={(e) => {
-                          setRegistrationType(e.target.value as "invitee");
-                        }}
-                      />
-                      <span>Invitee</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
+                        value={field.value || registrationType}
+                        className="flex flex-col space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="member" id="member-simple" />
+                          <Label htmlFor="member-simple">Member</Label>
+                        </div>
+                        {event?.allowGuests && (
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="guest" id="guest-simple" />
+                            <Label htmlFor="guest-simple">Guest</Label>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="invitee" id="invitee-simple" />
+                          <Label htmlFor="invitee-simple">Invitee</Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Basic fields for all types */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
