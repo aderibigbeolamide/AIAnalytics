@@ -152,15 +152,11 @@ export function EventForm({ onClose, event }: EventFormProps) {
   });
 
   const [auxiliaryBodies, setAuxiliaryBodies] = useState(() => {
-    // Always start with default bodies, user can remove them if needed
-    const defaultBodies = ["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"];
+    // Start with existing auxiliary bodies from the event or empty array
     if (event?.eligibleAuxiliaryBodies && event.eligibleAuxiliaryBodies.length > 0) {
-      // If editing an event, use existing auxiliary bodies plus any defaults not already included
-      const existingBodies = event.eligibleAuxiliaryBodies;
-      const allBodies = [...new Set([...defaultBodies, ...existingBodies])];
-      return allBodies;
+      return event.eligibleAuxiliaryBodies;
     }
-    return defaultBodies;
+    return [];
   });
   const [newAuxiliaryBody, setNewAuxiliaryBody] = useState("");
 

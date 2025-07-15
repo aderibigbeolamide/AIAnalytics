@@ -296,13 +296,13 @@ export default function Dashboard() {
         )}
 
         {/* Upcoming Events with Countdown */}
-        {events.filter((event: any) => 
+        {Array.isArray(events) && events.filter((event: any) => 
           event.status === 'upcoming' && new Date(event.startDate) > new Date()
         ).length > 0 && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Upcoming Events</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {events
+              {Array.isArray(events) && events
                 .filter((event: any) => 
                   event.status === 'upcoming' && new Date(event.startDate) > new Date()
                 )
@@ -320,7 +320,7 @@ export default function Dashboard() {
         )}
 
         {/* Live Events */}
-        {events.filter((event: any) => {
+        {Array.isArray(events) && events.filter((event: any) => {
           const now = new Date();
           const start = new Date(event.startDate);
           const end = new Date(event.endDate);
@@ -329,7 +329,7 @@ export default function Dashboard() {
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Live Events</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {events
+              {Array.isArray(events) && events
                 .filter((event: any) => {
                   const now = new Date();
                   const start = new Date(event.startDate);
