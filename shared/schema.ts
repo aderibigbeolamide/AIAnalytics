@@ -23,6 +23,19 @@ export interface CustomFormField {
     showWhen: string; // field id
     equals: string; // value
   };
+  // New conditional fields for registration types
+  requiredForTypes?: string[]; // Array of registration types where this field is required
+  visibleForTypes?: string[]; // Array of registration types where this field is visible
+  conditionalRequired?: {
+    member?: boolean;
+    guest?: boolean;
+    invitee?: boolean;
+  };
+  conditionalVisible?: {
+    member?: boolean;
+    guest?: boolean;
+    invitee?: boolean;
+  };
 }
 
 export const users = pgTable("users", {

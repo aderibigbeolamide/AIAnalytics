@@ -45,6 +45,8 @@ export function FormFieldBuilder({ control, fields, append, remove, update }: Fo
     placeholder: '',
     options: [],
     helperText: '',
+    requiredForTypes: [],
+    visibleForTypes: ['member', 'guest', 'invitee'],
   });
 
   const handleAddField = () => {
@@ -71,6 +73,8 @@ export function FormFieldBuilder({ control, fields, append, remove, update }: Fo
       placeholder: '',
       options: [],
       helperText: '',
+      requiredForTypes: [],
+      visibleForTypes: ['member', 'guest', 'invitee'],
     });
     setIsBuilding(false);
   };
@@ -311,6 +315,69 @@ export function FormFieldBuilder({ control, fields, append, remove, update }: Fo
               <Label htmlFor="field-required">Required field</Label>
             </div>
 
+            {/* Conditional Requirements */}
+            <div className="space-y-3">
+              <Label>Registration Type Settings</Label>
+              
+              <div>
+                <Label className="text-sm font-medium">Required for registration types:</Label>
+                <div className="flex gap-4 mt-2">
+                  {['member', 'guest', 'invitee'].map((type) => (
+                    <div key={type} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`required-${type}`}
+                        checked={newField.requiredForTypes?.includes(type) || false}
+                        onCheckedChange={(checked) => {
+                          const currentTypes = newField.requiredForTypes || [];
+                          if (checked) {
+                            setNewField({
+                              ...newField,
+                              requiredForTypes: [...currentTypes, type]
+                            });
+                          } else {
+                            setNewField({
+                              ...newField,
+                              requiredForTypes: currentTypes.filter(t => t !== type)
+                            });
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`required-${type}`} className="capitalize">{type}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Visible for registration types:</Label>
+                <div className="flex gap-4 mt-2">
+                  {['member', 'guest', 'invitee'].map((type) => (
+                    <div key={type} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`visible-${type}`}
+                        checked={newField.visibleForTypes?.includes(type) || false}
+                        onCheckedChange={(checked) => {
+                          const currentTypes = newField.visibleForTypes || [];
+                          if (checked) {
+                            setNewField({
+                              ...newField,
+                              visibleForTypes: [...currentTypes, type]
+                            });
+                          } else {
+                            setNewField({
+                              ...newField,
+                              visibleForTypes: currentTypes.filter(t => t !== type)
+                            });
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`visible-${type}`} className="capitalize">{type}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Options for select, radio, checkbox */}
             {['select', 'radio', 'checkbox'].includes(newField.type) && (
               <div>
@@ -369,6 +436,8 @@ export function FormFieldBuilder({ control, fields, append, remove, update }: Fo
                     placeholder: '',
                     options: [],
                     helperText: '',
+                    requiredForTypes: [],
+                    visibleForTypes: ['member', 'guest', 'invitee'],
                   });
                 }}
               >

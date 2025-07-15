@@ -19,18 +19,52 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { RegistrationCard } from "@/components/registration-card";
 import { CountdownTimer } from "@/components/countdown-timer";
 
+// Helper function to determine if a field is required for a specific registration type
+function isFieldRequiredForRegistrationType(field: any, registrationType: string): boolean {
+  // If field has type-specific requirements, check them
+  if (field.requiredForTypes && Array.isArray(field.requiredForTypes)) {
+    return field.requiredForTypes.includes(registrationType);
+  }
+  
+  // If field has conditional requirements based on registration type
+  if (field.conditionalRequired) {
+    return field.conditionalRequired[registrationType] === true;
+  }
+  
+  // Default to the field's general required setting
+  return field.required === true;
+}
+
+// Helper function to determine if a field should be shown for a specific registration type
+function shouldShowFieldForRegistrationType(field: any, registrationType: string): boolean {
+  // If field has visibility rules for specific types
+  if (field.visibleForTypes && Array.isArray(field.visibleForTypes)) {
+    return field.visibleForTypes.includes(registrationType);
+  }
+  
+  // If field has conditional visibility
+  if (field.conditionalVisible) {
+    return field.conditionalVisible[registrationType] !== false;
+  }
+  
+  // Default to showing the field for all types
+  return true;
+}
+
 // Dynamic validation schemas
 const createDynamicSchema = (registrationType: string, event: any) => {
   let schemaFields: any = {
     registrationType: z.enum(["member", "guest", "invitee"]),
   };
 
-  // Only basic registration type field is required by default
-  // All other fields come from admin configuration
-
-  // Add custom fields dynamically
+  // Add custom fields dynamically with type-specific requirements
   if (event.customRegistrationFields) {
     event.customRegistrationFields.forEach((field: any) => {
+      // Skip fields that shouldn't be shown for this registration type
+      if (!shouldShowFieldForRegistrationType(field, registrationType)) {
+        return;
+      }
+      
       let fieldSchema: any;
       
       switch (field.type) {
@@ -38,7 +72,7 @@ const createDynamicSchema = (registrationType: string, event: any) => {
           fieldSchema = z.string().email("Valid email is required");
           break;
         case 'number':
-          fieldSchema = z.number().min(field.validation?.min || 0);
+          fieldSchema = z.coerce.number().min(field.validation?.min || 0);
           break;
         case 'tel':
           fieldSchema = z.string().min(10, "Valid phone number is required");
@@ -49,12 +83,31 @@ const createDynamicSchema = (registrationType: string, event: any) => {
         case 'file':
           fieldSchema = z.any().optional();
           break;
+        case 'select':
+          if (field.options && field.options.length > 0) {
+            fieldSchema = z.enum(field.options);
+          } else {
+            fieldSchema = z.string();
+          }
+          break;
+        case 'textarea':
+          fieldSchema = z.string();
+          break;
         default:
           fieldSchema = z.string();
       }
       
-      if (field.required) {
-        fieldSchema = fieldSchema.min ? fieldSchema.min(1, `${field.label} is required`) : fieldSchema.refine((val: any) => val !== undefined && val !== null && val !== "", `${field.label} is required`);
+      // Check if field is required for this specific registration type
+      const isRequiredForType = isFieldRequiredForRegistrationType(field, registrationType);
+      
+      if (isRequiredForType) {
+        if (field.type === 'number') {
+          fieldSchema = fieldSchema.min(field.validation?.min || 0, `${field.label} is required`);
+        } else if (field.type === 'email') {
+          fieldSchema = fieldSchema.min(1, `${field.label} is required`);
+        } else {
+          fieldSchema = fieldSchema.min ? fieldSchema.min(1, `${field.label} is required`) : fieldSchema.refine((val: any) => val !== undefined && val !== null && val !== "", `${field.label} is required`);
+        }
       } else {
         fieldSchema = fieldSchema.optional();
       }
@@ -79,7 +132,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
   const [qrImageBase64, setQrImageBase64] = useState<string>("");
   const [registrationType, setRegistrationType] = useState<"member" | "guest" | "invitee">("member");
 
-  // Create form with dynamic validation
+  // Create form with dynamic validation that updates when registration type changes
   const form = useForm({
     resolver: zodResolver(createDynamicSchema(registrationType, event)),
     defaultValues: {
@@ -90,6 +143,12 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
       }, {}),
     },
   });
+
+  // Update form validation when registration type changes
+  React.useEffect(() => {
+    form.clearErrors();
+    form.trigger();
+  }, [registrationType, form]);
 
   // Check if registration is currently open
   const isRegistrationOpen = () => {
@@ -248,23 +307,34 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                         onValueChange={(value) => {
                           field.onChange(value);
                           setRegistrationType(value as "member" | "guest" | "invitee");
+                          // Re-validate form when registration type changes
+                          setTimeout(() => form.trigger(), 100);
                         }}
                         value={field.value}
-                        className="flex flex-col space-y-2"
+                        className="grid grid-cols-1 md:grid-cols-3 gap-4"
                       >
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
                           <RadioGroupItem value="member" id="member" />
-                          <Label htmlFor="member">Member</Label>
+                          <div>
+                            <Label htmlFor="member" className="font-medium">Member</Label>
+                            <p className="text-xs text-gray-600">Organization member</p>
+                          </div>
                         </div>
                         {event.allowGuests && (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
                             <RadioGroupItem value="guest" id="guest" />
-                            <Label htmlFor="guest">Guest</Label>
+                            <div>
+                              <Label htmlFor="guest" className="font-medium">Guest</Label>
+                              <p className="text-xs text-gray-600">External guest</p>
+                            </div>
                           </div>
                         )}
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
                           <RadioGroupItem value="invitee" id="invitee" />
-                          <Label htmlFor="invitee">Invitee</Label>
+                          <div>
+                            <Label htmlFor="invitee" className="font-medium">Invitee</Label>
+                            <p className="text-xs text-gray-600">Special invitee</p>
+                          </div>
                         </div>
                       </RadioGroup>
                     </FormControl>
@@ -275,8 +345,10 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
 
               {/* Only show custom fields configured by admin */}
 
-              {/* Admin-configured fields only */}
-              {event.customRegistrationFields?.map((field: any) => (
+              {/* Admin-configured fields only - filtered by registration type */}
+              {event.customRegistrationFields?.filter((field: any) => 
+                shouldShowFieldForRegistrationType(field, registrationType)
+              ).map((field: any) => (
                 <FormField
                   key={field.name}
                   control={form.control}
@@ -285,7 +357,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                     <FormItem>
                       <FormLabel>
                         {field.label} 
-                        {field.required && <span className="text-red-500">*</span>}
+                        {isFieldRequiredForRegistrationType(field, registrationType) && <span className="text-red-500">*</span>}
                       </FormLabel>
                       <FormControl>
                         {field.type === 'textarea' ? (
@@ -330,12 +402,18 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                 />
               ))}
 
-              {/* Payment Information */}
+              {/* Payment Information - conditional based on registration type */}
               {event.requiresPayment && (
                 <div className="bg-yellow-50 p-4 rounded-lg">
                   <h4 className="font-medium text-yellow-900 mb-2">Payment Required</h4>
                   <p className="text-sm text-yellow-700">
-                    This event requires a payment of {event.paymentAmount}. Please ensure payment is completed before attending.
+                    {registrationType === "member" ? (
+                      <>This event requires a payment of {event.paymentAmount}. Please ensure payment is completed before attending.</>
+                    ) : registrationType === "guest" ? (
+                      <>Guest registration may require payment of {event.paymentAmount}. Please check with organizers.</>
+                    ) : (
+                      <>As an invitee, payment requirements may vary. Please check with organizers.</>
+                    )}
                   </p>
                 </div>
               )}
