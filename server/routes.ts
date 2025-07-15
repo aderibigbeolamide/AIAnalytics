@@ -593,7 +593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event not found" });
       }
       
-      // Return only public information including registration dates
+      // Return only public information including registration dates and custom fields
       const publicEvent = {
         id: event.id,
         name: event.name,
@@ -608,6 +608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allowGuests: event.allowGuests,
         requiresPayment: event.requiresPayment,
         paymentAmount: event.paymentAmount,
+        customRegistrationFields: event.customRegistrationFields || [],
       };
       
       res.json(publicEvent);
@@ -833,26 +834,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const {
-        firstName,
-        lastName,
-        jamaat,
-        auxiliaryBody,
-        chandaNumber,
-        circuit,
-        email,
-        registrationType,
-        paymentReceiptUrl,
-        paymentAmount
-      } = req.body;
+      const { registrationType, ...formData } = req.body;
 
-      // Validate required fields based on registration type
-      if (!firstName || !lastName || firstName.trim() === '' || lastName.trim() === '') {
-        return res.status(400).json({ message: "First name and last name are required" });
+      // Validate required fields based on custom registration fields
+      if (!event.customRegistrationFields || event.customRegistrationFields.length === 0) {
+        return res.status(400).json({ message: "No registration fields configured for this event" });
       }
 
-      // Handle payment receipt upload first
-      let paymentReceiptUrlFinal = paymentReceiptUrl;
+      // Validate required custom fields
+      for (const field of event.customRegistrationFields) {
+        if (field.required && (!formData[field.name] || formData[field.name].toString().trim() === '')) {
+          return res.status(400).json({ message: `${field.label} is required` });
+        }
+      }
+
+      // Handle file uploads if any
+      let paymentReceiptUrlFinal = null;
       if (req.file) {
         try {
           const { fileStorage } = await import('./storage-handler');
@@ -860,62 +857,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paymentReceiptUrlFinal = uploadedFile.url;
         } catch (error) {
           console.error('File upload error:', error);
-          return res.status(400).json({ message: "Failed to upload payment receipt" });
+          return res.status(400).json({ message: "Failed to upload file" });
         }
       }
 
-      // For members, additional fields are required
-      if (registrationType === "member") {
-        if (!jamaat || !auxiliaryBody || !email) {
-          return res.status(400).json({ message: "Jamaat, auxiliary body, and email are required for members" });
-        }
-        
-        // Check if payment receipt is required for members
-        if (event.requiresPayment && !paymentReceiptUrlFinal) {
-          return res.status(400).json({ message: "Payment receipt is required for members in paid events" });
-        }
-      }
+      // Extract common fields for registration (if they exist in custom fields)
+      const tempRegistrationData = {
+        registrationType: registrationType || 'guest',
+        customFieldData: formData
+      };
 
-      // Check payment receipt if event requires payment (make it optional for now)
-      // if (event.requiresPayment && !paymentReceiptUrlFinal) {
-      //   return res.status(400).json({ message: "Payment receipt is required for this event" });
-      // }
-
-      // Check if auxiliary body is eligible for this event (only for members)
-      if (registrationType === "member" && auxiliaryBody && !event.eligibleAuxiliaryBodies.includes(auxiliaryBody)) {
-        return res.status(400).json({ message: "Auxiliary body not eligible for this event" });
-      }
-
-      // Create or find member based on registration data
+      // Create or find member based on registration data (simplified approach)
       let member = null;
       if (registrationType === "member") {
         try {
-          // First check if member exists by chanda number (primary identifier)
-          if (chandaNumber) {
-            member = await storage.getMemberByChandaNumber(chandaNumber);
-          }
+          // Try to find member by email if email field exists
+          const emailField = event.customRegistrationFields.find(f => f.type === 'email');
+          const email = emailField ? formData[emailField.name] : null;
           
-          if (!member) {
-            // Create new member if doesn't exist
-            // Use chanda number + timestamp for unique username if chanda number exists
-            const uniqueUsername = chandaNumber ? 
-              `${chandaNumber}_${Date.now()}` : 
-              `${email}_${Date.now()}`;
-              
+          if (email) {
+            // Create a simple member record
+            const uniqueUsername = `${email}_${Date.now()}`;
             member = await storage.createMember({
               username: uniqueUsername,
-              firstName,
-              lastName,
-              jamaat,
-              auxiliaryBody,
-              chandaNumber,
-              circuit,
-              email,
+              firstName: formData.firstName || formData.FirstName || 'Unknown',
+              lastName: formData.lastName || formData.LastName || 'User',
+              jamaat: formData.jamaat || formData.Jamaat || 'Unknown',
+              auxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || 'Unknown',
+              chandaNumber: formData.chandaNumber || formData.ChandaNumber || null,
+              circuit: formData.circuit || formData.Circuit || null,
+              email: email,
               status: "active"
             });
           }
         } catch (error) {
-          console.error("Member creation/lookup error:", error);
+          console.error("Member creation error:", error);
           // Continue with registration even if member creation fails
         }
       }
@@ -923,22 +899,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const qrCode = generateQRCode();
       const uniqueId = generateShortUniqueId(); // Generate shorter 6-character ID for manual validation
       
+      // Extract common fields from custom form data
+      const getName = () => {
+        // Try common name field combinations
+        const firstName = formData.firstName || formData.FirstName || formData.first_name || '';
+        const lastName = formData.lastName || formData.LastName || formData.last_name || '';
+        const fullName = formData.name || formData.Name || formData.fullName || formData.FullName || '';
+        
+        if (firstName && lastName) {
+          return `${firstName} ${lastName}`;
+        } else if (fullName) {
+          return fullName;
+        } else {
+          return 'Unknown User';
+        }
+      };
+
+      const getEmail = () => {
+        const emailField = event.customRegistrationFields.find(f => f.type === 'email');
+        return emailField ? formData[emailField.name] : null;
+      };
+
       const registrationData = {
         eventId,
         memberId: member?.id,
         registrationType,
         qrCode,
         uniqueId,
-        // Store data for all registration types (including members for fallback)
-        guestName: `${firstName} ${lastName}`,
-        guestEmail: email,
-        guestJamaat: jamaat,
-        guestAuxiliaryBody: auxiliaryBody,
-        guestChandaNumber: chandaNumber,
-        guestCircuit: circuit,
-        guestPost: registrationType === "invitee" ? req.body.post : undefined,
+        // Store custom form data as JSON and fallback fields
+        customFormData: JSON.stringify(formData),
+        guestName: getName(),
+        guestEmail: getEmail(),
+        guestJamaat: formData.jamaat || formData.Jamaat || 'Unknown',
+        guestAuxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || 'Unknown',
+        guestChandaNumber: formData.chandaNumber || formData.ChandaNumber || null,
+        guestCircuit: formData.circuit || formData.Circuit || null,
+        guestPost: formData.post || formData.Post || null,
         paymentReceiptUrl: paymentReceiptUrlFinal,
-        paymentAmount,
+        paymentAmount: formData.paymentAmount || null,
         paymentStatus: paymentReceiptUrlFinal ? "pending" : undefined,
         status: "registered"
       };
@@ -963,13 +961,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sendEmail, generateRegistrationCardHTML } = await import('./email');
       const emailHtml = generateRegistrationCardHTML(fullRegistration || registration, event, qrImageData.replace('data:image/png;base64,', ''));
       
-      const emailSent = await sendEmail({
-        to: email,
-        from: 'admin@letbud.com',
-        subject: `Registration Confirmation - ${event.name}`,
-        html: emailHtml,
-        text: `Registration confirmed for ${event.name}. Your unique ID is: ${registration.uniqueId}`
-      });
+      const userEmail = getEmail();
+      let emailSent = false;
+      
+      if (userEmail) {
+        emailSent = await sendEmail({
+          to: userEmail,
+          from: 'admin@letbud.com',
+          subject: `Registration Confirmation - ${event.name}`,
+          html: emailHtml,
+          text: `Registration confirmed for ${event.name}. Your unique ID is: ${registration.uniqueId}`
+        });
+      }
       
       // Extract base64 data from the data URL
       const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
