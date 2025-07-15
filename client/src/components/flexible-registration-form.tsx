@@ -165,7 +165,7 @@ export function FlexibleRegistrationForm({ event, onSubmit, isLoading }: Flexibl
               <SelectValue placeholder={field.placeholder || "Select an option"} />
             </SelectTrigger>
             <SelectContent>
-              {field.options?.map((option) => (
+              {field.options?.filter(option => option && option.trim()).map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
@@ -344,7 +344,7 @@ export function FlexibleRegistrationForm({ event, onSubmit, isLoading }: Flexibl
                               <SelectValue placeholder="Select auxiliary body" />
                             </SelectTrigger>
                             <SelectContent>
-                              {event.eligibleAuxiliaryBodies.map((body: string) => (
+                              {event.eligibleAuxiliaryBodies.filter((body: string) => body && body.trim()).map((body: string) => (
                                 <SelectItem key={body} value={body}>
                                   {body}
                                 </SelectItem>
@@ -436,7 +436,7 @@ export function FlexibleRegistrationForm({ event, onSubmit, isLoading }: Flexibl
                               <SelectValue placeholder="Select auxiliary body" />
                             </SelectTrigger>
                             <SelectContent>
-                              {event.eligibleAuxiliaryBodies.map((body: string) => (
+                              {event.eligibleAuxiliaryBodies.filter((body: string) => body && body.trim()).map((body: string) => (
                                 <SelectItem key={body} value={body}>
                                   {body}
                                 </SelectItem>

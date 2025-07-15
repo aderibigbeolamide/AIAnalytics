@@ -376,7 +376,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {auxiliaryBodies.map((body: string) => (
+                            {auxiliaryBodies.filter((body: string) => body && body.trim()).map((body: string) => (
                               <SelectItem key={body} value={body}>
                                 {body}
                               </SelectItem>

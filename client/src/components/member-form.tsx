@@ -55,9 +55,9 @@ function DynamicAuxiliaryBodyField({ form }: { form: any }) {
             </FormControl>
             <SelectContent>
               {auxiliaryBodies.length === 0 ? (
-                <SelectItem value="" disabled>No auxiliary bodies available (create an event first)</SelectItem>
+                <SelectItem value="no-bodies" disabled>No auxiliary bodies available (create an event first)</SelectItem>
               ) : (
-                auxiliaryBodies.map((body: string) => (
+                auxiliaryBodies.filter((body: string) => body && body.trim()).map((body: string) => (
                   <SelectItem key={body} value={body}>
                     {body}
                   </SelectItem>
