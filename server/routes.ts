@@ -835,15 +835,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { registrationType, ...formData } = req.body;
+      
+      // Debug: Log received form data
+      console.log('Received registration data:', { registrationType, formData });
+      console.log('Event custom fields:', event.customRegistrationFields);
 
       // Validate required fields based on custom registration fields
       if (!event.customRegistrationFields || event.customRegistrationFields.length === 0) {
         return res.status(400).json({ message: "No registration fields configured for this event" });
       }
 
-      // Validate required custom fields
+      // Validate required custom fields based on registration type
       for (const field of event.customRegistrationFields) {
-        if (field.required && (!formData[field.name] || formData[field.name].toString().trim() === '')) {
+        // Check if field should be shown for this registration type
+        if (field.visibleForTypes && !field.visibleForTypes.includes(registrationType)) {
+          continue; // Skip fields not visible for this registration type
+        }
+        
+        // Check if field is required for this registration type
+        const isRequired = field.requiredForTypes 
+          ? field.requiredForTypes.includes(registrationType)
+          : field.required; // fallback to general required setting
+        
+        if (isRequired && (!formData[field.name] || formData[field.name].toString().trim() === '')) {
           return res.status(400).json({ message: `${field.label} is required` });
         }
       }

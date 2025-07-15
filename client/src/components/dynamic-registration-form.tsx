@@ -165,6 +165,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
 
   const registrationMutation = useMutation({
     mutationFn: async (data: any) => {
+      // For file uploads, we need to use fetch directly since apiRequest expects JSON
       const formData = new FormData();
       
       // Add all form fields
@@ -182,10 +183,27 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
       
       formData.append("eventId", eventId);
       
-      return apiRequest(`/api/events/${eventId}/register`, {
+      // Use fetch directly for FormData uploads
+      const token = localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/events/${eventId}/register`, {
         method: "POST",
+        headers,
         body: formData,
+        credentials: "include",
       });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`${response.status}: ${text}`);
+      }
+
+      return await response.json();
     },
     onSuccess: (response) => {
       setRegistrationData(response.registration);
