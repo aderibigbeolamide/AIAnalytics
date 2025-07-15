@@ -37,7 +37,6 @@ export function FlexibleRegistrationForm({ event, onSubmit, isLoading }: Flexibl
       schemaFields.lastName = z.string().min(1, "Last name is required");
       schemaFields.email = z.string().email("Valid email is required");
       schemaFields.auxiliaryBody = z.string().min(1, "Auxiliary body is required");
-      schemaFields.chandaNumber = z.string().optional();
       schemaFields.circuit = z.string().optional();
     } else {
       schemaFields.guestName = z.string().min(1, "Name is required");
@@ -356,19 +355,7 @@ export function FlexibleRegistrationForm({ event, onSubmit, isLoading }: Flexibl
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="chandaNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Chanda Number (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter chanda number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                   <FormField
                     control={form.control}
                     name="circuit"

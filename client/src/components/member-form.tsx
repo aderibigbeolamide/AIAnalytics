@@ -19,10 +19,7 @@ const memberSchema = z.object({
   middleName: z.string().optional(),
   lastName: z.string().min(1, "Last name is required"),
   username: z.string().min(1, "Username is required"),
-  jamaat: z.string().optional(),
   circuit: z.string().optional(),
-  chandaNumber: z.string().optional(),
-  wasiyyahNumber: z.string().optional(),
   address: z.string().optional(),
   phoneNumber: z.string().optional(),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
@@ -83,10 +80,7 @@ export function MemberForm({ onClose, member }: MemberFormProps) {
       middleName: member?.middleName || "",
       lastName: member?.lastName || "",
       username: member?.username || "",
-      jamaat: member?.jamaat || "",
       circuit: member?.circuit || "",
-      chandaNumber: member?.chandaNumber || "",
-      wasiyyahNumber: member?.wasiyyahNumber || "",
       address: member?.address || "",
       phoneNumber: member?.phoneNumber || "",
       email: member?.email || "",
@@ -234,67 +228,23 @@ export function MemberForm({ onClose, member }: MemberFormProps) {
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="jamaat"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Jamaat</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="circuit"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Circuit (Optional)</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="circuit"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Circuit (Optional)</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <DynamicAuxiliaryBodyField form={form} />
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="chandaNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Chanda Number (Optional)</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="wasiyyahNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Wasiyyah Number (Optional)</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+
 
         <FormField
           control={form.control}

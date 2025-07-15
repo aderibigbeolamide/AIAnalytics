@@ -166,7 +166,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 guestEmail: row.guest_email,
                 guestJamaat: row.guest_jamaat,
                 guestAuxiliaryBody: row.guest_auxiliary_body,
-                guestChandaNumber: row.guest_chanda_number,
                 guestCircuit: row.guest_circuit,
                 uniqueId: row.unique_id,
                 status: row.status,
@@ -213,7 +212,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               guestEmail: row.guest_email,
               guestJamaat: row.guest_jamaat,
               guestAuxiliaryBody: row.guest_auxiliary_body,
-              guestChandaNumber: row.guest_chanda_number,
               guestCircuit: row.guest_circuit,
               uniqueId: row.unique_id,
               status: row.status,
@@ -254,7 +252,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               guestEmail: row.guest_email,
               guestJamaat: row.guest_jamaat,
               guestAuxiliaryBody: row.guest_auxiliary_body,
-              guestChandaNumber: row.guest_chanda_number,
               guestCircuit: row.guest_circuit,
               uniqueId: row.unique_id,
               status: row.status,
@@ -964,9 +961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customFormData: JSON.stringify(formData),
         guestName: getName(),
         guestEmail: getEmail(),
-        guestJamaat: formData.jamaat || formData.Jamaat || 'Unknown',
         guestAuxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || 'Unknown',
-        guestChandaNumber: formData.chandaNumber || formData.ChandaNumber || null,
         guestCircuit: formData.circuit || formData.Circuit || null,
         guestPost: formData.post || formData.Post || null,
         paymentReceiptUrl: paymentReceiptUrlFinal,
@@ -1116,7 +1111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Support multiple possible field names for CSV data
             const csvName = csvMember.name || csvMember.Fullname || csvMember.fullName || csvMember.fullname;
             const csvEmail = csvMember.email || csvMember.Email || csvMember.emailAddress;
-            const csvChanda = csvMember.chandaNumber || csvMember.ChandaNO || csvMember.chandaNo || csvMember.chanda_number;
+
             
             // Compare name (case insensitive)
             const nameMatch = csvName && registration.guestName && 
@@ -1126,16 +1121,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const emailMatch = csvEmail && registration.guestEmail && 
               csvEmail.toLowerCase().trim() === registration.guestEmail.toLowerCase().trim();
             
-            // Compare chanda number
-            const chandaMatch = csvChanda && registration.guestChandaNumber && 
-              csvChanda.toString().trim() === registration.guestChandaNumber.toString().trim();
-            
             console.log(`CSV QR Validation Check:
-              CSV Member: ${csvName} | ${csvEmail} | ${csvChanda}
-              Registration: ${registration.guestName} | ${registration.guestEmail} | ${registration.guestChandaNumber}
-              Matches: name=${nameMatch}, email=${emailMatch}, chanda=${chandaMatch}`);
+              CSV Member: ${csvName} | ${csvEmail}
+              Registration: ${registration.guestName} | ${registration.guestEmail}
+              Matches: name=${nameMatch}, email=${emailMatch}`);
             
-            return nameMatch || emailMatch || chandaMatch;
+            return nameMatch || emailMatch;
           })
         );
         
@@ -1229,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Registration ID': reg.id,
           'Name': reg.guestName || (member ? `${member.firstName} ${member.lastName}` : 'N/A'),
           'Auxiliary Body': reg.guestAuxiliaryBody || member?.auxiliaryBody || 'N/A',
-          'Chanda Number': reg.guestChandaNumber || member?.chandaNumber || 'N/A',
+          
           'Email': reg.guestEmail || member?.email || 'N/A',
           'Registration Type': reg.registrationType,
           'Status': reg.status,
@@ -1493,15 +1484,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               csvEmail.toLowerCase().trim() === registration.guestEmail.toLowerCase().trim();
             
             // Compare chanda number
-            const chandaMatch = csvChanda && registration.guestChandaNumber && 
-              csvChanda.toString().trim() === registration.guestChandaNumber.toString().trim();
             
             console.log(`CSV Validation Check:
               CSV Member: ${csvName} | ${csvEmail} | ${csvChanda}
-              Registration: ${registration.guestName} | ${registration.guestEmail} | ${registration.guestChandaNumber}
-              Matches: name=${nameMatch}, email=${emailMatch}, chanda=${chandaMatch}`);
+              Registration: ${registration.guestName} | ${registration.guestEmail} | 
+              Matches: name=${nameMatch}, email=${emailMatch}`);
             
-            return nameMatch || emailMatch || chandaMatch;
+            return nameMatch || emailMatch;
           })
         );
         
@@ -1795,15 +1784,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               csvEmail.toLowerCase().trim() === registration.guestEmail.toLowerCase().trim();
             
             // Compare chanda number
-            const chandaMatch = csvChanda && registration.guestChandaNumber && 
-              csvChanda.toString().trim() === registration.guestChandaNumber.toString().trim();
             
             console.log(`CSV Validation Check:
               CSV Member: ${csvName} | ${csvEmail} | ${csvChanda}
-              Registration: ${registration.guestName} | ${registration.guestEmail} | ${registration.guestChandaNumber}
-              Matches: name=${nameMatch}, email=${emailMatch}, chanda=${chandaMatch}`);
+              Registration: ${registration.guestName} | ${registration.guestEmail} | 
+              Matches: name=${nameMatch}, email=${emailMatch}`);
             
-            return nameMatch || emailMatch || chandaMatch;
+            return nameMatch || emailMatch;
           })
         );
         

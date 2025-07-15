@@ -21,8 +21,8 @@ export interface IStorage {
   getMember(id: number): Promise<Member | undefined>;
   getMemberByUserId(userId: number): Promise<Member | undefined>;
   getMemberByUsername(username: string): Promise<Member | undefined>;
-  getMemberByChandaNumber(chandaNumber: string): Promise<Member | undefined>;
-  getMembers(filters?: { auxiliaryBody?: string; search?: string; chandaNumber?: string }): Promise<Member[]>;
+
+  getMembers(filters?: { auxiliaryBody?: string; search?: string }): Promise<Member[]>;
   createMember(member: InsertMember): Promise<Member>;
   updateMember(id: number, updates: Partial<InsertMember>): Promise<Member | undefined>;
   deleteMember(id: number): Promise<boolean>;
@@ -117,26 +117,19 @@ export class DatabaseStorage implements IStorage {
     return member || undefined;
   }
 
-  async getMemberByChandaNumber(chandaNumber: string): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.chandaNumber, chandaNumber));
-    return member || undefined;
-  }
 
-  async getMembers(filters?: { auxiliaryBody?: string; search?: string; chandaNumber?: string }): Promise<Member[]> {
+
+  async getMembers(filters?: { auxiliaryBody?: string; search?: string }): Promise<Member[]> {
     const conditions = [isNull(members.deletedAt)]; // Exclude soft-deleted members
 
     if (filters?.auxiliaryBody) {
       conditions.push(eq(members.auxiliaryBody, filters.auxiliaryBody));
     }
 
-    if (filters?.chandaNumber) {
-      conditions.push(eq(members.chandaNumber, filters.chandaNumber));
-    }
-
     if (filters?.search) {
       const searchTerm = `%${filters.search}%`;
       conditions.push(
-        sql`${members.firstName} ILIKE ${searchTerm} OR ${members.lastName} ILIKE ${searchTerm} OR ${members.email} ILIKE ${searchTerm} OR ${members.chandaNumber} ILIKE ${searchTerm} OR ${members.username} ILIKE ${searchTerm}`
+        sql`${members.firstName} ILIKE ${searchTerm} OR ${members.lastName} ILIKE ${searchTerm} OR ${members.email} ILIKE ${searchTerm} OR ${members.username} ILIKE ${searchTerm}`
       );
     }
 

@@ -17,8 +17,7 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
   const auxiliaryBody = registration.guestAuxiliaryBody || registration.guest_auxiliary_body || 
     (registration.member ? registration.member.auxiliaryBody : 'Guest');
   
-  const chandaNumber = registration.guestChandaNumber || registration.guest_chanda_number || 
-    (registration.member ? registration.member.chandaNumber : 'N/A');
+  // Removed hardcoded chanda number field for flexibility
   
   const email = registration.guestEmail || registration.guest_email || 
     (registration.member ? registration.member.email : 'N/A');
@@ -172,13 +171,7 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
               </div>
             </div>
             
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <Hash className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Chanda Number</p>
-                <p className="font-semibold">{chandaNumber}</p>
-              </div>
-            </div>
+
             
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
               <Mail className="h-5 w-5 text-blue-600" />
