@@ -27,11 +27,15 @@ export function AuxiliaryBodyFilter({
         {includeAll && (
           <SelectItem value="all">All Auxiliary Bodies</SelectItem>
         )}
-        {auxiliaryBodies.map((body: string) => (
-          <SelectItem key={body} value={body}>
-            {body}
-          </SelectItem>
-        ))}
+        {auxiliaryBodies.length === 0 ? (
+          <SelectItem value="none" disabled>No auxiliary bodies available</SelectItem>
+        ) : (
+          auxiliaryBodies.filter((body: string) => body && body.trim()).map((body: string) => (
+            <SelectItem key={body} value={body}>
+              {body}
+            </SelectItem>
+          ))
+        )}
       </SelectContent>
     </Select>
   );

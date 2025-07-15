@@ -523,7 +523,6 @@ export default function Dashboard() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Auxiliary Body</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chanda #</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
@@ -550,9 +549,6 @@ export default function Dashboard() {
                             <Badge className={getAuxiliaryBodyBadge(member.auxiliaryBody)}>
                               {member.auxiliaryBody}
                             </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {member.chandaNumber || "N/A"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <Badge className={getStatusBadge(member.status)}>
