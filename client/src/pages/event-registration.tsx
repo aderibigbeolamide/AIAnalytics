@@ -1,6 +1,6 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { SimpleRegistrationForm } from "@/components/simple-registration-form";
+import { FlexibleRegistrationForm } from "@/components/flexible-registration-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users } from "lucide-react";
@@ -195,7 +195,30 @@ export default function EventRegistration() {
         </Card>
 
         {/* Registration Form */}
-        <SimpleRegistrationForm eventId={id!} event={event} />
+        <FlexibleRegistrationForm
+          event={event}
+          onSubmit={async (data) => {
+            try {
+              const response = await fetch(`/api/events/${id}/register`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+              });
+              
+              if (!response.ok) {
+                throw new Error('Registration failed');
+              }
+              
+              const result = await response.json();
+              // Handle success - maybe redirect to success page or show QR code
+              console.log('Registration successful:', result);
+            } catch (error) {
+              console.error('Registration error:', error);
+            }
+          }}
+        />
         
         {/* Footer */}
         <div className="text-center py-6 text-gray-500">

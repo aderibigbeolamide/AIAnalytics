@@ -3,6 +3,28 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// Custom form field type for flexible registration forms
+export interface CustomFormField {
+  id: string;
+  name: string;
+  label: string;
+  type: 'text' | 'email' | 'number' | 'tel' | 'select' | 'radio' | 'checkbox' | 'textarea' | 'file';
+  required: boolean;
+  placeholder?: string;
+  options?: string[]; // For select, radio, checkbox
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+    message?: string;
+  };
+  helperText?: string;
+  conditionalLogic?: {
+    showWhen: string; // field id
+    equals: string; // value
+  };
+}
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -47,6 +69,7 @@ export const events = pgTable("events", {
   allowGuests: boolean("allow_guests").default(false),
   requiresPayment: boolean("requires_payment").default(false),
   paymentAmount: text("payment_amount"),
+  customRegistrationFields: jsonb("custom_registration_fields").$type<CustomFormField[]>().default([]),
   status: text("status").notNull().default("upcoming"), // upcoming, active, completed, cancelled
   createdBy: integer("created_by").references(() => users.id).notNull(),
   qrCode: text("qr_code"),
@@ -72,6 +95,9 @@ export const eventRegistrations = pgTable("event_registrations", {
   guestChandaNumber: text("guest_chanda_number"),
   guestCircuit: text("guest_circuit"),
   guestPost: text("guest_post"), // Optional post for invitees
+  
+  // Custom form field data
+  customFieldData: jsonb("custom_field_data").$type<Record<string, any>>().default({}),
   
   // Payment receipt (optional)
   paymentReceiptUrl: text("payment_receipt_url"),

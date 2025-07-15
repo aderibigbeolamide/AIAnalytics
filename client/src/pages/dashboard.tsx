@@ -199,6 +199,102 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Auxiliary Body Statistics */}
+        {stats?.auxiliaryBodyStats && Object.keys(stats.auxiliaryBodyStats).length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Auxiliary Body Statistics</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Object.entries(stats.auxiliaryBodyStats).map(([auxBody, bodyStats]: [string, any]) => (
+                <Card key={auxBody} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <UsersRound className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-lg font-semibold text-gray-900">{auxBody}</p>
+                        </div>
+                      </div>
+                      <Badge className={getAuxiliaryBodyBadge(auxBody)}>
+                        {auxBody}
+                      </Badge>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Total Members:</span>
+                        <span className="text-sm font-medium">{bodyStats.totalMembers || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Active Members:</span>
+                        <span className="text-sm font-medium">{bodyStats.activeMembers || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Registrations:</span>
+                        <span className="text-sm font-medium">{bodyStats.registrations || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Attended:</span>
+                        <span className="text-sm font-medium">{bodyStats.attendedEvents || 0}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Registration Type Statistics */}
+        {stats?.registrationTypeStats && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Registration Type Distribution</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <Users className="h-8 w-8 text-blue-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-blue-600">Members</p>
+                      <p className="text-2xl font-bold text-blue-900">{stats.registrationTypeStats.members || 0}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <UserPlus className="h-8 w-8 text-green-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-green-600">Guests</p>
+                      <p className="text-2xl font-bold text-green-900">{stats.registrationTypeStats.guests || 0}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-purple-50 border-purple-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <Bot className="h-8 w-8 text-purple-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-purple-600">Invitees</p>
+                      <p className="text-2xl font-bold text-purple-900">{stats.registrationTypeStats.invitees || 0}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
         {/* Upcoming Events with Countdown */}
         {events.filter((event: any) => 
           event.status === 'upcoming' && new Date(event.startDate) > new Date()

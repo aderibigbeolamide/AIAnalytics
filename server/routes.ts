@@ -388,6 +388,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
+      // Calculate auxiliary body statistics
+      const auxiliaryBodyStats: Record<string, any> = {};
+      
+      // Count members by auxiliary body
+      members.forEach(member => {
+        if (member.auxiliaryBody) {
+          if (!auxiliaryBodyStats[member.auxiliaryBody]) {
+            auxiliaryBodyStats[member.auxiliaryBody] = {
+              totalMembers: 0,
+              registrations: 0,
+              attendedEvents: 0,
+              activeMembers: 0
+            };
+          }
+          auxiliaryBodyStats[member.auxiliaryBody].totalMembers++;
+          if (member.status === 'active') {
+            auxiliaryBodyStats[member.auxiliaryBody].activeMembers++;
+          }
+        }
+      });
+      
+      // Count registrations by auxiliary body
+      allRegistrations.forEach(reg => {
+        const auxBody = reg.member?.auxiliaryBody || reg.guestAuxiliaryBody;
+        if (auxBody) {
+          if (!auxiliaryBodyStats[auxBody]) {
+            auxiliaryBodyStats[auxBody] = {
+              totalMembers: 0,
+              registrations: 0,
+              attendedEvents: 0,
+              activeMembers: 0
+            };
+          }
+          auxiliaryBodyStats[auxBody].registrations++;
+          if (reg.status === 'attended') {
+            auxiliaryBodyStats[auxBody].attendedEvents++;
+          }
+        }
+      });
+      
+      // Calculate registration type distribution
+      const registrationTypeStats = {
+        members: allRegistrations.filter(r => r.registrationType === 'member').length,
+        guests: allRegistrations.filter(r => r.registrationType === 'guest').length,
+        invitees: allRegistrations.filter(r => r.registrationType === 'invitee').length,
+      };
+      
       const stats = {
         ...attendanceStats,
         totalMembers: members.length,
@@ -396,6 +443,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeEvents: events.filter(e => e.status === 'active').length,
         totalEvents: events.length,
         activeMembers: members.filter(m => m.status === 'active').length,
+        auxiliaryBodyStats,
+        registrationTypeStats,
       };
       
       res.json(stats);

@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
+import { FormFieldBuilder } from "@/components/form-field-builder";
 import { Plus, X } from "lucide-react";
 
 const eventSchema = z.object({
@@ -24,6 +25,7 @@ const eventSchema = z.object({
   allowGuests: z.boolean().default(false),
   requiresPayment: z.boolean().default(false),
   paymentAmount: z.string().optional(),
+  customRegistrationFields: z.array(z.any()).optional(),
   invitations: z.array(z.object({
     name: z.string().min(1, "Invitee name is required"),
     email: z.string().email("Valid email is required"),
@@ -56,6 +58,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
       allowGuests: event?.allowGuests || false,
       requiresPayment: event?.requiresPayment || false,
       paymentAmount: event?.paymentAmount || "",
+      customRegistrationFields: event?.customRegistrationFields || [],
       invitations: event?.invitations || [],
     },
   });
@@ -164,6 +167,11 @@ export function EventForm({ onClose, event }: EventFormProps) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "invitations",
+  });
+
+  const { fields: customFields, append: appendCustomField, remove: removeCustomField, update: updateCustomField } = useFieldArray({
+    control: form.control,
+    name: "customRegistrationFields",
   });
 
   const addAuxiliaryBody = () => {
@@ -530,6 +538,17 @@ export function EventForm({ onClose, event }: EventFormProps) {
               Click "Add Invitation" to invite specific people who aren't members
             </p>
           )}
+        </div>
+
+        {/* Custom Registration Fields Builder */}
+        <div className="border-t pt-6">
+          <FormFieldBuilder
+            control={form.control}
+            fields={customFields}
+            append={appendCustomField}
+            remove={removeCustomField}
+            update={updateCustomField}
+          />
         </div>
 
         <div className="flex space-x-3 pt-4">
