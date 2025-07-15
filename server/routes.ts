@@ -476,6 +476,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all auxiliary bodies from existing events
+  app.get("/api/auxiliary-bodies", async (req: Request, res) => {
+    try {
+      // Get all unique auxiliary bodies from all events
+      const result = await pool.query(
+        'SELECT DISTINCT jsonb_array_elements_text(eligible_auxiliary_bodies) as auxiliary_body FROM events WHERE deleted_at IS NULL AND eligible_auxiliary_bodies IS NOT NULL AND eligible_auxiliary_bodies != \'null\''
+      );
+      
+      const auxiliaryBodies = result.rows
+        .map(row => row.auxiliary_body)
+        .filter(body => body && body.trim() !== '')
+        .sort();
+      
+      res.json(auxiliaryBodies);
+    } catch (error) {
+      console.error('Error fetching auxiliary bodies:', error);
+      res.json([]); // Return empty array if no events exist
+    }
+  });
+
   // Member routes
   app.get("/api/members", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuxiliaryBodies } from "@/components/auxiliary-body-filter";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
@@ -18,14 +19,14 @@ const memberSchema = z.object({
   middleName: z.string().optional(),
   lastName: z.string().min(1, "Last name is required"),
   username: z.string().min(1, "Username is required"),
-  jamaat: z.string().min(1, "Jamaat is required"),
+  jamaat: z.string().optional(),
   circuit: z.string().optional(),
   chandaNumber: z.string().optional(),
   wasiyyahNumber: z.string().optional(),
   address: z.string().optional(),
   phoneNumber: z.string().optional(),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
-  auxiliaryBody: z.enum(["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"]),
+  auxiliaryBody: z.string().min(1, "Auxiliary body is required"),
   postHolding: z.string().optional(),
 });
 
@@ -34,6 +35,41 @@ type MemberFormData = z.infer<typeof memberSchema>;
 interface MemberFormProps {
   onClose: () => void;
   member?: any;
+}
+
+function DynamicAuxiliaryBodyField({ form }: { form: any }) {
+  const { data: auxiliaryBodies = [] } = useAuxiliaryBodies();
+  
+  return (
+    <FormField
+      control={form.control}
+      name="auxiliaryBody"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Auxiliary Body</FormLabel>
+          <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <FormControl>
+              <SelectTrigger>
+                <SelectValue placeholder="Select auxiliary body" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              {auxiliaryBodies.length === 0 ? (
+                <SelectItem value="" disabled>No auxiliary bodies available (create an event first)</SelectItem>
+              ) : (
+                auxiliaryBodies.map((body: string) => (
+                  <SelectItem key={body} value={body}>
+                    {body}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
 }
 
 export function MemberForm({ onClose, member }: MemberFormProps) {
@@ -54,7 +90,7 @@ export function MemberForm({ onClose, member }: MemberFormProps) {
       address: member?.address || "",
       phoneNumber: member?.phoneNumber || "",
       email: member?.email || "",
-      auxiliaryBody: member?.auxiliaryBody || "Khuddam",
+      auxiliaryBody: member?.auxiliaryBody || "",
       postHolding: member?.postHolding || "",
     },
   });
@@ -228,30 +264,7 @@ export function MemberForm({ onClose, member }: MemberFormProps) {
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="auxiliaryBody"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Auxiliary Body</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select auxiliary body" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="Atfal">Atfal</SelectItem>
-                  <SelectItem value="Khuddam">Khuddam</SelectItem>
-                  <SelectItem value="Lajna">Lajna</SelectItem>
-                  <SelectItem value="Ansarullah">Ansarullah</SelectItem>
-                  <SelectItem value="Nasra">Nasra</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <DynamicAuxiliaryBodyField form={form} />
 
         <div className="grid grid-cols-2 gap-4">
           <FormField

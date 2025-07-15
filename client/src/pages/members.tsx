@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AuxiliaryBodyFilter } from "@/components/auxiliary-body-filter";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -85,14 +86,25 @@ export default function Members() {
     });
 
   const getAuxiliaryBodyBadge = (auxiliaryBody: string) => {
-    const colors: Record<string, string> = {
-      "Atfal": "bg-blue-100 text-blue-800",
-      "Khuddam": "bg-green-100 text-green-800",
-      "Lajna": "bg-purple-100 text-purple-800",
-      "Ansarullah": "bg-orange-100 text-orange-800",
-      "Nasra": "bg-pink-100 text-pink-800",
-    };
-    return colors[auxiliaryBody] || "bg-gray-100 text-gray-800";
+    // Generate consistent colors based on auxiliary body name
+    const colors = [
+      "bg-blue-100 text-blue-800",
+      "bg-green-100 text-green-800", 
+      "bg-purple-100 text-purple-800",
+      "bg-orange-100 text-orange-800",
+      "bg-pink-100 text-pink-800",
+      "bg-indigo-100 text-indigo-800",
+      "bg-yellow-100 text-yellow-800",
+      "bg-red-100 text-red-800",
+    ];
+    
+    // Generate consistent color index based on string hash
+    let hash = 0;
+    for (let i = 0; i < auxiliaryBody.length; i++) {
+      hash = auxiliaryBody.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colorIndex = Math.abs(hash) % colors.length;
+    return colors[colorIndex];
   };
 
   const getStatusBadge = (status: string) => {
@@ -205,19 +217,10 @@ export default function Members() {
                     onChange={(e) => setMemberSearch(e.target.value)}
                   />
                 </div>
-                <Select value={memberFilter} onValueChange={setMemberFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Filter by auxiliary body" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Auxiliary Bodies</SelectItem>
-                    <SelectItem value="Atfal">Atfal</SelectItem>
-                    <SelectItem value="Khuddam">Khuddam</SelectItem>
-                    <SelectItem value="Lajna">Lajna</SelectItem>
-                    <SelectItem value="Ansarullah">Ansarullah</SelectItem>
-                    <SelectItem value="Nasra">Nasra</SelectItem>
-                  </SelectContent>
-                </Select>
+                <AuxiliaryBodyFilter 
+                  value={memberFilter} 
+                  onValueChange={setMemberFilter} 
+                />
                 <Select value={eventFilter} onValueChange={setEventFilter}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Filter by event" />
@@ -241,9 +244,7 @@ export default function Members() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Auxiliary Body</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chanda #</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jamaat</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -270,16 +271,10 @@ export default function Members() {
                           {member.auxiliaryBody}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {member.chandaNumber || "N/A"}
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Badge className={getStatusBadge(member.status)}>
                           {member.status}
                         </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {member.jamaat}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">

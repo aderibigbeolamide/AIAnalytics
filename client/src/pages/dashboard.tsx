@@ -11,6 +11,7 @@ import { MemberForm } from "@/components/member-form";
 import { EventForm } from "@/components/event-form";
 import { QRScanner } from "@/components/qr-scanner";
 import { CountdownTimer } from "@/components/countdown-timer";
+import { AuxiliaryBodyFilter } from "@/components/auxiliary-body-filter";
 import { getAuthHeaders } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -87,13 +88,25 @@ export default function Dashboard() {
   };
 
   const getAuxiliaryBodyBadge = (auxiliaryBody: string) => {
-    const auxiliaryMap = {
-      Atfal: "bg-green-100 text-green-800",
-      Khuddam: "bg-blue-100 text-blue-800",
-      Lajna: "bg-pink-100 text-pink-800",
-      Ansarullah: "bg-purple-100 text-purple-800",
-    };
-    return auxiliaryMap[auxiliaryBody as keyof typeof auxiliaryMap] || "bg-gray-100 text-gray-800";
+    // Generate consistent colors based on auxiliary body name
+    const colors = [
+      "bg-blue-100 text-blue-800",
+      "bg-green-100 text-green-800", 
+      "bg-purple-100 text-purple-800",
+      "bg-orange-100 text-orange-800",
+      "bg-pink-100 text-pink-800",
+      "bg-indigo-100 text-indigo-800",
+      "bg-yellow-100 text-yellow-800",
+      "bg-red-100 text-red-800",
+    ];
+    
+    // Generate consistent color index based on string hash
+    let hash = 0;
+    for (let i = 0; i < auxiliaryBody.length; i++) {
+      hash = auxiliaryBody.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colorIndex = Math.abs(hash) % colors.length;
+    return colors[colorIndex];
   };
 
   const deleteEvent = async (eventId: number) => {
@@ -501,18 +514,7 @@ export default function Dashboard() {
                         onChange={(e) => setMemberSearch(e.target.value)}
                       />
                     </div>
-                    <Select value={memberFilter} onValueChange={setMemberFilter}>
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Filter by auxiliary body" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Auxiliary Bodies</SelectItem>
-                        <SelectItem value="Atfal">Atfal</SelectItem>
-                        <SelectItem value="Khuddam">Khuddam</SelectItem>
-                        <SelectItem value="Lajna">Lajna</SelectItem>
-                        <SelectItem value="Ansarullah">Ansarullah</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <AuxiliaryBodyFilter value={memberFilter} onValueChange={setMemberFilter} />
                   </div>
                 </div>
                 <div className="overflow-x-auto">
