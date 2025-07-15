@@ -444,6 +444,9 @@ npm run migrate
   - All field types now configurable: text, email, number, select, file, textarea
   - Enhanced form validation with dynamic schema generation
   - Improved user experience with registration period indicators
+  - Fixed PostgreSQL auxiliary body query using jsonb_array_elements_text
+  - Updated member management to remove hardcoded Chanda and Jamaat columns
+  - Made registration forms completely flexible without hardcoded field requirements
   - All migration checklist items completed successfully
 
 ## User Preferences

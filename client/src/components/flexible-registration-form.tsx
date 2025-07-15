@@ -36,14 +36,12 @@ export function FlexibleRegistrationForm({ event, onSubmit, isLoading }: Flexibl
       schemaFields.firstName = z.string().min(1, "First name is required");
       schemaFields.lastName = z.string().min(1, "Last name is required");
       schemaFields.email = z.string().email("Valid email is required");
-      schemaFields.jamaat = z.string().min(1, "Jamaat is required");
       schemaFields.auxiliaryBody = z.string().min(1, "Auxiliary body is required");
       schemaFields.chandaNumber = z.string().optional();
       schemaFields.circuit = z.string().optional();
     } else {
       schemaFields.guestName = z.string().min(1, "Name is required");
       schemaFields.guestEmail = z.string().email("Valid email is required");
-      schemaFields.guestJamaat = z.string().min(1, "Jamaat is required");
       schemaFields.guestAuxiliaryBody = z.string().min(1, "Auxiliary body is required");
       schemaFields.guestCircuit = z.string().optional();
       if (registrationType === "invitee") {
@@ -333,19 +331,7 @@ export function FlexibleRegistrationForm({ event, onSubmit, isLoading }: Flexibl
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="jamaat"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Jamaat</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your jamaat" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                   <FormField
                     control={form.control}
                     name="auxiliaryBody"
