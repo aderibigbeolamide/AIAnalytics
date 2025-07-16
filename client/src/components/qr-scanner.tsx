@@ -75,18 +75,21 @@ export function QRScanner({ onClose }: QRScannerProps) {
     
     if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return;
     
-    // Optimize canvas size for much faster processing
-    const maxWidth = 320;
-    const maxHeight = 240;
+    // Ultra-fast processing - very small canvas for maximum speed
+    const maxWidth = 160;
+    const maxHeight = 120;
     const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
     
     canvas.width = video.videoWidth * scale;
     canvas.height = video.videoHeight * scale;
+    
+    // Use faster rendering
+    context.imageSmoothingEnabled = false;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     
-    // Optimize QR detection for speed
+    // Ultra-fast QR detection
     const code = jsQR(imageData.data, imageData.width, imageData.height, {
       inversionAttempts: "dontInvert",
     });
@@ -115,8 +118,9 @@ export function QRScanner({ onClose }: QRScannerProps) {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: "environment",
-            width: { ideal: 480 },
-            height: { ideal: 320 }
+            width: { ideal: 320 },
+            height: { ideal: 240 },
+            frameRate: { ideal: 30 }
           }
         });
         console.log("Back camera successful");
@@ -126,8 +130,9 @@ export function QRScanner({ onClose }: QRScannerProps) {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { 
               facingMode: "user",
-              width: { ideal: 480 },
-              height: { ideal: 320 }
+              width: { ideal: 320 },
+              height: { ideal: 240 },
+              frameRate: { ideal: 30 }
             }
           });
           console.log("Front camera successful");
@@ -172,8 +177,8 @@ export function QRScanner({ onClose }: QRScannerProps) {
           setCameraStatus('ready');
           video.play().then(() => {
             console.log("Video started playing successfully");
-            // Start scanning for QR codes every 200ms for better performance
-            scanIntervalRef.current = window.setInterval(scanQRCode, 200);
+            // Ultra-fast scanning every 100ms for immediate capture
+            scanIntervalRef.current = window.setInterval(scanQRCode, 100);
           }).catch(playError => {
             console.error("Video play error:", playError);
             setCameraError("Unable to start video playback");
