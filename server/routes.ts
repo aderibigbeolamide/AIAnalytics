@@ -1139,19 +1139,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           csv.memberData.some((csvMember: any) => {
             // Support multiple possible field names for CSV data
             const csvName = csvMember.name || csvMember.Fullname || csvMember.fullName || csvMember.fullname;
+            const csvFirstName = csvMember.FirstName || csvMember.firstName || csvMember.first_name;
+            const csvLastName = csvMember.LastName || csvMember.lastName || csvMember.last_name;
             const csvEmail = csvMember.email || csvMember.Email || csvMember.emailAddress;
 
+            // Construct full name from first and last name if available
+            let constructedName = '';
+            if (csvFirstName && csvLastName) {
+              constructedName = `${csvFirstName} ${csvLastName}`;
+            } else if (csvFirstName) {
+              constructedName = csvFirstName;
+            } else if (csvLastName) {
+              constructedName = csvLastName;
+            }
+            
+            const finalCsvName = csvName || constructedName;
             
             // Compare name (case insensitive)
-            const nameMatch = csvName && registration.guestName && 
-              csvName.toLowerCase().trim() === registration.guestName.toLowerCase().trim();
+            const nameMatch = finalCsvName && registration.guestName && 
+              finalCsvName.toLowerCase().trim() === registration.guestName.toLowerCase().trim();
             
             // Compare email (case insensitive)
             const emailMatch = csvEmail && registration.guestEmail && 
               csvEmail.toLowerCase().trim() === registration.guestEmail.toLowerCase().trim();
             
             console.log(`CSV QR Validation Check:
-              CSV Member: ${csvName} | ${csvEmail}
+              CSV Member: ${finalCsvName} | ${csvEmail}
               Registration: ${registration.guestName} | ${registration.guestEmail}
               Matches: name=${nameMatch}, email=${emailMatch}`);
             
@@ -1801,21 +1814,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           csv.memberData.some((member: any) => {
             // Support multiple possible field names for CSV data
             const csvName = member.name || member.Fullname || member.fullName || member.fullname;
+            const csvFirstName = member.FirstName || member.firstName || member.first_name;
+            const csvLastName = member.LastName || member.lastName || member.last_name;
             const csvEmail = member.email || member.Email || member.emailAddress;
             const csvChanda = member.chandaNumber || member.ChandaNO || member.chandaNo || member.chanda_number;
             
+            // Construct full name from first and last name if available
+            let constructedName = '';
+            if (csvFirstName && csvLastName) {
+              constructedName = `${csvFirstName} ${csvLastName}`;
+            } else if (csvFirstName) {
+              constructedName = csvFirstName;
+            } else if (csvLastName) {
+              constructedName = csvLastName;
+            }
+            
+            const finalCsvName = csvName || constructedName;
+            
             // Compare name (case insensitive)
-            const nameMatch = csvName && registration.guestName && 
-              csvName.toLowerCase().trim() === registration.guestName.toLowerCase().trim();
+            const nameMatch = finalCsvName && registration.guestName && 
+              finalCsvName.toLowerCase().trim() === registration.guestName.toLowerCase().trim();
             
             // Compare email (case insensitive)
             const emailMatch = csvEmail && registration.guestEmail && 
               csvEmail.toLowerCase().trim() === registration.guestEmail.toLowerCase().trim();
             
-            // Compare chanda number
-            
             console.log(`CSV Validation Check:
-              CSV Member: ${csvName} | ${csvEmail} | ${csvChanda}
+              CSV Member: ${finalCsvName} | ${csvEmail} | ${csvChanda}
               Registration: ${registration.guestName} | ${registration.guestEmail} | 
               Matches: name=${nameMatch}, email=${emailMatch}`);
             
