@@ -492,7 +492,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
 
       {/* Registration Success Dialog */}
       <Dialog open={showRegistrationCard} onOpenChange={setShowRegistrationCard}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
