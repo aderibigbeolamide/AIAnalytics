@@ -75,9 +75,9 @@ export function QRScanner({ onClose }: QRScannerProps) {
     
     if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return;
     
-    // Optimize canvas size for faster processing
-    const maxWidth = 800;
-    const maxHeight = 600;
+    // Optimize canvas size for much faster processing
+    const maxWidth = 320;
+    const maxHeight = 240;
     const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
     
     canvas.width = video.videoWidth * scale;
@@ -86,7 +86,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
     
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     
-    // Optimize QR detection with better options
+    // Optimize QR detection for speed
     const code = jsQR(imageData.data, imageData.width, imageData.height, {
       inversionAttempts: "dontInvert",
     });
@@ -115,8 +115,8 @@ export function QRScanner({ onClose }: QRScannerProps) {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: "environment",
-            width: { ideal: 640 },
-            height: { ideal: 480 }
+            width: { ideal: 480 },
+            height: { ideal: 320 }
           }
         });
         console.log("Back camera successful");
@@ -126,8 +126,8 @@ export function QRScanner({ onClose }: QRScannerProps) {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { 
               facingMode: "user",
-              width: { ideal: 640 },
-              height: { ideal: 480 }
+              width: { ideal: 480 },
+              height: { ideal: 320 }
             }
           });
           console.log("Front camera successful");
@@ -172,8 +172,8 @@ export function QRScanner({ onClose }: QRScannerProps) {
           setCameraStatus('ready');
           video.play().then(() => {
             console.log("Video started playing successfully");
-            // Start scanning for QR codes every 100ms
-            scanIntervalRef.current = window.setInterval(scanQRCode, 150);
+            // Start scanning for QR codes every 200ms for better performance
+            scanIntervalRef.current = window.setInterval(scanQRCode, 200);
           }).catch(playError => {
             console.error("Video play error:", playError);
             setCameraError("Unable to start video playback");
