@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { QrCode, Users, UserPlus, Mail, Calendar, Clock, CheckCircle, XCircle } from "lucide-react";
@@ -397,6 +398,39 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                               ))}
                             </SelectContent>
                           </Select>
+                        ) : field.type === 'radio' ? (
+                          <RadioGroup
+                            onValueChange={formField.onChange}
+                            value={formField.value}
+                            className="flex flex-col space-y-2"
+                          >
+                            {field.options?.map((option: string, idx: number) => (
+                              <div key={option} className="flex items-center space-x-2">
+                                <RadioGroupItem value={option} id={`${field.name}-${idx}`} />
+                                <Label htmlFor={`${field.name}-${idx}`}>{option}</Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                        ) : field.type === 'checkbox' ? (
+                          <div className="space-y-2">
+                            {field.options?.map((option: string, idx: number) => (
+                              <div key={option} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`${field.name}-${idx}`}
+                                  checked={(formField.value || []).includes(option)}
+                                  onCheckedChange={(checked) => {
+                                    const currentValues = formField.value || [];
+                                    if (checked) {
+                                      formField.onChange([...currentValues, option]);
+                                    } else {
+                                      formField.onChange(currentValues.filter((v: string) => v !== option));
+                                    }
+                                  }}
+                                />
+                                <Label htmlFor={`${field.name}-${idx}`}>{option}</Label>
+                              </div>
+                            ))}
+                          </div>
                         ) : field.type === 'file' ? (
                           <Input
                             type="file"
