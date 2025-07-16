@@ -10,23 +10,59 @@ interface RegistrationCardProps {
 }
 
 export function RegistrationCard({ registration, event, qrImageBase64 }: RegistrationCardProps) {
-  // Handle both camelCase and snake_case field names for compatibility
-  const memberName = registration.guestName || registration.guest_name || 
-    (registration.member ? `${registration.member.firstName} ${registration.member.lastName}` : 'Guest');
+  // Parse custom form data from registration
+  const customFormData = registration.customFormData ? JSON.parse(registration.customFormData) : {};
   
-  const auxiliaryBody = registration.guestAuxiliaryBody || registration.guest_auxiliary_body || 
-    (registration.member ? registration.member.auxiliaryBody : 'Guest');
+  // Get the name from custom form data
+  const memberName = registration.guestName || 'Guest';
   
-  // Removed hardcoded chanda number field for flexibility
+  // Get auxiliary body from registration
+  const auxiliaryBody = registration.guestAuxiliaryBody || 'N/A';
   
-  const email = registration.guestEmail || registration.guest_email || 
-    (registration.member ? registration.member.email : 'N/A');
+  // Get email from registration
+  const email = registration.guestEmail || 'N/A';
 
-  const jamaat = registration.guestJamaat || registration.guest_jamaat || 
-    (registration.member ? registration.member.jamaat : 'N/A');
+  // Create dynamic field list from custom form data and event configuration
+  const getDisplayFields = () => {
+    const fields = [];
+    
+    // Add name field first if available
+    if (memberName && memberName !== 'Guest') {
+      fields.push({ label: 'Name', value: memberName, icon: User });
+    }
+    
+    // Add auxiliary body if available and not 'N/A'
+    if (auxiliaryBody && auxiliaryBody !== 'N/A' && auxiliaryBody !== 'Unknown') {
+      fields.push({ label: 'Auxiliary Body', value: auxiliaryBody, icon: User });
+    }
+    
+    // Add email if available and not 'N/A'
+    if (email && email !== 'N/A' && email !== 'Unknown') {
+      fields.push({ label: 'Email', value: email, icon: Mail });
+    }
+    
+    // Add other custom fields from the form data
+    if (event.customRegistrationFields && customFormData) {
+      event.customRegistrationFields.forEach(field => {
+        const value = customFormData[field.name];
+        if (value && value !== '' && 
+            field.label !== 'FirstName' && field.label !== 'LastName' && // Skip name components as we show combined name
+            field.type !== 'email' && // Skip email as we handle it separately
+            !field.label.toLowerCase().includes('gender') && // Skip gender/auxiliary as we handle it separately
+            !field.label.toLowerCase().includes('auxiliary')) {
+          fields.push({ 
+            label: field.label, 
+            value: value, 
+            icon: field.type === 'tel' ? Hash : MapPin 
+          });
+        }
+      });
+    }
+    
+    return fields;
+  };
 
-  const circuit = registration.guestCircuit || registration.guest_circuit || 
-    (registration.member ? registration.member.circuit : 'N/A');
+  const displayFields = getDisplayFields();
 
   const handleDownload = () => {
     const canvas = document.createElement('canvas');
@@ -66,13 +102,9 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
     let y = 140;
     const lineHeight = 35;
     
+    // Create dynamic details from the display fields
     const details = [
-      { label: 'Name:', value: memberName },
-      { label: 'Jamaat:', value: jamaat },
-      { label: 'Circuit:', value: circuit },
-      { label: 'Auxiliary Body:', value: auxiliaryBody },
-      { label: 'Chanda Number:', value: chandaNumber },
-      { label: 'Email:', value: email },
+      ...displayFields.map(field => ({ label: `${field.label}:`, value: field.value })),
       { label: 'Unique ID:', value: registration.uniqueId },
       { label: 'Event Date:', value: new Date(event.startDate).toLocaleDateString() },
     ];
@@ -130,58 +162,23 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
       </CardHeader>
       
       <CardContent className="p-6 space-y-6">
-        {/* Registration Details Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <User className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Name</p>
-                <p className="font-semibold">{memberName}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <MapPin className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Jamaat</p>
-                <p className="font-semibold">{jamaat}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <div className="h-5 w-5 text-blue-600 flex items-center justify-center">
-                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Circuit</p>
-                <p className="font-semibold">{circuit}</p>
-              </div>
-            </div>
+        {/* Dynamic Registration Details */}
+        {displayFields.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {displayFields.map((field, index) => {
+              const IconComponent = field.icon;
+              return (
+                <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <IconComponent className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">{field.label}</p>
+                    <p className="font-semibold text-sm">{field.value}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <Badge variant="outline" className="p-1">
-                <span className="text-xs">{auxiliaryBody}</span>
-              </Badge>
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Auxiliary Body</p>
-                <p className="font-semibold">{auxiliaryBody}</p>
-              </div>
-            </div>
-            
-
-            
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <Mail className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Email</p>
-                <p className="font-semibold text-sm">{email}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Event Details */}
         <div className="border-t pt-4">
