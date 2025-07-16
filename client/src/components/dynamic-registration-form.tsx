@@ -137,7 +137,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
   const form = useForm({
     resolver: zodResolver(createDynamicSchema(registrationType, event)),
     defaultValues: {
-      registrationType: "member",
+      registrationType: registrationType,
       ...event.customRegistrationFields?.reduce((acc: any, field: any) => {
         acc[field.name] = field.defaultValue || "";
         return acc;
@@ -147,6 +147,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
 
   // Update form validation when registration type changes
   React.useEffect(() => {
+    form.setValue("registrationType", registrationType);
     form.clearErrors();
     form.trigger();
   }, [registrationType, form]);
@@ -226,7 +227,14 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
   });
 
   const onSubmit = (data: any) => {
-    registrationMutation.mutate(data);
+    // Ensure registrationType is included in the submission data
+    const submissionData = {
+      ...data,
+      registrationType: registrationType || data.registrationType || "member"
+    };
+    
+    console.log("Submitting registration with data:", submissionData);
+    registrationMutation.mutate(submissionData);
   };
 
   if (!isRegistrationOpen()) {
