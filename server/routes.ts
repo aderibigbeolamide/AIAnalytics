@@ -955,6 +955,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return emailField ? formData[emailField.name] : null;
       };
 
+      const getAuxiliaryBody = () => {
+        // First try explicit auxiliary body fields
+        if (formData.auxiliaryBody || formData.AuxiliaryBody) {
+          return formData.auxiliaryBody || formData.AuxiliaryBody;
+        }
+        
+        // Look for fields that might represent auxiliary body (gender, group, etc.)
+        const potentialAuxBodyFields = event.customRegistrationFields.filter(f => 
+          f.label && (
+            f.label.toLowerCase().includes('gender') ||
+            f.label.toLowerCase().includes('auxiliary') ||
+            f.label.toLowerCase().includes('group') ||
+            f.label.toLowerCase().includes('body') ||
+            f.type === 'radio' || f.type === 'select'
+          )
+        );
+        
+        // Use the first found field value
+        for (const field of potentialAuxBodyFields) {
+          if (formData[field.name]) {
+            return formData[field.name];
+          }
+        }
+        
+        return 'Unknown';
+      };
+
       const registrationData = {
         eventId,
         memberId: member?.id,
@@ -965,7 +992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customFormData: JSON.stringify(formData),
         guestName: getName(),
         guestEmail: getEmail(),
-        guestAuxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || 'Unknown',
+        guestAuxiliaryBody: getAuxiliaryBody(),
         guestCircuit: formData.circuit || formData.Circuit || null,
         guestPost: formData.post || formData.Post || null,
         paymentReceiptUrl: paymentReceiptUrlFinal,
