@@ -902,35 +902,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customFieldData: formData
       };
 
-      // Create or find member based on registration data (simplified approach)
-      let member = null;
-      if (registrationType === "member") {
-        try {
-          // Try to find member by email if email field exists
-          const emailField = event.customRegistrationFields.find(f => f.type === 'email');
-          const email = emailField ? formData[emailField.name] : null;
-          
-          if (email) {
-            // Create a simple member record
-            const uniqueUsername = `${email}_${Date.now()}`;
-            member = await storage.createMember({
-              username: uniqueUsername,
-              firstName: formData.firstName || formData.FirstName || 'Unknown',
-              lastName: formData.lastName || formData.LastName || 'User',
-              jamaat: formData.jamaat || formData.Jamaat || 'Unknown',
-              auxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || 'Unknown',
-              chandaNumber: formData.chandaNumber || formData.ChandaNumber || null,
-              circuit: formData.circuit || formData.Circuit || null,
-              email: email,
-              status: "active"
-            });
-          }
-        } catch (error) {
-          console.error("Member creation error:", error);
-          // Continue with registration even if member creation fails
-        }
-      }
-
       const qrCode = generateQRCode();
       const uniqueId = generateShortUniqueId(); // Generate shorter 6-character ID for manual validation
       
@@ -981,6 +952,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return 'Unknown';
       };
+
+      // Create or find member based on registration data (simplified approach)
+      let member = null;
+      if (registrationType === "member") {
+        try {
+          // Try to find member by email if email field exists
+          const emailField = event.customRegistrationFields.find(f => f.type === 'email');
+          const email = emailField ? formData[emailField.name] : null;
+          
+          // Always create a member record for member registrations using available data
+          const uniqueUsername = `${getName().replace(/\s+/g, '').toLowerCase()}_${Date.now()}`;
+          member = await storage.createMember({
+            username: uniqueUsername,
+            firstName: formData.firstName || formData.FirstName || 'Unknown',
+            lastName: formData.lastName || formData.LastName || 'User',
+            jamaat: formData.jamaat || formData.Jamaat || 'Unknown',
+            auxiliaryBody: getAuxiliaryBody(),
+            chandaNumber: formData.chandaNumber || formData.ChandaNumber || null,
+            circuit: formData.circuit || formData.Circuit || null,
+            email: email || `${uniqueUsername}@event.local`,
+            status: "active"
+          });
+        } catch (error) {
+          console.error("Member creation error:", error);
+          // Continue with registration even if member creation fails
+        }
+      }
 
       const registrationData = {
         eventId,
