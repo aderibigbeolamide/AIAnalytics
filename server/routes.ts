@@ -821,7 +821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events/:id/register", async (req: Request, res) => {
+  app.post("/api/events/:id/register", upload.single('paymentReceipt'), async (req: Request, res) => {
     try {
       const eventId = parseInt(req.params.id);
       const event = await storage.getEvent(eventId);
@@ -851,7 +851,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { registrationType, ...formData } = req.body;
+      // Extract registration type and form data (multer puts form fields in req.body)
+      const registrationType = req.body.registrationType;
+      const formData = { ...req.body };
+      delete formData.registrationType;
+      delete formData.eventId; // Remove eventId from formData as it's handled separately
       
       // Debug: Log received form data
       console.log('Received registration data:', { registrationType, formData });
