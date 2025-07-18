@@ -401,19 +401,7 @@ export function FlexibleRegistrationForm({ event, onSubmit, isLoading }: Flexibl
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="circuit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Circuit (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter circuit" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                 </>
               ) : (
                 <>
@@ -480,19 +468,7 @@ export function FlexibleRegistrationForm({ event, onSubmit, isLoading }: Flexibl
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="guestCircuit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Circuit (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter circuit" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                   {registrationType === "invitee" && (
                     <FormField
                       control={form.control}

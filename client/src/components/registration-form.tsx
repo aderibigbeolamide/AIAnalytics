@@ -31,19 +31,13 @@ const createRegistrationSchema = (registrationType: string) => {
   if (registrationType === "member") {
     // Members need all fields
     return baseRegistrationSchema.extend({
-      jamaat: z.string().min(1, "Jamaat is required"),
       auxiliaryBody: z.string().min(1, "Auxiliary body is required"),
-      chandaNumber: z.string().optional(),
-      circuit: z.string().optional(),
       email: z.string().email("Valid email is required"),
     });
   } else {
     // Guests and invitees only need basic info
     return baseRegistrationSchema.extend({
-      jamaat: z.string().optional(),
       auxiliaryBody: z.string().optional(),
-      chandaNumber: z.string().optional(),
-      circuit: z.string().optional(),
       email: z.string().email().optional().or(z.literal("")),
     });
   }
@@ -51,10 +45,7 @@ const createRegistrationSchema = (registrationType: string) => {
 
 // Use full schema for TypeScript types
 const registrationSchema = baseRegistrationSchema.extend({
-  jamaat: z.string().optional(),
   auxiliaryBody: z.string().optional(),
-  chandaNumber: z.string().optional(),
-  circuit: z.string().optional(),
   email: z.string().optional(),
 });
 
@@ -250,19 +241,7 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
               {/* Member-specific fields */}
               {registrationType === "member" && (
                 <>
-                  <FormField
-                    control={form.control}
-                    name="jamaat"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Jamaat</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your jamaat" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
 
                   <FormField
                     control={form.control}
@@ -303,19 +282,7 @@ export function RegistrationForm({ eventId, event }: RegistrationFormProps) {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="circuit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Circuit (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your circuit" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
 
                   <FormField
                     control={form.control}

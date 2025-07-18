@@ -228,19 +228,7 @@ export function MemberForm({ onClose, member }: MemberFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="circuit"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Circuit (Optional)</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
 
         <DynamicAuxiliaryBodyField form={form} />
 

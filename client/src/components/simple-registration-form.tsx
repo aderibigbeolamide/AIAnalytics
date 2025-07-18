@@ -20,10 +20,7 @@ import { RegistrationCard } from "@/components/registration-card";
 const createMemberSchema = (requiresPayment: boolean) => z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  jamaat: z.string().min(1, "Jamaat is required"),
   auxiliaryBody: z.string().min(1, "Auxiliary body is required"),
-  chandaNumber: z.string().optional(),
-  circuit: z.string().optional(),
   email: z.string().email("Valid email is required"),
   registrationType: z.literal("member"),
   post: z.string().optional(),
@@ -37,10 +34,7 @@ const createMemberSchema = (requiresPayment: boolean) => z.object({
 const createGuestInviteeSchema = (requiresPayment: boolean) => z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  jamaat: z.string().optional(),
   auxiliaryBody: z.string().optional(),
-  chandaNumber: z.string().optional(),
-  circuit: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   registrationType: z.enum(["guest", "invitee"]),
   post: z.string().optional(),
@@ -70,10 +64,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
     defaultValues: {
       firstName: "",
       lastName: "",
-      jamaat: "",
       auxiliaryBody: "",
-      chandaNumber: "",
-      circuit: "",
       email: "",
       registrationType,
       post: "",
@@ -95,10 +86,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
         firstName: data.firstName || '',
         lastName: data.lastName || '',
         registrationType: registrationType,
-        jamaat: data.jamaat || '',
         auxiliaryBody: data.auxiliaryBody || '',
-        chandaNumber: data.chandaNumber || '',
-        circuit: data.circuit || '',
         email: data.email || '',
         post: data.post || '',
         paymentAmount: data.paymentAmount || '',
@@ -151,15 +139,6 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
 
     if (registrationType === "member") {
       // For members, validate all required fields
-      if (!data.jamaat?.trim()) {
-        toast({
-          title: "Validation Error", 
-          description: "Jamaat is required for members",
-          variant: "destructive",
-        });
-        return;
-      }
-
       if (!data.auxiliaryBody?.trim()) {
         toast({
           title: "Validation Error", 
@@ -184,26 +163,6 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
         toast({
           title: "Validation Error",
           description: "Please enter a valid email address",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Chanda/Wassiya number validation for members
-      if (!data.chandaNumber?.trim()) {
-        toast({
-          title: "Validation Error", 
-          description: "Chanda/Wassiya number is required for members",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Circuit validation for members
-      if (!data.circuit?.trim()) {
-        toast({
-          title: "Validation Error", 
-          description: "Circuit is required for members",
           variant: "destructive",
         });
         return;
@@ -345,19 +304,6 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
               {/* Member-specific fields */}
               {registrationType === "member" && (
                 <>
-                  <FormField
-                    control={form.control}
-                    name="jamaat"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Jamaat <span className="text-red-500">*</span></FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your jamaat" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <FormField
                     control={form.control}
@@ -384,43 +330,7 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
                     )}
                   />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="chandaNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Chanda/Wassiya Number <span className="text-red-500">*</span></FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Enter chanda/wassiya number" 
-                              {...field}
-                              onChange={(e) => {
-                                // Allow only numbers and remove any non-numeric characters
-                                const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                                field.onChange(numericValue);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
-                    <FormField
-                      control={form.control}
-                      name="circuit"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Circuit <span className="text-red-500">*</span></FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your circuit" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
                 </>
               )}
 

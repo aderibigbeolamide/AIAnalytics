@@ -54,7 +54,6 @@ export const members = pgTable("members", {
   lastName: text("last_name").notNull(),
   username: text("username").notNull().unique(),
   picture: text("picture"),
-  circuit: text("circuit"),
   address: text("address"),
   phoneNumber: text("phone_number"),
   email: text("email"),
@@ -119,10 +118,7 @@ export const eventRegistrations = pgTable("event_registrations", {
   // Guest/Invitee fields
   guestName: text("guest_name"),
   guestEmail: text("guest_email"),
-  guestJamaat: text("guest_jamaat"),
   guestAuxiliaryBody: text("guest_auxiliary_body"),
-  guestChandaNumber: text("guest_chanda_number"),
-  guestCircuit: text("guest_circuit"),
   guestPost: text("guest_post"), // Optional post for invitees
   
   // Custom form field data

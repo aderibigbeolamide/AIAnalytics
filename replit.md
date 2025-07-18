@@ -484,6 +484,12 @@ npm run migrate
   - Updated form validation schemas to include payment fields when payment is required for specific user types
   - Fixed payment visibility logic to show payment options only when required for the selected registration type
   - Improved user experience with clear payment requirement messaging and method selection interface
+- July 18, 2025. Removed hardcoded Circuit and Jamaat fields from all forms and database schema:
+  - Removed Circuit and Jamaat columns from members table and event registrations table in database schema
+  - Updated all registration forms (member-form, registration-form, simple-registration-form, flexible-registration-form) to remove Circuit and Jamaat fields
+  - Removed validation requirements for Circuit and Jamaat in all form schemas
+  - Pushed database schema changes to remove these hardcoded fields completely
+  - System now uses only flexible custom registration fields without any hardcoded organizational structure assumptions
 
 ## User Preferences
 
