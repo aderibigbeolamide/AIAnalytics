@@ -221,6 +221,19 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
       return await response.json();
     },
     onSuccess: (response) => {
+      // Check if payment is required and redirect to payment
+      if (response.requiresPayment && response.paymentUrl) {
+        toast({
+          title: "Redirecting to Payment",
+          description: "Please complete your payment to finish registration.",
+        });
+        
+        // Redirect to Paystack payment page
+        window.location.href = response.paymentUrl;
+        return;
+      }
+      
+      // Normal registration completion
       setRegistrationData(response.registration);
       setQrImageBase64(response.qrImageBase64);
       setShowRegistrationCard(true);

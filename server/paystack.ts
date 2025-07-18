@@ -20,7 +20,7 @@ export async function initializePaystackPayment(
         amount,
         reference,
         metadata,
-        callback_url: `${process.env.APP_DOMAIN}/payment/callback`,
+        callback_url: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/payment/callback`,
       }),
     });
 

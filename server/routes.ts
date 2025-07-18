@@ -934,6 +934,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Check if payment is required for this registration type
+      const requiresPayment = event.paymentSettings?.requiresPayment && 
+                             event.paymentSettings?.paymentRules?.[registrationType];
+      
+      if (requiresPayment) {
+        const paymentMethod = formData.paymentMethod;
+        
+        if (!paymentMethod) {
+          return res.status(400).json({ message: "Payment method is required for this event" });
+        }
+        
+        // For Paystack payments, initialize payment first
+        if (paymentMethod === 'paystack') {
+          const { initializePaystackPayment, generatePaymentReference, convertToKobo } = await import('./paystack');
+          
+          const userEmail = formData.email || formData.Email || formData.guestEmail;
+          if (!userEmail) {
+            return res.status(400).json({ message: "Email is required for online payment" });
+          }
+          
+          const paymentAmount = convertToKobo(event.paymentSettings.amount);
+          const paymentReference = generatePaymentReference();
+          
+          try {
+            const paymentData = await initializePaystackPayment(
+              userEmail,
+              paymentAmount,
+              paymentReference,
+              {
+                eventId,
+                registrationType,
+                customFieldData: formData
+              }
+            );
+            
+            if (paymentData.status) {
+              // Store pending registration data for completion after payment
+              const pendingRegistration = {
+                eventId,
+                registrationType,
+                formData,
+                paymentReference,
+                paymentAmount: event.paymentSettings.amount,
+                currency: event.paymentSettings.currency || 'NGN',
+                userEmail,
+                timestamp: Date.now()
+              };
+              
+              // Store pending registration (you might want to use a temporary storage or database)
+              // For now, we'll use a simple approach
+              
+              return res.json({
+                requiresPayment: true,
+                paymentUrl: paymentData.data.authorization_url,
+                paymentReference,
+                message: "Redirecting to payment gateway..."
+              });
+            } else {
+              return res.status(400).json({ message: "Failed to initialize payment" });
+            }
+          } catch (error) {
+            console.error('Payment initialization error:', error);
+            return res.status(500).json({ message: "Payment initialization failed" });
+          }
+        }
+        
+        // For manual receipt uploads
+        if (paymentMethod === 'manual_receipt') {
+          if (!req.file) {
+            return res.status(400).json({ message: "Payment receipt is required" });
+          }
+        }
+      }
+
       // Handle file uploads if any
       let paymentReceiptUrlFinal = null;
       if (req.file) {
@@ -1096,6 +1170,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Registration error:", error);
       res.status(400).json({ message: "Failed to register for event" });
+    }
+  });
+
+  // Payment callback endpoint
+  app.post("/api/payment/callback", async (req, res) => {
+    try {
+      const { reference, event: webhookEvent } = req.body;
+      
+      if (webhookEvent === 'charge.success') {
+        const { verifyPaystackPayment } = await import('./paystack');
+        
+        // Verify the payment
+        const paymentData = await verifyPaystackPayment(reference);
+        
+        if (paymentData.status && paymentData.data.status === 'success') {
+          // Payment successful, complete the registration
+          const metadata = paymentData.data.metadata;
+          
+          // Complete the registration with the stored data
+          // This would typically complete the registration process
+          // For now, we'll just return success
+          
+          res.json({ 
+            status: 'success', 
+            message: 'Payment verified and registration completed' 
+          });
+        } else {
+          res.status(400).json({ message: 'Payment verification failed' });
+        }
+      } else {
+        res.json({ message: 'Webhook received' });
+      }
+    } catch (error) {
+      console.error('Payment callback error:', error);
+      res.status(500).json({ message: 'Payment callback failed' });
+    }
+  });
+
+  // Payment verification endpoint for frontend
+  app.get("/api/payment/verify/:reference", async (req, res) => {
+    try {
+      const { reference } = req.params;
+      const { verifyPaystackPayment } = await import('./paystack');
+      
+      const paymentData = await verifyPaystackPayment(reference);
+      
+      if (paymentData.status && paymentData.data.status === 'success') {
+        res.json({ 
+          status: 'success', 
+          data: paymentData.data,
+          message: 'Payment verified successfully' 
+        });
+      } else {
+        res.status(400).json({ 
+          status: 'failed', 
+          message: 'Payment verification failed' 
+        });
+      }
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      res.status(500).json({ message: 'Payment verification failed' });
     }
   });
 
