@@ -6,9 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuthStore } from "./lib/auth";
 import { useEffect } from "react";
-// Analytics will be enabled when VITE_GA_MEASUREMENT_ID is provided
-// import { initGA } from "@/lib/analytics";
-// import { useAnalytics } from "@/hooks/use-analytics";
+import { initGTM } from "../lib/gtm";
+import { useGTM } from "../hooks/use-gtm";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 import Scanner from "@/pages/scanner";
@@ -32,8 +31,8 @@ import PaymentCallback from "@/pages/payment-callback";
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage } = useAuthStore();
   
-  // Analytics tracking disabled until VITE_GA_MEASUREMENT_ID is configured
-  // useAnalytics();
+  // Track page views with Google Tag Manager
+  useGTM();
 
   useEffect(() => {
     // First load from storage, then check if needed
@@ -118,14 +117,10 @@ function Router() {
 }
 
 function App() {
-  // Google Analytics initialization disabled until VITE_GA_MEASUREMENT_ID is configured
-  // useEffect(() => {
-  //   if (!import.meta.env.VITE_GA_MEASUREMENT_ID) {
-  //     console.warn('Missing required Google Analytics key: VITE_GA_MEASUREMENT_ID');
-  //   } else {
-  //     initGA();
-  //   }
-  // }, []);
+  // Initialize Google Tag Manager
+  useEffect(() => {
+    initGTM();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

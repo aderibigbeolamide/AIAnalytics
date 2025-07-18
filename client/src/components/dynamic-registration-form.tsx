@@ -19,6 +19,7 @@ import { QrCode, Users, UserPlus, Mail, Calendar, Clock, CheckCircle, XCircle } 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RegistrationCard } from "@/components/registration-card";
 import { CountdownTimer } from "@/components/countdown-timer";
+import { trackMemberRegistration } from "../../lib/gtm";
 
 // Helper function to determine if a field is required for a specific registration type
 function isFieldRequiredForRegistrationType(field: any, registrationType: string): boolean {
@@ -224,6 +225,10 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
       setQrImageBase64(response.qrImageBase64);
       setShowRegistrationCard(true);
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/registration-counts`] });
+      
+      // Track successful registration
+      trackMemberRegistration(eventId, registrationType);
+      
       toast({
         title: "Registration Successful",
         description: "Your registration has been completed successfully!",
