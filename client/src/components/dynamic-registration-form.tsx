@@ -117,6 +117,16 @@ const createDynamicSchema = (registrationType: string, event: any) => {
     });
   }
 
+  // Add payment fields if payment is required for this registration type
+  if (event.paymentSettings?.requiresPayment && event.paymentSettings?.paymentRules?.[registrationType]) {
+    schemaFields.paymentMethod = z.enum(["paystack", "manual_receipt"], {
+      required_error: "Please select a payment method"
+    });
+    
+    // Payment receipt is required only when manual receipt method is selected
+    schemaFields.paymentReceipt = z.any().optional();
+  }
+
   return z.object(schemaFields);
 };
 
@@ -138,6 +148,8 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
     resolver: zodResolver(createDynamicSchema(registrationType, event)),
     defaultValues: {
       registrationType: registrationType,
+      paymentMethod: "",
+      paymentReceipt: null,
       ...event.customRegistrationFields?.reduce((acc: any, field: any) => {
         acc[field.name] = field.defaultValue || "";
         return acc;
@@ -463,18 +475,84 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
               ))}
 
               {/* Payment Information - conditional based on registration type */}
-              {event.requiresPayment && (
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-yellow-900 mb-2">Payment Required</h4>
-                  <p className="text-sm text-yellow-700">
-                    {registrationType === "member" ? (
-                      <>This event requires a payment of {event.paymentAmount}. Please ensure payment is completed before attending.</>
-                    ) : registrationType === "guest" ? (
-                      <>Guest registration may require payment of {event.paymentAmount}. Please check with organizers.</>
-                    ) : (
-                      <>As an invitee, payment requirements may vary. Please check with organizers.</>
+              {/* Payment Section */}
+              {event.paymentSettings?.requiresPayment && 
+               event.paymentSettings?.paymentRules?.[registrationType] && (
+                <div className="space-y-4">
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-yellow-900 mb-2">Payment Required</h4>
+                    <p className="text-sm text-yellow-700">
+                      This event requires a payment of {event.paymentSettings.currency} {event.paymentSettings.amount} for {registrationType}s.
+                    </p>
+                    {event.paymentSettings.paymentDescription && (
+                      <p className="text-sm text-yellow-700 mt-2">
+                        {event.paymentSettings.paymentDescription}
+                      </p>
                     )}
-                  </p>
+                  </div>
+
+                  {/* Payment Method Selection */}
+                  <FormField
+                    control={form.control}
+                    name="paymentMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Method *</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            className="grid grid-cols-1 gap-3"
+                          >
+                            {event.paymentSettings.paymentMethods?.includes("paystack") && (
+                              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                                <RadioGroupItem value="paystack" id="paystack" />
+                                <div className="flex-1">
+                                  <Label htmlFor="paystack" className="font-medium">Pay Online (Paystack)</Label>
+                                  <p className="text-xs text-gray-600">Secure online payment with card or bank transfer</p>
+                                </div>
+                              </div>
+                            )}
+                            {event.paymentSettings.allowManualReceipt && (
+                              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                                <RadioGroupItem value="manual_receipt" id="manual_receipt" />
+                                <div className="flex-1">
+                                  <Label htmlFor="manual_receipt" className="font-medium">Upload Payment Receipt</Label>
+                                  <p className="text-xs text-gray-600">Upload proof of payment made offline</p>
+                                </div>
+                              </div>
+                            )}
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Payment Receipt Upload (when manual receipt is selected) */}
+                  {form.watch("paymentMethod") === "manual_receipt" && (
+                    <FormField
+                      control={form.control}
+                      name="paymentReceipt"
+                      render={({ field: { onChange, ...field } }) => (
+                        <FormItem>
+                          <FormLabel>Payment Receipt *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              onChange={(e) => onChange(e.target.files)}
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-gray-500">
+                            Upload an image or PDF of your payment receipt
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
               )}
 

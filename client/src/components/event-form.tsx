@@ -40,7 +40,7 @@ const eventSchema = z.object({
     allowManualReceipt: z.boolean().default(true),
     paymentDescription: z.string().optional(),
   }).optional(),
-  customRegistrationFields: z.array(z.any()).optional(),
+  customRegistrationFields: z.array(z.any()).min(1, "At least one registration field is required"),
   invitations: z.array(z.object({
     name: z.string().min(1, "Invitee name is required"),
     email: z.string().email("Valid email is required"),
@@ -210,6 +210,16 @@ export function EventForm({ onClose, event }: EventFormProps) {
 
   const onSubmit = (data: EventFormData) => {
     console.log("Form data being submitted:", data);
+    
+    // Validate custom registration fields
+    if (!data.customRegistrationFields || data.customRegistrationFields.length === 0) {
+      toast({
+        title: "Registration Fields Required",
+        description: "Please add at least one registration field for members, guests, and invitees to fill out when registering for this event.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Set the eligible auxiliary bodies from our state
     const submissionData = {
