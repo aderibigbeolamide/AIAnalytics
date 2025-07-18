@@ -1379,6 +1379,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment routes for Paystack integration
+  app.post("/api/payment/initialize", async (req: Request, res: Response) => {
+    try {
+      const { eventId, email, registrationData } = req.body;
+
+      // Get event details
+      const [event] = await db.select().from(events).where(eq(events.id, parseInt(eventId)));
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Check if payment is required
+      if (!event.paymentSettings?.requiresPayment) {
+        return res.status(400).json({ message: "Payment not required for this event" });
+      }
+
+      // Generate payment reference
+      const reference = generatePaymentReference(`EVT${eventId}`);
+      
+      // Get payment amount from event settings
+      const amount = convertToKobo(event.paymentSettings.amount);
+      
+      // Initialize Paystack payment
+      const paymentData = await initializePaystackPayment(
+        email,
+        amount,
+        reference,
+        {
+          eventId,
+          eventName: event.name,
+          registrationData,
+        }
+      );
+
+      if (paymentData.status) {
+        res.json({
+          success: true,
+          data: paymentData.data,
+          reference,
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: paymentData.message || "Payment initialization failed",
+        });
+      }
+    } catch (error) {
+      console.error("Payment initialization error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to initialize payment" 
+      });
+    }
+  });
+
+  app.post("/api/payment/verify", async (req: Request, res: Response) => {
+    try {
+      const { reference } = req.body;
+
+      if (!reference) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment reference is required",
+        });
+      }
+
+      // Verify payment with Paystack
+      const verificationData = await verifyPaystackPayment(reference);
+
+      if (verificationData.status && verificationData.data.status === 'success') {
+        // Payment successful - proceed with registration
+        const metadata = verificationData.data.metadata;
+        const eventId = metadata.eventId;
+        const registrationData = metadata.registrationData;
+
+        // Create registration record with payment information
+        const registrationRecord = {
+          ...registrationData,
+          eventId: parseInt(eventId),
+          status: "registered",
+          paymentStatus: "paid",
+          paymentReference: reference,
+          paymentAmount: convertFromKobo(verificationData.data.amount).toString(),
+          qrCode: generateShortUniqueId(),
+        };
+
+        const [newRegistration] = await db.insert(eventRegistrations)
+          .values(registrationRecord)
+          .returning();
+
+        res.json({
+          success: true,
+          message: "Payment verified and registration completed",
+          data: {
+            ...verificationData.data,
+            registration: newRegistration,
+          },
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Payment verification failed",
+          data: verificationData.data,
+        });
+      }
+    } catch (error) {
+      console.error("Payment verification error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to verify payment",
+      });
+    }
+  });
+
   // Reports endpoints
   app.get("/api/reports", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {

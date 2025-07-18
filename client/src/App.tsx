@@ -24,6 +24,7 @@ import Report from "@/pages/report";
 import Reports from "@/pages/reports";
 import { LandingPage } from "@/pages/landing";
 import { ProtectedRoute } from "@/components/protected-route";
+import PaymentCallback from "@/pages/payment-callback";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage } = useAuthStore();
@@ -50,6 +51,7 @@ function Router() {
       {/* Public routes - always accessible */}
       <Route path="/register/:id" component={EventRegistration} />
       <Route path="/report/:eventId" component={Report} />
+      <Route path="/payment/callback" component={PaymentCallback} />
       <Route path="/login" component={Login} />
       
       {/* Root and landing route always go to landing page */}
