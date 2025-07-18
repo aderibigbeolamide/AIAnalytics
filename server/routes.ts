@@ -670,6 +670,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allowGuests: event.allowGuests,
         requiresPayment: event.requiresPayment,
         paymentAmount: event.paymentAmount,
+        paymentSettings: event.paymentSettings || {
+          requiresPayment: false,
+          paymentMethods: [],
+          paymentRules: { member: false, guest: false, invitee: false },
+          allowManualReceipt: true
+        },
         customRegistrationFields: event.customRegistrationFields || [],
       };
       
