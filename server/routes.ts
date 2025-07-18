@@ -140,6 +140,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ user: req.user, member });
   });
 
+  // Change password endpoint
+  app.post("/api/auth/change-password", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "New password must be at least 8 characters long" });
+      }
+
+      // Get current user
+      const user = await storage.getUserById(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await comparePassword(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password and update
+      const hashedNewPassword = await hashPassword(newPassword);
+      await db.update(users)
+        .set({ password: hashedNewPassword })
+        .where(eq(users.id, req.user!.id));
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Password change error:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
   // Get user's registrations (supports both authenticated users and registration lookup by ID)
   app.get("/api/my-registrations", async (req: Request, res) => {
     try {
@@ -1360,6 +1398,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(invitation);
     } catch (error) {
       res.status(400).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // Delete invitation endpoint
+  app.delete("/api/invitations/:id", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const invitationId = parseInt(req.params.id);
+      
+      // Delete the invitation
+      await db.delete(invitations).where(eq(invitations.id, invitationId));
+      
+      res.json({ message: "Invitation deleted successfully" });
+    } catch (error) {
+      console.error("Delete invitation error:", error);
+      res.status(500).json({ message: "Failed to delete invitation" });
     }
   });
 

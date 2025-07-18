@@ -14,7 +14,7 @@ import { CountdownTimer } from "@/components/countdown-timer";
 import { AuxiliaryBodyFilter } from "@/components/auxiliary-body-filter";
 import { getAuthHeaders } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   Users, 
   Calendar, 
@@ -40,6 +40,7 @@ import { LoadingCard } from "@/components/ui/loading-spinner";
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [memberSearch, setMemberSearch] = useState("");
   const [memberFilter, setMemberFilter] = useState("all");
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
@@ -677,19 +678,47 @@ export default function Dashboard() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => {
+                    // Export attendance functionality
+                    const activeEvent = events.find((event: any) => event.status === 'active');
+                    if (activeEvent) {
+                      window.open(`/api/events/${activeEvent.id}/export-attendance`, '_blank');
+                    } else {
+                      toast({
+                        title: "No Active Event",
+                        description: "Please select an event to export attendance.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
                   <Download className="h-4 w-4 mr-3" />
                   Export Attendance
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setLocation("/analytics")}
+                >
                   <BarChart className="h-4 w-4 mr-3" />
                   View Analytics
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setLocation("/invitees")}
+                >
                   <UsersRound className="h-4 w-4 mr-3" />
                   Manage Invitees
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setLocation("/settings")}
+                >
                   <Settings className="h-4 w-4 mr-3" />
                   System Settings
                 </Button>
