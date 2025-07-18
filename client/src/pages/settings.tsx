@@ -97,7 +97,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <Navbar />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">Loading settings...</div>
@@ -107,17 +107,17 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <Navbar />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 flex items-center">
+          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center">
             <Settings className="h-8 w-8 mr-3" />
             System Settings
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your account and system preferences</p>
+          <p className="text-muted-foreground">Manage your account and system preferences</p>
         </div>
 
         <div className="space-y-6">
@@ -133,7 +133,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="theme-toggle">Dark Mode</Label>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Toggle between light and dark themes</p>
+                  <p className="text-sm text-muted-foreground">Toggle between light and dark themes</p>
                 </div>
                 <Switch
                   id="theme-toggle"

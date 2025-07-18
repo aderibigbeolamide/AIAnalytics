@@ -147,7 +147,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-background dark:bg-gray-900">
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -546,30 +546,30 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-muted">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Auxiliary Body</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Member</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Auxiliary Body</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-card divide-y divide-border">
                       {members.map((member: any) => (
                         <tr key={member.id}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <span className="text-sm font-medium text-gray-600">
+                              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                                <span className="text-sm font-medium text-muted-foreground">
                                   {member.firstName?.[0]}{member.lastName?.[0]}
                                 </span>
                               </div>
                               <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
+                                <div className="text-sm font-medium text-foreground">
                                   {member.firstName} {member.lastName}
                                 </div>
-                                <div className="text-sm text-gray-500">{member.email}</div>
+                                <div className="text-sm text-muted-foreground">{member.email}</div>
                               </div>
                             </div>
                           </td>
@@ -609,9 +609,9 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className="bg-gray-100 rounded-lg p-8 mb-4">
-                    <QrCode className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-sm text-gray-600">Camera will activate when scanning</p>
+                  <div className="bg-muted rounded-lg p-8 mb-4">
+                    <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-sm text-muted-foreground">Camera will activate when scanning</p>
                   </div>
                   <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
                     <DialogTrigger asChild>
@@ -639,33 +639,33 @@ export default function Dashboard() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Face Recognition</span>
-                    <Badge className="bg-green-100 text-green-800">
+                    <span className="text-sm text-muted-foreground">Face Recognition</span>
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                       <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
                       Online
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Member Lookup</span>
-                    <Badge className="bg-green-100 text-green-800">
+                    <span className="text-sm text-muted-foreground">Member Lookup</span>
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                       <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
                       Active
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Eligibility Check</span>
-                    <Badge className="bg-green-100 text-green-800">
+                    <span className="text-sm text-muted-foreground">Eligibility Check</span>
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                       <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
                       Running
                     </Badge>
                   </div>
                 </div>
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <div className="flex items-center">
-                    <Bot className="h-5 w-5 text-blue-500 mr-3" />
+                    <Bot className="h-5 w-5 text-blue-500 dark:text-blue-400 mr-3" />
                     <div>
-                      <p className="text-sm font-medium text-blue-800">AI Status</p>
-                      <p className="text-xs text-blue-600">Processing validation in real-time</p>
+                      <p className="text-sm font-medium text-blue-800 dark:text-blue-200">AI Status</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-300">Processing validation in real-time</p>
                     </div>
                   </div>
                 </div>
