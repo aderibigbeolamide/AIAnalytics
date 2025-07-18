@@ -79,6 +79,25 @@ export const events = pgTable("events", {
   allowGuests: boolean("allow_guests").default(false),
   requiresPayment: boolean("requires_payment").default(false),
   paymentAmount: text("payment_amount"),
+  paymentSettings: jsonb("payment_settings").$type<{
+    requiresPayment: boolean;
+    amount?: string;
+    currency?: string;
+    paymentMethods: string[]; // ['paystack', 'manual_receipt']
+    paymentRules: {
+      member: boolean;
+      guest: boolean;
+      invitee: boolean;
+    };
+    paystackPublicKey?: string;
+    allowManualReceipt: boolean;
+    paymentDescription?: string;
+  }>().default({
+    requiresPayment: false,
+    paymentMethods: [],
+    paymentRules: { member: false, guest: false, invitee: false },
+    allowManualReceipt: true
+  }),
   customRegistrationFields: jsonb("custom_registration_fields").$type<CustomFormField[]>().default([]),
   status: text("status").notNull().default("upcoming"), // upcoming, active, completed, cancelled
   createdBy: integer("created_by").references(() => users.id).notNull(),
@@ -109,10 +128,14 @@ export const eventRegistrations = pgTable("event_registrations", {
   // Custom form field data
   customFieldData: jsonb("custom_field_data").$type<Record<string, any>>().default({}),
   
-  // Payment receipt (optional)
+  // Payment information
   paymentReceiptUrl: text("payment_receipt_url"),
   paymentAmount: text("payment_amount"),
-  paymentStatus: text("payment_status").default("pending"), // pending, verified, rejected
+  paymentStatus: text("payment_status").default("pending"), // pending, paid, verified, rejected
+  paymentMethod: text("payment_method"), // paystack, manual_receipt
+  paystackReference: text("paystack_reference"), // Paystack transaction reference
+  paymentVerifiedAt: timestamp("payment_verified_at"),
+  paymentVerifiedBy: integer("payment_verified_by").references(() => users.id),
   
   status: text("status").notNull().default("registered"), // registered, online, attended, cancelled
   validationMethod: text("validation_method"), // qr_code, manual_id, face_recognition, csv_verification

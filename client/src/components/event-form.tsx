@@ -11,7 +11,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
 import { FormFieldBuilder } from "@/components/form-field-builder";
-import { Plus, X } from "lucide-react";
+import { Plus, X, CreditCard, Receipt } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const eventSchema = z.object({
   name: z.string().min(1, "Event name is required"),
@@ -25,6 +27,19 @@ const eventSchema = z.object({
   allowGuests: z.boolean().default(false),
   requiresPayment: z.boolean().default(false),
   paymentAmount: z.string().optional(),
+  paymentSettings: z.object({
+    requiresPayment: z.boolean().default(false),
+    amount: z.string().optional(),
+    currency: z.string().default("NGN"),
+    paymentMethods: z.array(z.string()).default(["paystack", "manual_receipt"]),
+    paymentRules: z.object({
+      member: z.boolean().default(false),
+      guest: z.boolean().default(false),
+      invitee: z.boolean().default(false),
+    }).default({ member: false, guest: false, invitee: false }),
+    allowManualReceipt: z.boolean().default(true),
+    paymentDescription: z.string().optional(),
+  }).optional(),
   customRegistrationFields: z.array(z.any()).optional(),
   invitations: z.array(z.object({
     name: z.string().min(1, "Invitee name is required"),
@@ -58,6 +73,15 @@ export function EventForm({ onClose, event }: EventFormProps) {
       allowGuests: event?.allowGuests || false,
       requiresPayment: event?.requiresPayment || false,
       paymentAmount: event?.paymentAmount || "",
+      paymentSettings: event?.paymentSettings || {
+        requiresPayment: false,
+        amount: "",
+        currency: "NGN",
+        paymentMethods: ["paystack", "manual_receipt"],
+        paymentRules: { member: false, guest: false, invitee: false },
+        allowManualReceipt: true,
+        paymentDescription: "",
+      },
       customRegistrationFields: event?.customRegistrationFields || [],
       invitations: event?.invitations || [],
     },
@@ -416,44 +440,238 @@ export function EventForm({ onClose, event }: EventFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="requiresPayment"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel>
-                  Requires Payment
-                </FormLabel>
-              </div>
-            </FormItem>
-          )}
-        />
+        {/* Payment Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <CreditCard className="h-5 w-5" />
+              <span>Payment Settings</span>
+            </CardTitle>
+            <CardDescription>
+              Configure payment requirements and methods for this event
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="paymentSettings.requiresPayment"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      This event requires payment
+                    </FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
 
-        {form.watch("requiresPayment") && (
-          <FormField
-            control={form.control}
-            name="paymentAmount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Payment Amount</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="e.g., $50.00 or ₦5000"
-                    {...field} 
+            {form.watch("paymentSettings.requiresPayment") && (
+              <div className="space-y-4 border-l-2 border-blue-200 pl-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="paymentSettings.amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Amount</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            placeholder="5000"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+                  
+                  <FormField
+                    control={form.control}
+                    name="paymentSettings.currency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Currency</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="NGN">NGN (₦)</SelectItem>
+                            <SelectItem value="USD">USD ($)</SelectItem>
+                            <SelectItem value="GBP">GBP (£)</SelectItem>
+                            <SelectItem value="EUR">EUR (€)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="paymentSettings.paymentDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="e.g., This payment covers event materials, refreshments, and transportation"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-3">
+                  <FormLabel className="text-base font-medium">Who needs to pay?</FormLabel>
+                  
+                  <FormField
+                    control={form.control}
+                    name="paymentSettings.paymentRules.member"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Members must pay
+                          </FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="paymentSettings.paymentRules.guest"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Guests must pay
+                          </FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="paymentSettings.paymentRules.invitee"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Invitees must pay
+                          </FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <FormLabel className="text-base font-medium">Payment Methods</FormLabel>
+                  
+                  <FormField
+                    control={form.control}
+                    name="paymentSettings.paymentMethods"
+                    render={() => (
+                      <FormItem>
+                        <div className="space-y-2">
+                          <FormField
+                            control={form.control}
+                            name="paymentSettings.paymentMethods"
+                            render={({ field }) => {
+                              return (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes("paystack")}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        return checked
+                                          ? field.onChange([...current.filter(m => m !== "paystack"), "paystack"])
+                                          : field.onChange(current.filter(m => m !== "paystack"));
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel className="flex items-center space-x-2">
+                                      <CreditCard className="h-4 w-4" />
+                                      <span>Online payment via Paystack</span>
+                                    </FormLabel>
+                                    <p className="text-xs text-muted-foreground">
+                                      Accept card payments, bank transfers, and mobile money
+                                    </p>
+                                  </div>
+                                </FormItem>
+                              );
+                            }}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="paymentSettings.allowManualReceipt"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="flex items-center space-x-2">
+                                    <Receipt className="h-4 w-4" />
+                                    <span>Allow payment receipt uploads</span>
+                                  </FormLabel>
+                                  <p className="text-xs text-muted-foreground">
+                                    Users can upload receipts for manual verification
+                                  </p>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
             )}
-          />
-        )}
+          </CardContent>
+        </Card>
 
         {/* Invitations Section */}
         <div className="space-y-4">

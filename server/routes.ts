@@ -24,6 +24,13 @@ import {
   type AuthenticatedRequest 
 } from "./auth";
 import { 
+  initializePaystackPayment, 
+  verifyPaystackPayment, 
+  generatePaymentReference, 
+  convertToKobo,
+  convertFromKobo
+} from "./paystack";
+import { 
   generateQRCode, 
   generateQRImage, 
   generateShortUniqueId,
@@ -1889,6 +1896,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       res.status(500).json({ message: "Validation failed" });
+    }
+  });
+
+  // Payment Routes
+  
+  // Initialize Paystack payment
+  app.post("/api/payment/initialize", async (req: Request, res: Response) => {
+    try {
+      const { registrationId, amount, email } = req.body;
+      
+      if (!registrationId || !amount || !email) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Get registration details
+      const registration = await storage.getEventRegistration(registrationId);
+      if (!registration) {
+        return res.status(404).json({ message: "Registration not found" });
+      }
+
+      // Get event details
+      const event = await storage.getEvent(registration.eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Generate unique payment reference
+      const reference = generatePaymentReference('EVT');
+      
+      // Convert amount to kobo
+      const amountInKobo = convertToKobo(amount);
+
+      // Initialize payment with Paystack
+      const paymentData = await initializePaystackPayment(
+        email,
+        amountInKobo,
+        reference,
+        {
+          registrationId,
+          eventId: event.id,
+          eventName: event.name,
+          registrationType: registration.registrationType
+        },
+        process.env.PAYSTACK_PUBLIC_KEY || ''
+      );
+
+      if (paymentData.status) {
+        // Update registration with payment reference
+        await storage.updateEventRegistration(registrationId, {
+          paystackReference: reference,
+          paymentMethod: 'paystack',
+          paymentAmount: amount.toString(),
+          paymentStatus: 'pending'
+        });
+
+        res.json({
+          success: true,
+          data: paymentData.data,
+          reference
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: paymentData.message || 'Payment initialization failed'
+        });
+      }
+    } catch (error) {
+      console.error('Payment initialization error:', error);
+      res.status(500).json({ message: "Payment initialization failed" });
+    }
+  });
+
+  // Verify Paystack payment
+  app.post("/api/payment/verify", async (req: Request, res: Response) => {
+    try {
+      const { reference } = req.body;
+      
+      if (!reference) {
+        return res.status(400).json({ message: "Payment reference is required" });
+      }
+
+      // Verify payment with Paystack
+      const verification = await verifyPaystackPayment(reference);
+
+      if (verification.status && verification.data.status === 'success') {
+        // Find registration by payment reference
+        const registrations = await db
+          .select()
+          .from(eventRegistrations)
+          .where(eq(eventRegistrations.paystackReference, reference));
+
+        if (registrations.length === 0) {
+          return res.status(404).json({ message: "Registration not found for this payment" });
+        }
+
+        const registration = registrations[0];
+
+        // Update registration payment status
+        await storage.updateEventRegistration(registration.id, {
+          paymentStatus: 'paid',
+          paymentVerifiedAt: new Date()
+        });
+
+        res.json({
+          success: true,
+          message: "Payment verified successfully",
+          data: verification.data
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: verification.message || 'Payment verification failed'
+        });
+      }
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      res.status(500).json({ message: "Payment verification failed" });
+    }
+  });
+
+  // Manual payment verification (for admin)
+  app.post("/api/payment/verify-manual/:registrationId", authenticateToken, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { registrationId } = req.params;
+      const { status, notes } = req.body;
+
+      if (!['verified', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be 'verified' or 'rejected'" });
+      }
+
+      const registration = await storage.getEventRegistration(parseInt(registrationId));
+      if (!registration) {
+        return res.status(404).json({ message: "Registration not found" });
+      }
+
+      await storage.updateEventRegistration(parseInt(registrationId), {
+        paymentStatus: status,
+        paymentVerifiedAt: new Date(),
+        paymentVerifiedBy: req.user!.id
+      });
+
+      res.json({ 
+        message: `Payment ${status} successfully`,
+        registration: await storage.getEventRegistration(parseInt(registrationId))
+      });
+    } catch (error) {
+      console.error('Manual payment verification error:', error);
+      res.status(500).json({ message: "Payment verification failed" });
+    }
+  });
+
+  // Upload payment receipt
+  app.post("/api/payment/upload-receipt/:registrationId", upload.single('receipt'), async (req: Request, res: Response) => {
+    try {
+      const { registrationId } = req.params;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const registration = await storage.getEventRegistration(parseInt(registrationId));
+      if (!registration) {
+        return res.status(404).json({ message: "Registration not found" });
+      }
+
+      // Save file to uploads directory
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      await fs.mkdir(uploadsDir, { recursive: true });
+      
+      const fileName = `receipt_${registrationId}_${Date.now()}_${file.originalname}`;
+      const filePath = path.join(uploadsDir, fileName);
+      
+      await fs.writeFile(filePath, file.buffer);
+
+      // Update registration with receipt URL
+      await storage.updateEventRegistration(parseInt(registrationId), {
+        paymentReceiptUrl: `/uploads/${fileName}`,
+        paymentMethod: 'manual_receipt',
+        paymentStatus: 'pending'
+      });
+
+      res.json({ 
+        message: "Receipt uploaded successfully",
+        receiptUrl: `/uploads/${fileName}`
+      });
+    } catch (error) {
+      console.error('Receipt upload error:', error);
+      res.status(500).json({ message: "Receipt upload failed" });
     }
   });
 
