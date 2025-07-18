@@ -470,3 +470,4 @@ npm run migrate
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+UI/UX preferences: User-friendly design with professional appearance, no demo credentials on login page, direct users to contact admin for login issues.

@@ -33,7 +33,7 @@ export default function Login() {
     } catch (error) {
       toast({
         title: "Sign in failed",
-        description: "Invalid username or password. Please try again.",
+        description: "Invalid username or password. Please contact your administrator for assistance.",
         variant: "destructive",
       });
     } finally {
@@ -135,22 +135,13 @@ export default function Login() {
           </CardContent>
         </Card>
 
-        {/* Enhanced Demo Credentials */}
-        <div className="mt-8 bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 text-center">Demo Credentials</h3>
-          <div className="grid grid-cols-1 gap-3 text-sm">
-            <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
-              <span className="text-gray-600 font-medium">Username:</span>
-              <code className="bg-blue-100 text-blue-800 px-3 py-1 rounded-md font-mono text-sm">admin</code>
-            </div>
-            <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
-              <span className="text-gray-600 font-medium">Password:</span>
-              <code className="bg-blue-100 text-blue-800 px-3 py-1 rounded-md font-mono text-sm">password123</code>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 text-center mt-3">
-            Use these credentials to explore the demo
-          </p>
+        {/* Quick Access Link */}
+        <div className="text-center mt-8">
+          <Link href="/landing">
+            <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+              ← Back to Homepage
+            </button>
+          </Link>
         </div>
       </div>
     </div>
