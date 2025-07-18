@@ -29,11 +29,16 @@ import {
   Settings,
   Camera,
   Bot,
-  Trash2
+  Trash2,
+  TrendingUp,
+  Activity,
+  Clock
 } from "lucide-react";
+import { EnhancedCard } from "@/components/ui/enhanced-card";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { LoadingCard } from "@/components/ui/loading-spinner";
 
 export default function Dashboard() {
-  console.log('Dashboard component rendering...');
   const { toast } = useToast();
   const [memberSearch, setMemberSearch] = useState("");
   const [memberFilter, setMemberFilter] = useState("all");
@@ -41,6 +46,7 @@ export default function Dashboard() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [currentView, setCurrentView] = useState<"overview" | "events" | "members">("overview");
   const queryClient = useQueryClient();
 
   const { data: stats } = useQuery({
@@ -140,76 +146,110 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Event Management Dashboard</h1>
-          <p className="text-gray-600">Manage members, events, and track attendance with AI-powered validation</p>
+        {/* Enhanced Header */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-3">Event Management Dashboard</h1>
+              <p className="text-lg text-gray-600">Manage members, events, and track attendance with AI-powered validation</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button 
+                onClick={() => setIsEventModalOpen(true)} 
+                size="lg"
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+              >
+                <Plus className="h-5 w-5" />
+                Create Event
+              </Button>
+              <Button 
+                onClick={() => setIsMemberModalOpen(true)} 
+                variant="outline" 
+                size="lg"
+                className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+              >
+                <UserPlus className="h-5 w-5" />
+                Add Member
+              </Button>
+              <Button 
+                onClick={() => setIsScannerOpen(true)} 
+                variant="outline" 
+                size="lg"
+                className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50"
+              >
+                <Camera className="h-5 w-5" />
+                QR Scanner
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Quick Navigation Tabs */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2 mb-8">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: "overview", label: "Overview", icon: BarChart },
+              { id: "events", label: "Events", icon: Calendar },
+              { id: "members", label: "Members", icon: Users }
+            ].map(({ id, label, icon: Icon }) => (
+              <Button
+                key={id}
+                variant={currentView === id ? "default" : "ghost"}
+                onClick={() => setCurrentView(id as any)}
+                className={`flex items-center gap-2 px-6 py-3 ${
+                  currentView === id 
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Enhanced Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Users className="h-8 w-8 text-primary" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Members</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats?.totalMembers || 0}</p>
-                  <p className="text-xs text-gray-500">
-                    {stats?.totalRegistrations || 0} registrations
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <EnhancedCard
+            title="Total Members"
+            value={stats?.totalMembers || 0}
+            icon={Users}
+            description={`${stats?.totalRegistrations || 0} total registrations`}
+            color="blue"
+          />
           
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Calendar className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Active Events</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats?.activeEvents || 0}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <EnhancedCard
+            title="Active Events"
+            value={stats?.activeEvents || 0}
+            icon={Calendar}
+            description="Currently running events"
+            color="green"
+          />
           
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <QrCode className="h-8 w-8 text-orange-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">QR Scans Today</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats?.scansToday || 0}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <EnhancedCard
+            title="QR Scans Today"
+            value={stats?.scansToday || 0}
+            icon={QrCode}
+            description="Real-time validation activity"
+            color="orange"
+          />
           
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Validation Rate</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats?.validationRate?.toFixed(1) || 0}%</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <EnhancedCard
+            title="Validation Rate"
+            value={`${stats?.validationRate?.toFixed(1) || 0}%`}
+            icon={TrendingUp}
+            description="Success rate of validations"
+            color="purple"
+            trend={{
+              value: stats?.validationTrend || 0,
+              isPositive: (stats?.validationTrend || 0) >= 0
+            }}
+          />
         </div>
 
         {/* Auxiliary Body Statistics */}
@@ -258,52 +298,39 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Registration Type Statistics */}
+        {/* Enhanced Registration Type Statistics */}
         {stats?.registrationTypeStats && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Registration Type Distribution</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="bg-blue-50 border-blue-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <Users className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-blue-600">Members</p>
-                      <p className="text-2xl font-bold text-blue-900">{stats.registrationTypeStats.members || 0}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-green-50 border-green-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <UserPlus className="h-8 w-8 text-green-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-green-600">Guests</p>
-                      <p className="text-2xl font-bold text-green-900">{stats.registrationTypeStats.guests || 0}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-purple-50 border-purple-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <Bot className="h-8 w-8 text-purple-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-purple-600">Invitees</p>
-                      <p className="text-2xl font-bold text-purple-900">{stats.registrationTypeStats.invitees || 0}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <Activity className="h-6 w-6 text-blue-600" />
+                Registration Type Distribution
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <EnhancedCard
+                  title="Members"
+                  value={stats.registrationTypeStats.members || 0}
+                  icon={Users}
+                  description="Registered community members"
+                  color="blue"
+                />
+                
+                <EnhancedCard
+                  title="Guests"
+                  value={stats.registrationTypeStats.guests || 0}
+                  icon={UserPlus}
+                  description="Visiting guests"
+                  color="green"
+                />
+                
+                <EnhancedCard
+                  title="Invitees"
+                  value={stats.registrationTypeStats.invitees || 0}
+                  icon={Bot}
+                  description="Special invitations"
+                  color="purple"
+                />
+              </div>
             </div>
           </div>
         )}

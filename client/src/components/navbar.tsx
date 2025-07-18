@@ -43,19 +43,21 @@ export function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-white shadow-lg border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/landing">
-              <div className="flex-shrink-0 flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="flex-shrink-0 flex items-center cursor-pointer hover:opacity-80 transition-all duration-200 hover:scale-105">
                 <img 
                   src="/logo.png" 
                   alt="EventValidate Logo" 
-                  className="h-10 w-auto" 
+                  className="h-12 w-auto" 
                 />
-                <span className="ml-2 text-xl font-semibold text-gray-900">EventValidate</span>
+                <span className="ml-3 text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  EventValidate
+                </span>
               </div>
             </Link>
           </div>
@@ -66,10 +68,10 @@ export function Navbar() {
               {navItems.map((item) => (
                 <Link key={item.href} href={item.href}>
                   <span
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
                       isActive(item.href)
-                        ? "text-primary bg-blue-50"
-                        : "text-gray-600 hover:text-gray-900"
+                        ? "text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                     }`}
                   >
                     {item.label}
