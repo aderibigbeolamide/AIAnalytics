@@ -144,6 +144,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
   const [qrImageBase64, setQrImageBase64] = useState<string>("");
   const [registrationType, setRegistrationType] = useState<"member" | "guest" | "invitee">("member");
   const [pendingPayment, setPendingPayment] = useState<any>(null);
+  const [paymentIntentConfirmed, setPaymentIntentConfirmed] = useState(false);
 
   // Create form with dynamic validation that updates when registration type changes
   const form = useForm({
@@ -164,7 +165,19 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
     form.setValue("registrationType", registrationType);
     form.clearErrors();
     form.trigger();
+    // Reset payment confirmation when registration type changes
+    setPaymentIntentConfirmed(false);
   }, [registrationType, form]);
+
+  // Reset payment confirmation when payment method changes
+  React.useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "paymentMethod") {
+        setPaymentIntentConfirmed(false);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   // Check if registration is currently open
   const isRegistrationOpen = () => {
@@ -612,23 +625,61 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                 </div>
               )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={registrationMutation.isPending}
-              >
-                {(() => {
-                  const requiresPayment = event.paymentSettings?.requiresPayment && 
-                                         event.paymentSettings?.paymentRules?.[registrationType];
-                  const isPaystackSelected = form.watch("paymentMethod") === "paystack";
-                  
-                  if (requiresPayment && isPaystackSelected) {
-                    return registrationMutation.isPending ? "Processing..." : `Pay Now - ${event.paymentSettings?.currency || 'NGN'} ${event.paymentSettings?.amount || 0}`;
+              {(() => {
+                const requiresPayment = event.paymentSettings?.requiresPayment && 
+                                       event.paymentSettings?.paymentRules?.[registrationType];
+                const isPaystackSelected = form.watch("paymentMethod") === "paystack";
+                
+                if (requiresPayment && isPaystackSelected) {
+                  if (!paymentIntentConfirmed) {
+                    return (
+                      <Button
+                        type="button"
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        disabled={registrationMutation.isPending}
+                        onClick={() => setPaymentIntentConfirmed(true)}
+                      >
+                        Pay Online - {event.paymentSettings?.currency || 'NGN'} {event.paymentSettings?.amount || 0}
+                      </Button>
+                    );
                   } else {
-                    return registrationMutation.isPending ? "Submitting..." : "Submit Registration";
+                    return (
+                      <div className="space-y-3">
+                        <div className="bg-green-50 p-3 rounded-lg">
+                          <p className="text-sm text-green-700 text-center">
+                            Ready to proceed with payment of {event.paymentSettings?.currency || 'NGN'} {event.paymentSettings?.amount || 0}
+                          </p>
+                        </div>
+                        <Button
+                          type="submit"
+                          className="w-full bg-green-600 hover:bg-green-700"
+                          disabled={registrationMutation.isPending}
+                        >
+                          {registrationMutation.isPending ? "Processing Payment..." : "Pay Now & Complete Registration"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setPaymentIntentConfirmed(false)}
+                        >
+                          Cancel Payment
+                        </Button>
+                      </div>
+                    );
                   }
-                })()}
-              </Button>
+                } else {
+                  return (
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={registrationMutation.isPending}
+                    >
+                      {registrationMutation.isPending ? "Submitting..." : "Submit Registration"}
+                    </Button>
+                  );
+                }
+              })()}
             </form>
           </Form>
         </CardContent>
