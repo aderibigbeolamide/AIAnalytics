@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        video { max-width: 100%; height: auto; }
+        #preview { max-width: 300px; max-height: 300px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .success { color: green; }
+        .error { color: red; }
+        #result { margin: 20px 0; padding: 15px; border-radius: 8px; }
+        .success-result { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error-result { background: #f8d7da; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>AI Face Recognition Test</h1>
+    
+    <div class="section">
+        <h2>Step 1: Take a Photo</h2>
+        <button onclick="startCamera()">Start Camera</button>
+        <button onclick="capturePhoto()" id="captureBtn" disabled>Capture Photo</button>
+        <button onclick="stopCamera()">Stop Camera</button>
+        <br><br>
+        <video id="video" autoplay style="display: none;"></video>
+        <canvas id="canvas" style="display: none;"></canvas>
+        <img id="preview" style="display: none;" alt="Captured photo">
+    </div>
+
+    <div class="section">
+        <h2>Step 2: Test Face Validation</h2>
+        <label>Member Name: <input type="text" id="memberName" value="Musodiq Aderibigbe" style="margin: 10px; padding: 5px;"></label><br>
+        <label>Email (optional): <input type="text" id="email" value="musodiq@example.com" style="margin: 10px; padding: 5px;"></label><br>
+        <button onclick="testFaceValidation()" id="validateBtn" disabled>Test Face Validation</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        let stream = null;
+        let capturedImage = null;
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480, facingMode: 'user' } 
+                });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                video.style.display = 'block';
+                video.play();
+                document.getElementById('captureBtn').disabled = false;
+                showMessage('Camera started successfully!', 'success');
+            } catch (error) {
+                showMessage('Camera access failed: ' + error.message, 'error');
+            }
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const preview = document.getElementById('preview');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0);
+            
+            canvas.toBlob((blob) => {
+                capturedImage = blob;
+                const url = URL.createObjectURL(blob);
+                preview.src = url;
+                preview.style.display = 'block';
+                document.getElementById('validateBtn').disabled = false;
+                showMessage('Photo captured successfully!', 'success');
+            }, 'image/jpeg', 0.8);
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                document.getElementById('video').style.display = 'none';
+                document.getElementById('captureBtn').disabled = true;
+                showMessage('Camera stopped', 'success');
+            }
+        }
+
+        async function testFaceValidation() {
+            if (!capturedImage) {
+                showMessage('Please capture a photo first!', 'error');
+                return;
+            }
+
+            const memberName = document.getElementById('memberName').value;
+            const email = document.getElementById('email').value;
+
+            if (!memberName) {
+                showMessage('Please enter a member name!', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('faceImage', capturedImage, 'face.jpg');
+            formData.append('eventId', '1');
+            formData.append('memberName', memberName);
+            if (email) formData.append('email', email);
+
+            try {
+                document.getElementById('validateBtn').disabled = true;
+                showMessage('Testing face validation...', 'info');
+
+                // Get auth token from localStorage (same as the app uses)
+                const authState = JSON.parse(localStorage.getItem('auth-storage') || '{}');
+                const token = authState.state?.token;
+
+                if (!token) {
+                    showMessage('Please login to the main app first!', 'error');
+                    return;
+                }
+
+                const response = await fetch('/api/validate-face', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(`Success! ${result.message} (Confidence: ${result.confidence || 'N/A'}%)`, 'success');
+                    console.log('Full result:', result);
+                } else {
+                    showMessage(`Failed: ${result.message}`, 'error');
+                    console.log('Error result:', result);
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+                console.error('Validation error:', error);
+            } finally {
+                document.getElementById('validateBtn').disabled = false;
+            }
+        }
+
+        function showMessage(message, type) {
+            const result = document.getElementById('result');
+            result.textContent = message;
+            result.className = type === 'success' ? 'success-result' : 
+                              type === 'error' ? 'error-result' : '';
+        }
+    </script>
+</body>
+</html>
