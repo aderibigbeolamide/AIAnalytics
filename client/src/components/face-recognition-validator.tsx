@@ -82,25 +82,104 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: 640, 
-          height: 480,
-          facingMode: 'user' 
-        } 
-      });
-      setCameraStream(stream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+      console.log("Starting camera...");
+      
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera not supported in this browser");
       }
+
+      // Try different camera configurations
+      let stream;
+      try {
+        console.log("Trying back camera...");
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: { ideal: 640 }, 
+            height: { ideal: 480 },
+            facingMode: 'environment' // Back camera first
+          } 
+        });
+        console.log("Back camera successful");
+      } catch (backCameraError) {
+        console.log("Back camera failed, trying front camera...");
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: { ideal: 640 }, 
+            height: { ideal: 480 },
+            facingMode: 'user' // Front camera fallback
+          } 
+        });
+        console.log("Front camera successful");
+      }
+
+      setCameraStream(stream);
+      
+      if (videoRef.current) {
+        console.log("Checking video ref after render:", !!videoRef.current);
+        console.log("Setting video source object");
+        videoRef.current.srcObject = stream;
+        
+        // Add event listeners to debug video loading
+        videoRef.current.onloadstart = () => console.log("Video load started");
+        videoRef.current.onloadedmetadata = () => {
+          console.log("Video metadata loaded");
+          console.log("Video metadata loaded, dimensions:", videoRef.current?.videoWidth, "x", videoRef.current?.videoHeight);
+        };
+        videoRef.current.oncanplay = () => console.log("Video can play");
+        videoRef.current.onplay = () => console.log("Video is playing");
+        videoRef.current.onplaying = () => console.log("Video started playing successfully");
+        videoRef.current.onsuspend = () => console.log("Video suspended");
+        
+        console.log("Video immediately after setting srcObject:", {
+          srcObject: !!videoRef.current.srcObject,
+          readyState: videoRef.current.readyState,
+          videoWidth: videoRef.current.videoWidth,
+          videoHeight: videoRef.current.videoHeight
+        });
+        
+        // Force play
+        await videoRef.current.play();
+        
+        // Additional timeout to ensure video is playing
+        setTimeout(() => {
+          console.log("Force playing video after timeout");
+          if (videoRef.current) {
+            console.log("Video element state after 1s:", {
+              srcObject: !!videoRef.current.srcObject,
+              readyState: videoRef.current.readyState,
+              paused: videoRef.current.paused,
+              width: videoRef.current.videoWidth,
+              height: videoRef.current.videoHeight,
+              currentTime: videoRef.current.currentTime,
+              duration: videoRef.current.duration,
+              played: videoRef.current.played.length > 0,
+              stream: !!stream,
+              tracks: stream.getTracks().map(track => ({
+                kind: track.kind,
+                enabled: track.enabled,
+                readyState: track.readyState
+              }))
+            });
+          }
+        }, 1000);
+      }
+      
       setIsUsingCamera(true);
-    } catch (error) {
+      
       toast({
-        title: "Camera Error",
-        description: "Could not access camera. Please use file upload instead.",
+        title: "Camera Started",
+        description: "Camera is ready. Position your face and click 'Capture Photo'",
+      });
+      
+    } catch (error: any) {
+      console.error("Camera error:", error);
+      toast({
+        title: "Camera Access Failed",
+        description: `Could not access camera: ${error.message}. Please allow camera permissions or use file upload instead.`,
         variant: "destructive",
       });
+      setIsUsingCamera(false);
     }
   };
 
