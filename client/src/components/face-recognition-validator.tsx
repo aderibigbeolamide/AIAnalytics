@@ -187,7 +187,10 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
                     <p><strong>Member:</strong> {validationResult.memberName}</p>
                     <p><strong>Event:</strong> {validationResult.event?.name}</p>
                     <p><strong>Status:</strong> Validated</p>
-                    <p><strong>Method:</strong> Face Recognition</p>
+                    <p><strong>Method:</strong> AI Face Recognition</p>
+                    {validationResult.confidence && (
+                      <p><strong>Confidence:</strong> {validationResult.confidence}%</p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={resetForm} variant="outline" className="flex-1">
@@ -206,6 +209,9 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
                   </div>
                   <div className="bg-red-50 p-4 rounded-lg">
                     <p className="text-red-800">{validationResult.message}</p>
+                    {validationResult.confidence && (
+                      <p className="text-red-600 text-sm mt-2">Confidence: {validationResult.confidence}%</p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={resetForm} variant="outline" className="flex-1">

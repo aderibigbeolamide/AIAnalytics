@@ -2220,27 +2220,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert uploaded image to base64 for comparison
       const uploadedImageBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
 
+      // Validate image quality first
+      const { FaceRecognitionService } = await import('./face-recognition');
+      const qualityCheck = FaceRecognitionService.validateImageQuality(uploadedImageBase64);
+      
+      if (!qualityCheck.isValid) {
+        return res.status(400).json({ 
+          message: qualityCheck.message,
+          validationStatus: "invalid" 
+        });
+      }
+
       // Get all face recognition photos for this event
       const storedPhotos = await storage.getFaceRecognitionPhotos(parseInt(eventId));
       
       if (storedPhotos.length === 0) {
         return res.status(400).json({ 
-          message: "No face recognition photos found for this event",
+          message: "No face recognition photos found for this event. Please upload reference photos first.",
           validationStatus: "invalid" 
         });
       }
 
-      // Simple face matching based on member name
-      // In a real implementation, you would use an AI face recognition service here
-      const matchedPhoto = storedPhotos.find(photo => 
+      // AI-powered face matching - compare with all stored photos for this member
+      const memberPhotos = storedPhotos.filter(photo => 
         photo.memberName && 
         photo.memberName.toLowerCase().trim() === memberName.toLowerCase().trim()
       );
 
-      if (!matchedPhoto) {
+      if (memberPhotos.length === 0) {
         return res.status(404).json({ 
-          message: "No matching face photo found for this member",
+          message: `No reference photos found for ${memberName}. Please upload a reference photo first.`,
           validationStatus: "invalid" 
+        });
+      }
+
+      // Compare captured image with all reference photos for this member
+      let bestMatch = { isMatch: false, confidence: 0, message: "No match found" };
+      
+      for (const photo of memberPhotos) {
+        try {
+          const comparisonResult = await FaceRecognitionService.enhancedFaceComparison(
+            photo.photoUrl, 
+            uploadedImageBase64, 
+            memberName
+          );
+          
+          if (comparisonResult.confidence > bestMatch.confidence) {
+            bestMatch = comparisonResult;
+          }
+        } catch (error) {
+          console.error('Face comparison error for photo:', photo.id, error);
+        }
+      }
+
+      if (!bestMatch.isMatch) {
+        return res.status(401).json({ 
+          message: `Face does not match stored photos for ${memberName}. ${bestMatch.message}`,
+          validationStatus: "invalid",
+          confidence: Math.round(bestMatch.confidence * 100)
         });
       }
 
@@ -2251,7 +2288,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try to find registration by name or email
       for (const registration of registrations) {
         const registrationData = registration.customFieldData as any || {};
-        const regName = registration.guestName || registrationData.FirstName + ' ' + registrationData.LastName || registrationData.fullName;
+        const regName = registration.guestName || 
+                       (registrationData.FirstName && registrationData.LastName ? 
+                        `${registrationData.FirstName} ${registrationData.LastName}` : '') ||
+                       registrationData.fullName || '';
         const regEmail = registration.guestEmail || registrationData.email || registrationData.Email;
         
         const nameMatch = regName && regName.toLowerCase().trim() === memberName.toLowerCase().trim();
@@ -2337,10 +2377,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validationMethod: "face_recognition"
       });
 
+      // Get the matched photo from the best match
+      const matchedPhoto = memberPhotos[0]; // Since we found matches, take the first one
+      
       res.json({
-        message: "Face recognition validation successful",
+        message: `Face recognition validation successful! ${bestMatch.message}`,
         validationStatus: "valid",
         memberName: matchedPhoto.memberName,
+        confidence: Math.round(bestMatch.confidence * 100),
         event,
         registration: matchedRegistration,
         attendance: attendanceRecord,

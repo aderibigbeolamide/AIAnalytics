@@ -12,6 +12,8 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.37.0",
+    "@google/genai": "^1.10.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^1.0.1",
@@ -77,6 +79,7 @@
     "nanoid": "^5.1.5",
     "next-themes": "^0.4.6",
     "nodemailer": "^7.0.4",
+    "openai": "^5.10.1",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "paystack": "^2.0.1",
