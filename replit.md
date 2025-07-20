@@ -512,6 +512,16 @@ npm run migrate
   - Created comprehensive GTM utility functions for event tracking
   - Page view tracking enabled with automatic route change detection
 
+- July 20, 2025. Enhanced payment flow with separate registration and payment buttons:
+  - Modified registration form to show "Submit Registration" button first
+  - After submission, displays payment summary with dedicated "Pay Now" button
+  - Users see registration confirmation before being redirected to Paystack
+  - Payment flow: Submit Registration → Payment Summary → Pay Now → Paystack → Callback → Completion
+  - Implemented face recognition validation system as alternative to QR codes
+  - Created comprehensive validation center with multiple methods (QR scan, manual ID, face recognition)
+  - Enhanced payment callback page to show QR code after successful payment verification
+  - All validation methods work with CSV validation and member verification systems
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

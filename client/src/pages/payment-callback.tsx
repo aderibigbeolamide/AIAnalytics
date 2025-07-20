@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Download, QrCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function PaymentCallback() {
@@ -10,6 +10,8 @@ export default function PaymentCallback() {
   const { toast } = useToast();
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
   const [paymentData, setPaymentData] = useState<any>(null);
+  const [registrationData, setRegistrationData] = useState<any>(null);
+  const [qrImageBase64, setQrImageBase64] = useState<string>("");
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -42,6 +44,13 @@ export default function PaymentCallback() {
       if (data.status === 'success') {
         setStatus('success');
         setPaymentData(data.data);
+        setRegistrationData(data.data.registration);
+        
+        // If registration was completed with payment, get QR code
+        if (data.data.registration) {
+          fetchQRCode(data.data.registration.id);
+        }
+        
         toast({
           title: "Payment Successful",
           description: "Your registration has been completed!",
@@ -64,6 +73,27 @@ export default function PaymentCallback() {
     }
   };
 
+  const fetchQRCode = async (registrationId: number) => {
+    try {
+      const response = await fetch(`/api/registrations/${registrationId}/qr`);
+      if (response.ok) {
+        const data = await response.json();
+        setQrImageBase64(data.qrImageData);
+      }
+    } catch (error) {
+      console.error("Failed to fetch QR code:", error);
+    }
+  };
+
+  const downloadQRCode = () => {
+    if (!qrImageBase64) return;
+    
+    const link = document.createElement('a');
+    link.download = `event-registration-qr-${registrationData?.id || 'code'}.png`;
+    link.href = qrImageBase64;
+    link.click();
+  };
+
   const handleContinue = () => {
     if (status === 'success') {
       // Redirect to events page or dashboard
@@ -76,7 +106,7 @@ export default function PaymentCallback() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
             {status === 'loading' && (
@@ -107,17 +137,50 @@ export default function PaymentCallback() {
           )}
           
           {status === 'success' && (
-            <div className="space-y-4">
-              <p className="text-green-600 font-medium">
+            <div className="space-y-6">
+              <p className="text-green-600 font-medium text-lg">
                 Your payment has been processed successfully!
               </p>
+              
               <div className="bg-green-50 p-4 rounded-lg text-left space-y-2">
                 <p className="text-sm"><strong>Amount:</strong> ₦{paymentData?.amount ? (paymentData.amount / 100).toLocaleString() : 'N/A'}</p>
                 <p className="text-sm"><strong>Reference:</strong> {paymentData?.reference}</p>
                 <p className="text-sm"><strong>Status:</strong> {paymentData?.status}</p>
+                {registrationData && (
+                  <>
+                    <p className="text-sm"><strong>Registration ID:</strong> {registrationData.uniqueId || registrationData.id}</p>
+                    <p className="text-sm"><strong>Name:</strong> {registrationData.guestName}</p>
+                  </>
+                )}
               </div>
+
+              {qrImageBase64 && (
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                      <QrCode className="h-5 w-5" />
+                      <h3 className="font-semibold">Your Event QR Code</h3>
+                    </div>
+                    <div className="flex justify-center mb-4">
+                      <img
+                        src={qrImageBase64}
+                        alt="Registration QR Code"
+                        className="w-48 h-48 border rounded-lg"
+                      />
+                    </div>
+                    <Button onClick={downloadQRCode} variant="outline" size="sm" className="w-full">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download QR Code
+                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Show this QR code at the event entrance for validation.
+                  </p>
+                </div>
+              )}
+              
               <p className="text-sm text-gray-600">
-                Your registration is now complete. You will receive a confirmation email with your QR code shortly.
+                Your registration is now complete. Save your QR code and bring it to the event.
               </p>
             </div>
           )}

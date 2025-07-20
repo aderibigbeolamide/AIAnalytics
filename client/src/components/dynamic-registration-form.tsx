@@ -143,6 +143,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
   const [registrationData, setRegistrationData] = useState<any>(null);
   const [qrImageBase64, setQrImageBase64] = useState<string>("");
   const [registrationType, setRegistrationType] = useState<"member" | "guest" | "invitee">("member");
+  const [pendingPayment, setPendingPayment] = useState<any>(null);
 
   // Create form with dynamic validation that updates when registration type changes
   const form = useForm({
@@ -221,19 +222,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
       return await response.json();
     },
     onSuccess: (response) => {
-      // Check if payment is required and redirect to payment
-      if (response.requiresPayment && response.paymentUrl) {
-        toast({
-          title: "Redirecting to Payment",
-          description: "Please complete your payment to finish registration.",
-        });
-        
-        // Redirect to Paystack payment page
-        window.location.href = response.paymentUrl;
-        return;
-      }
-      
-      // Normal registration completion
+      // Normal registration completion (payment already verified)
       setRegistrationData(response.registration);
       setQrImageBase64(response.qrImageBase64);
       setShowRegistrationCard(true);
@@ -256,15 +245,64 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
     },
   });
 
-  const onSubmit = (data: any) => {
-    // Ensure registrationType is included in the submission data
+  const initiatePayment = async (data: any) => {
     const submissionData = {
       ...data,
       registrationType: registrationType || data.registrationType || "member"
     };
     
-    console.log("Submitting registration with data:", submissionData);
-    registrationMutation.mutate(submissionData);
+    try {
+      const response = await fetch(`/api/payment/initialize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId: eventId,
+          email: submissionData.email || submissionData.Email || 'user@example.com',
+          registrationData: submissionData
+        })
+      });
+      
+      const paymentData = await response.json();
+      
+      if (paymentData.success && paymentData.data.authorization_url) {
+        // Redirect to Paystack for payment
+        window.location.href = paymentData.data.authorization_url;
+      } else {
+        toast({
+          title: "Payment Initialization Failed",
+          description: paymentData.message || "Unable to initialize payment",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Payment Error",
+        description: "Failed to initialize payment. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const onSubmit = (data: any) => {
+    // Check if payment is required for this registration type
+    const requiresPayment = event.paymentSettings?.requiresPayment && 
+                           event.paymentSettings?.paymentRules?.[registrationType];
+    
+    if (requiresPayment && data.paymentMethod === 'paystack') {
+      // Initiate payment first
+      initiatePayment(data);
+    } else {
+      // Proceed with normal registration (no payment or manual receipt)
+      const submissionData = {
+        ...data,
+        registrationType: registrationType || data.registrationType || "member"
+      };
+      
+      console.log("Submitting registration with data:", submissionData);
+      registrationMutation.mutate(submissionData);
+    }
   };
 
   if (!isRegistrationOpen()) {
@@ -579,7 +617,17 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                 className="w-full"
                 disabled={registrationMutation.isPending}
               >
-                {registrationMutation.isPending ? "Registering..." : "Register for Event"}
+                {(() => {
+                  const requiresPayment = event.paymentSettings?.requiresPayment && 
+                                         event.paymentSettings?.paymentRules?.[registrationType];
+                  const isPaystackSelected = form.watch("paymentMethod") === "paystack";
+                  
+                  if (requiresPayment && isPaystackSelected) {
+                    return registrationMutation.isPending ? "Processing..." : `Pay Now - ${event.paymentSettings?.currency || 'NGN'} ${event.paymentSettings?.amount || 0}`;
+                  } else {
+                    return registrationMutation.isPending ? "Submitting..." : "Submit Registration";
+                  }
+                })()}
               </Button>
             </form>
           </Form>

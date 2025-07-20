@@ -1646,30 +1646,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (verificationData.status && verificationData.data.status === 'success') {
         // Payment successful - proceed with registration
         const metadata = verificationData.data.metadata;
-        const eventId = metadata.eventId;
+        const eventId = parseInt(metadata.eventId);
         const registrationData = metadata.registrationData;
 
-        // Create registration record with payment information
-        const registrationRecord = {
-          ...registrationData,
-          eventId: parseInt(eventId),
-          status: "registered",
-          paymentStatus: "paid",
-          paymentReference: reference,
-          paymentAmount: convertFromKobo(verificationData.data.amount).toString(),
-          qrCode: generateShortUniqueId(),
+        const event = await storage.getEvent(eventId);
+        if (!event) {
+          return res.status(404).json({
+            status: "failed",
+            message: "Event not found",
+          });
+        }
+
+        const qrCode = generateQRCode();
+        const uniqueId = generateShortUniqueId();
+        
+        // Extract name and email from form data
+        const getName = () => {
+          const firstName = registrationData.firstName || registrationData.FirstName || registrationData.first_name || '';
+          const lastName = registrationData.lastName || registrationData.LastName || registrationData.last_name || '';
+          const fullName = registrationData.name || registrationData.Name || registrationData.fullName || registrationData.FullName || '';
+          
+          if (firstName && lastName) {
+            return `${firstName} ${lastName}`;
+          } else if (fullName) {
+            return fullName;
+          } else {
+            return 'Unknown User';
+          }
         };
 
-        const [newRegistration] = await db.insert(eventRegistrations)
-          .values(registrationRecord)
-          .returning();
+        const getEmail = () => {
+          return registrationData.email || registrationData.Email || registrationData.emailAddress || null;
+        };
+
+        // Create registration using storage system
+        const insertData = {
+          eventId,
+          registrationType: registrationData.registrationType as "member" | "guest" | "invitee",
+          qrCode,
+          uniqueId,
+          guestName: getName(),
+          guestEmail: getEmail(),
+          paymentReference: reference,
+          paymentStatus: "completed" as const,
+          paymentAmount: verificationData.data.amount / 100, // Convert from kobo
+          customFieldData: registrationData,
+          status: "registered" as const,
+        };
+
+        const registration = await storage.createEventRegistration(insertData);
 
         res.json({
           status: "success",
           message: "Payment verified and registration completed",
           data: {
             ...verificationData.data,
-            registration: newRegistration,
+            registration,
           },
         });
       } else {
@@ -1705,30 +1737,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (verificationData.status && verificationData.data.status === 'success') {
         // Payment successful - proceed with registration
         const metadata = verificationData.data.metadata;
-        const eventId = metadata.eventId;
+        const eventId = parseInt(metadata.eventId);
         const registrationData = metadata.registrationData;
 
-        // Create registration record with payment information
-        const registrationRecord = {
-          ...registrationData,
-          eventId: parseInt(eventId),
-          status: "registered",
-          paymentStatus: "paid",
-          paymentReference: reference,
-          paymentAmount: convertFromKobo(verificationData.data.amount).toString(),
-          qrCode: generateShortUniqueId(),
+        const event = await storage.getEvent(eventId);
+        if (!event) {
+          return res.status(400).json({
+            success: false,
+            message: "Event not found",
+          });
+        }
+
+        const qrCode = generateQRCode();
+        const uniqueId = generateShortUniqueId();
+        
+        // Extract name and email from form data
+        const getName = () => {
+          const firstName = registrationData.firstName || registrationData.FirstName || registrationData.first_name || '';
+          const lastName = registrationData.lastName || registrationData.LastName || registrationData.last_name || '';
+          const fullName = registrationData.name || registrationData.Name || registrationData.fullName || registrationData.FullName || '';
+          
+          if (firstName && lastName) {
+            return `${firstName} ${lastName}`;
+          } else if (fullName) {
+            return fullName;
+          } else {
+            return 'Unknown User';
+          }
         };
 
-        const [newRegistration] = await db.insert(eventRegistrations)
-          .values(registrationRecord)
-          .returning();
+        const getEmail = () => {
+          return registrationData.email || registrationData.Email || registrationData.emailAddress || null;
+        };
+
+        // Create registration using storage system
+        const insertData = {
+          eventId,
+          registrationType: registrationData.registrationType as "member" | "guest" | "invitee",
+          qrCode,
+          uniqueId,
+          guestName: getName(),
+          guestEmail: getEmail(),
+          paymentReference: reference,
+          paymentStatus: "completed" as const,
+          paymentAmount: verificationData.data.amount / 100, // Convert from kobo
+          customFieldData: registrationData,
+          status: "registered" as const,
+        };
+
+        const registration = await storage.createEventRegistration(insertData);
 
         res.json({
           success: true,
           message: "Payment verified and registration completed",
           data: {
             ...verificationData.data,
-            registration: newRegistration,
+            registration,
           },
         });
       } else {
