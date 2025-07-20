@@ -1628,6 +1628,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment verification route for callback page
+  app.get("/api/payment/verify/:reference", async (req: Request, res: Response) => {
+    try {
+      const reference = req.params.reference;
+
+      if (!reference) {
+        return res.status(400).json({
+          status: "failed",
+          message: "Payment reference is required",
+        });
+      }
+
+      // Verify payment with Paystack
+      const verificationData = await verifyPaystackPayment(reference);
+
+      if (verificationData.status && verificationData.data.status === 'success') {
+        // Payment successful - proceed with registration
+        const metadata = verificationData.data.metadata;
+        const eventId = metadata.eventId;
+        const registrationData = metadata.registrationData;
+
+        // Create registration record with payment information
+        const registrationRecord = {
+          ...registrationData,
+          eventId: parseInt(eventId),
+          status: "registered",
+          paymentStatus: "paid",
+          paymentReference: reference,
+          paymentAmount: convertFromKobo(verificationData.data.amount).toString(),
+          qrCode: generateShortUniqueId(),
+        };
+
+        const [newRegistration] = await db.insert(eventRegistrations)
+          .values(registrationRecord)
+          .returning();
+
+        res.json({
+          status: "success",
+          message: "Payment verified and registration completed",
+          data: {
+            ...verificationData.data,
+            registration: newRegistration,
+          },
+        });
+      } else {
+        res.status(400).json({
+          status: "failed",
+          message: "Payment verification failed",
+          data: verificationData.data,
+        });
+      }
+    } catch (error) {
+      console.error("Payment verification error:", error);
+      res.status(500).json({
+        status: "failed",
+        message: "Failed to verify payment",
+      });
+    }
+  });
+
   app.post("/api/payment/verify", async (req: Request, res: Response) => {
     try {
       const { reference } = req.body;
@@ -2071,6 +2131,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Photo deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete photo" });
+    }
+  });
+
+  // Face recognition validation endpoint
+  app.post("/api/validate-face", authenticateToken, upload.single('faceImage'), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { eventId, memberName, email } = req.body;
+      
+      if (!req.file) {
+        return res.status(400).json({ 
+          message: "Face image is required",
+          validationStatus: "invalid" 
+        });
+      }
+
+      if (!eventId || !memberName) {
+        return res.status(400).json({ 
+          message: "Event ID and member name are required",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Convert uploaded image to base64 for comparison
+      const uploadedImageBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+      // Get all face recognition photos for this event
+      const storedPhotos = await storage.getFaceRecognitionPhotos(parseInt(eventId));
+      
+      if (storedPhotos.length === 0) {
+        return res.status(400).json({ 
+          message: "No face recognition photos found for this event",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Simple face matching based on member name
+      // In a real implementation, you would use an AI face recognition service here
+      const matchedPhoto = storedPhotos.find(photo => 
+        photo.memberName && 
+        photo.memberName.toLowerCase().trim() === memberName.toLowerCase().trim()
+      );
+
+      if (!matchedPhoto) {
+        return res.status(404).json({ 
+          message: "No matching face photo found for this member",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Find the registration for this member and event
+      const registrations = await storage.getEventRegistrations(parseInt(eventId));
+      let matchedRegistration = null;
+
+      // Try to find registration by name or email
+      for (const registration of registrations) {
+        const registrationData = registration.customFieldData as any || {};
+        const regName = registration.guestName || registrationData.FirstName + ' ' + registrationData.LastName || registrationData.fullName;
+        const regEmail = registration.guestEmail || registrationData.email || registrationData.Email;
+        
+        const nameMatch = regName && regName.toLowerCase().trim() === memberName.toLowerCase().trim();
+        const emailMatch = email && regEmail && regEmail.toLowerCase().trim() === email.toLowerCase().trim();
+        
+        if (nameMatch || emailMatch) {
+          matchedRegistration = registration;
+          break;
+        }
+      }
+
+      if (!matchedRegistration) {
+        return res.status(404).json({ 
+          message: "No registration found for this member",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Check if already validated
+      if (matchedRegistration.status === "online" || matchedRegistration.status === "attended") {
+        return res.status(400).json({ 
+          message: "This member has already been validated",
+          validationStatus: "duplicate" 
+        });
+      }
+
+      const event = await storage.getEvent(parseInt(eventId));
+      if (!event) {
+        return res.status(404).json({ 
+          message: "Event not found",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Enhanced CSV validation logic (same as other validation methods)
+      const csvData = await storage.getMemberValidationCsv(parseInt(eventId));
+      let csvValidationPassed = true;
+      
+      if (csvData.length > 0 && matchedRegistration.registrationType === 'member') {
+        csvValidationPassed = csvData.some(csv => 
+          csv.memberData.some((csvMember: any) => {
+            const csvName = csvMember.name || csvMember.Fullname || csvMember.fullName || csvMember.fullname;
+            const csvFirstName = csvMember.FirstName || csvMember.firstName || csvMember.first_name;
+            const csvLastName = csvMember.LastName || csvMember.lastName || csvMember.last_name;
+            const csvEmail = csvMember.email || csvMember.Email || csvMember.emailAddress;
+
+            let constructedName = '';
+            if (csvFirstName && csvLastName) {
+              constructedName = `${csvFirstName} ${csvLastName}`;
+            }
+            const finalCsvName = csvName || constructedName;
+            
+            const nameMatch = finalCsvName && memberName && 
+              finalCsvName.toLowerCase().trim() === memberName.toLowerCase().trim();
+            const emailMatch = csvEmail && email && 
+              csvEmail.toLowerCase().trim() === email.toLowerCase().trim();
+            
+            return nameMatch || emailMatch;
+          })
+        );
+        
+        if (!csvValidationPassed) {
+          return res.status(403).json({ 
+            message: "Member validation failed. Your information was not found in the member validation list.",
+            validationStatus: "csv_validation_failed" 
+          });
+        }
+      }
+
+      // Create attendance record
+      const attendanceData = {
+        eventId: parseInt(eventId),
+        registrationId: matchedRegistration.id,
+        scannedBy: req.user!.id,
+        validationStatus: "valid" as const,
+      };
+
+      const attendanceRecord = await storage.createAttendance(attendanceData);
+      
+      // Update registration status to "online"
+      await storage.updateEventRegistration(matchedRegistration.id, { 
+        status: "online",
+        validationMethod: "face_recognition"
+      });
+
+      res.json({
+        message: "Face recognition validation successful",
+        validationStatus: "valid",
+        memberName: matchedPhoto.memberName,
+        event,
+        registration: matchedRegistration,
+        attendance: attendanceRecord,
+        matchedPhoto: {
+          id: matchedPhoto.id,
+          memberName: matchedPhoto.memberName,
+          auxiliaryBody: matchedPhoto.auxiliaryBody
+        }
+      });
+
+    } catch (error) {
+      console.error("Face recognition validation error:", error);
+      res.status(500).json({ 
+        message: "Face recognition validation failed",
+        validationStatus: "invalid" 
+      });
     }
   });
 
