@@ -78,6 +78,8 @@ export const events = pgTable("events", {
   allowGuests: boolean("allow_guests").default(false),
   requiresPayment: boolean("requires_payment").default(false),
   paymentAmount: text("payment_amount"),
+  // New field to distinguish event types
+  eventType: text("event_type").notNull().default("registration"), // "registration" or "ticket"
   paymentSettings: jsonb("payment_settings").$type<{
     requiresPayment: boolean;
     amount?: string;
@@ -201,6 +203,72 @@ export const faceRecognitionPhotos = pgTable("face_recognition_photos", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// New Ticket System Tables
+export const tickets = pgTable("tickets", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  ticketNumber: text("ticket_number").notNull().unique(), // e.g., TICKET-001
+  qrCode: text("qr_code").notNull().unique(),
+  
+  // Ticket Information
+  ticketType: text("ticket_type").notNull(), // VIP, Regular, Student, etc.
+  price: text("price").notNull(),
+  currency: text("currency").default("NGN"),
+  
+  // Current Owner Information
+  ownerName: text("owner_name").notNull(),
+  ownerEmail: text("owner_email").notNull(),
+  ownerPhone: text("owner_phone"),
+  
+  // Additional Fields from Purchase
+  additionalInfo: jsonb("additional_info").$type<Record<string, any>>().default({}),
+  
+  // Payment Information
+  paymentStatus: text("payment_status").default("pending"), // pending, paid, refunded
+  paymentMethod: text("payment_method"), // paystack, manual, transfer
+  paymentReference: text("payment_reference"),
+  paymentAmount: text("payment_amount"),
+  
+  // Ticket Status
+  status: text("status").notNull().default("active"), // active, used, expired, cancelled, transferred
+  usedAt: timestamp("used_at"),
+  scannedBy: integer("scanned_by").references(() => users.id),
+  
+  // Transfer Information
+  isTransferable: boolean("is_transferable").default(true),
+  transferCount: integer("transfer_count").default(0),
+  maxTransfers: integer("max_transfers").default(5),
+  
+  // Metadata
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"), // Ticket expiration
+});
+
+export const ticketTransfers = pgTable("ticket_transfers", {
+  id: serial("id").primaryKey(),
+  ticketId: integer("ticket_id").references(() => tickets.id).notNull(),
+  
+  // Previous Owner
+  fromOwnerName: text("from_owner_name").notNull(),
+  fromOwnerEmail: text("from_owner_email").notNull(),
+  fromOwnerPhone: text("from_owner_phone"),
+  
+  // New Owner
+  toOwnerName: text("to_owner_name").notNull(),
+  toOwnerEmail: text("to_owner_email").notNull(),
+  toOwnerPhone: text("to_owner_phone"),
+  
+  // Transfer Details
+  transferPrice: text("transfer_price"), // Price if sold
+  transferReason: text("transfer_reason"), // Optional reason
+  transferMethod: text("transfer_method").default("direct"), // direct, marketplace
+  
+  // Status
+  transferStatus: text("transfer_status").default("completed"), // pending, completed, cancelled
+  transferredAt: timestamp("transferred_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   member: one(members, { fields: [users.id], references: [members.userId] }),
@@ -223,6 +291,7 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   reports: many(eventReports),
   validationCsvs: many(memberValidationCsv),
   faceRecognitionPhotos: many(faceRecognitionPhotos),
+  tickets: many(tickets),
 }));
 
 export const eventRegistrationsRelations = relations(eventRegistrations, ({ one, many }) => ({
@@ -256,6 +325,17 @@ export const faceRecognitionPhotosRelations = relations(faceRecognitionPhotos, (
   event: one(events, { fields: [faceRecognitionPhotos.eventId], references: [events.id] }),
   member: one(members, { fields: [faceRecognitionPhotos.memberId], references: [members.id] }),
   uploadedBy: one(users, { fields: [faceRecognitionPhotos.uploadedBy], references: [users.id] }),
+}));
+
+export const ticketsRelations = relations(tickets, ({ one, many }) => ({
+  event: one(events, { fields: [tickets.eventId], references: [events.id] }),
+  createdBy: one(users, { fields: [tickets.createdBy], references: [users.id] }),
+  scannedBy: one(users, { fields: [tickets.scannedBy], references: [users.id] }),
+  transfers: many(ticketTransfers),
+}));
+
+export const ticketTransfersRelations = relations(ticketTransfers, ({ one }) => ({
+  ticket: one(tickets, { fields: [ticketTransfers.ticketId], references: [tickets.id] }),
 }));
 
 // Schemas
@@ -338,3 +418,21 @@ export type MemberValidationCsv = typeof memberValidationCsv.$inferSelect;
 
 export type InsertFaceRecognitionPhoto = z.infer<typeof insertFaceRecognitionPhotoSchema>;
 export type FaceRecognitionPhoto = typeof faceRecognitionPhotos.$inferSelect;
+
+export const insertTicketSchema = createInsertSchema(tickets).omit({
+  id: true,
+  createdAt: true,
+  qrCode: true,
+  ticketNumber: true,
+});
+
+export const insertTicketTransferSchema = createInsertSchema(ticketTransfers).omit({
+  id: true,
+  transferredAt: true,
+});
+
+export type InsertTicket = z.infer<typeof insertTicketSchema>;
+export type Ticket = typeof tickets.$inferSelect;
+
+export type InsertTicketTransfer = z.infer<typeof insertTicketTransferSchema>;
+export type TicketTransfer = typeof ticketTransfers.$inferSelect;

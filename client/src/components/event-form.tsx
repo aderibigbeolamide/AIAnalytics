@@ -19,7 +19,10 @@ const eventSchema = z.object({
   name: z.string().min(1, "Event name is required"),
   description: z.string().optional(),
   location: z.string().min(1, "Location is required"),
-  startDate: z.string().min(1, "Event start date is required"),
+  eventType: z.enum(["registration", "ticket"]).default("registration"),
+  startDate: z.string().min(1, "Event start date is required").refine((date) => {
+    return new Date(date) > new Date();
+  }, "Event start date cannot be in the past"),
   endDate: z.string().optional(),
   registrationStartDate: z.string().min(1, "Registration start date is required"),
   registrationEndDate: z.string().min(1, "Registration end date is required"),
@@ -65,6 +68,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
       name: event?.name || "",
       description: event?.description || "",
       location: event?.location || "",
+      eventType: event?.eventType || "registration",
       startDate: event?.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : "",
       endDate: event?.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : "",
       registrationStartDate: event?.registrationStartDate ? new Date(event.registrationStartDate).toISOString().slice(0, 16) : "",
@@ -277,6 +281,42 @@ export function EventForm({ onClose, event }: EventFormProps) {
               <FormLabel>Location</FormLabel>
               <FormControl>
                 <Input placeholder="Event location" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="eventType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Event Type</FormLabel>
+              <FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="registration">
+                      <div className="space-y-1">
+                        <div className="font-medium">Secure Registration Event</div>
+                        <div className="text-xs text-muted-foreground">
+                          Traditional validation with auxiliary body checks, CSV verification, and strict security
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="ticket">
+                      <div className="space-y-1">
+                        <div className="font-medium">Ticket-Based Event</div>
+                        <div className="text-xs text-muted-foreground">
+                          Simplified ticketing system - purchase, transfer, and validate with QR codes only
+                        </div>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </FormControl>
               <FormMessage />
             </FormItem>

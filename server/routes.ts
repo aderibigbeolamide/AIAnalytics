@@ -12,7 +12,9 @@ import {
   eventReports,
   invitations,
   memberValidationCsv,
-  faceRecognitionPhotos
+  faceRecognitionPhotos,
+  tickets,
+  ticketTransfers
 } from "@shared/schema";
 import { eq, and, isNull, desc, or, ilike, gte, lte, sql } from "drizzle-orm";
 import { 
@@ -48,7 +50,9 @@ import {
   insertAttendanceSchema,
   insertEventReportSchema,
   insertMemberValidationCsvSchema,
-  insertFaceRecognitionPhotoSchema
+  insertFaceRecognitionPhotoSchema,
+  insertTicketSchema,
+  insertTicketTransferSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -2726,6 +2730,281 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Receipt upload error:', error);
       res.status(500).json({ message: "Receipt upload failed" });
+    }
+  });
+
+  // Ticket System API Routes
+
+  // Purchase ticket (public endpoint)
+  app.post("/api/tickets/purchase", async (req: Request, res: Response) => {
+    try {
+      const { eventId, ownerName, ownerEmail, ownerPhone, ticketType, paymentMethod } = req.body;
+
+      // Get event details
+      const [event] = await db.select().from(events).where(eq(events.id, eventId));
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      if (event.eventType !== "ticket") {
+        return res.status(400).json({ message: "This is not a ticket-based event" });
+      }
+
+      // Check if ticket sales are open
+      const now = new Date();
+      const registrationStart = new Date(event.registrationStartDate);
+      const registrationEnd = new Date(event.registrationEndDate);
+
+      if (now < registrationStart) {
+        return res.status(400).json({ message: "Ticket sales haven't started yet" });
+      }
+
+      if (now > registrationEnd) {
+        return res.status(400).json({ message: "Ticket sales have ended" });
+      }
+
+      // Generate ticket data
+      const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const qrCode = generateQRCode();
+
+      // Determine ticket price (this would normally come from event configuration)
+      let price = "0";
+      if (ticketType === "VIP") price = "5000";
+      if (ticketType === "Student") price = "1000";
+
+      // Create ticket record
+      const [ticket] = await db.insert(tickets).values({
+        eventId,
+        ticketNumber,
+        qrCode,
+        ticketType,
+        price,
+        currency: "NGN",
+        ownerName,
+        ownerEmail,
+        ownerPhone,
+        paymentMethod,
+        paymentStatus: paymentMethod === "manual" ? "pending" : "pending",
+        status: "active",
+        isTransferable: true,
+      }).returning();
+
+      if (paymentMethod === "paystack" && price !== "0") {
+        // Initialize Paystack payment
+        const reference = generatePaymentReference(`TKT${ticket.id}`);
+        const amount = convertToKobo(price);
+
+        try {
+          const paymentData = await initializePaystackPayment(
+            ownerEmail,
+            amount,
+            reference,
+            {
+              ticketId: ticket.id,
+              eventId,
+              ticketType,
+              ownerName,
+            }
+          );
+
+          if (paymentData.status) {
+            // Update ticket with payment reference
+            await db.update(tickets)
+              .set({ paymentReference: reference })
+              .where(eq(tickets.id, ticket.id));
+
+            res.json({
+              ticketId: ticket.id,
+              paymentUrl: paymentData.data.authorization_url,
+              reference,
+            });
+          } else {
+            // Delete ticket if payment initialization failed
+            await db.delete(tickets).where(eq(tickets.id, ticket.id));
+            res.status(400).json({ message: "Payment initialization failed" });
+          }
+        } catch (paymentError) {
+          // Delete ticket if payment initialization failed
+          await db.delete(tickets).where(eq(tickets.id, ticket.id));
+          throw paymentError;
+        }
+      } else {
+        // For manual payment or free tickets
+        res.json({
+          ticketId: ticket.id,
+          message: paymentMethod === "manual" ? "Ticket reserved. Complete payment to activate." : "Free ticket created successfully.",
+        });
+      }
+    } catch (error) {
+      console.error("Ticket purchase error:", error);
+      res.status(500).json({ message: "Failed to purchase ticket" });
+    }
+  });
+
+  // Get ticket details (public endpoint)
+  app.get("/api/tickets/:ticketId", async (req: Request, res: Response) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+
+      const [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      res.json(ticket);
+    } catch (error) {
+      console.error("Get ticket error:", error);
+      res.status(500).json({ message: "Failed to fetch ticket" });
+    }
+  });
+
+  // Transfer ticket (public endpoint)
+  app.post("/api/tickets/:ticketId/transfer", async (req: Request, res: Response) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      const { toOwnerName, toOwnerEmail, toOwnerPhone, transferReason } = req.body;
+
+      const [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      if (!ticket.isTransferable || ticket.status !== "active" || ticket.paymentStatus !== "paid") {
+        return res.status(400).json({ message: "Ticket cannot be transferred" });
+      }
+
+      if (ticket.transferCount >= ticket.maxTransfers) {
+        return res.status(400).json({ message: "Maximum transfer limit reached" });
+      }
+
+      // Record the transfer
+      await db.insert(ticketTransfers).values({
+        ticketId,
+        fromOwnerName: ticket.ownerName,
+        fromOwnerEmail: ticket.ownerEmail,
+        fromOwnerPhone: ticket.ownerPhone,
+        toOwnerName,
+        toOwnerEmail,
+        toOwnerPhone,
+        transferReason,
+        transferStatus: "completed",
+      });
+
+      // Update ticket ownership
+      await db.update(tickets).set({
+        ownerName: toOwnerName,
+        ownerEmail: toOwnerEmail,
+        ownerPhone: toOwnerPhone,
+        transferCount: ticket.transferCount + 1,
+      }).where(eq(tickets.id, ticketId));
+
+      res.json({ message: "Ticket transferred successfully" });
+    } catch (error) {
+      console.error("Transfer ticket error:", error);
+      res.status(500).json({ message: "Failed to transfer ticket" });
+    }
+  });
+
+  // Validate ticket at event (admin endpoint)
+  app.post("/api/tickets/:ticketId/validate", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+
+      const [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      if (ticket.status === "used") {
+        return res.status(400).json({ 
+          message: "Ticket already used",
+          usedAt: ticket.usedAt,
+        });
+      }
+
+      if (ticket.status !== "active" || ticket.paymentStatus !== "paid") {
+        return res.status(400).json({ message: "Ticket is not valid for entry" });
+      }
+
+      // Check if ticket has expired
+      if (ticket.expiresAt && new Date() > new Date(ticket.expiresAt)) {
+        await db.update(tickets).set({ status: "expired" }).where(eq(tickets.id, ticketId));
+        return res.status(400).json({ message: "Ticket has expired" });
+      }
+
+      // Mark ticket as used
+      await db.update(tickets).set({
+        status: "used",
+        usedAt: new Date(),
+        scannedBy: req.user!.id,
+      }).where(eq(tickets.id, ticketId));
+
+      res.json({ 
+        message: "Ticket validated successfully",
+        ticket: {
+          ...ticket,
+          status: "used",
+          usedAt: new Date(),
+        },
+      });
+    } catch (error) {
+      console.error("Validate ticket error:", error);
+      res.status(500).json({ message: "Failed to validate ticket" });
+    }
+  });
+
+  // Get event tickets (admin endpoint)
+  app.get("/api/events/:eventId/tickets", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+
+      const eventTickets = await db.select().from(tickets)
+        .where(eq(tickets.eventId, eventId))
+        .orderBy(desc(tickets.createdAt));
+
+      res.json(eventTickets);
+    } catch (error) {
+      console.error("Get event tickets error:", error);
+      res.status(500).json({ message: "Failed to fetch event tickets" });
+    }
+  });
+
+  // Ticket payment verification for Paystack callback
+  app.post("/api/tickets/verify-payment", async (req: Request, res: Response) => {
+    try {
+      const { reference } = req.body;
+
+      if (!reference) {
+        return res.status(400).json({ message: "Payment reference is required" });
+      }
+
+      // Verify payment with Paystack
+      const verificationData = await verifyPaystackPayment(reference);
+
+      if (verificationData.status && verificationData.data.status === 'success') {
+        const metadata = verificationData.data.metadata;
+        const ticketId = parseInt(metadata.ticketId);
+
+        // Update ticket payment status
+        await db.update(tickets).set({
+          paymentStatus: "paid",
+          paymentAmount: (verificationData.data.amount / 100).toString(), // Convert from kobo
+        }).where(eq(tickets.id, ticketId));
+
+        res.json({
+          success: true,
+          message: "Payment verified successfully",
+          ticketId,
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Payment verification failed",
+        });
+      }
+    } catch (error) {
+      console.error("Ticket payment verification error:", error);
+      res.status(500).json({ message: "Failed to verify payment" });
     }
   });
 

@@ -27,6 +27,8 @@ import Invitees from "@/pages/invitees";
 import { LandingPage } from "@/pages/landing";
 import { ProtectedRoute } from "@/components/protected-route";
 import PaymentCallback from "@/pages/payment-callback";
+import BuyTicket from "@/pages/buy-ticket";
+import TicketDetail from "@/pages/ticket-detail";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage } = useAuthStore();
@@ -54,6 +56,8 @@ function Router() {
       <Route path="/register/:id" component={EventRegistration} />
       <Route path="/report/:eventId" component={Report} />
       <Route path="/payment/callback" component={PaymentCallback} />
+      <Route path="/buy-ticket/:eventId" component={BuyTicket} />
+      <Route path="/ticket/:ticketId" component={TicketDetail} />
       <Route path="/login" component={Login} />
       
       {/* Root and landing route always go to landing page */}
