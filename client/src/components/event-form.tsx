@@ -221,10 +221,10 @@ export function EventForm({ onClose, event }: EventFormProps) {
   };
 
   const removeAuxiliaryBody = (bodyToRemove: string) => {
-    setAuxiliaryBodies(auxiliaryBodies.filter(body => body !== bodyToRemove));
+    setAuxiliaryBodies(auxiliaryBodies.filter((body: string) => body !== bodyToRemove));
     // Remove from form if it was selected
     const currentBodies = form.getValues("eligibleAuxiliaryBodies");
-    form.setValue("eligibleAuxiliaryBodies", currentBodies.filter(body => body !== bodyToRemove));
+    form.setValue("eligibleAuxiliaryBodies", currentBodies.filter((body: string) => body !== bodyToRemove));
   };
 
   const onSubmit = (data: EventFormData) => {
@@ -444,7 +444,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
               </div>
               
               <div className="space-y-2">
-                {auxiliaryBodies.map((body) => (
+                {auxiliaryBodies.map((body: string) => (
                   <FormField
                     key={body}
                     control={form.control}
