@@ -58,8 +58,7 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  // Force production mode for Replit deployment stability
-  // This ensures static files are served instead of Vite dev server
+  // For Replit environment, force static serving since Vite dev has path issues
   serveStatic(app);
 
   // ALWAYS serve the app on port 5000
