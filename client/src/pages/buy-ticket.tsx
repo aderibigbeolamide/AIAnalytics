@@ -18,7 +18,7 @@ const ticketPurchaseSchema = z.object({
   ownerName: z.string().min(1, "Name is required"),
   ownerEmail: z.string().email("Valid email is required"),
   ownerPhone: z.string().optional(),
-  ticketType: z.string().min(1, "Please select a ticket type"),
+  ticketCategoryId: z.string().min(1, "Please select a ticket category"),
   paymentMethod: z.enum(["paystack", "manual"]),
 });
 
@@ -37,7 +37,7 @@ export default function BuyTicket() {
       ownerName: "",
       ownerEmail: "",
       ownerPhone: "",
-      ticketType: "",
+      ticketCategoryId: "",
       paymentMethod: "paystack",
     },
   });
@@ -291,19 +291,22 @@ export default function BuyTicket() {
 
                   <FormField
                     control={form.control}
-                    name="ticketType"
+                    name="ticketCategoryId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Ticket Type</FormLabel>
+                        <FormLabel>Ticket Category</FormLabel>
                         <FormControl>
                           <select 
                             {...field} 
                             className="w-full p-2 border rounded-md"
                           >
-                            <option value="">Select ticket type</option>
-                            <option value="General">General Admission - Free</option>
-                            <option value="VIP">VIP - ₦5,000</option>
-                            <option value="Student">Student - ₦1,000</option>
+                            <option value="">Select ticket category</option>
+                            {event.ticketCategories?.filter(cat => cat.available).map((category) => (
+                              <option key={category.id} value={category.id}>
+                                {category.name} - {category.currency} {category.price.toLocaleString()}
+                                {category.description && ` (${category.description})`}
+                              </option>
+                            ))}
                           </select>
                         </FormControl>
                         <FormMessage />

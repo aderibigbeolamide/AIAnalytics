@@ -80,6 +80,17 @@ export const events = pgTable("events", {
   paymentAmount: text("payment_amount"),
   // New field to distinguish event types
   eventType: text("event_type").notNull().default("registration"), // "registration" or "ticket"
+  
+  // Ticket Categories for ticket-based events
+  ticketCategories: jsonb("ticket_categories").$type<Array<{
+    id: string;
+    name: string;
+    price: number;
+    currency: string;
+    description?: string;
+    maxQuantity?: number;
+    available: boolean;
+  }>>().default([]),
   paymentSettings: jsonb("payment_settings").$type<{
     requiresPayment: boolean;
     amount?: string;
@@ -212,6 +223,7 @@ export const tickets = pgTable("tickets", {
   
   // Ticket Information
   ticketType: text("ticket_type").notNull(), // VIP, Regular, Student, etc.
+  ticketCategoryId: text("ticket_category_id").notNull(), // Reference to event's ticket category
   price: text("price").notNull(),
   currency: text("currency").default("NGN"),
   

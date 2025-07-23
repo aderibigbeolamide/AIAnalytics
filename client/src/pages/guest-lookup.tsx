@@ -212,12 +212,21 @@ export default function GuestLookup() {
                       )}
                       
                       <div className="flex gap-2 pt-2">
-                        <Link href={`/register/${event.id}`}>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Register
-                          </Button>
-                        </Link>
+                        {event.eventType === "ticket" ? (
+                          <Link href={`/buy-ticket/${event.id}`}>
+                            <Button variant="outline" size="sm" className="flex-1">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Buy Tickets
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Link href={`/register/${event.id}`}>
+                            <Button variant="outline" size="sm" className="flex-1">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Register
+                            </Button>
+                          </Link>
+                        )}
                         <Link href={`/event-view/${event.id}`}>
                           <Button variant="ghost" size="sm" className="flex-1">
                             View Details

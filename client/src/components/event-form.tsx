@@ -44,6 +44,15 @@ const eventSchema = z.object({
     paymentDescription: z.string().optional(),
   }).optional(),
   customRegistrationFields: z.array(z.any()).min(1, "At least one registration field is required"),
+  ticketCategories: z.array(z.object({
+    id: z.string(),
+    name: z.string().min(1, "Category name is required"),
+    price: z.number().min(0, "Price must be 0 or greater"),
+    currency: z.string().default("NGN"),
+    description: z.string().optional(),
+    maxQuantity: z.number().optional(),
+    available: z.boolean().default(true),
+  })).optional(),
   invitations: z.array(z.object({
     name: z.string().min(1, "Invitee name is required"),
     email: z.string().email("Valid email is required"),
@@ -87,6 +96,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
         paymentDescription: "",
       },
       customRegistrationFields: event?.customRegistrationFields || [],
+      ticketCategories: event?.ticketCategories || [],
       invitations: event?.invitations || [],
     },
   });
@@ -198,6 +208,11 @@ export function EventForm({ onClose, event }: EventFormProps) {
     name: "customRegistrationFields",
   });
 
+  const { fields: ticketCategories, append: appendTicketCategory, remove: removeTicketCategory } = useFieldArray({
+    control: form.control,
+    name: "ticketCategories",
+  });
+
   const addAuxiliaryBody = () => {
     if (newAuxiliaryBody.trim() && !auxiliaryBodies.includes(newAuxiliaryBody.trim())) {
       setAuxiliaryBodies([...auxiliaryBodies, newAuxiliaryBody.trim()]);
@@ -220,6 +235,16 @@ export function EventForm({ onClose, event }: EventFormProps) {
       toast({
         title: "Registration Fields Required",
         description: "Please add at least one registration field for members, guests, and invitees to fill out when registering for this event.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate ticket categories for ticket-based events
+    if (data.eventType === "ticket" && (!data.ticketCategories || data.ticketCategories.length === 0)) {
+      toast({
+        title: "Ticket Categories Required",
+        description: "Please add at least one ticket category for your ticket-based event.",
         variant: "destructive",
       });
       return;
@@ -722,6 +747,161 @@ export function EventForm({ onClose, event }: EventFormProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Ticket Categories Section - Only for ticket-based events */}
+        {form.watch("eventType") === "ticket" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Ticket Categories</CardTitle>
+              <CardDescription>
+                Define different ticket types with prices for your event
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-base font-medium">Ticket Types</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => appendTicketCategory({
+                    id: `ticket-${Date.now()}`,
+                    name: "",
+                    price: 0,
+                    currency: "NGN",
+                    description: "",
+                    maxQuantity: undefined,
+                    available: true,
+                  })}
+                  className="h-8"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Ticket Category
+                </Button>
+              </div>
+              
+              {ticketCategories.length > 0 ? (
+                <div className="space-y-4">
+                  {ticketCategories.map((category, index) => (
+                    <div key={category.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium">Ticket Category {index + 1}</h4>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeTicketCategory(index)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name={`ticketCategories.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Category Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., Regular, VIP, Student" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name={`ticketCategories.${index}.price`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Price</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  step="0.01" 
+                                  placeholder="0.00" 
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name={`ticketCategories.${index}.description`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description (Optional)</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="e.g., Includes special seating and refreshments" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name={`ticketCategories.${index}.maxQuantity`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Max Quantity (Optional)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  min="1" 
+                                  placeholder="Unlimited" 
+                                  {...field}
+                                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name={`ticketCategories.${index}.available`}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-6">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Available for purchase</FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-6 border-2 border-dashed border-gray-300 rounded-lg">
+                  <p className="text-sm text-gray-500 mb-2">No ticket categories added yet</p>
+                  <p className="text-xs text-gray-400">Add at least one ticket category for your event</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Invitations Section */}
         <div className="space-y-4">

@@ -2738,7 +2738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Purchase ticket (public endpoint)
   app.post("/api/tickets/purchase", async (req: Request, res: Response) => {
     try {
-      const { eventId, ownerName, ownerEmail, ownerPhone, ticketType, paymentMethod } = req.body;
+      const { eventId, ownerName, ownerEmail, ownerPhone, ticketCategoryId, paymentMethod } = req.body;
 
       // Get event details
       const [event] = await db.select().from(events).where(eq(events.id, eventId));
@@ -2753,7 +2753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if ticket sales are open
       const now = new Date();
       const registrationStart = new Date(event.registrationStartDate || event.startDate);
-      const registrationEnd = new Date(event.registrationEndDate || event.endDate);
+      const registrationEnd = new Date(event.registrationEndDate || event.endDate || event.startDate);
 
       if (now < registrationStart) {
         return res.status(400).json({ message: "Ticket sales haven't started yet" });
@@ -2763,23 +2763,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Ticket sales have ended" });
       }
 
+      // Find the selected ticket category
+      const ticketCategory = event.ticketCategories?.find(cat => cat.id === ticketCategoryId);
+      if (!ticketCategory) {
+        return res.status(400).json({ message: "Invalid ticket category selected" });
+      }
+
+      if (!ticketCategory.available) {
+        return res.status(400).json({ message: "This ticket category is no longer available" });
+      }
+
       // Generate ticket data
       const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       const qrCode = generateQRCode();
-
-      // Determine ticket price (this would normally come from event configuration)
-      let price = "0";
-      if (ticketType === "VIP") price = "5000";
-      if (ticketType === "Student") price = "1000";
 
       // Create ticket record
       const [ticket] = await db.insert(tickets).values({
         eventId,
         ticketNumber,
         qrCode,
-        ticketType,
-        price,
-        currency: "NGN",
+        ticketType: ticketCategory.name,
+        ticketCategoryId,
+        price: ticketCategory.price.toString(),
+        currency: ticketCategory.currency,
         ownerName,
         ownerEmail,
         ownerPhone,
@@ -2789,10 +2795,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isTransferable: true,
       }).returning();
 
-      if (paymentMethod === "paystack" && price !== "0") {
+      if (paymentMethod === "paystack" && ticketCategory.price > 0) {
         // Initialize Paystack payment
         const reference = generatePaymentReference(`TKT${ticket.id}`);
-        const amount = convertToKobo(price);
+        const amount = convertToKobo(ticketCategory.price.toString(), ticketCategory.currency);
 
         try {
           const paymentData = await initializePaystackPayment(
@@ -2802,7 +2808,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             {
               ticketId: ticket.id,
               eventId,
-              ticketType,
+              ticketCategoryId,
+              ticketType: ticketCategory.name,
               ownerName,
             }
           );
