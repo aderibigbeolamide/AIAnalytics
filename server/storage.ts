@@ -298,7 +298,8 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (filters?.chandaNumber) {
-      conditions.push(eq(eventRegistrations.guestChandaNumber, filters.chandaNumber));
+      // Search in custom field data for chanda number
+      conditions.push(sql`${eventRegistrations.customFieldData}->>'chandaNumber' = ${filters.chandaNumber}`);
     }
     
     if (filters?.status) {
