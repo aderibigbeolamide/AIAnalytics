@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Ticket, CheckCircle, XCircle, Clock, User, Mail, Phone, Camera, Search } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { getAuthHeaders } from "@/lib/auth";
-import { QrScanner } from "@/components/qr-scanner";
+import { QRScanner } from "@/components/qr-scanner";
 
 interface ValidationResult {
   success: boolean;
@@ -186,7 +186,7 @@ export default function TicketScanner() {
             <CardContent className="space-y-4">
               {scannerActive ? (
                 <div className="space-y-4">
-                  <QrScanner onScan={handleQRScan} />
+                  <QRScanner onClose={() => setScannerActive(false)} />
                   <Button 
                     variant="outline" 
                     onClick={() => setScannerActive(false)}
