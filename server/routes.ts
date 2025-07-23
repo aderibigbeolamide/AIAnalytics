@@ -2752,8 +2752,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if ticket sales are open
       const now = new Date();
-      const registrationStart = new Date(event.registrationStartDate);
-      const registrationEnd = new Date(event.registrationEndDate);
+      const registrationStart = new Date(event.registrationStartDate || event.startDate);
+      const registrationEnd = new Date(event.registrationEndDate || event.endDate);
 
       if (now < registrationStart) {
         return res.status(400).json({ message: "Ticket sales haven't started yet" });
@@ -2873,7 +2873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Ticket cannot be transferred" });
       }
 
-      if (ticket.transferCount >= ticket.maxTransfers) {
+      if ((ticket.transferCount || 0) >= (ticket.maxTransfers || 5)) {
         return res.status(400).json({ message: "Maximum transfer limit reached" });
       }
 
@@ -2895,7 +2895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerName: toOwnerName,
         ownerEmail: toOwnerEmail,
         ownerPhone: toOwnerPhone,
-        transferCount: ticket.transferCount + 1,
+        transferCount: (ticket.transferCount || 0) + 1,
       }).where(eq(tickets.id, ticketId));
 
       res.json({ message: "Ticket transferred successfully" });

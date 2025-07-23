@@ -60,6 +60,8 @@ export default function MyEvents() {
   });
 
   const getEventStatus = (event: any) => {
+    if (!event || !event.startDate) return 'unknown';
+    
     const now = new Date();
     const start = new Date(event.startDate);
     const end = new Date(event.endDate);
@@ -74,10 +76,12 @@ export default function MyEvents() {
     (user?.role === "admin" ? allEvents.map((event: any) => ({ event })) : []);
   
   const filteredRegistrations = displayEvents.filter((registration: any) => {
+    if (!registration || !registration.event) return false;
+    
     const eventStatus = getEventStatus(registration.event);
     const matchesSearch = search === "" || 
-      registration.event.name.toLowerCase().includes(search.toLowerCase()) ||
-      registration.event.location.toLowerCase().includes(search.toLowerCase());
+      (registration.event.name && registration.event.name.toLowerCase().includes(search.toLowerCase())) ||
+      (registration.event.location && registration.event.location.toLowerCase().includes(search.toLowerCase()));
     const matchesFilter = filter === "all" || eventStatus === filter;
     
     return matchesSearch && matchesFilter;
