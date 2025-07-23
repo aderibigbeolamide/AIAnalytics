@@ -29,6 +29,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import PaymentCallback from "@/pages/payment-callback";
 import BuyTicket from "@/pages/buy-ticket";
 import TicketDetail from "@/pages/ticket-detail";
+import TicketScanner from "@/pages/ticket-scanner";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage } = useAuthStore();
@@ -106,6 +107,11 @@ function Router() {
       <Route path="/events/:id">
         <ProtectedRoute>
           <EventDetail />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/events/:eventId/scan-tickets">
+        <ProtectedRoute>
+          <TicketScanner />
         </ProtectedRoute>
       </Route>
       <Route path="/scanner">

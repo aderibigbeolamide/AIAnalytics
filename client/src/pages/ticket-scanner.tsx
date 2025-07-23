@@ -27,7 +27,7 @@ export default function TicketScanner() {
   const [scannerActive, setScannerActive] = useState(false);
 
   // Fetch event details
-  const { data: event, isLoading } = useQuery({
+  const { data: event, isLoading } = useQuery<any>({
     queryKey: ["/api/events", eventId],
     enabled: !!eventId,
   });

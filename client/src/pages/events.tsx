@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Progress } from "@/components/ui/progress";
 import { getAuthHeaders } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
-import { Calendar, Edit, QrCode, Users, Download, BarChart3, Eye, UserCheck } from "lucide-react";
+import { Calendar, Edit, QrCode, Users, Download, BarChart3, Eye, UserCheck, Ticket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import QRCode from "qrcode";
 
@@ -238,9 +238,16 @@ export default function Events() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{event.name}</CardTitle>
-                      <Badge className={getStatusBadge(event.status)}>
-                        {event.status}
-                      </Badge>
+                      <div className="flex space-x-2">
+                        {event.eventType === "ticket" && (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                            Ticket Event
+                          </Badge>
+                        )}
+                        <Badge className={getStatusBadge(event.status)}>
+                          {event.status}
+                        </Badge>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -296,43 +303,83 @@ export default function Events() {
 
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2 pt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleShowQR(event.id, event.name)}
-                        >
-                          <QrCode className="h-3 w-3 mr-1" />
-                          QR
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setEditingEvent(event);
-                            setIsEventModalOpen(true);
-                          }}
-                        >
-                          <Edit className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => exportAttendance.mutate(event.id)}
-                          disabled={exportAttendance.isPending}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Export
-                        </Button>
-                        <Link href={`/events/${event.id}`}>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
-                          </Button>
-                        </Link>
+                        {event.eventType === "ticket" ? (
+                          // Ticket Event Actions
+                          <>
+                            <Link href={`/buy-ticket/${event.id}`}>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="bg-purple-50 hover:bg-purple-100 text-purple-700"
+                              >
+                                <Ticket className="h-3 w-3 mr-1" />
+                                Buy Tickets
+                              </Button>
+                            </Link>
+                            <Link href={`/events/${event.id}/scan-tickets`}>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="bg-green-50 hover:bg-green-100 text-green-700"
+                              >
+                                <QrCode className="h-3 w-3 mr-1" />
+                                Scan Tickets
+                              </Button>
+                            </Link>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setEditingEvent(event);
+                                setIsEventModalOpen(true);
+                              }}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                          </>
+                        ) : (
+                          // Traditional Registration Event Actions
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleShowQR(event.id, event.name)}
+                            >
+                              <QrCode className="h-3 w-3 mr-1" />
+                              QR
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setEditingEvent(event);
+                                setIsEventModalOpen(true);
+                              }}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => exportAttendance.mutate(event.id)}
+                              disabled={exportAttendance.isPending}
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Export
+                            </Button>
+                            <Link href={`/events/${event.id}`}>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                            </Link>
+                          </>
+                        )}
                       </div>
                     </div>
                   </CardContent>

@@ -42,13 +42,13 @@ export default function TicketDetail() {
   });
 
   // Fetch ticket details
-  const { data: ticket, isLoading } = useQuery({
+  const { data: ticket, isLoading } = useQuery<any>({
     queryKey: ["/api/tickets", ticketId],
     enabled: !!ticketId,
   });
 
   // Fetch event details
-  const { data: event } = useQuery({
+  const { data: event } = useQuery<any>({
     queryKey: ["/api/events", ticket?.eventId],
     enabled: !!ticket?.eventId,
   });

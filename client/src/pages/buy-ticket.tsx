@@ -43,7 +43,7 @@ export default function BuyTicket() {
   });
 
   // Fetch event details
-  const { data: event, isLoading } = useQuery({
+  const { data: event, isLoading } = useQuery<any>({
     queryKey: ["/api/events", eventId],
     enabled: !!eventId,
   });
@@ -202,7 +202,7 @@ export default function BuyTicket() {
             
             {/* Countdown Timer */}
             <div className="mt-4">
-              <CountdownTimer targetDate={eventStart} />
+              <CountdownTimer eventDate={eventStart} />
             </div>
           </CardContent>
         </Card>
