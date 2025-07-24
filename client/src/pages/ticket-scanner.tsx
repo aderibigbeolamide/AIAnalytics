@@ -16,6 +16,9 @@ interface ValidationResult {
   message: string;
   ticket?: any;
   usedAt?: string;
+  requiresPayment?: boolean;
+  paymentStatus?: string;
+  paymentMethod?: string;
 }
 
 export default function TicketScanner() {
@@ -45,7 +48,10 @@ export default function TicketScanner() {
       const result = await response.json();
       
       if (!response.ok) {
-        throw new Error(result.message || "Validation failed");
+        // Throw the entire result object so we can access payment details
+        const error = new Error(result.message || "Validation failed");
+        (error as any).details = result; // Attach the full response for error handling
+        throw error;
       }
 
       return result;
@@ -66,13 +72,19 @@ export default function TicketScanner() {
       queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "tickets"] });
     },
     onError: (error: any) => {
+      // Get error details from the attached details object
+      const errorDetails = (error as any).details || {};
+
       setValidationResult({
         success: false,
         message: error.message,
+        requiresPayment: errorDetails.requiresPayment || false,
+        paymentStatus: errorDetails.paymentStatus,
+        paymentMethod: errorDetails.paymentMethod,
       });
       
       toast({
-        title: "Validation Failed",
+        title: errorDetails.requiresPayment ? "Payment Required" : "Validation Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -265,6 +277,19 @@ export default function TicketScanner() {
                   </CardTitle>
                   <CardDescription>
                     {validationResult.message}
+                    {validationResult.requiresPayment && (
+                      <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <p className="text-sm text-yellow-800 font-medium">
+                          💳 Payment Status: {validationResult.paymentStatus || 'pending'}
+                        </p>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          Method: {validationResult.paymentMethod === 'paystack' ? 'Online Payment' : 'Manual Payment'}
+                        </p>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          Please complete payment before entry is allowed.
+                        </p>
+                      </div>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 

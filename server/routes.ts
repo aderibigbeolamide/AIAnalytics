@@ -2921,39 +2921,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Validate ticket at event (admin endpoint)
   app.post("/api/tickets/:ticketId/validate", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
-      const ticketId = parseInt(req.params.ticketId);
+      const ticketParam = req.params.ticketId;
+      let ticket;
 
-      const [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      // Try to find ticket by ticket number first, then by ID
+      if (isNaN(parseInt(ticketParam))) {
+        // It's a ticket number (string like "TKTDAOIKM")
+        [ticket] = await db.select().from(tickets).where(eq(tickets.ticketNumber, ticketParam));
+      } else {
+        // It's a numeric ID
+        const ticketId = parseInt(ticketParam);
+        [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      }
+
       if (!ticket) {
         return res.status(404).json({ message: "Ticket not found" });
       }
 
+      // Check if ticket has already been used
       if (ticket.status === "used") {
         return res.status(400).json({ 
           message: "Ticket already used",
           usedAt: ticket.usedAt,
+          success: false
         });
       }
 
-      if (ticket.status !== "active" || ticket.paymentStatus !== "paid") {
-        return res.status(400).json({ message: "Ticket is not valid for entry" });
+      // Check payment status - this is the key logic you requested
+      if (ticket.paymentStatus !== "paid") {
+        return res.status(400).json({ 
+          message: "Payment required. Please complete payment before entry.",
+          paymentStatus: ticket.paymentStatus,
+          paymentMethod: ticket.paymentMethod,
+          success: false,
+          requiresPayment: true
+        });
+      }
+
+      // Check if ticket is active
+      if (ticket.status !== "active") {
+        return res.status(400).json({ 
+          message: "Ticket is not active",
+          success: false 
+        });
       }
 
       // Check if ticket has expired
       if (ticket.expiresAt && new Date() > new Date(ticket.expiresAt)) {
-        await db.update(tickets).set({ status: "expired" }).where(eq(tickets.id, ticketId));
-        return res.status(400).json({ message: "Ticket has expired" });
+        await db.update(tickets).set({ status: "expired" }).where(eq(tickets.id, ticket.id));
+        return res.status(400).json({ 
+          message: "Ticket has expired",
+          success: false 
+        });
       }
 
-      // Mark ticket as used
+      // Mark ticket as used - validation successful
       await db.update(tickets).set({
         status: "used",
         usedAt: new Date(),
         scannedBy: req.user!.id,
-      }).where(eq(tickets.id, ticketId));
+      }).where(eq(tickets.id, ticket.id));
 
       res.json({ 
         message: "Ticket validated successfully",
+        success: true,
         ticket: {
           ...ticket,
           status: "used",
@@ -2962,7 +2993,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Validate ticket error:", error);
-      res.status(500).json({ message: "Failed to validate ticket" });
+      res.status(500).json({ 
+        message: "Failed to validate ticket",
+        success: false 
+      });
     }
   });
 
