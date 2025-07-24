@@ -560,6 +560,10 @@ npm run migrate
   - Tickets now show: event name, date/time, venue, ticket type, validation ID, and contact email only
   - Full ticket download includes QR code, event details, validation instructions, and print-friendly design
   - Improved ticket privacy for resale while maintaining necessary contact information
+  - Removed full name requirement from ticket purchase form for enhanced privacy
+  - System now generates owner name from email prefix (e.g., user@email.com becomes "user")
+  - Ticket purchase form now only requires: email, phone (optional), ticket category, payment method
+  - Enhanced privacy protection for ticket resale and transfer purposes
 
 - July 20, 2025. Enhanced payment flow with separate registration and payment buttons:
   - Modified registration form to show "Submit Registration" button first

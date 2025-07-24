@@ -15,7 +15,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { CountdownTimer } from "@/components/countdown-timer";
 
 const ticketPurchaseSchema = z.object({
-  ownerName: z.string().min(1, "Name is required"),
   ownerEmail: z.string().email("Valid email is required"),
   ownerPhone: z.string().optional(),
   ticketCategoryId: z.string().min(1, "Please select a ticket category"),
@@ -34,7 +33,6 @@ export default function BuyTicket() {
   const form = useForm<TicketPurchaseData>({
     resolver: zodResolver(ticketPurchaseSchema),
     defaultValues: {
-      ownerName: "",
       ownerEmail: "",
       ownerPhone: "",
       ticketCategoryId: "",
@@ -260,20 +258,6 @@ export default function BuyTicket() {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="ownerName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your full name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   <FormField
                     control={form.control}
                     name="ownerEmail"

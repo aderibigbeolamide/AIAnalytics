@@ -2741,7 +2741,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Purchase ticket (public endpoint)
   app.post("/api/tickets/purchase", async (req: Request, res: Response) => {
     try {
-      const { eventId, ownerName, ownerEmail, ownerPhone, ticketCategoryId, paymentMethod } = req.body;
+      const { eventId, ownerEmail, ownerPhone, ticketCategoryId, paymentMethod } = req.body;
+      
+      // Generate owner name from email if not provided (for privacy)
+      const ownerName = ownerEmail.split('@')[0];
 
       // Get event details
       const [event] = await db.select().from(events).where(eq(events.id, eventId));
