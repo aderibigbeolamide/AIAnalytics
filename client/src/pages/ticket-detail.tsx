@@ -54,11 +54,11 @@ export default function TicketDetail() {
     enabled: !!ticketId,
   });
 
-  // Fetch event details
+  // Fetch event details using public endpoint to avoid auth issues
   const { data: event } = useQuery<any>({
-    queryKey: ["/api/events", ticket?.eventId],
+    queryKey: ["/api/events", ticket?.eventId, "public"],
     queryFn: async () => {
-      const response = await fetch(`/api/events/${ticket.eventId}`);
+      const response = await fetch(`/api/events/${ticket.eventId}/public`);
       if (!response.ok) {
         throw new Error("Event not found");
       }
@@ -132,7 +132,14 @@ export default function TicketDetail() {
   };
 
   const downloadFullTicket = async () => {
-    if (!ticket || !event) return;
+    if (!ticket || !event) {
+      toast({
+        title: "Error",
+        description: "Ticket or event information not available",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Generate QR code for the download
     let qrDataUrl = qrCodeDataUrl;
@@ -148,14 +155,13 @@ export default function TicketDetail() {
         });
       } catch (error) {
         console.error("Error generating QR code for download:", error);
+        // Use a fallback placeholder
         qrDataUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y5ZjlmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UVIgQ29kZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==";
       }
     }
 
-    // Create a new window with ticket details for printing/saving
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      const ticketHtml = `
+    // Create HTML content for the ticket
+    const ticketHtml = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -307,10 +313,27 @@ export default function TicketDetail() {
         </html>
       `;
       
-      printWindow.document.write(ticketHtml);
-      printWindow.document.close();
-      printWindow.focus();
-    }
+      // Create a blob with the HTML content
+      const blob = new Blob([ticketHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create a download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ticket-${ticket.ticketNumber}-${event.name.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the object URL
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download Started",
+        description: "Your ticket has been downloaded as an HTML file",
+      });
   };
 
   const shareTicket = async () => {
@@ -431,39 +454,166 @@ export default function TicketDetail() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* QR Code and Ticket Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Ticket QR Code</CardTitle>
-              <CardDescription>
-                Show this QR code at the event entrance for validation
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center">
-              {qrCodeDataUrl && (
-                <div className="space-y-4">
-                  <img
-                    src={qrCodeDataUrl}
-                    alt="Ticket QR Code"
-                    className="mx-auto border rounded-lg"
-                  />
-                  <div className="flex space-x-2 justify-center">
-                    <Button variant="outline" onClick={downloadQRCode}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                    <Button variant="outline" onClick={shareTicket}>
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share
-                    </Button>
+        {/* Main Ticket Card - Single Column Design */}
+        <Card className="mb-8 bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200">
+          <CardHeader className="text-center pb-4">
+            <div className="flex justify-center mb-3">
+              <div className="bg-blue-600 text-white p-3 rounded-full">
+                <Ticket className="h-8 w-8" />
+              </div>
+            </div>
+            <CardTitle className="text-3xl font-bold text-gray-900 mb-2">
+              🎫 Digital Ticket
+            </CardTitle>
+            <div className="flex justify-center space-x-3">
+              {getStatusBadge(ticket.status)}
+              {getPaymentStatusBadge(ticket.paymentStatus)}
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {/* Event Name Section */}
+            {event && (
+              <div className="text-center py-4 bg-white rounded-lg border shadow-sm">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">{event.name}</h2>
+                <p className="text-gray-600">{event.description}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* QR Code Section */}
+              <div className="bg-white rounded-lg p-6 border shadow-sm text-center">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900">Scan to Enter</h3>
+                {qrCodeDataUrl && (
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 p-4 rounded-lg inline-block">
+                      <img
+                        src={qrCodeDataUrl}
+                        alt="Ticket QR Code"
+                        className="mx-auto w-48 h-48 border-2 border-gray-200 rounded-lg"
+                      />
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <strong>Manual Code:</strong>
+                      <div className="font-mono text-lg bg-gray-100 px-3 py-2 rounded mt-2 border">
+                        {ticket.ticketNumber}
+                      </div>
+                    </div>
                   </div>
+                )}
+              </div>
+
+              {/* Event Details Section */}
+              <div className="bg-white rounded-lg p-6 border shadow-sm">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900">Event Details</h3>
+                {event && (
+                  <div className="space-y-4">
+                    {/* Event Times */}
+                    <div className="flex items-start space-x-3">
+                      <Calendar className="h-5 w-5 text-green-600 mt-1 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium text-gray-900">Event Time</div>
+                        <div className="text-sm text-gray-700">
+                          <div><strong>Start:</strong> {new Date(event.startDate).toLocaleDateString()} at {new Date(event.startDate).toLocaleTimeString()}</div>
+                          {event.endDate && (
+                            <div><strong>End:</strong> {new Date(event.endDate).toLocaleDateString()} at {new Date(event.endDate).toLocaleTimeString()}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Venue */}
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="h-5 w-5 text-blue-600 mt-1 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium text-gray-900">Venue</div>
+                        <div className="text-sm text-gray-700">{event.location || 'To be announced'}</div>
+                      </div>
+                    </div>
+
+                    {/* Ticket Info */}
+                    <div className="flex items-start space-x-3">
+                      <Ticket className="h-5 w-5 text-purple-600 mt-1 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium text-gray-900">Ticket Type</div>
+                        <div className="text-sm text-gray-700">{ticket.ticketType}</div>
+                      </div>
+                    </div>
+
+                    {/* Price */}
+                    <div className="flex items-start space-x-3">
+                      <div className="h-5 w-5 text-green-600 mt-1 flex-shrink-0 text-center">💰</div>
+                      <div>
+                        <div className="font-medium text-gray-900">Price</div>
+                        <div className="text-sm font-semibold text-green-600">{ticket.price} {ticket.currency}</div>
+                      </div>
+                    </div>
+
+                    {/* Payment Method */}
+                    <div className="flex items-start space-x-3">
+                      <div className="h-5 w-5 text-blue-600 mt-1 flex-shrink-0 text-center">💳</div>
+                      <div>
+                        <div className="font-medium text-gray-900">Payment</div>
+                        <div className="text-sm text-gray-700">
+                          {ticket.paymentMethod === 'paystack' ? 'Online Payment' : 'Manual Payment on Event Day'}
+                          {ticket.paymentStatus === 'paid' && ticket.paymentMethod === 'paystack' && (
+                            <span className="text-green-600 font-medium"> ✓ Paid</span>
+                          )}
+                          {ticket.paymentStatus === 'pending' && (
+                            <span className="text-yellow-600 font-medium"> ⏳ Pending</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contact */}
+                    <div className="flex items-start space-x-3">
+                      <Mail className="h-5 w-5 text-gray-600 mt-1 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium text-gray-900">Contact</div>
+                        <div className="text-sm text-gray-700">{ticket.ownerEmail}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="bg-white rounded-lg p-6 border shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button onClick={downloadFullTicket} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Ticket
+                </Button>
+                <Button variant="outline" onClick={downloadQRCode}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download QR
+                </Button>
+                <Button variant="outline" onClick={shareTicket}>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share Ticket
+                </Button>
+              </div>
+              
+              {ticket.isTransferable && ticket.status === "active" && ticket.paymentStatus === "paid" && (
+                <div className="mt-4 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowTransferForm(!showTransferForm)}
+                    className="w-full"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Transfer Ticket
+                  </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Event Information */}
+        {/* Keep the old structure as backup */}
+        <div className="hidden">
           <Card>
             <CardHeader>
               <CardTitle>Event Information</CardTitle>
