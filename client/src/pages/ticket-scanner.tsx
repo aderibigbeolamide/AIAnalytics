@@ -32,7 +32,7 @@ export default function TicketScanner() {
   console.log('TicketScanner component mounted with eventId:', eventId);
 
   // Force execution of query with debugging
-  const { data: event, isLoading, error } = useQuery<any>({
+  const { data: event, isLoading, error, refetch } = useQuery<any>({
     queryKey: [`ticket-scanner-event-${eventId}`],
     queryFn: async () => {
       console.log('=== TICKET SCANNER QUERY EXECUTING ===');
