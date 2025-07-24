@@ -2906,14 +2906,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "This ticket does not support online payment" });
       }
 
-      // Generate payment reference if not exists
-      let paymentReference = ticket.paymentReference;
-      if (!paymentReference) {
-        paymentReference = generatePaymentReference(`TKT${ticket.id}`);
-        await db.update(tickets)
-          .set({ paymentReference })
-          .where(eq(tickets.id, ticket.id));
-      }
+      // Always generate a new unique payment reference to avoid duplicates
+      const paymentReference = generatePaymentReference(`TKT${ticket.id}_${Date.now()}`);
+      await db.update(tickets)
+        .set({ paymentReference })
+        .where(eq(tickets.id, ticket.id));
 
       // Convert price to kobo (smallest currency unit)
       const amount = convertToKobo(ticket.price.toString(), ticket.currency);
