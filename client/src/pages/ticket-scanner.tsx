@@ -29,23 +29,30 @@ export default function TicketScanner() {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [scannerActive, setScannerActive] = useState(false);
 
-  // Fetch event details with explicit refetch
-  const { data: event, isLoading, refetch } = useQuery<any>({
+  // Fetch event details directly with apiRequest
+  const { data: event, isLoading, error } = useQuery<any>({
     queryKey: [`/api/events/${eventId}`],
     queryFn: async () => {
+      console.log('Fetching event with ID:', eventId);
       const response = await fetch(`/api/events/${eventId}`, {
         headers: {
+          'Content-Type': 'application/json',
           ...getAuthHeaders(),
         },
       });
+      console.log('Event fetch response status:', response.status);
       if (!response.ok) {
-        throw new Error('Failed to fetch event');
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`Failed to fetch event: ${response.status}`);
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Event data received:', data);
+      console.log('Event type:', data.eventType);
+      return data;
     },
     enabled: !!eventId,
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache to ensure we get latest data
+    retry: false, // Don't retry to see errors clearly
   });
 
   // Refetch event data when component mounts
@@ -171,6 +178,12 @@ export default function TicketScanner() {
 
 
   if (event.eventType !== "ticket") {
+    console.log('Event type check failed:', {
+      eventType: event.eventType,
+      fullEvent: event,
+      eventId,
+      error
+    });
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -183,6 +196,9 @@ export default function TicketScanner() {
             </p>
             <p className="text-center text-xs text-gray-500">
               Event ID: {eventId}
+            </p>
+            <p className="text-center text-xs text-red-500 mt-2">
+              {error?.message || 'No error'}
             </p>
           </CardContent>
         </Card>
