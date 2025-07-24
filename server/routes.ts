@@ -2857,9 +2857,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get ticket details (public endpoint)
   app.get("/api/tickets/:ticketId", async (req: Request, res: Response) => {
     try {
-      const ticketId = parseInt(req.params.ticketId);
+      const ticketParam = req.params.ticketId;
+      let ticket;
 
-      const [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      // Try to find ticket by ticket number first (string like "TKTPZIWI9"), then by ID
+      if (isNaN(parseInt(ticketParam))) {
+        // It's a ticket number (string)
+        [ticket] = await db.select().from(tickets).where(eq(tickets.ticketNumber, ticketParam));
+      } else {
+        // It's a numeric ID
+        const ticketId = parseInt(ticketParam);
+        [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      }
+
       if (!ticket) {
         return res.status(404).json({ message: "Ticket not found" });
       }
@@ -2874,10 +2884,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transfer ticket (public endpoint)
   app.post("/api/tickets/:ticketId/transfer", async (req: Request, res: Response) => {
     try {
-      const ticketId = parseInt(req.params.ticketId);
+      const ticketParam = req.params.ticketId;
       const { toOwnerName, toOwnerEmail, toOwnerPhone, transferReason } = req.body;
+      let ticket;
 
-      const [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      // Try to find ticket by ticket number first, then by ID
+      if (isNaN(parseInt(ticketParam))) {
+        // It's a ticket number (string)
+        [ticket] = await db.select().from(tickets).where(eq(tickets.ticketNumber, ticketParam));
+      } else {
+        // It's a numeric ID
+        const ticketId = parseInt(ticketParam);
+        [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      }
+
       if (!ticket) {
         return res.status(404).json({ message: "Ticket not found" });
       }
@@ -2892,7 +2912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Record the transfer
       await db.insert(ticketTransfers).values({
-        ticketId,
+        ticketId: ticket.id,
         fromOwnerName: ticket.ownerName,
         fromOwnerEmail: ticket.ownerEmail,
         fromOwnerPhone: ticket.ownerPhone,
@@ -2909,7 +2929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerEmail: toOwnerEmail,
         ownerPhone: toOwnerPhone,
         transferCount: (ticket.transferCount || 0) + 1,
-      }).where(eq(tickets.id, ticketId));
+      }).where(eq(tickets.id, ticket.id));
 
       res.json({ message: "Ticket transferred successfully" });
     } catch (error) {
