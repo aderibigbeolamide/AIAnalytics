@@ -100,12 +100,34 @@ export function LandingPage() {
 
     setPaymentLoading(true);
     try {
-      // Redirect to ticket detail page for payment
-      window.location.href = `/ticket/${foundTicket.ticketNumber}`;
+      // Initialize payment with Paystack
+      const response = await fetch('/api/tickets/initialize-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ticketId: foundTicket.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to initialize payment');
+      }
+
+      const data = await response.json();
+      
+      if (data.authorizationUrl) {
+        // Redirect to Paystack
+        window.location.href = data.authorizationUrl;
+      } else {
+        throw new Error('Payment initialization failed');
+      }
     } catch (error) {
+      console.error('Payment error:', error);
       toast({
         title: "Payment Error",
-        description: "Failed to redirect to payment page",
+        description: "Failed to initialize payment. Please try again.",
         variant: "destructive",
       });
     } finally {
