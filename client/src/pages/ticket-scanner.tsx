@@ -29,30 +29,42 @@ export default function TicketScanner() {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [scannerActive, setScannerActive] = useState(false);
 
-  // Fetch event details directly with apiRequest
+  console.log('TicketScanner component mounted with eventId:', eventId);
+
+  // Force execution of query with debugging
   const { data: event, isLoading, error } = useQuery<any>({
-    queryKey: [`/api/events/${eventId}`],
+    queryKey: [`ticket-scanner-event-${eventId}`],
     queryFn: async () => {
+      console.log('=== TICKET SCANNER QUERY EXECUTING ===');
       console.log('Fetching event with ID:', eventId);
+      console.log('Auth headers:', getAuthHeaders());
+      
       const response = await fetch(`/api/events/${eventId}`, {
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders(),
         },
       });
+      
       console.log('Event fetch response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
         const errorText = await response.text();
-        console.log('Error response:', errorText);
-        throw new Error(`Failed to fetch event: ${response.status}`);
+        console.log('Error response body:', errorText);
+        throw new Error(`Failed to fetch event: ${response.status} - ${errorText}`);
       }
+      
       const data = await response.json();
       console.log('Event data received:', data);
-      console.log('Event type:', data.eventType);
+      console.log('Event type from data:', data.eventType);
+      console.log('=== END QUERY ===');
       return data;
     },
-    enabled: !!eventId,
-    retry: false, // Don't retry to see errors clearly
+    enabled: true, // Always try to fetch
+    retry: 1,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   // Refetch event data when component mounts
@@ -156,6 +168,24 @@ export default function TicketScanner() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">Error loading event</p>
+            <p className="text-center text-xs text-red-500 mt-2">
+              {error.message}
+            </p>
+            <p className="text-center text-xs text-gray-500 mt-2">
+              Event ID: {eventId}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
