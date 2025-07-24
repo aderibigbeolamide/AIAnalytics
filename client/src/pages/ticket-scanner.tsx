@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams } from "wouter";
+import { useParams, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Ticket, CheckCircle, XCircle, Clock, User, Mail, Phone, Camera, Search } from "lucide-react";
+import { Ticket, CheckCircle, XCircle, Clock, User, Mail, Phone, Camera, Search, ArrowLeft } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { getAuthHeaders } from "@/lib/auth";
 import { QRScanner } from "@/components/qr-scanner";
@@ -239,6 +239,16 @@ export default function TicketScanner() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
+        {/* Back Navigation */}
+        <div className="mb-6">
+          <Link href="/events">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Events
+            </Button>
+          </Link>
+        </div>
+
         {/* Event Header */}
         <Card className="mb-8">
           <CardHeader>

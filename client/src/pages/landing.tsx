@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { 
   CheckCircle, 
   QrCode, 
@@ -22,18 +24,68 @@ import {
   Globe,
   Menu,
   X,
-  Search
+  Search,
+  CreditCard,
+  Ticket
 } from "lucide-react";
 // Logo image placed in public folder for proper asset handling
 
 export function LandingPage() {
   const [activeTab, setActiveTab] = useState("features");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [ticketId, setTicketId] = useState("");
+  const [ticketPaymentLoading, setTicketPaymentLoading] = useState(false);
   const { isAuthenticated, checkAuth } = useAuthStore();
+  const { toast } = useToast();
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  const handleTicketPayment = async () => {
+    if (!ticketId.trim()) {
+      toast({
+        title: "Ticket ID Required",
+        description: "Please enter your ticket ID to continue with payment",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTicketPaymentLoading(true);
+    try {
+      // First, get ticket details
+      const response = await fetch(`/api/tickets/${ticketId.trim()}`);
+      
+      if (!response.ok) {
+        throw new Error("Ticket not found");
+      }
+
+      const ticket = await response.json();
+      
+      // Check if ticket needs payment
+      if (ticket.paymentStatus === 'paid') {
+        toast({
+          title: "Ticket Already Paid",
+          description: "This ticket has already been paid for",
+        });
+        setTicketPaymentLoading(false);
+        return;
+      }
+
+      // Redirect to ticket detail page where they can make payment
+      window.location.href = `/ticket/${ticketId.trim()}`;
+
+    } catch (error) {
+      toast({
+        title: "Ticket Not Found",
+        description: "Please check your ticket ID and try again",
+        variant: "destructive",
+      });
+    } finally {
+      setTicketPaymentLoading(false);
+    }
+  };
 
   const features = [
     {
@@ -603,6 +655,80 @@ export function LandingPage() {
               </Card>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Ticket Payment Section */}
+      <section className="py-20 bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-purple-100 text-purple-800 border-purple-200">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Ticket Payment
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Complete Your Ticket Payment
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Already have a ticket but need to complete payment? Enter your ticket ID below to proceed with secure online payment.
+            </p>
+          </div>
+
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mb-4">
+                <Ticket className="h-8 w-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-gray-900">Pay for Your Ticket</CardTitle>
+              <CardDescription className="text-gray-600 mt-2">
+                Enter your ticket ID to complete payment and secure your spot at the event
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Input
+                    placeholder="Enter your ticket ID (e.g., TKTPZIWI9)"
+                    value={ticketId}
+                    onChange={(e) => setTicketId(e.target.value.toUpperCase())}
+                    className="flex-1 h-12 text-lg border-2 border-gray-200 focus:border-purple-500 transition-colors"
+                  />
+                  <Button 
+                    onClick={handleTicketPayment}
+                    disabled={ticketPaymentLoading}
+                    className="h-12 px-8 bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg"
+                  >
+                    {ticketPaymentLoading ? (
+                      <>
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Pay Now
+                      </>
+                    )}
+                  </Button>
+                </div>
+                
+                <div className="text-center text-sm text-gray-500 space-y-1">
+                  <p>💳 Secure payment processing with Paystack</p>
+                  <p>🔒 Your payment information is protected and encrypted</p>
+                  <p>📧 You'll receive a confirmation email after successful payment</p>
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4 mt-6">
+                  <h4 className="font-semibold text-blue-900 mb-2">Need Help?</h4>
+                  <div className="text-sm text-blue-800 space-y-1">
+                    <p>• Your ticket ID is found in your registration confirmation</p>
+                    <p>• Check your email for the ticket details</p>
+                    <p>• Contact event organizers if you can't find your ticket ID</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
