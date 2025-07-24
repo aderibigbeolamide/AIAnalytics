@@ -321,6 +321,10 @@ export default function Events() {
                                 variant="outline" 
                                 size="sm"
                                 className="bg-green-50 hover:bg-green-100 text-green-700"
+                                onClick={() => {
+                                  console.log('Scan Tickets clicked for event:', event.id);
+                                  console.log('Navigating to:', `/events/${event.id}/scan-tickets`);
+                                }}
                               >
                                 <QrCode className="h-3 w-3 mr-1" />
                                 Scan Tickets

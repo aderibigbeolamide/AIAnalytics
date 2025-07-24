@@ -37,6 +37,20 @@ function Router() {
   // Track page views with Google Tag Manager
   useGTM();
 
+  // Debug current URL
+  useEffect(() => {
+    const handleLocationChange = () => {
+      console.log('Current URL:', window.location.pathname);
+      console.log('Current hash:', window.location.hash);
+      console.log('Current search:', window.location.search);
+    };
+    
+    handleLocationChange(); // Log initial location
+    window.addEventListener('popstate', handleLocationChange);
+    
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
   useEffect(() => {
     // First load from storage, then check if needed
     loadFromStorage();
