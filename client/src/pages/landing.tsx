@@ -34,7 +34,10 @@ export function LandingPage() {
   const [activeTab, setActiveTab] = useState("features");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [ticketId, setTicketId] = useState("");
-  const [ticketPaymentLoading, setTicketPaymentLoading] = useState(false);
+  const [foundTicket, setFoundTicket] = useState<any>(null);
+  const [foundEvent, setFoundEvent] = useState<any>(null);
+  const [ticketSearchLoading, setTicketSearchLoading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const { isAuthenticated, checkAuth } = useAuthStore();
   const { toast } = useToast();
 
@@ -42,39 +45,33 @@ export function LandingPage() {
     checkAuth();
   }, [checkAuth]);
 
-  const handleTicketPayment = async () => {
+  const handleFindTicket = async () => {
     if (!ticketId.trim()) {
       toast({
         title: "Ticket ID Required",
-        description: "Please enter your ticket ID to continue with payment",
+        description: "Please enter your ticket ID to search",
         variant: "destructive",
       });
       return;
     }
 
-    setTicketPaymentLoading(true);
+    setTicketSearchLoading(true);
     try {
-      // First, get ticket details
-      const response = await fetch(`/api/tickets/${ticketId.trim()}`);
+      // Get ticket details
+      const ticketResponse = await fetch(`/api/tickets/${ticketId.trim()}`);
       
-      if (!response.ok) {
+      if (!ticketResponse.ok) {
         throw new Error("Ticket not found");
       }
 
-      const ticket = await response.json();
+      const ticket = await ticketResponse.json();
       
-      // Check if ticket needs payment
-      if (ticket.paymentStatus === 'paid') {
-        toast({
-          title: "Ticket Already Paid",
-          description: "This ticket has already been paid for",
-        });
-        setTicketPaymentLoading(false);
-        return;
-      }
+      // Get event details
+      const eventResponse = await fetch(`/api/events/${ticket.eventId}/public`);
+      const event = eventResponse.ok ? await eventResponse.json() : null;
 
-      // Redirect to ticket detail page where they can make payment
-      window.location.href = `/ticket/${ticketId.trim()}`;
+      setFoundTicket(ticket);
+      setFoundEvent(event);
 
     } catch (error) {
       toast({
@@ -82,9 +79,44 @@ export function LandingPage() {
         description: "Please check your ticket ID and try again",
         variant: "destructive",
       });
+      setFoundTicket(null);
+      setFoundEvent(null);
     } finally {
-      setTicketPaymentLoading(false);
+      setTicketSearchLoading(false);
     }
+  };
+
+  const handlePayNow = async () => {
+    if (!foundTicket) return;
+
+    // Check if ticket is already paid
+    if (foundTicket.paymentStatus === 'paid') {
+      toast({
+        title: "Ticket Already Paid",
+        description: "This ticket has already been paid for",
+      });
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      // Redirect to ticket detail page for payment
+      window.location.href = `/ticket/${foundTicket.ticketNumber}`;
+    } catch (error) {
+      toast({
+        title: "Payment Error",
+        description: "Failed to redirect to payment page",
+        variant: "destructive",
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const resetSearch = () => {
+    setFoundTicket(null);
+    setFoundEvent(null);
+    setTicketId("");
   };
 
   const features = [
@@ -685,47 +717,142 @@ export function LandingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Input
-                    placeholder="Enter your ticket ID (e.g., TKTPZIWI9)"
-                    value={ticketId}
-                    onChange={(e) => setTicketId(e.target.value.toUpperCase())}
-                    className="flex-1 h-12 text-lg border-2 border-gray-200 focus:border-purple-500 transition-colors"
-                  />
-                  <Button 
-                    onClick={handleTicketPayment}
-                    disabled={ticketPaymentLoading}
-                    className="h-12 px-8 bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg"
-                  >
-                    {ticketPaymentLoading ? (
-                      <>
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                        Checking...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Pay Now
-                      </>
-                    )}
-                  </Button>
-                </div>
-                
-                <div className="text-center text-sm text-gray-500 space-y-1">
-                  <p>💳 Secure payment processing with Paystack</p>
-                  <p>🔒 Your payment information is protected and encrypted</p>
-                  <p>📧 You'll receive a confirmation email after successful payment</p>
-                </div>
+              <div className="space-y-6">
+                {!foundTicket ? (
+                  /* Search Step */
+                  <>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Input
+                        placeholder="Enter your ticket ID (e.g., TKTPZIWI9)"
+                        value={ticketId}
+                        onChange={(e) => setTicketId(e.target.value.toUpperCase())}
+                        className="flex-1 h-12 text-lg border-2 border-gray-200 focus:border-purple-500 transition-colors"
+                      />
+                      <Button 
+                        onClick={handleFindTicket}
+                        disabled={ticketSearchLoading}
+                        className="h-12 px-8 bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg"
+                      >
+                        {ticketSearchLoading ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                            Searching...
+                          </>
+                        ) : (
+                          <>
+                            <Search className="h-4 w-4 mr-2" />
+                            Find My Ticket
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">Need Help?</h4>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        <p>• Your ticket ID is found in your registration confirmation</p>
+                        <p>• Check your email for the ticket details</p>
+                        <p>• Contact event organizers if you can't find your ticket ID</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  /* Ticket Found - Payment Step */
+                  <>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-green-900 flex items-center">
+                          <CheckCircle className="h-5 w-5 mr-2" />
+                          Ticket Found!
+                        </h3>
+                        <Button variant="ghost" size="sm" onClick={resetSearch} className="text-green-700 hover:text-green-900">
+                          Search Different Ticket
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                          <p className="text-sm text-green-700 font-medium">Ticket ID</p>
+                          <p className="text-green-900 font-semibold">{foundTicket.ticketNumber}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-green-700 font-medium">Ticket Type</p>
+                          <p className="text-green-900">{foundTicket.ticketType}</p>
+                        </div>
+                        {foundEvent && (
+                          <>
+                            <div>
+                              <p className="text-sm text-green-700 font-medium">Event</p>
+                              <p className="text-green-900">{foundEvent.name}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-green-700 font-medium">Date</p>
+                              <p className="text-green-900">{new Date(foundEvent.startDate).toLocaleDateString()}</p>
+                            </div>
+                          </>
+                        )}
+                        <div>
+                          <p className="text-sm text-green-700 font-medium">Price</p>
+                          <p className="text-green-900 font-semibold">{foundTicket.currency} {foundTicket.price.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-green-700 font-medium">Payment Status</p>
+                          <Badge variant={foundTicket.paymentStatus === 'paid' ? 'default' : 'secondary'} className="mt-1">
+                            {foundTicket.paymentStatus === 'paid' ? 'Paid' : 'Pending Payment'}
+                          </Badge>
+                        </div>
+                      </div>
 
-                <div className="bg-blue-50 rounded-lg p-4 mt-6">
-                  <h4 className="font-semibold text-blue-900 mb-2">Need Help?</h4>
-                  <div className="text-sm text-blue-800 space-y-1">
-                    <p>• Your ticket ID is found in your registration confirmation</p>
-                    <p>• Check your email for the ticket details</p>
-                    <p>• Contact event organizers if you can't find your ticket ID</p>
-                  </div>
-                </div>
+                      {foundTicket.paymentStatus !== 'paid' ? (
+                        <div className="space-y-4">
+                          <div className="bg-white rounded-lg p-4 border border-green-200">
+                            <h4 className="font-semibold text-green-900 mb-2">Ready to Complete Payment?</h4>
+                            <p className="text-sm text-green-800 mb-4">
+                              Click below to proceed to secure payment processing with Paystack
+                            </p>
+                            <Button 
+                              onClick={handlePayNow}
+                              disabled={paymentLoading}
+                              className="w-full h-12 bg-gradient-to-br from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold shadow-lg"
+                            >
+                              {paymentLoading ? (
+                                <>
+                                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                                  Redirecting...
+                                </>
+                              ) : (
+                                <>
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  Pay Now - {foundTicket.currency} {foundTicket.price.toLocaleString()}
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          
+                          <div className="text-center text-sm text-green-600 space-y-1">
+                            <p>💳 Secure payment processing with Paystack</p>
+                            <p>🔒 Your payment information is protected and encrypted</p>
+                            <p>📧 You'll receive a confirmation email after successful payment</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-white rounded-lg p-4 border border-green-200 text-center">
+                          <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-3" />
+                          <h4 className="font-semibold text-green-900 mb-2">Payment Complete!</h4>
+                          <p className="text-sm text-green-800 mb-4">
+                            This ticket has already been paid for. You're all set for the event!
+                          </p>
+                          <Button 
+                            onClick={() => window.location.href = `/ticket/${foundTicket.ticketNumber}`}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            View Full Ticket Details
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
