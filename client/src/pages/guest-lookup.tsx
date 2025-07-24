@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Search, Calendar, QrCode, ArrowLeft, MapPin, Clock, Users } from 'lucide-react';
+import { Search, Calendar, QrCode, ArrowLeft, MapPin, Clock, Users, Ticket } from 'lucide-react';
 import { CountdownTimer } from '@/components/countdown-timer';
 import { Link } from 'wouter';
 
@@ -214,8 +214,8 @@ export default function GuestLookup() {
                       <div className="flex gap-2 pt-2">
                         {event.eventType === "ticket" ? (
                           <Link href={`/buy-ticket/${event.id}`}>
-                            <Button variant="outline" size="sm" className="flex-1">
-                              <Calendar className="h-4 w-4 mr-2" />
+                            <Button variant="outline" size="sm" className="flex-1 bg-purple-50 hover:bg-purple-100 text-purple-700">
+                              <Ticket className="h-4 w-4 mr-2" />
                               Buy Tickets
                             </Button>
                           </Link>
