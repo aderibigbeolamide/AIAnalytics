@@ -32,6 +32,17 @@ export default function TicketScanner() {
   // Fetch event details with explicit refetch
   const { data: event, isLoading, refetch } = useQuery<any>({
     queryKey: [`/api/events/${eventId}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/events/${eventId}`, {
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch event');
+      }
+      return response.json();
+    },
     enabled: !!eventId,
     staleTime: 0, // Always fetch fresh data
     cacheTime: 0, // Don't cache to ensure we get latest data
