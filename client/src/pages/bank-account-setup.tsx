@@ -136,14 +136,30 @@ export default function BankAccountSetup() {
   }, [watchedAccountNumber, watchedBankCode, isVerifying, smartVerifyAccountMutation]);
 
   const onSubmit = (data: BankAccountFormData) => {
-    if (!verifiedAccount) {
-      toast({
-        title: "Account Not Verified",
-        description: "Please verify your bank account first",
-        variant: "destructive",
-      });
+    if (!verifiedAccount && data.accountNumber && data.bankCode) {
+      // Try to verify one more time before submission
+      setIsVerifying(true);
+      smartVerifyAccountMutation.mutate(
+        { accountNumber: data.accountNumber, bankCode: data.bankCode },
+        {
+          onSuccess: () => {
+            // Verification succeeded, proceed with setup
+            setupAccountMutation.mutate(data);
+          },
+          onError: () => {
+            // Allow submission even without verification for manual verification
+            toast({
+              title: "Account Setup",
+              description: "Proceeding with manual verification. Account details will be verified during first payment.",
+            });
+            setupAccountMutation.mutate(data);
+          },
+          onSettled: () => setIsVerifying(false),
+        }
+      );
       return;
     }
+    
     setupAccountMutation.mutate(data);
   };
 
@@ -236,7 +252,7 @@ export default function BankAccountSetup() {
                         <FormControl>
                           <Input
                             {...field}
-                            placeholder="Enter your 10-digit account number (e.g., 0123456789)"
+                            placeholder="Enter your real 10-digit bank account number"
                             maxLength={10}
                             type="tel"
                           />
@@ -245,7 +261,7 @@ export default function BankAccountSetup() {
                         {isVerifying && (
                           <p className="text-sm text-blue-600 flex items-center gap-2">
                             <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-                            Searching for your bank...
+                            Verifying account with selected bank...
                           </p>
                         )}
                         {verifiedAccount && (
@@ -289,9 +305,15 @@ export default function BankAccountSetup() {
                           </Select>
                         </FormControl>
                         <FormMessage />
-                        {!verifiedAccount && (
+                        {!verifiedAccount && watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && (
+                          <div className="text-xs">
+                            <p className="text-amber-600">⚠️ Automatic verification failed. You can still proceed - your account will be verified during the first payment.</p>
+                          </div>
+                        )}
+                        {!verifiedAccount && (!watchedAccountNumber || watchedAccountNumber.length < 10 || !watchedBankCode) && (
                           <div className="text-xs text-gray-500">
-                            <p>Select your bank and enter account number to verify automatically</p>
+                            <p>Enter account number first, then select your bank for automatic verification</p>
+                            <p className="mt-1 text-amber-600">💡 Make sure to use a real bank account number for verification</p>
                           </div>
                         )}
                       </FormItem>
