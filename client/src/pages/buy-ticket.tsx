@@ -150,21 +150,19 @@ export default function BuyTicket() {
     );
   }
 
-  // Debug logging to see what we get from the API
-  console.log("Event data from API:", event);
-  console.log("Event type:", event.eventType);
-  console.log("Event ID:", eventId);
-
   if (event.eventType !== "ticket") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
-              This is not a ticket-based event (Type: {event.eventType || "undefined"})
+              This is not a ticket-based event
             </p>
             <p className="text-center text-sm text-gray-500 mt-2">
-              Event ID: {eventId}, Event Name: {event.name}
+              Event: {event.name} (Type: {event.eventType})
+            </p>
+            <p className="text-center text-sm text-gray-500">
+              Looking for ticket events? Try the "Code" event.
             </p>
           </CardContent>
         </Card>
