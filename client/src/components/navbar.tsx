@@ -29,6 +29,7 @@ export function Navbar() {
       { href: "/events", label: "Events", roles: ["admin"] },
       { href: "/scanner", label: "Scan QR", roles: ["admin"] },
       { href: "/reports", label: "Reports", roles: ["admin"] },
+      { href: "/bank-account-setup", label: "Bank Account", roles: ["admin"] },
     ];
 
     return [...baseItems, ...adminItems].filter(item => 

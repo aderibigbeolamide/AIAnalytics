@@ -43,6 +43,19 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("member"), // admin, member, guest, invitee
+  // Paystack subaccount for receiving payments
+  paystackSubaccountCode: text("paystack_subaccount_code"), // Paystack subaccount code
+  bankName: text("bank_name"),
+  accountNumber: text("account_number"),
+  accountName: text("account_name"),
+  bankCode: text("bank_code"),
+  // Business details for subaccount verification
+  businessName: text("business_name"),
+  businessEmail: text("business_email"),
+  businessPhone: text("business_phone"),
+  settlementBank: text("settlement_bank"),
+  percentageCharge: integer("percentage_charge").default(0), // Platform fee percentage (0-100)
+  isVerified: boolean("is_verified").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -104,11 +117,18 @@ export const events = pgTable("events", {
     paystackPublicKey?: string;
     allowManualReceipt: boolean;
     paymentDescription?: string;
+    // Multi-tenant payment settings
+    useOrganizerAccount: boolean; // If true, payments go to event organizer's account
+    platformFeePercentage?: number; // Platform fee (0-100)
+    splitPayment?: boolean; // Enable payment splitting
   }>().default({
     requiresPayment: false,
     paymentMethods: [],
     paymentRules: { member: false, guest: false, invitee: false },
-    allowManualReceipt: true
+    allowManualReceipt: true,
+    useOrganizerAccount: false,
+    platformFeePercentage: 0,
+    splitPayment: false
   }),
   customRegistrationFields: jsonb("custom_registration_fields").$type<CustomFormField[]>().default([]),
   status: text("status").notNull().default("upcoming"), // upcoming, active, completed, cancelled

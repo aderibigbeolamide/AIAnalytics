@@ -30,6 +30,7 @@ import PaymentCallback from "@/pages/payment-callback";
 import BuyTicket from "@/pages/buy-ticket";
 import TicketDetail from "@/pages/ticket-detail";
 import TicketScanner from "@/pages/ticket-scanner";
+import BankAccountSetup from "@/pages/bank-account-setup";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage } = useAuthStore();
@@ -103,6 +104,11 @@ function Router() {
       <Route path="/settings">
         <ProtectedRoute>
           <Settings />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/bank-account-setup">
+        <ProtectedRoute>
+          <BankAccountSetup />
         </ProtectedRoute>
       </Route>
       <Route path="/invitees">
