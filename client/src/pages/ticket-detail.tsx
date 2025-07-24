@@ -131,6 +131,155 @@ export default function TicketDetail() {
     }
   };
 
+  const downloadFullTicket = () => {
+    // Create a new window with ticket details for printing/saving
+    const printWindow = window.open('', '_blank');
+    if (printWindow && ticket && event) {
+      const ticketHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Ticket - ${ticket.ticketNumber}</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              max-width: 600px; 
+              margin: 20px auto; 
+              padding: 20px;
+              line-height: 1.6;
+            }
+            .ticket-header { 
+              text-align: center; 
+              border-bottom: 2px solid #333; 
+              padding-bottom: 20px;
+              margin-bottom: 20px;
+            }
+            .ticket-number { 
+              font-size: 24px; 
+              font-weight: bold; 
+              color: #333;
+              margin-bottom: 10px;
+            }
+            .event-name { 
+              font-size: 20px; 
+              color: #666;
+              margin-bottom: 5px;
+            }
+            .ticket-type { 
+              font-size: 16px; 
+              background: #f0f0f0; 
+              padding: 5px 10px; 
+              border-radius: 15px;
+              display: inline-block;
+            }
+            .event-details { 
+              margin: 20px 0;
+              padding: 15px;
+              background: #f9f9f9;
+              border-radius: 8px;
+            }
+            .detail-row { 
+              display: flex; 
+              margin-bottom: 10px;
+              align-items: center;
+            }
+            .detail-label { 
+              font-weight: bold; 
+              width: 120px;
+              margin-right: 10px;
+            }
+            .qr-section { 
+              text-align: center; 
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+            }
+            .qr-code { 
+              margin: 20px 0;
+            }
+            .validation-info {
+              font-size: 12px;
+              color: #666;
+              margin-top: 15px;
+              padding: 10px;
+              background: #f0f0f0;
+              border-radius: 5px;
+            }
+            .contact-info {
+              margin-top: 20px;
+              padding: 10px;
+              background: #f8f9fa;
+              border-radius: 5px;
+              font-size: 14px;
+            }
+            @media print {
+              body { margin: 0; padding: 10px; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="ticket-header">
+            <div class="ticket-number">🎫 ${ticket.ticketNumber}</div>
+            <div class="event-name">${event.name}</div>
+            <div class="ticket-type">${ticket.ticketType} Ticket</div>
+          </div>
+          
+          <div class="event-details">
+            <h3>Event Information</h3>
+            <div class="detail-row">
+              <div class="detail-label">📅 Date:</div>
+              <div>${new Date(event.startDate).toLocaleDateString()}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">🕐 Time:</div>
+              <div>${new Date(event.startDate).toLocaleTimeString()}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">📍 Venue:</div>
+              <div>${event.location || 'To be announced'}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">💰 Price:</div>
+              <div>${ticket.price} ${ticket.currency}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">📧 Contact:</div>
+              <div>${ticket.ownerEmail}</div>
+            </div>
+          </div>
+
+          <div class="qr-section">
+            <h3>Validation Code</h3>
+            <div class="qr-code">
+              <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 200px; height: 200px; border: 1px solid #ddd;" />
+            </div>
+            <div><strong>Manual Code: ${ticket.ticketNumber}</strong></div>
+          </div>
+
+          <div class="validation-info">
+            <strong>Important Instructions:</strong><br>
+            • Present this ticket at the event entrance for validation<br>
+            • QR code or manual ticket number can be used for entry<br>
+            • Keep this ticket safe - screenshots are acceptable<br>
+            • Contact event organizer if you have any issues<br>
+            • Status: ${ticket.status.toUpperCase()} | Payment: ${ticket.paymentStatus.toUpperCase()}
+          </div>
+
+          <div class="contact-info">
+            Generated on: ${new Date().toLocaleString()}<br>
+            For support or questions, please contact the event organizer.
+          </div>
+        </body>
+        </html>
+      `;
+      
+      printWindow.document.write(ticketHtml);
+      printWindow.document.close();
+      printWindow.focus();
+    }
+  };
+
   const shareTicket = async () => {
     if (navigator.share && ticket) {
       try {
@@ -281,28 +430,42 @@ export default function TicketDetail() {
             </CardContent>
           </Card>
 
-          {/* Ticket Details */}
+          {/* Event Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Ticket Details</CardTitle>
+              <CardTitle>Event Information</CardTitle>
+              <CardDescription>
+                Essential details for your event attendance
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{ticket.ownerName}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{ticket.ownerEmail}</span>
-                </div>
-                {ticket.ownerPhone && (
+              {event && (
+                <div className="space-y-3">
                   <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{ticket.ownerPhone}</span>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <span className="font-medium">Date & Time:</span>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(event.startDate).toLocaleDateString()} at{" "}
+                        {new Date(event.startDate).toLocaleTimeString()}
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <span className="font-medium">Venue:</span>
+                      <p className="text-sm text-muted-foreground">{event.location || 'To be announced'}</p>
+                    </div>
+                  </div>
+                  {event.description && (
+                    <div>
+                      <span className="font-medium">Description:</span>
+                      <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="border-t pt-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -315,15 +478,26 @@ export default function TicketDetail() {
                     <p className="font-medium">{ticket.price} {ticket.currency}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Payment Method:</span>
-                    <p className="font-medium capitalize">{ticket.paymentMethod}</p>
+                    <span className="text-muted-foreground">Validation ID:</span>
+                    <p className="font-medium font-mono">{ticket.ticketNumber}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Created:</span>
-                    <p className="font-medium">
-                      {new Date(ticket.createdAt).toLocaleDateString()}
-                    </p>
+                    <span className="text-muted-foreground">Contact:</span>
+                    <p className="font-medium text-sm">{ticket.ownerEmail}</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex space-x-2">
+                  <Button variant="outline" onClick={downloadFullTicket} className="flex-1">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Ticket
+                  </Button>
+                  <Button variant="outline" onClick={shareTicket}>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
                 </div>
               </div>
 

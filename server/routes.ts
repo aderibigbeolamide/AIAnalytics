@@ -2776,8 +2776,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "This ticket category is no longer available" });
       }
 
-      // Generate ticket data
-      const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      // Generate ticket data - shorter format
+      const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       const qrCode = generateQRCode();
 
       // Create ticket record
