@@ -2907,7 +2907,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Always generate a new unique payment reference to avoid duplicates
-      const paymentReference = generatePaymentReference(`TKT${ticket.id}_${Date.now()}`);
+      // Include random component to ensure uniqueness even for rapid successive calls
+      const paymentReference = generatePaymentReference(`TKT${ticket.id}_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`);
       await db.update(tickets)
         .set({ paymentReference })
         .where(eq(tickets.id, ticket.id));
