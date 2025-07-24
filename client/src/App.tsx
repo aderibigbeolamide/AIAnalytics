@@ -105,14 +105,24 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/events/:eventId/scan-tickets">
-        <ProtectedRoute>
-          <TicketScanner />
-        </ProtectedRoute>
+        {(params) => {
+          console.log('Ticket scanner route matched with params:', params);
+          return (
+            <ProtectedRoute>
+              <TicketScanner />
+            </ProtectedRoute>
+          );
+        }}
       </Route>
       <Route path="/events/:id">
-        <ProtectedRoute>
-          <EventDetail />
-        </ProtectedRoute>
+        {(params) => {
+          console.log('Event detail route matched with params:', params);
+          return (
+            <ProtectedRoute>
+              <EventDetail />
+            </ProtectedRoute>
+          );
+        }}
       </Route>
       <Route path="/scanner">
         <ProtectedRoute>
