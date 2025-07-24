@@ -104,14 +104,14 @@ function Router() {
           <Reports />
         </ProtectedRoute>
       </Route>
-      <Route path="/events/:id">
-        <ProtectedRoute>
-          <EventDetail />
-        </ProtectedRoute>
-      </Route>
       <Route path="/events/:eventId/scan-tickets">
         <ProtectedRoute>
           <TicketScanner />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/events/:id">
+        <ProtectedRoute>
+          <EventDetail />
         </ProtectedRoute>
       </Route>
       <Route path="/scanner">
