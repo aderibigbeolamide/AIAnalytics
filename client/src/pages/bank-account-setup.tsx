@@ -65,7 +65,7 @@ export default function BankAccountSetup() {
   const verifyAccountMutation = useMutation({
     mutationFn: (data: { accountNumber: string; bankCode: string }) =>
       apiRequest("POST", "/api/banks/verify", data),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setVerifiedAccount({
         accountName: data.accountName,
         accountNumber: data.accountNumber,
@@ -89,7 +89,7 @@ export default function BankAccountSetup() {
   const setupAccountMutation = useMutation({
     mutationFn: (data: BankAccountFormData) =>
       apiRequest("POST", "/api/users/setup-bank-account", data),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
         title: "Bank Account Setup Complete",
         description: `Your account is now ready to receive payments from your events`,
@@ -107,19 +107,29 @@ export default function BankAccountSetup() {
 
   // Auto-verify when bank and account number are filled
   useEffect(() => {
-    const bankCode = form.watch("bankCode");
-    const accountNumber = form.watch("accountNumber");
+    const subscription = form.watch((value, { name }) => {
+      const bankCode = value.bankCode;
+      const accountNumber = value.accountNumber;
 
-    if (bankCode && accountNumber && accountNumber.length >= 10 && !isVerifying) {
-      setIsVerifying(true);
-      verifyAccountMutation.mutate(
-        { bankCode, accountNumber },
-        {
-          onSettled: () => setIsVerifying(false),
-        }
-      );
-    }
-  }, [form.watch("bankCode"), form.watch("accountNumber")]);
+      if (bankCode && accountNumber && accountNumber.length >= 10 && !isVerifying) {
+        // Reset previous verification
+        setVerifiedAccount(null);
+        setIsVerifying(true);
+        
+        verifyAccountMutation.mutate(
+          { bankCode, accountNumber },
+          {
+            onSettled: () => setIsVerifying(false),
+          }
+        );
+      } else if (accountNumber && accountNumber.length < 10) {
+        // Clear verification if account number becomes invalid
+        setVerifiedAccount(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form.watch, isVerifying, verifyAccountMutation]);
 
   const onSubmit = (data: BankAccountFormData) => {
     if (!verifiedAccount) {
@@ -133,8 +143,8 @@ export default function BankAccountSetup() {
     setupAccountMutation.mutate(data);
   };
 
-  const banks = banksResponse?.banks || [];
-  const hasExistingAccount = existingAccount?.bankAccount?.paystackSubaccountCode;
+  const banks = (banksResponse as any)?.banks || [];
+  const hasExistingAccount = (existingAccount as any)?.bankAccount?.paystackSubaccountCode;
 
   if (accountLoading || banksLoading) {
     return (
@@ -169,23 +179,23 @@ export default function BankAccountSetup() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Bank Name:</span>
-                  <span className="font-medium">{existingAccount.bankAccount.bankName}</span>
+                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.bankName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Account Number:</span>
-                  <span className="font-medium">{existingAccount.bankAccount.accountNumber}</span>
+                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.accountNumber}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Account Name:</span>
-                  <span className="font-medium">{existingAccount.bankAccount.accountName}</span>
+                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.accountName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Business Name:</span>
-                  <span className="font-medium">{existingAccount.bankAccount.businessName}</span>
+                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.businessName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Platform Fee:</span>
-                  <span className="font-medium">{existingAccount.bankAccount.percentageCharge}%</span>
+                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.percentageCharge}%</span>
                 </div>
               </div>
             </CardContent>
