@@ -215,7 +215,7 @@ export default function BuyTicket() {
             
             {/* Countdown Timer */}
             <div className="mt-4">
-              <CountdownTimer eventDate={eventStart} />
+              <CountdownTimer event={event} showEventDetails={false} size="compact" />
             </div>
           </CardContent>
         </Card>
@@ -314,7 +314,7 @@ export default function BuyTicket() {
                             className="w-full p-2 border rounded-md"
                           >
                             <option value="">Select ticket category</option>
-                            {event.ticketCategories?.filter(cat => cat.available).map((category) => (
+                            {event.ticketCategories?.filter((cat: any) => cat.available).map((category: any) => (
                               <option key={category.id} value={category.id}>
                                 {category.name} - {category.currency} {category.price.toLocaleString()}
                                 {category.description && ` (${category.description})`}
