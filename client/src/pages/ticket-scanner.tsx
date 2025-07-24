@@ -29,11 +29,20 @@ export default function TicketScanner() {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [scannerActive, setScannerActive] = useState(false);
 
-  // Fetch event details
-  const { data: event, isLoading } = useQuery<any>({
-    queryKey: ["/api/events", eventId],
+  // Fetch event details with explicit refetch
+  const { data: event, isLoading, refetch } = useQuery<any>({
+    queryKey: [`/api/events/${eventId}`],
     enabled: !!eventId,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache to ensure we get latest data
   });
+
+  // Refetch event data when component mounts
+  useEffect(() => {
+    if (eventId) {
+      refetch();
+    }
+  }, [eventId, refetch]);
 
   const validateTicketMutation = useMutation({
     mutationFn: async (ticketId: string) => {
@@ -139,11 +148,16 @@ export default function TicketScanner() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">Event not found</p>
+            <p className="text-center text-xs text-gray-500 mt-2">
+              Event ID: {eventId}
+            </p>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+
 
   if (event.eventType !== "ticket") {
     return (
@@ -152,6 +166,12 @@ export default function TicketScanner() {
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
               This is not a ticket-based event
+            </p>
+            <p className="text-center text-xs text-gray-500 mt-2">
+              Event Type: {event.eventType || 'undefined'}
+            </p>
+            <p className="text-center text-xs text-gray-500">
+              Event ID: {eventId}
             </p>
           </CardContent>
         </Card>
