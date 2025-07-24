@@ -131,10 +131,30 @@ export default function TicketDetail() {
     }
   };
 
-  const downloadFullTicket = () => {
+  const downloadFullTicket = async () => {
+    if (!ticket || !event) return;
+    
+    // Generate QR code for the download
+    let qrDataUrl = qrCodeDataUrl;
+    if (!qrDataUrl && ticket.qrCode) {
+      try {
+        qrDataUrl = await QRCode.toDataURL(ticket.qrCode, {
+          width: 300,
+          margin: 2,
+          color: {
+            dark: "#000000",
+            light: "#FFFFFF",
+          },
+        });
+      } catch (error) {
+        console.error("Error generating QR code for download:", error);
+        qrDataUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y5ZjlmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UVIgQ29kZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==";
+      }
+    }
+
     // Create a new window with ticket details for printing/saving
     const printWindow = window.open('', '_blank');
-    if (printWindow && ticket && event) {
+    if (printWindow) {
       const ticketHtml = `
         <!DOCTYPE html>
         <html>
@@ -228,20 +248,33 @@ export default function TicketDetail() {
           <div class="event-details">
             <h3>Event Information</h3>
             <div class="detail-row">
-              <div class="detail-label">📅 Date:</div>
-              <div>${new Date(event.startDate).toLocaleDateString()}</div>
+              <div class="detail-label">🎫 Event Name:</div>
+              <div>${event.name}</div>
             </div>
             <div class="detail-row">
-              <div class="detail-label">🕐 Time:</div>
-              <div>${new Date(event.startDate).toLocaleTimeString()}</div>
+              <div class="detail-label">📅 Start Date:</div>
+              <div>${new Date(event.startDate).toLocaleDateString()} at ${new Date(event.startDate).toLocaleTimeString()}</div>
             </div>
+            ${event.endDate ? `
+            <div class="detail-row">
+              <div class="detail-label">🏁 End Date:</div>
+              <div>${new Date(event.endDate).toLocaleDateString()} at ${new Date(event.endDate).toLocaleTimeString()}</div>
+            </div>` : ''}
             <div class="detail-row">
               <div class="detail-label">📍 Venue:</div>
               <div>${event.location || 'To be announced'}</div>
             </div>
             <div class="detail-row">
+              <div class="detail-label">🎟️ Ticket Type:</div>
+              <div>${ticket.ticketType}</div>
+            </div>
+            <div class="detail-row">
               <div class="detail-label">💰 Price:</div>
               <div>${ticket.price} ${ticket.currency}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">💳 Payment:</div>
+              <div>${ticket.paymentMethod === 'paystack' ? 'Paid Online' : 'Manual Payment on Event Day'} ${ticket.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Pending'}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">📧 Contact:</div>
@@ -252,7 +285,7 @@ export default function TicketDetail() {
           <div class="qr-section">
             <h3>Validation Code</h3>
             <div class="qr-code">
-              <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 200px; height: 200px; border: 1px solid #ddd;" />
+              <img src="${qrDataUrl}" alt="QR Code" style="width: 200px; height: 200px; border: 1px solid #ddd;" />
             </div>
             <div><strong>Manual Code: ${ticket.ticketNumber}</strong></div>
           </div>
@@ -439,39 +472,92 @@ export default function TicketDetail() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Event Name */}
               {event && (
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <span className="font-medium">Date & Time:</span>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(event.startDate).toLocaleDateString()} at{" "}
-                        {new Date(event.startDate).toLocaleTimeString()}
-                      </p>
+                <div className="text-center pb-4 border-b">
+                  <h3 className="text-xl font-bold text-gray-900">{event.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{event.description}</p>
+                </div>
+              )}
+
+              {event && (
+                <div className="space-y-4">
+                  {/* Event Times */}
+                  <div>
+                    <span className="font-medium text-gray-900">Event Time:</span>
+                    <div className="mt-1 space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-green-600" />
+                        <span className="text-sm">
+                          <strong>Start:</strong> {new Date(event.startDate).toLocaleDateString()} at {new Date(event.startDate).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      {event.endDate && (
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-red-600" />
+                          <span className="text-sm">
+                            <strong>End:</strong> {new Date(event.endDate).toLocaleDateString()} at {new Date(event.endDate).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <span className="font-medium">Venue:</span>
-                      <p className="text-sm text-muted-foreground">{event.location || 'To be announced'}</p>
+
+                  {/* Event Location */}
+                  <div>
+                    <span className="font-medium text-gray-900">Event Location:</span>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <MapPin className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm">{event.location || 'To be announced'}</span>
                     </div>
                   </div>
-                  {event.description && (
-                    <div>
-                      <span className="font-medium">Description:</span>
-                      <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-                    </div>
-                  )}
                 </div>
               )}
 
               <div className="border-t pt-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="space-y-3">
+                  {/* Ticket Type and Price */}
                   <div>
-                    <span className="text-muted-foreground">Ticket Type:</span>
-                    <p className="font-medium">{ticket.ticketType}</p>
+                    <span className="font-medium text-gray-900">Ticket Type:</span>
+                    <p className="text-sm mt-1">{ticket.ticketType}</p>
+                  </div>
+                  
+                  <div>
+                    <span className="font-medium text-gray-900">Price:</span>
+                    <p className="text-sm mt-1 font-medium text-green-600">
+                      {ticket.price} {ticket.currency}
+                    </p>
+                  </div>
+
+                  {/* Payment Method */}
+                  <div>
+                    <span className="font-medium text-gray-900">Payment Method:</span>
+                    <p className="text-sm mt-1 capitalize">
+                      {ticket.paymentMethod === 'paystack' ? 'Online Payment' : 'Manual Payment on Event Day'}
+                      {ticket.paymentStatus === 'paid' && ticket.paymentMethod === 'paystack' && (
+                        <span className="text-green-600 font-medium"> ✓ Paid Online</span>
+                      )}
+                      {ticket.paymentStatus === 'pending' && (
+                        <span className="text-yellow-600 font-medium"> - Pending Payment</span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Validation ID */}
+                  <div>
+                    <span className="font-medium text-gray-900">Validation ID:</span>
+                    <p className="text-sm mt-1 font-mono bg-gray-100 px-2 py-1 rounded">
+                      {ticket.ticketNumber}
+                    </p>
+                  </div>
+
+                  {/* Contact */}
+                  <div>
+                    <span className="font-medium text-gray-900">Contact:</span>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Mail className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm">{ticket.ownerEmail}</span>
+                    </div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Price:</span>
