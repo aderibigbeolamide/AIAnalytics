@@ -3228,96 +3228,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auto-resolve bank account - tries all banks to find the correct one
-  app.post("/api/banks/auto-resolve", async (req: Request, res: Response) => {
+  // Smart bank verification - only checks once bank is selected
+  app.post("/api/banks/smart-verify", async (req: Request, res: Response) => {
     try {
-      const { accountNumber } = req.body;
+      const { accountNumber, bankCode } = req.body;
 
-      if (!accountNumber || accountNumber.length < 10) {
+      if (!accountNumber || !bankCode) {
         return res.status(400).json({ 
           success: false,
-          message: "Valid 10-digit account number is required" 
+          message: "Account number and bank code are required" 
         });
       }
 
-      // Get all banks
-      const banksData = await getNigerianBanks();
+      console.log(`Verifying account ${accountNumber} with bank ${bankCode}`);
       
-      if (!banksData.status) {
-        return res.status(400).json({
-          success: false,
-          message: "Failed to fetch banks"
-        });
-      }
-
-      const banks = banksData.data;
-      let foundMatch = null;
-
-      // Try to verify account against all banks (limit to major banks first for speed)
-      const majorBanks = banks.filter((bank: any) => 
-        ['Access Bank', 'GTBank', 'First Bank', 'UBA', 'Zenith Bank', 'Fidelity Bank', 'Union Bank', 'Sterling Bank', 'Wema Bank', 'FCMB'].includes(bank.name)
-      );
+      const verificationData = await verifyBankAccount(accountNumber, bankCode);
       
-      // First try major banks
-      for (const bank of majorBanks) {
-        try {
-          const verificationData = await verifyBankAccount(accountNumber, bank.code);
-          if (verificationData.status) {
-            foundMatch = {
-              accountName: verificationData.data.account_name,
-              accountNumber: verificationData.data.account_number,
-              bankName: bank.name,
-              bankCode: bank.code
-            };
-            break;
-          }
-        } catch (error) {
-          // Continue trying other banks
-          continue;
-        }
-      }
-
-      // If not found in major banks, try all banks
-      if (!foundMatch) {
-        const otherBanks = banks.filter((bank: any) => 
-          !['Access Bank', 'GTBank', 'First Bank', 'UBA', 'Zenith Bank', 'Fidelity Bank', 'Union Bank', 'Sterling Bank', 'Wema Bank', 'FCMB'].includes(bank.name)
-        );
-
-        for (const bank of otherBanks) {
-          try {
-            const verificationData = await verifyBankAccount(accountNumber, bank.code);
-            if (verificationData.status) {
-              foundMatch = {
-                accountName: verificationData.data.account_name,
-                accountNumber: verificationData.data.account_number,
-                bankName: bank.name,
-                bankCode: bank.code
-              };
-              break;
-            }
-          } catch (error) {
-            // Continue trying other banks
-            continue;
-          }
-        }
-      }
-
-      if (foundMatch) {
+      if (verificationData.status) {
+        // Get bank name from banks list
+        const banksData = await getNigerianBanks();
+        const bank = banksData.data.find((b: any) => b.code === bankCode);
+        
         res.json({
           success: true,
-          ...foundMatch
+          accountName: verificationData.data.account_name,
+          accountNumber: verificationData.data.account_number,
+          bankName: bank?.name || 'Unknown Bank',
+          bankCode: bankCode
         });
       } else {
-        res.status(404).json({
+        res.status(400).json({
           success: false,
-          message: "No matching bank account found. Please verify the account number."
+          message: verificationData.message || "Account verification failed"
         });
       }
     } catch (error) {
-      console.error("Auto bank resolution error:", error);
+      console.error("Smart bank verification error:", error);
       res.status(500).json({ 
         success: false,
-        message: "Failed to resolve bank account" 
+        message: "Failed to verify bank account" 
       });
     }
   });

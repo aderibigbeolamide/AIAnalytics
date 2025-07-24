@@ -61,10 +61,10 @@ export default function BankAccountSetup() {
     queryFn: () => apiRequest("GET", "/api/users/bank-account"),
   });
 
-  // Auto-resolve bank account mutation (new smart verification)
-  const autoResolveAccountMutation = useMutation({
-    mutationFn: (data: { accountNumber: string }) =>
-      apiRequest("POST", "/api/banks/auto-resolve", data),
+  // Smart bank verification mutation
+  const smartVerifyAccountMutation = useMutation({
+    mutationFn: (data: { accountNumber: string; bankCode: string }) =>
+      apiRequest("POST", "/api/banks/smart-verify", data),
     onSuccess: (data: any) => {
       setVerifiedAccount({
         accountName: data.accountName,
@@ -72,8 +72,6 @@ export default function BankAccountSetup() {
         bankName: data.bankName,
         bankCode: data.bankCode,
       });
-      // Auto-fill the bank code in the form
-      form.setValue("bankCode", data.bankCode);
       toast({
         title: "Account Verified",
         description: `${data.bankName} - ${data.accountName}`,
@@ -81,12 +79,11 @@ export default function BankAccountSetup() {
     },
     onError: (error: any) => {
       toast({
-        title: "Account Not Found",
-        description: error.message || "Could not find this account number in any bank",
+        title: "Verification Failed",
+        description: error.message || "Could not verify this account number with the selected bank",
         variant: "destructive",
       });
       setVerifiedAccount(null);
-      form.setValue("bankCode", "");
     },
   });
 
@@ -110,37 +107,33 @@ export default function BankAccountSetup() {
     },
   });
 
-  // Auto-resolve when account number is entered
+  // Watch form fields for verification
+  const watchedAccountNumber = form.watch("accountNumber");
+  const watchedBankCode = form.watch("bankCode");
+  
+  // Smart verification when both account number and bank are selected
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      const accountNumber = value.accountNumber;
-
-      console.log("Form watch triggered:", { accountNumber, name, isVerifying });
-
-      if (accountNumber && accountNumber.length === 10 && !isVerifying) {
-        // Trigger verification when account number is exactly 10 digits
-        console.log("Triggering auto-resolve for:", accountNumber);
-        setVerifiedAccount(null);
-        setIsVerifying(true);
-        
-        autoResolveAccountMutation.mutate(
-          { accountNumber },
-          {
-            onSettled: () => {
-              console.log("Auto-resolve completed");
-              setIsVerifying(false);
-            },
-          }
-        );
-      } else if (accountNumber && accountNumber.length < 10) {
-        // Clear verification if account number becomes invalid
-        setVerifiedAccount(null);
-        form.setValue("bankCode", "");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [form.watch, isVerifying, autoResolveAccountMutation]);
+    console.log("Form fields changed:", { accountNumber: watchedAccountNumber, bankCode: watchedBankCode, isVerifying });
+    
+    if (watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !isVerifying) {
+      console.log("Triggering smart verification");
+      setVerifiedAccount(null);
+      setIsVerifying(true);
+      
+      smartVerifyAccountMutation.mutate(
+        { accountNumber: watchedAccountNumber, bankCode: watchedBankCode },
+        {
+          onSettled: () => {
+            console.log("Smart verification completed");
+            setIsVerifying(false);
+          },
+        }
+      );
+    } else if (watchedAccountNumber && watchedAccountNumber.length < 10) {
+      // Clear verification if account number becomes invalid
+      setVerifiedAccount(null);
+    }
+  }, [watchedAccountNumber, watchedBankCode, isVerifying, smartVerifyAccountMutation]);
 
   const onSubmit = (data: BankAccountFormData) => {
     if (!verifiedAccount) {
@@ -298,8 +291,7 @@ export default function BankAccountSetup() {
                         <FormMessage />
                         {!verifiedAccount && (
                           <div className="text-xs text-gray-500">
-                            <p>Enter your account number above to auto-detect your bank</p>
-                            <p className="mt-1 text-blue-600">Try: 0123456789 for testing</p>
+                            <p>Select your bank and enter account number to verify automatically</p>
                           </div>
                         )}
                       </FormItem>
