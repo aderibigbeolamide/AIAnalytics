@@ -1,27 +1,40 @@
 import { Request, Response } from 'express';
 
-// Paystack payment initialization
+// Paystack payment initialization with subaccount support
 export async function initializePaystackPayment(
   email: string,
   amount: number, // in kobo (smallest currency unit)
   reference: string,
   metadata: any = {},
-  publicKey: string
+  subaccountCode?: string, // For multi-tenant payments
+  splitConfig?: any // For payment splitting
 ) {
   try {
+    const requestBody: any = {
+      email,
+      amount,
+      reference,
+      metadata,
+      callback_url: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/payment/callback`,
+    };
+
+    // Add subaccount for direct payment to organizer
+    if (subaccountCode) {
+      requestBody.subaccount = subaccountCode;
+    }
+
+    // Add split payment configuration
+    if (splitConfig) {
+      requestBody.split = splitConfig;
+    }
+
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        email,
-        amount,
-        reference,
-        metadata,
-        callback_url: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/payment/callback`,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     const data = await response.json();
@@ -66,4 +79,73 @@ export function convertToKobo(amount: string | number): number {
 // Convert from kobo to naira
 export function convertFromKobo(amount: number): number {
   return amount / 100;
+}
+
+// Create Paystack subaccount for event organizers
+export async function createPaystackSubaccount(
+  businessName: string,
+  bankCode: string,
+  accountNumber: string,
+  percentageCharge: number = 0 // Platform fee
+) {
+  try {
+    const response = await fetch('https://api.paystack.co/subaccount', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        business_name: businessName,
+        settlement_bank: bankCode,
+        account_number: accountNumber,
+        percentage_charge: percentageCharge,
+      }),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Paystack subaccount creation error:', error);
+    throw error;
+  }
+}
+
+// Verify bank account details
+export async function verifyBankAccount(accountNumber: string, bankCode: string) {
+  try {
+    const response = await fetch(
+      `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Bank account verification error:', error);
+    throw error;
+  }
+}
+
+// Get list of Nigerian banks
+export async function getNigerianBanks() {
+  try {
+    const response = await fetch('https://api.paystack.co/bank?country=nigeria', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Get banks error:', error);
+    throw error;
+  }
 }

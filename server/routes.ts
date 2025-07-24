@@ -30,7 +30,10 @@ import {
   verifyPaystackPayment, 
   generatePaymentReference, 
   convertToKobo,
-  convertFromKobo
+  convertFromKobo,
+  createPaystackSubaccount,
+  verifyBankAccount,
+  getNigerianBanks
 } from "./paystack";
 import { 
   generateQRCode, 
@@ -2806,6 +2809,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const reference = generatePaymentReference(`TKT${ticket.id}`);
         const amount = convertToKobo(ticketCategory.price.toString(), ticketCategory.currency);
 
+        // Get event organizer's subaccount for direct payment
+        const [organizer] = await db.select({
+          paystackSubaccountCode: users.paystackSubaccountCode,
+          businessName: users.businessName
+        }).from(users).where(eq(users.id, event.createdBy));
+
         try {
           const paymentData = await initializePaystackPayment(
             ownerEmail,
@@ -2817,7 +2826,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ticketCategoryId,
               ticketType: ticketCategory.name,
               ownerName,
-            }
+              eventName: event.name,
+              organizerName: organizer?.businessName || "Event Organizer"
+            },
+            organizer?.paystackSubaccountCode || undefined // Direct payment to event organizer
           );
 
           if (paymentData.status) {
@@ -2916,7 +2928,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert price to kobo (smallest currency unit)
       const amount = convertToKobo(ticket.price.toString(), ticket.currency);
 
-      // Initialize Paystack payment
+      // Get event details and organizer's subaccount
+      const [event] = await db.select().from(events).where(eq(events.id, ticket.eventId));
+      const [organizer] = await db.select({
+        paystackSubaccountCode: users.paystackSubaccountCode,
+        businessName: users.businessName
+      }).from(users).where(eq(users.id, event.createdBy));
+
+      // Initialize Paystack payment with subaccount if organizer has one
       const paymentData = await initializePaystackPayment(
         ticket.ownerEmail,
         amount,
@@ -2926,7 +2945,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ticketNumber: ticket.ticketNumber,
           ticketType: ticket.ticketType,
           eventId: ticket.eventId,
-        }
+          eventName: event.name,
+          organizerName: organizer?.businessName || "Event Organizer"
+        },
+        organizer?.paystackSubaccountCode || undefined // Direct payment to event organizer
       );
 
       if (paymentData.status) {
@@ -3141,6 +3163,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Ticket payment verification error:", error);
       res.status(500).json({ message: "Failed to verify payment" });
+    }
+  });
+
+  // Bank Account Management API Routes for Multi-Tenant Payments
+
+  // Get Nigerian banks list
+  app.get("/api/banks", async (req: Request, res: Response) => {
+    try {
+      const banksData = await getNigerianBanks();
+      
+      if (banksData.status) {
+        res.json({
+          success: true,
+          banks: banksData.data
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Failed to fetch banks"
+        });
+      }
+    } catch (error) {
+      console.error("Get banks error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch banks" 
+      });
+    }
+  });
+
+  // Verify bank account details
+  app.post("/api/banks/verify", async (req: Request, res: Response) => {
+    try {
+      const { accountNumber, bankCode } = req.body;
+
+      if (!accountNumber || !bankCode) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Account number and bank code are required" 
+        });
+      }
+
+      const verificationData = await verifyBankAccount(accountNumber, bankCode);
+
+      if (verificationData.status) {
+        res.json({
+          success: true,
+          accountName: verificationData.data.account_name,
+          accountNumber: verificationData.data.account_number
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: verificationData.message || "Account verification failed"
+        });
+      }
+    } catch (error) {
+      console.error("Bank verification error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to verify bank account" 
+      });
+    }
+  });
+
+  // Setup bank account for user (create subaccount)
+  app.post("/api/users/setup-bank-account", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { 
+        bankCode, 
+        accountNumber, 
+        businessName, 
+        businessEmail, 
+        businessPhone,
+        percentageCharge = 0 
+      } = req.body;
+
+      if (!bankCode || !accountNumber || !businessName) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Bank code, account number, and business name are required" 
+        });
+      }
+
+      // First verify the bank account
+      const verificationData = await verifyBankAccount(accountNumber, bankCode);
+      
+      if (!verificationData.status) {
+        return res.status(400).json({
+          success: false,
+          message: "Bank account verification failed"
+        });
+      }
+
+      // Create Paystack subaccount
+      const subaccountData = await createPaystackSubaccount(
+        businessName,
+        bankCode,
+        accountNumber,
+        percentageCharge
+      );
+
+      if (subaccountData.status) {
+        // Update user record with bank details and subaccount code
+        await db.update(users).set({
+          paystackSubaccountCode: subaccountData.data.subaccount_code,
+          bankName: verificationData.data.account_name,
+          accountNumber: accountNumber,
+          accountName: verificationData.data.account_name,
+          bankCode: bankCode,
+          businessName: businessName,
+          businessEmail: businessEmail,
+          businessPhone: businessPhone,
+          percentageCharge: percentageCharge,
+          isVerified: true
+        }).where(eq(users.id, userId));
+
+        res.json({
+          success: true,
+          message: "Bank account setup successfully",
+          subaccountCode: subaccountData.data.subaccount_code,
+          accountName: verificationData.data.account_name
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: subaccountData.message || "Failed to create payment account"
+        });
+      }
+    } catch (error) {
+      console.error("Bank account setup error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to setup bank account" 
+      });
+    }
+  });
+
+  // Get user's bank account details
+  app.get("/api/users/bank-account", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      const [user] = await db.select({
+        paystackSubaccountCode: users.paystackSubaccountCode,
+        bankName: users.bankName,
+        accountNumber: users.accountNumber,
+        accountName: users.accountName,
+        bankCode: users.bankCode,
+        businessName: users.businessName,
+        businessEmail: users.businessEmail,
+        businessPhone: users.businessPhone,
+        percentageCharge: users.percentageCharge,
+        isVerified: users.isVerified
+      }).from(users).where(eq(users.id, userId));
+
+      if (!user) {
+        return res.status(404).json({ 
+          success: false,
+          message: "User not found" 
+        });
+      }
+
+      res.json({
+        success: true,
+        bankAccount: user
+      });
+    } catch (error) {
+      console.error("Get bank account error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch bank account details" 
+      });
     }
   });
 
