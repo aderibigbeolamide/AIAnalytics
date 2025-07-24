@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Ticket, Calendar, MapPin, Users, Share2, Download, RefreshCw, User, Mail, Phone } from "lucide-react";
+import { Ticket, Calendar, MapPin, Users, Share2, Download, RefreshCw, User, Mail, Phone, CreditCard } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import QRCode from "qrcode";
 import jsPDF from "jspdf";
@@ -32,6 +32,7 @@ export default function TicketDetail() {
   const queryClient = useQueryClient();
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const form = useForm<TransferTicketData>({
     resolver: zodResolver(transferTicketSchema),
@@ -311,6 +312,46 @@ export default function TicketDetail() {
     }
   };
 
+  const handlePayment = async () => {
+    if (!ticket) return;
+
+    setPaymentLoading(true);
+    try {
+      // Initialize payment with Paystack
+      const response = await fetch('/api/tickets/initialize-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ticketId: ticket.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to initialize payment');
+      }
+
+      const data = await response.json();
+      
+      if (data.authorizationUrl) {
+        // Redirect to Paystack
+        window.location.href = data.authorizationUrl;
+      } else {
+        throw new Error('Payment initialization failed');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Payment Error",
+        description: "Failed to initialize payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -531,6 +572,38 @@ export default function TicketDetail() {
 
             {/* Action Buttons */}
             <div className="bg-white rounded-lg p-6 border shadow-sm">
+              {/* Payment Button - Show prominently if payment is pending */}
+              {ticket.paymentStatus === 'pending' && ticket.paymentMethod === 'paystack' && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg">
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-semibold text-orange-900">Payment Required</h3>
+                    <p className="text-sm text-orange-700 mt-1">
+                      Complete your payment to secure your ticket for this event
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handlePayment}
+                    disabled={paymentLoading}
+                    className="w-full h-12 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold text-lg shadow-lg"
+                  >
+                    {paymentLoading ? (
+                      <>
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-3" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-5 w-5 mr-3" />
+                        Pay Now - {ticket.currency} {ticket.price.toLocaleString()}
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-center text-orange-600 mt-2">
+                    🔒 Secure payment processing with Paystack
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Button onClick={downloadFullTicket} className="bg-blue-600 hover:bg-blue-700 text-white">
                   <Download className="h-4 w-4 mr-2" />

@@ -562,6 +562,10 @@ npm run migrate
   - Implemented improved two-step payment flow: "Find My Ticket" → "Pay Now"
   - Users can now confirm ticket details before proceeding to payment
   - Added comprehensive ticket information display with event details, pricing, and payment status
+  - Added ticket payment initialization endpoint (/api/tickets/initialize-payment)
+  - Enhanced ticket detail page with prominent payment button for pending payments
+  - Payment button shows when ticket status is pending and payment method is Paystack
+  - Payment flow now redirects directly to Paystack checkout for secure payment processing
 
 - July 24, 2025. Enhanced ticket system with privacy-focused design and improved user experience:
   - Fixed critical UI issue where ticket-based events were showing "Register" instead of "Buy Ticket" on public pages

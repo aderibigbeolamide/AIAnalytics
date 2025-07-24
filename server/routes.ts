@@ -2881,6 +2881,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Initialize payment for existing ticket
+  app.post("/api/tickets/initialize-payment", async (req: Request, res: Response) => {
+    try {
+      const { ticketId } = req.body;
+
+      if (!ticketId) {
+        return res.status(400).json({ message: "Ticket ID is required" });
+      }
+
+      // Get ticket details
+      const [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      // Check if ticket is already paid
+      if (ticket.paymentStatus === 'paid') {
+        return res.status(400).json({ message: "Ticket has already been paid for" });
+      }
+
+      // Check if payment method is Paystack
+      if (ticket.paymentMethod !== 'paystack') {
+        return res.status(400).json({ message: "This ticket does not support online payment" });
+      }
+
+      // Generate payment reference if not exists
+      let paymentReference = ticket.paymentReference;
+      if (!paymentReference) {
+        paymentReference = generatePaymentReference(`TKT${ticket.id}`);
+        await db.update(tickets)
+          .set({ paymentReference })
+          .where(eq(tickets.id, ticket.id));
+      }
+
+      // Convert price to kobo (smallest currency unit)
+      const amount = convertToKobo(ticket.price.toString(), ticket.currency);
+
+      // Initialize Paystack payment
+      const paymentData = await initializePaystackPayment(
+        ticket.ownerEmail,
+        amount,
+        paymentReference,
+        {
+          ticketId: ticket.id,
+          ticketNumber: ticket.ticketNumber,
+          ticketType: ticket.ticketType,
+          eventId: ticket.eventId,
+        }
+      );
+
+      if (paymentData.status) {
+        res.json({
+          success: true,
+          authorizationUrl: paymentData.data.authorization_url,
+          reference: paymentReference,
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: paymentData.message || "Payment initialization failed",
+        });
+      }
+    } catch (error) {
+      console.error("Ticket payment initialization error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to initialize payment" 
+      });
+    }
+  });
+
   // Transfer ticket (public endpoint)
   app.post("/api/tickets/:ticketId/transfer", async (req: Request, res: Response) => {
     try {
