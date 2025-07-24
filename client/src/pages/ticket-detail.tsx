@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Ticket, Calendar, MapPin, Users, Share2, Download, RefreshCw, User, Mail, Phone } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import QRCode from "qrcode";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const transferTicketSchema = z.object({
   toOwnerName: z.string().min(1, "Recipient name is required"),
@@ -140,11 +142,16 @@ export default function TicketDetail() {
       });
       return;
     }
+
+    toast({
+      title: "Generating PDF...",
+      description: "Please wait while we prepare your ticket",
+    });
     
-    // Generate QR code for the download
-    let qrDataUrl = qrCodeDataUrl;
-    if (!qrDataUrl && ticket.qrCode) {
-      try {
+    try {
+      // Generate QR code for the download
+      let qrDataUrl = qrCodeDataUrl;
+      if (!qrDataUrl && ticket.qrCode) {
         qrDataUrl = await QRCode.toDataURL(ticket.qrCode, {
           width: 300,
           margin: 2,
@@ -153,187 +160,130 @@ export default function TicketDetail() {
             light: "#FFFFFF",
           },
         });
-      } catch (error) {
-        console.error("Error generating QR code for download:", error);
-        // Use a fallback placeholder
-        qrDataUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y5ZjlmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UVIgQ29kZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==";
       }
-    }
 
-    // Create HTML content for the ticket
-    const ticketHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Ticket - ${ticket.ticketNumber}</title>
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              max-width: 600px; 
-              margin: 20px auto; 
-              padding: 20px;
-              line-height: 1.6;
-            }
-            .ticket-header { 
-              text-align: center; 
-              border-bottom: 2px solid #333; 
-              padding-bottom: 20px;
-              margin-bottom: 20px;
-            }
-            .ticket-number { 
-              font-size: 24px; 
-              font-weight: bold; 
-              color: #333;
-              margin-bottom: 10px;
-            }
-            .event-name { 
-              font-size: 20px; 
-              color: #666;
-              margin-bottom: 5px;
-            }
-            .ticket-type { 
-              font-size: 16px; 
-              background: #f0f0f0; 
-              padding: 5px 10px; 
-              border-radius: 15px;
-              display: inline-block;
-            }
-            .event-details { 
-              margin: 20px 0;
-              padding: 15px;
-              background: #f9f9f9;
-              border-radius: 8px;
-            }
-            .detail-row { 
-              display: flex; 
-              margin-bottom: 10px;
-              align-items: center;
-            }
-            .detail-label { 
-              font-weight: bold; 
-              width: 120px;
-              margin-right: 10px;
-            }
-            .qr-section { 
-              text-align: center; 
-              margin-top: 30px;
-              padding-top: 20px;
-              border-top: 1px solid #ddd;
-            }
-            .qr-code { 
-              margin: 20px 0;
-            }
-            .validation-info {
-              font-size: 12px;
-              color: #666;
-              margin-top: 15px;
-              padding: 10px;
-              background: #f0f0f0;
-              border-radius: 5px;
-            }
-            .contact-info {
-              margin-top: 20px;
-              padding: 10px;
-              background: #f8f9fa;
-              border-radius: 5px;
-              font-size: 14px;
-            }
-            @media print {
-              body { margin: 0; padding: 10px; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="ticket-header">
-            <div class="ticket-number">🎫 ${ticket.ticketNumber}</div>
-            <div class="event-name">${event.name}</div>
-            <div class="ticket-type">${ticket.ticketType} Ticket</div>
+      // Create a temporary container for the ticket
+      const ticketContainer = document.createElement('div');
+      ticketContainer.style.position = 'absolute';
+      ticketContainer.style.left = '-9999px';
+      ticketContainer.style.width = '800px';
+      ticketContainer.style.padding = '40px';
+      ticketContainer.style.backgroundColor = 'white';
+      ticketContainer.style.fontFamily = 'Arial, sans-serif';
+      
+      ticketContainer.innerHTML = `
+        <div style="text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 30px; margin-bottom: 30px;">
+          <div style="font-size: 32px; font-weight: bold; color: #1f2937; margin-bottom: 15px;">🎫 Digital Ticket</div>
+          <div style="font-size: 24px; color: #374151; margin-bottom: 10px;">${event.name}</div>
+          <div style="font-size: 18px; background: #f3f4f6; padding: 8px 16px; border-radius: 20px; display: inline-block;">
+            ${ticket.ticketType} Ticket
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 40px; margin-bottom: 30px;">
+          <div style="flex: 1;">
+            <h3 style="color: #1f2937; margin-bottom: 20px; font-size: 20px;">Event Details</h3>
+            <div style="margin-bottom: 15px;">
+              <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">📅 Event Time:</div>
+              <div style="font-size: 14px; color: #6b7280;">
+                <strong>Start:</strong> ${new Date(event.startDate).toLocaleDateString()} at ${new Date(event.startDate).toLocaleTimeString()}
+                ${event.endDate ? `<br><strong>End:</strong> ${new Date(event.endDate).toLocaleDateString()} at ${new Date(event.endDate).toLocaleTimeString()}` : ''}
+              </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">📍 Venue:</div>
+              <div style="font-size: 14px; color: #6b7280;">${event.location || 'To be announced'}</div>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">💰 Price:</div>
+              <div style="font-size: 14px; color: #059669; font-weight: bold;">${ticket.price} ${ticket.currency}</div>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">💳 Payment:</div>
+              <div style="font-size: 14px; color: #6b7280;">
+                ${ticket.paymentMethod === 'paystack' ? 'Online Payment' : 'Manual Payment on Event Day'}
+                ${ticket.paymentStatus === 'paid' ? ' ✅ Paid' : ' ⏳ Pending'}
+              </div>
+            </div>
+            <div>
+              <div style="font-weight: bold; color: #374151; margin-bottom: 5px;">📧 Contact:</div>
+              <div style="font-size: 14px; color: #6b7280;">${ticket.ownerEmail}</div>
+            </div>
           </div>
           
-          <div class="event-details">
-            <h3>Event Information</h3>
-            <div class="detail-row">
-              <div class="detail-label">🎫 Event Name:</div>
-              <div>${event.name}</div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">📅 Start Date:</div>
-              <div>${new Date(event.startDate).toLocaleDateString()} at ${new Date(event.startDate).toLocaleTimeString()}</div>
-            </div>
-            ${event.endDate ? `
-            <div class="detail-row">
-              <div class="detail-label">🏁 End Date:</div>
-              <div>${new Date(event.endDate).toLocaleDateString()} at ${new Date(event.endDate).toLocaleTimeString()}</div>
-            </div>` : ''}
-            <div class="detail-row">
-              <div class="detail-label">📍 Venue:</div>
-              <div>${event.location || 'To be announced'}</div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">🎟️ Ticket Type:</div>
-              <div>${ticket.ticketType}</div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">💰 Price:</div>
-              <div>${ticket.price} ${ticket.currency}</div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">💳 Payment:</div>
-              <div>${ticket.paymentMethod === 'paystack' ? 'Paid Online' : 'Manual Payment on Event Day'} ${ticket.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Pending'}</div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">📧 Contact:</div>
-              <div>${ticket.ownerEmail}</div>
+          <div style="text-align: center; flex: 1;">
+            <h3 style="color: #1f2937; margin-bottom: 20px; font-size: 20px;">Scan to Enter</h3>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 12px; border: 2px solid #e5e7eb;">
+              <img src="${qrDataUrl}" style="width: 200px; height: 200px; border: 1px solid #d1d5db; border-radius: 8px;" />
+              <div style="margin-top: 15px; font-size: 14px; color: #6b7280;">
+                <strong>Manual Code:</strong>
+                <div style="font-family: monospace; font-size: 18px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; margin-top: 8px; border: 1px solid #d1d5db;">
+                  ${ticket.ticketNumber}
+                </div>
+              </div>
             </div>
           </div>
-
-          <div class="qr-section">
-            <h3>Validation Code</h3>
-            <div class="qr-code">
-              <img src="${qrDataUrl}" alt="QR Code" style="width: 200px; height: 200px; border: 1px solid #ddd;" />
-            </div>
-            <div><strong>Manual Code: ${ticket.ticketNumber}</strong></div>
-          </div>
-
-          <div class="validation-info">
-            <strong>Important Instructions:</strong><br>
+        </div>
+        
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; font-size: 12px; color: #6b7280;">
+          <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <strong style="color: #1e40af;">Important Instructions:</strong><br>
             • Present this ticket at the event entrance for validation<br>
             • QR code or manual ticket number can be used for entry<br>
             • Keep this ticket safe - screenshots are acceptable<br>
             • Contact event organizer if you have any issues<br>
             • Status: ${ticket.status.toUpperCase()} | Payment: ${ticket.paymentStatus.toUpperCase()}
           </div>
-
-          <div class="contact-info">
+          <div style="text-align: center;">
             Generated on: ${new Date().toLocaleString()}<br>
             For support or questions, please contact the event organizer.
           </div>
-        </body>
-        </html>
+        </div>
       `;
-      
-      // Create a blob with the HTML content
-      const blob = new Blob([ticketHtml], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      
-      // Create a download link
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `ticket-${ticket.ticketNumber}-${event.name.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
-      
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up the object URL
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Download Started",
-        description: "Your ticket has been downloaded as an HTML file",
+
+      document.body.appendChild(ticketContainer);
+
+      // Convert to canvas
+      const canvas = await html2canvas(ticketContainer, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        allowTaint: true,
       });
+
+      // Remove the temporary container
+      document.body.removeChild(ticketContainer);
+
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      const imgWidth = 190; // A4 width minus margins
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
+
+      // Save the PDF
+      const fileName = `ticket-${ticket.ticketNumber}-${event.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      pdf.save(fileName);
+
+      toast({
+        title: "Download Complete",
+        description: "Your ticket has been downloaded as a PDF file",
+      });
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const shareTicket = async () => {
