@@ -391,6 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: event.name,
           description: event.description,
           location: event.location,
+          eventType: event.event_type, // Add the missing eventType field
           startDate: event.start_date,
           endDate: event.end_date,
           registrationStartDate: event.registration_start_date,
@@ -665,6 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: event.name,
         description: event.description,
         location: event.location,
+        eventType: event.eventType, // Add the missing eventType field
         startDate: event.startDate,
         endDate: event.endDate,
         registrationStartDate: event.registrationStartDate,
@@ -681,6 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           allowManualReceipt: true
         },
         customRegistrationFields: event.customRegistrationFields || [],
+        ticketCategories: event.ticketCategories || [], // Add ticket categories for ticket events
       };
       
       res.json(publicEvent);

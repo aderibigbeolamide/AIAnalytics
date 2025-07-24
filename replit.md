@@ -523,6 +523,10 @@ npm run migrate
   - Page view tracking enabled with automatic route change detection
 
 - July 24, 2025. Successfully completed migration from Replit Agent to Replit environment with comprehensive dual event system and flexible ticket categories:
+  - Fixed critical UI issue where ticket-based events were showing "Register" instead of "Buy Ticket" on public pages
+  - Updated both `/api/events/public` and `/api/events/:id/public` endpoints to properly return `eventType` field
+  - Enhanced public event pages (guest-lookup, public-event-detail) to correctly display purple "Buy Ticket" buttons for ticket events
+  - Users now see clear distinction: "Register" (blue) for registration events, "Buy Ticket" (purple) for ticket events
   - Migrated all packages and dependencies to standard Replit environment
   - Fixed PostgreSQL database connection and pushed complete schema with ticket tables
   - Implemented comprehensive dual event system with ticket-based events

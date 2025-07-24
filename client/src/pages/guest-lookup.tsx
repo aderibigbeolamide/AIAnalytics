@@ -205,7 +205,7 @@ export default function GuestLookup() {
                       {eventStatus === 'upcoming' && (
                         <CountdownTimer
                           event={event}
-                          registration={null}
+                          registration={undefined}
                           showEventDetails={false}
                           size="compact"
                         />
