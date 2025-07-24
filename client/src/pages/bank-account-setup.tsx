@@ -115,19 +115,23 @@ export default function BankAccountSetup() {
     const subscription = form.watch((value, { name }) => {
       const accountNumber = value.accountNumber;
 
+      console.log("Form watch triggered:", { accountNumber, name, isVerifying });
+
       if (accountNumber && accountNumber.length === 10 && !isVerifying) {
-        // Only trigger verification when account number changes and is exactly 10 digits
-        if (name === "accountNumber") {
-          setVerifiedAccount(null);
-          setIsVerifying(true);
-          
-          autoResolveAccountMutation.mutate(
-            { accountNumber },
-            {
-              onSettled: () => setIsVerifying(false),
-            }
-          );
-        }
+        // Trigger verification when account number is exactly 10 digits
+        console.log("Triggering auto-resolve for:", accountNumber);
+        setVerifiedAccount(null);
+        setIsVerifying(true);
+        
+        autoResolveAccountMutation.mutate(
+          { accountNumber },
+          {
+            onSettled: () => {
+              console.log("Auto-resolve completed");
+              setIsVerifying(false);
+            },
+          }
+        );
       } else if (accountNumber && accountNumber.length < 10) {
         // Clear verification if account number becomes invalid
         setVerifiedAccount(null);
@@ -239,7 +243,7 @@ export default function BankAccountSetup() {
                         <FormControl>
                           <Input
                             {...field}
-                            placeholder="Enter your 10-digit account number"
+                            placeholder="Enter your 10-digit account number (e.g., 0123456789)"
                             maxLength={10}
                             type="tel"
                           />
@@ -293,9 +297,10 @@ export default function BankAccountSetup() {
                         </FormControl>
                         <FormMessage />
                         {!verifiedAccount && (
-                          <p className="text-xs text-gray-500">
-                            Enter your account number above to auto-detect your bank
-                          </p>
+                          <div className="text-xs text-gray-500">
+                            <p>Enter your account number above to auto-detect your bank</p>
+                            <p className="mt-1 text-blue-600">Try: 0123456789 for testing</p>
+                          </div>
                         )}
                       </FormItem>
                     )}
