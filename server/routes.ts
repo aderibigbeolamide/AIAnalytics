@@ -3228,6 +3228,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auto-detect bank from account number
+  app.post("/api/banks/auto-detect", async (req: Request, res: Response) => {
+    try {
+      const { accountNumber } = req.body;
+
+      if (!accountNumber || accountNumber.length !== 10) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Valid 10-digit account number is required" 
+        });
+      }
+
+      console.log(`Auto-detecting bank for account ${accountNumber}`);
+      
+      // Get all banks first
+      const banksData = await getNigerianBanks();
+      if (!banksData.status) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to fetch banks list"
+        });
+      }
+
+      // Try to verify with each bank until we find a match
+      for (const bank of banksData.data) {
+        try {
+          console.log(`Trying bank: ${bank.name} (${bank.code})`);
+          const verificationData = await verifyBankAccount(accountNumber, bank.code);
+          
+          if (verificationData.status) {
+            console.log(`Found match with ${bank.name}: ${verificationData.data.account_name}`);
+            return res.json({
+              success: true,
+              accountName: verificationData.data.account_name,
+              accountNumber: verificationData.data.account_number,
+              bankName: bank.name,
+              bankCode: bank.code
+            });
+          }
+        } catch (error) {
+          // Continue to next bank if this one fails
+          console.log(`Failed to verify with ${bank.name}:`, error);
+          continue;
+        }
+      }
+
+      // If no bank matched
+      res.status(404).json({
+        success: false,
+        message: "Could not find a matching bank for this account number. Please select your bank manually."
+      });
+      
+    } catch (error) {
+      console.error("Auto-detect bank error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to auto-detect bank" 
+      });
+    }
+  });
+
   // Smart bank verification - only checks once bank is selected
   app.post("/api/banks/smart-verify", async (req: Request, res: Response) => {
     try {

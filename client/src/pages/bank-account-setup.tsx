@@ -61,7 +61,31 @@ export default function BankAccountSetup() {
     queryFn: () => apiRequest("GET", "/api/users/bank-account"),
   });
 
-  // Smart bank verification mutation
+  // Auto-detect bank mutation
+  const autoDetectBankMutation = useMutation({
+    mutationFn: (data: { accountNumber: string }) =>
+      apiRequest("POST", "/api/banks/auto-detect", data),
+    onSuccess: (data: any) => {
+      setVerifiedAccount({
+        accountName: data.accountName,
+        accountNumber: data.accountNumber,
+        bankName: data.bankName,
+        bankCode: data.bankCode,
+      });
+      // Auto-fill the bank field
+      form.setValue("bankCode", data.bankCode);
+      toast({
+        title: "Bank Auto-Detected",
+        description: `${data.bankName} - ${data.accountName}`,
+      });
+    },
+    onError: (error: any) => {
+      console.log("Auto-detection failed, allowing manual bank selection");
+      setVerifiedAccount(null);
+    },
+  });
+
+  // Smart bank verification mutation (for manual bank selection)
   const smartVerifyAccountMutation = useMutation({
     mutationFn: (data: { accountNumber: string; bankCode: string }) =>
       apiRequest("POST", "/api/banks/smart-verify", data),
@@ -111,20 +135,19 @@ export default function BankAccountSetup() {
   const watchedAccountNumber = form.watch("accountNumber");
   const watchedBankCode = form.watch("bankCode");
   
-  // Smart verification when both account number and bank are selected
+  // Auto-detect bank when account number is complete
   useEffect(() => {
     console.log("Form fields changed:", { accountNumber: watchedAccountNumber, bankCode: watchedBankCode, isVerifying });
     
-    if (watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !isVerifying) {
-      console.log("Triggering smart verification");
-      setVerifiedAccount(null);
+    if (watchedAccountNumber && watchedAccountNumber.length === 10 && !isVerifying && !verifiedAccount) {
+      console.log("Triggering auto-detection for account:", watchedAccountNumber);
       setIsVerifying(true);
       
-      smartVerifyAccountMutation.mutate(
-        { accountNumber: watchedAccountNumber, bankCode: watchedBankCode },
+      autoDetectBankMutation.mutate(
+        { accountNumber: watchedAccountNumber },
         {
           onSettled: () => {
-            console.log("Smart verification completed");
+            console.log("Auto-detection completed");
             setIsVerifying(false);
           },
         }
@@ -132,8 +155,27 @@ export default function BankAccountSetup() {
     } else if (watchedAccountNumber && watchedAccountNumber.length < 10) {
       // Clear verification if account number becomes invalid
       setVerifiedAccount(null);
+      form.setValue("bankCode", "");
     }
-  }, [watchedAccountNumber, watchedBankCode, isVerifying, smartVerifyAccountMutation]);
+  }, [watchedAccountNumber, isVerifying, autoDetectBankMutation, verifiedAccount, form]);
+
+  // Verify with manually selected bank if auto-detection failed
+  useEffect(() => {
+    if (watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying) {
+      console.log("Manual bank selected, verifying...");
+      setIsVerifying(true);
+      
+      smartVerifyAccountMutation.mutate(
+        { accountNumber: watchedAccountNumber, bankCode: watchedBankCode },
+        {
+          onSettled: () => {
+            console.log("Manual verification completed");
+            setIsVerifying(false);
+          },
+        }
+      );
+    }
+  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, smartVerifyAccountMutation]);
 
   const onSubmit = (data: BankAccountFormData) => {
     if (!verifiedAccount && data.accountNumber && data.bankCode) {
@@ -261,7 +303,7 @@ export default function BankAccountSetup() {
                         {isVerifying && (
                           <p className="text-sm text-blue-600 flex items-center gap-2">
                             <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-                            Verifying account with selected bank...
+                            Auto-detecting your bank and verifying account...
                           </p>
                         )}
                         {verifiedAccount && (
@@ -305,14 +347,14 @@ export default function BankAccountSetup() {
                           </Select>
                         </FormControl>
                         <FormMessage />
-                        {!verifiedAccount && watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && (
+                        {!verifiedAccount && watchedAccountNumber && watchedAccountNumber.length === 10 && !isVerifying && (
                           <div className="text-xs">
-                            <p className="text-amber-600">⚠️ Automatic verification failed. You can still proceed - your account will be verified during the first payment.</p>
+                            <p className="text-amber-600">⚠️ Auto-detection failed. Please select your bank manually below for verification.</p>
                           </div>
                         )}
-                        {!verifiedAccount && (!watchedAccountNumber || watchedAccountNumber.length < 10 || !watchedBankCode) && (
+                        {!verifiedAccount && (!watchedAccountNumber || watchedAccountNumber.length < 10) && (
                           <div className="text-xs text-gray-500">
-                            <p>Enter account number first, then select your bank for automatic verification</p>
+                            <p>Enter your 10-digit account number - we'll automatically detect your bank</p>
                             <p className="mt-1 text-amber-600">💡 Make sure to use a real bank account number for verification</p>
                           </div>
                         )}
