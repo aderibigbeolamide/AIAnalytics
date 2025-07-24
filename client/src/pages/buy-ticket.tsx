@@ -42,9 +42,16 @@ export default function BuyTicket() {
     },
   });
 
-  // Fetch event details
+  // Fetch event details from public endpoint to ensure eventType is included
   const { data: event, isLoading } = useQuery<any>({
-    queryKey: ["/api/events", eventId],
+    queryKey: ["/api/events", eventId, "public"],
+    queryFn: async () => {
+      const response = await fetch(`/api/events/${eventId}/public`);
+      if (!response.ok) {
+        throw new Error("Event not found");
+      }
+      return response.json();
+    },
     enabled: !!eventId,
   });
 
