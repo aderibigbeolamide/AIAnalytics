@@ -14,7 +14,10 @@ import {
   memberValidationCsv,
   faceRecognitionPhotos,
   tickets,
-  ticketTransfers
+  ticketTransfers,
+  eventCapacity,
+  userPreferences,
+  eventRecommendations
 } from "@shared/schema";
 import { eq, and, isNull, desc, or, ilike, gte, lte, sql } from "drizzle-orm";
 import { 
@@ -55,7 +58,10 @@ import {
   insertMemberValidationCsvSchema,
   insertFaceRecognitionPhotoSchema,
   insertTicketSchema,
-  insertTicketTransferSchema
+  insertTicketTransferSchema,
+  insertEventCapacitySchema,
+  insertUserPreferencesSchema,
+  insertEventRecommendationSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -3505,6 +3511,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: "Failed to fetch bank account details" 
       });
+    }
+  });
+
+  // Real-time Seat Availability Heatmap Endpoints
+  app.get("/api/events/:id/seat-availability", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      
+      // Get existing seat availability data
+      let seatData = await storage.getEventCapacity(eventId);
+      
+      if (!seatData) {
+        // Create sample seat map for demonstration
+        const sampleSeatMap = {
+          sections: [
+            {
+              id: "section-a",
+              name: "Section A (VIP)",
+              seats: Array.from({ length: 50 }, (_, i) => ({
+                id: `a-${i + 1}`,
+                row: String.fromCharCode(65 + Math.floor(i / 10)),
+                number: String((i % 10) + 1),
+                status: Math.random() > 0.7 ? 'occupied' : Math.random() > 0.5 ? 'reserved' : 'available' as 'available' | 'reserved' | 'occupied' | 'blocked',
+                price: 5000,
+                category: 'VIP'
+              }))
+            },
+            {
+              id: "section-b", 
+              name: "Section B (Regular)",
+              seats: Array.from({ length: 100 }, (_, i) => ({
+                id: `b-${i + 1}`,
+                row: String.fromCharCode(65 + Math.floor(i / 20)),
+                number: String((i % 20) + 1),
+                status: Math.random() > 0.6 ? 'occupied' : Math.random() > 0.4 ? 'reserved' : 'available' as 'available' | 'reserved' | 'occupied' | 'blocked',
+                price: 2000,
+                category: 'Regular'
+              }))
+            }
+          ]
+        };
+
+        const totalSeats = sampleSeatMap.sections.reduce((total, section) => total + section.seats.length, 0);
+        const availableSeats = sampleSeatMap.sections.reduce((total, section) => 
+          total + section.seats.filter(seat => seat.status === 'available').length, 0
+        );
+
+        seatData = await storage.createEventCapacity({
+          eventId,
+          totalSeats,
+          availableSeats,
+          seatMap: sampleSeatMap
+        });
+      }
+
+      res.json(seatData);
+    } catch (error) {
+      console.error("Seat availability error:", error);
+      res.status(500).json({ message: "Failed to fetch seat availability" });
+    }
+  });
+
+  app.post("/api/events/:id/seat-availability", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      const { totalSeats, seatMap } = req.body;
+
+      const availableSeats = seatMap.sections.reduce((total: number, section: any) => 
+        total + section.seats.filter((seat: any) => seat.status === 'available').length, 0
+      );
+
+      const seatData = await storage.updateEventCapacity(eventId, {
+        totalSeats,
+        availableSeats,
+        seatMap
+      });
+
+      res.json(seatData);
+    } catch (error) {
+      console.error("Update seat availability error:", error);
+      res.status(500).json({ message: "Failed to update seat availability" });
+    }
+  });
+
+  // User Preferences Endpoints
+  app.get("/api/users/preferences", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const preferences = await storage.getUserPreferences(userId);
+      
+      res.json(preferences || {
+        preferences: {
+          auxiliaryBodies: [],
+          eventTypes: [],
+          locations: [],
+          timePreferences: [],
+          interests: [],
+          priceRange: { min: 0, max: 10000 },
+          notificationSettings: { email: true, sms: false, push: true }
+        }
+      });
+    } catch (error) {
+      console.error("Get preferences error:", error);
+      res.status(500).json({ message: "Failed to fetch preferences" });
+    }
+  });
+
+  app.post("/api/users/preferences", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { preferences } = req.body;
+
+      const updatedPreferences = await storage.updateUserPreferences(userId, { preferences });
+      
+      // Trigger recommendation regeneration
+      await storage.generateRecommendations(userId);
+
+      res.json(updatedPreferences);
+    } catch (error) {
+      console.error("Update preferences error:", error);
+      res.status(500).json({ message: "Failed to update preferences" });
+    }
+  });
+
+  // Event Recommendations Endpoints
+  app.get("/api/recommendations", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const limit = parseInt(req.query.limit as string) || 5;
+      
+      let recommendations = await storage.getEventRecommendations(userId, limit);
+      
+      // If no recommendations exist, generate them
+      if (recommendations.length === 0) {
+        await storage.generateRecommendations(userId);
+        recommendations = await storage.getEventRecommendations(userId, limit);
+      }
+
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Get recommendations error:", error);
+      res.status(500).json({ message: "Failed to fetch recommendations" });
+    }
+  });
+
+  app.patch("/api/recommendations/:id", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const recommendationId = parseInt(req.params.id);
+      const { status } = req.body;
+
+      const recommendation = await storage.updateEventRecommendation(recommendationId, { status });
+      
+      res.json(recommendation);
+    } catch (error) {
+      console.error("Update recommendation error:", error);
+      res.status(500).json({ message: "Failed to update recommendation" });
+    }
+  });
+
+  app.post("/api/recommendations/generate", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      const recommendations = await storage.generateRecommendations(userId);
+      
+      res.json({
+        message: "Recommendations generated successfully",
+        count: recommendations.length,
+        recommendations
+      });
+    } catch (error) {
+      console.error("Generate recommendations error:", error);
+      res.status(500).json({ message: "Failed to generate recommendations" });
     }
   });
 

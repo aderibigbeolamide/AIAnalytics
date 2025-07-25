@@ -234,6 +234,66 @@ export const faceRecognitionPhotos = pgTable("face_recognition_photos", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Real-time seat availability and event recommendation tables
+export const eventCapacity = pgTable("event_capacity", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  totalSeats: integer("total_seats").notNull(),
+  availableSeats: integer("available_seats").notNull(),
+  seatMap: jsonb("seat_map").$type<{
+    sections: Array<{
+      id: string;
+      name: string;
+      seats: Array<{
+        id: string;
+        row: string;
+        number: string;
+        status: 'available' | 'reserved' | 'occupied' | 'blocked';
+        price?: number;
+        category?: string;
+      }>;
+    }>;
+  }>(),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+});
+
+export const userPreferences = pgTable("user_preferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  preferences: jsonb("preferences").$type<{
+    auxiliaryBodies: string[];
+    eventTypes: string[];
+    locations: string[];
+    timePreferences: string[];
+    interests: string[];
+    priceRange: { min: number; max: number };
+    notificationSettings: {
+      email: boolean;
+      sms: boolean;
+      push: boolean;
+    };
+  }>().default({
+    auxiliaryBodies: [],
+    eventTypes: [],
+    locations: [],
+    timePreferences: [],
+    interests: [],
+    priceRange: { min: 0, max: 10000 },
+    notificationSettings: { email: true, sms: false, push: true }
+  }),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const eventRecommendations = pgTable("event_recommendations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  score: integer("score").notNull(), // 0-100 recommendation score
+  reasons: jsonb("reasons").$type<string[]>().default([]),
+  status: text("status").default("pending"), // pending, viewed, registered, ignored
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // New Ticket System Tables
 export const tickets = pgTable("tickets", {
   id: serial("id").primaryKey(),
@@ -468,3 +528,30 @@ export type Ticket = typeof tickets.$inferSelect;
 
 export type InsertTicketTransfer = z.infer<typeof insertTicketTransferSchema>;
 export type TicketTransfer = typeof ticketTransfers.$inferSelect;
+
+// Event Capacity schemas and types
+export const insertEventCapacitySchema = createInsertSchema(eventCapacity).omit({
+  id: true,
+  lastUpdated: true,
+});
+
+export type InsertEventCapacity = z.infer<typeof insertEventCapacitySchema>;
+export type EventCapacity = typeof eventCapacity.$inferSelect;
+
+// User Preferences schemas and types
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type UserPreferences = typeof userPreferences.$inferSelect;
+
+// Event Recommendations schemas and types
+export const insertEventRecommendationSchema = createInsertSchema(eventRecommendations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEventRecommendation = z.infer<typeof insertEventRecommendationSchema>;
+export type EventRecommendation = typeof eventRecommendations.$inferSelect;

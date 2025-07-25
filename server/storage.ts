@@ -1,11 +1,14 @@
 import { 
   users, members, events, eventRegistrations, attendance, eventReports, invitations, 
   memberValidationCsv, faceRecognitionPhotos, tickets, ticketTransfers,
+  eventCapacity, userPreferences, eventRecommendations,
   type User, type InsertUser, type Member, type InsertMember,
   type Event, type InsertEvent, type EventRegistration, type InsertEventRegistration,
   type Attendance, type InsertAttendance, type Invitation, type InsertInvitation,
   type EventReport, type InsertEventReport, type MemberValidationCsv, type InsertMemberValidationCsv,
-  type FaceRecognitionPhoto, type InsertFaceRecognitionPhoto, type Ticket, type TicketTransfer
+  type FaceRecognitionPhoto, type InsertFaceRecognitionPhoto, type Ticket, type TicketTransfer,
+  type EventCapacity, type InsertEventCapacity, type UserPreferences, type InsertUserPreferences,
+  type EventRecommendation, type InsertEventRecommendation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull, desc, or, ilike, gte, lte, sql } from "drizzle-orm";
@@ -77,6 +80,21 @@ export interface IStorage {
   getFaceRecognitionPhotos(eventId?: number): Promise<FaceRecognitionPhoto[]>;
   createFaceRecognitionPhoto(photo: InsertFaceRecognitionPhoto): Promise<FaceRecognitionPhoto>;
   deleteFaceRecognitionPhoto(id: number): Promise<boolean>;
+
+  // Event Capacity (Seat Heatmap)
+  getEventCapacity(eventId: number): Promise<EventCapacity | undefined>;
+  createEventCapacity(capacity: InsertEventCapacity): Promise<EventCapacity>;
+  updateEventCapacity(eventId: number, updates: Partial<InsertEventCapacity>): Promise<EventCapacity | undefined>;
+
+  // User Preferences
+  getUserPreferences(userId: number): Promise<UserPreferences | undefined>;
+  updateUserPreferences(userId: number, preferences: InsertUserPreferences): Promise<UserPreferences>;
+
+  // Event Recommendations
+  getEventRecommendations(userId: number, limit?: number): Promise<EventRecommendation[]>;
+  createEventRecommendation(recommendation: InsertEventRecommendation): Promise<EventRecommendation>;
+  updateEventRecommendation(id: number, updates: Partial<InsertEventRecommendation>): Promise<EventRecommendation | undefined>;
+  generateRecommendations(userId: number): Promise<EventRecommendation[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -822,7 +840,7 @@ export class DatabaseStorage implements IStorage {
     const totalScans = await db.select({ count: sql<number>`count(*)` }).from(attendance);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const scansToday = await db.select({ count: sql<number>`count(*)` }).from(attendance).where(gte(attendance.createdAt, today));
+    const scansToday = await db.select({ count: sql<number>`count(*)` }).from(attendance).where(gte(attendance.scannedAt, today));
     
     return {
       totalScans: totalScans[0]?.count || 0,
@@ -938,6 +956,213 @@ export class DatabaseStorage implements IStorage {
       .where(eq(faceRecognitionPhotos.id, id))
       .returning();
     return result.length > 0;
+  }
+
+  // Event Capacity (Seat Heatmap)
+  async getEventCapacity(eventId: number): Promise<EventCapacity | undefined> {
+    const [capacity] = await db.select().from(eventCapacity).where(eq(eventCapacity.eventId, eventId));
+    return capacity || undefined;
+  }
+
+  async createEventCapacity(insertCapacity: InsertEventCapacity): Promise<EventCapacity> {
+    const [capacity] = await db
+      .insert(eventCapacity)
+      .values(insertCapacity)
+      .returning();
+    return capacity;
+  }
+
+  async updateEventCapacity(eventId: number, updates: Partial<InsertEventCapacity>): Promise<EventCapacity | undefined> {
+    const [capacity] = await db
+      .update(eventCapacity)
+      .set({ ...updates, lastUpdated: new Date() })
+      .where(eq(eventCapacity.eventId, eventId))
+      .returning();
+    return capacity || undefined;
+  }
+
+  // User Preferences
+  async getUserPreferences(userId: number): Promise<UserPreferences | undefined> {
+    const [preferences] = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId));
+    return preferences || undefined;
+  }
+
+  async updateUserPreferences(userId: number, insertPreferences: InsertUserPreferences): Promise<UserPreferences> {
+    // First try to update existing preferences
+    const existing = await this.getUserPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userPreferences)
+        .set({ ...insertPreferences, updatedAt: new Date() })
+        .where(eq(userPreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      // Create new preferences
+      const [created] = await db
+        .insert(userPreferences)
+        .values({ ...insertPreferences, userId })
+        .returning();
+      return created;
+    }
+  }
+
+  // Event Recommendations
+  async getEventRecommendations(userId: number, limit = 10): Promise<EventRecommendation[]> {
+    const recommendations = await db
+      .select()
+      .from(eventRecommendations)
+      .where(and(
+        eq(eventRecommendations.userId, userId),
+        or(
+          eq(eventRecommendations.status, 'pending'),
+          eq(eventRecommendations.status, 'viewed')
+        )
+      ))
+      .orderBy(desc(eventRecommendations.score), desc(eventRecommendations.createdAt))
+      .limit(limit);
+    
+    // Join with events to get event details
+    const enrichedRecommendations = await Promise.all(
+      recommendations.map(async (rec) => {
+        const [event] = await db.select().from(events).where(eq(events.id, rec.eventId));
+        return {
+          ...rec,
+          event
+        };
+      })
+    );
+    
+    return enrichedRecommendations.filter(rec => rec.event);
+  }
+
+  async createEventRecommendation(insertRecommendation: InsertEventRecommendation): Promise<EventRecommendation> {
+    const [recommendation] = await db
+      .insert(eventRecommendations)
+      .values(insertRecommendation)
+      .returning();
+    return recommendation;
+  }
+
+  async updateEventRecommendation(id: number, updates: Partial<InsertEventRecommendation>): Promise<EventRecommendation | undefined> {
+    const [recommendation] = await db
+      .update(eventRecommendations)
+      .set(updates)
+      .where(eq(eventRecommendations.id, id))
+      .returning();
+    return recommendation || undefined;
+  }
+
+  async generateRecommendations(userId: number): Promise<EventRecommendation[]> {
+    // Get user preferences
+    const userPref = await this.getUserPreferences(userId);
+    
+    // Get user's past registrations to understand behavior
+    const userRegistrations = await db
+      .select()
+      .from(eventRegistrations)
+      .where(eq(eventRegistrations.userId, userId))
+      .limit(10);
+
+    // Get upcoming events
+    const upcomingEvents = await db
+      .select()
+      .from(events)
+      .where(and(
+        gte(events.startDate, new Date()),
+        eq(events.status, 'upcoming')
+      ))
+      .orderBy(events.startDate)
+      .limit(20);
+
+    const recommendations: InsertEventRecommendation[] = [];
+
+    for (const event of upcomingEvents) {
+      let score = 0;
+      const reasons: string[] = [];
+
+      // Score based on user preferences
+      if (userPref?.preferences) {
+        const prefs = userPref.preferences;
+        
+        // Auxiliary body match
+        if (prefs.auxiliaryBodies.some(ab => event.eligibleAuxiliaryBodies.includes(ab))) {
+          score += 30;
+          reasons.push('Matches your auxiliary body preference');
+        }
+
+        // Location preference
+        if (prefs.locations.some(loc => event.location.toLowerCase().includes(loc.toLowerCase()))) {
+          score += 20;
+          reasons.push('In your preferred location');
+        }
+
+        // Price range preference
+        if (event.paymentSettings?.requiresPayment && event.paymentSettings.amount) {
+          const eventPrice = parseFloat(event.paymentSettings.amount);
+          if (eventPrice >= prefs.priceRange.min && eventPrice <= prefs.priceRange.max) {
+            score += 15;
+            reasons.push('Within your price range');
+          }
+        } else if (!event.paymentSettings?.requiresPayment) {
+          score += 10;
+          reasons.push('Free event');
+        }
+
+        // Interest match (simple keyword matching)
+        if (prefs.interests.some(interest => 
+          event.name.toLowerCase().includes(interest.toLowerCase()) ||
+          event.description?.toLowerCase().includes(interest.toLowerCase())
+        )) {
+          score += 25;
+          reasons.push('Matches your interests');
+        }
+      }
+
+      // Score based on past behavior
+      const similarEvents = userRegistrations.filter(reg => {
+        // Simple similarity check - same auxiliary body or location keywords
+        return event.eligibleAuxiliaryBodies.some(ab => 
+          reg.customFieldData && 
+          Object.values(reg.customFieldData).some(val => 
+            typeof val === 'string' && val.includes(ab)
+          )
+        );
+      });
+
+      if (similarEvents.length > 0) {
+        score += 10 * Math.min(similarEvents.length, 3);
+        reasons.push('Similar to events you\'ve attended');
+      }
+
+      // Recency bonus - events happening soon get slight boost
+      const daysUntilEvent = Math.ceil(
+        (new Date(event.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysUntilEvent <= 7) {
+        score += 5;
+        reasons.push('Happening soon');
+      }
+
+      // Only recommend events with a decent score
+      if (score >= 20) {
+        recommendations.push({
+          userId,
+          eventId: event.id,
+          score: Math.min(score, 100), // Cap at 100
+          reasons,
+          status: 'pending'
+        });
+      }
+    }
+
+    // Create recommendations in database
+    const createdRecommendations = await Promise.all(
+      recommendations.map(rec => this.createEventRecommendation(rec))
+    );
+
+    return createdRecommendations;
   }
 }
 

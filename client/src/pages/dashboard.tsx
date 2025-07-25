@@ -37,6 +37,8 @@ import {
 import { EnhancedCard } from "@/components/ui/enhanced-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { LoadingCard } from "@/components/ui/loading-spinner";
+import SeatHeatmap from "@/components/seat-heatmap";
+import EventRecommendations from "@/components/event-recommendations";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -388,6 +390,30 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+
+        {/* AI-Powered Features Section */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <Bot className="h-6 w-6 text-purple-600" />
+            AI-Powered Features
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Event Recommendations */}
+            <div>
+              <EventRecommendations limit={3} />
+            </div>
+            
+            {/* Seat Heatmap Demo */}
+            {events && events.length > 0 && (
+              <div>
+                <SeatHeatmap 
+                  eventId={events[0].id} 
+                  refreshInterval={10000}
+                />
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
