@@ -26,7 +26,7 @@ try {
 
   // Step 2: Build the client application
   console.log('📦 Building client application...');
-  execSync('npm run build:client', { stdio: 'inherit', cwd: rootDir });
+  execSync('vite build', { stdio: 'inherit', cwd: rootDir });
   
   // Step 3: Ensure server/public directory exists
   console.log('📁 Creating server/public directory...');
