@@ -3460,6 +3460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/bank-account", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
+      console.log("Fetching bank account for user ID:", userId);
       
       const [user] = await db.select({
         paystackSubaccountCode: users.paystackSubaccountCode,
@@ -3474,6 +3475,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isVerified: users.isVerified
       }).from(users).where(eq(users.id, userId));
 
+      console.log("Found user data:", user);
+
       if (!user) {
         return res.status(404).json({ 
           success: false,
@@ -3485,8 +3488,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         bankAccount: user
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Get bank account error:", error);
+      console.error("Error stack:", error?.stack);
+      console.error("Error message:", error?.message);
       res.status(500).json({ 
         success: false,
         message: "Failed to fetch bank account details" 
