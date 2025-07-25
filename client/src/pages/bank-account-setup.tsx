@@ -162,10 +162,50 @@ export default function BankAccountSetup() {
   const bankStats = (banksResponse as any)?.statistics || { total: 0, commercial: 0, microfinance: 0 };
   const hasExistingAccount = (existingAccount as any)?.bankAccount?.paystackSubaccountCode;
 
-  // Filter banks based on search term
-  const filteredBanks = banks.filter((bank: Bank) =>
-    bank.name.toLowerCase().includes(bankSearchTerm.toLowerCase())
-  );
+  // Enhanced bank search with common name mappings
+  const filteredBanks = banks.filter((bank: Bank) => {
+    const searchTerm = bankSearchTerm.toLowerCase();
+    const bankName = bank.name.toLowerCase();
+    
+    // Direct name match
+    if (bankName.includes(searchTerm)) {
+      return true;
+    }
+    
+    // Common bank name mappings for easier search
+    const bankMappings: { [key: string]: string[] } = {
+      'wema': ['alat by wema', 'wema bank'],
+      'gtbank': ['guaranty trust bank', 'gtb'],
+      'uba': ['united bank for africa'],
+      'fcmb': ['first city monument bank'],
+      'zenith': ['zenith bank'],
+      'access': ['access bank'],
+      'fidelity': ['fidelity bank'],
+      'union': ['union bank'],
+      'sterling': ['sterling bank'],
+      'polaris': ['polaris bank'],
+      'keystone': ['keystone bank'],
+      'providus': ['providus bank'],
+      'kuda': ['kuda microfinance bank'],
+      'opay': ['opay digital services limited'],
+      'palmpay': ['palmpay limited'],
+      'carbon': ['carbon microfinance bank'],
+      'mint': ['mint microfinance bank'],
+      'moniepoint': ['moniepoint microfinance bank'],
+      'rubies': ['rubies microfinance bank'],
+      'sparkle': ['sparkle microfinance bank'],
+      'eyowo': ['eyowo microfinance bank']
+    };
+    
+    // Check if search term matches any mapping
+    for (const [key, variations] of Object.entries(bankMappings)) {
+      if (searchTerm.includes(key)) {
+        return variations.some(variation => bankName.includes(variation));
+      }
+    }
+    
+    return false;
+  });
 
   // Categorize banks
   const commercialBanks = filteredBanks.filter((bank: Bank) => 
