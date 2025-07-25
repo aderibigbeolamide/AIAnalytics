@@ -255,6 +255,7 @@ export default function BankAccountSetup() {
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Step 1: Bank Selection FIRST */}
                   <FormField
                     control={form.control}
                     name="bankCode"
@@ -344,6 +345,7 @@ export default function BankAccountSetup() {
                     )}
                   />
 
+                  {/* Step 2: Account Number SECOND (after bank selection) */}
                   <FormField
                     control={form.control}
                     name="accountNumber"
