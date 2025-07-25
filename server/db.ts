@@ -5,6 +5,7 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
+// Use a fallback local database URL if external database is unavailable
 const defaultDatabaseUrl = "postgresql://postgres:postgres@localhost:5432/eventvalidate";
 const databaseUrl = process.env.DATABASE_URL || defaultDatabaseUrl;
 
