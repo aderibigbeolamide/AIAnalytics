@@ -1,10 +1,14 @@
 import { 
+  users, members, events, eventRegistrations, attendance, eventReports, invitations, 
+  memberValidationCsv, faceRecognitionPhotos, tickets, ticketTransfers,
   type User, type InsertUser, type Member, type InsertMember,
   type Event, type InsertEvent, type EventRegistration, type InsertEventRegistration,
   type Attendance, type InsertAttendance, type Invitation, type InsertInvitation,
   type EventReport, type InsertEventReport, type MemberValidationCsv, type InsertMemberValidationCsv,
-  type FaceRecognitionPhoto, type InsertFaceRecognitionPhoto
+  type FaceRecognitionPhoto, type InsertFaceRecognitionPhoto, type Ticket, type TicketTransfer
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, isNull, desc, or, ilike, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -602,4 +606,340 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  // Users
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  // Members
+  async getMember(id: number): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(and(eq(members.id, id), isNull(members.deletedAt)));
+    return member || undefined;
+  }
+
+  async getMemberByUserId(userId: number): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(and(eq(members.userId, userId), isNull(members.deletedAt)));
+    return member || undefined;
+  }
+
+  async getMemberByUsername(username: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(and(eq(members.username, username), isNull(members.deletedAt)));
+    return member || undefined;
+  }
+
+  async getMembers(filters?: { auxiliaryBody?: string; search?: string }): Promise<Member[]> {
+    let query = db.select().from(members).where(isNull(members.deletedAt));
+
+    if (filters?.auxiliaryBody) {
+      query = query.where(eq(members.auxiliaryBody, filters.auxiliaryBody));
+    }
+
+    if (filters?.search) {
+      const searchTerm = `%${filters.search.toLowerCase()}%`;
+      query = query.where(
+        or(
+          ilike(members.firstName, searchTerm),
+          ilike(members.lastName, searchTerm),
+          ilike(members.email, searchTerm),
+          ilike(members.username, searchTerm)
+        )
+      );
+    }
+
+    const memberList = await query.orderBy(desc(members.createdAt));
+    return memberList;
+  }
+
+  async createMember(insertMember: InsertMember): Promise<Member> {
+    const [member] = await db
+      .insert(members)
+      .values(insertMember)
+      .returning();
+    return member;
+  }
+
+  async updateMember(id: number, updates: Partial<InsertMember>): Promise<Member | undefined> {
+    const [member] = await db
+      .update(members)
+      .set(updates)
+      .where(and(eq(members.id, id), isNull(members.deletedAt)))
+      .returning();
+    return member || undefined;
+  }
+
+  async deleteMember(id: number): Promise<boolean> {
+    const result = await db
+      .update(members)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(members.id, id), isNull(members.deletedAt)))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Events
+  async getEvent(id: number): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(and(eq(events.id, id), isNull(events.deletedAt)));
+    return event || undefined;
+  }
+
+  async getEvents(filters?: { status?: string; createdBy?: number }): Promise<Event[]> {
+    let query = db.select().from(events).where(isNull(events.deletedAt));
+
+    if (filters?.createdBy) {
+      query = query.where(eq(events.createdBy, filters.createdBy));
+    }
+
+    if (filters?.status) {
+      query = query.where(eq(events.status, filters.status));
+    }
+
+    const eventList = await query.orderBy(desc(events.createdAt));
+    return eventList;
+  }
+
+  async createEvent(insertEvent: InsertEvent): Promise<Event> {
+    const [event] = await db
+      .insert(events)
+      .values(insertEvent)
+      .returning();
+    return event;
+  }
+
+  async updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event | undefined> {
+    const [event] = await db
+      .update(events)
+      .set(updates)
+      .where(and(eq(events.id, id), isNull(events.deletedAt)))
+      .returning();
+    return event || undefined;
+  }
+
+  async deleteEvent(id: number): Promise<boolean> {
+    const result = await db
+      .update(events)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(events.id, id), isNull(events.deletedAt)))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Event Registrations
+  async getEventRegistration(id: number): Promise<EventRegistration | undefined> {
+    const [registration] = await db.select().from(eventRegistrations).where(eq(eventRegistrations.id, id));
+    return registration || undefined;
+  }
+
+  async getEventRegistrationByQR(qrCode: string): Promise<EventRegistration | undefined> {
+    const [registration] = await db.select().from(eventRegistrations).where(eq(eventRegistrations.qrCode, qrCode));
+    return registration || undefined;
+  }
+
+  async getEventRegistrationByUniqueId(uniqueId: string): Promise<EventRegistration | undefined> {
+    const [registration] = await db.select().from(eventRegistrations).where(eq(eventRegistrations.uniqueId, uniqueId));
+    return registration || undefined;
+  }
+
+  async getEventRegistrations(eventId?: number, filters?: any): Promise<EventRegistration[]> {
+    let query = db.select().from(eventRegistrations);
+
+    if (eventId) {
+      query = query.where(eq(eventRegistrations.eventId, eventId));
+    }
+
+    if (filters?.auxiliaryBody) {
+      query = query.where(eq(eventRegistrations.auxiliaryBody, filters.auxiliaryBody));
+    }
+
+    if (filters?.status) {
+      query = query.where(eq(eventRegistrations.status, filters.status));
+    }
+
+    const registrations = await query.orderBy(desc(eventRegistrations.createdAt));
+    return registrations;
+  }
+
+  async getMemberRegistrations(memberId: number): Promise<EventRegistration[]> {
+    const registrations = await db.select().from(eventRegistrations).where(eq(eventRegistrations.memberId, memberId));
+    return registrations;
+  }
+
+  async createEventRegistration(insertRegistration: InsertEventRegistration): Promise<EventRegistration> {
+    const [registration] = await db
+      .insert(eventRegistrations)
+      .values(insertRegistration)
+      .returning();
+    return registration;
+  }
+
+  async updateEventRegistration(id: number, updates: Partial<InsertEventRegistration>): Promise<EventRegistration | undefined> {
+    const [registration] = await db
+      .update(eventRegistrations)
+      .set(updates)
+      .where(eq(eventRegistrations.id, id))
+      .returning();
+    return registration || undefined;
+  }
+
+  // Attendance
+  async getAttendance(eventId: number): Promise<Attendance[]> {
+    const attendanceList = await db.select().from(attendance).where(eq(attendance.eventId, eventId));
+    return attendanceList;
+  }
+
+  async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
+    const [attendanceRecord] = await db
+      .insert(attendance)
+      .values(insertAttendance)
+      .returning();
+    return attendanceRecord;
+  }
+
+  async getAttendanceStats(): Promise<{ totalScans: number; validationRate: number; scansToday: number }> {
+    const totalScans = await db.select({ count: sql<number>`count(*)` }).from(attendance);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const scansToday = await db.select({ count: sql<number>`count(*)` }).from(attendance).where(gte(attendance.createdAt, today));
+    
+    return {
+      totalScans: totalScans[0]?.count || 0,
+      validationRate: 100, // Placeholder calculation
+      scansToday: scansToday[0]?.count || 0
+    };
+  }
+
+  // Invitations
+  async getInvitation(id: number): Promise<Invitation | undefined> {
+    const [invitation] = await db.select().from(invitations).where(eq(invitations.id, id));
+    return invitation || undefined;
+  }
+
+  async getEventInvitations(eventId: number): Promise<Invitation[]> {
+    const invitationList = await db.select().from(invitations).where(eq(invitations.eventId, eventId));
+    return invitationList;
+  }
+
+  async createInvitation(insertInvitation: InsertInvitation): Promise<Invitation> {
+    const [invitation] = await db
+      .insert(invitations)
+      .values(insertInvitation)
+      .returning();
+    return invitation;
+  }
+
+  async updateInvitation(id: number, updates: Partial<InsertInvitation>): Promise<Invitation | undefined> {
+    const [invitation] = await db
+      .update(invitations)
+      .set(updates)
+      .where(eq(invitations.id, id))
+      .returning();
+    return invitation || undefined;
+  }
+
+  // Event Reports
+  async getEventReport(id: number): Promise<EventReport | undefined> {
+    const [report] = await db.select().from(eventReports).where(eq(eventReports.id, id));
+    return report || undefined;
+  }
+
+  async getEventReports(eventId: number): Promise<EventReport[]> {
+    const reports = await db.select().from(eventReports).where(eq(eventReports.eventId, eventId));
+    return reports;
+  }
+
+  async getAllEventReports(): Promise<EventReport[]> {
+    const reports = await db.select().from(eventReports).orderBy(desc(eventReports.createdAt));
+    return reports;
+  }
+
+  async createEventReport(insertReport: InsertEventReport): Promise<EventReport> {
+    const [report] = await db
+      .insert(eventReports)
+      .values(insertReport)
+      .returning();
+    return report;
+  }
+
+  async updateEventReport(id: number, updates: Partial<InsertEventReport>): Promise<EventReport | undefined> {
+    const [report] = await db
+      .update(eventReports)
+      .set(updates)
+      .where(eq(eventReports.id, id))
+      .returning();
+    return report || undefined;
+  }
+
+  // Member Validation CSV
+  async getMemberValidationCsv(eventId: number): Promise<MemberValidationCsv[]> {
+    const csvRecords = await db.select().from(memberValidationCsv).where(eq(memberValidationCsv.eventId, eventId));
+    return csvRecords;
+  }
+
+  async createMemberValidationCsv(insertCsv: InsertMemberValidationCsv): Promise<MemberValidationCsv> {
+    const [csv] = await db
+      .insert(memberValidationCsv)
+      .values(insertCsv)
+      .returning();
+    return csv;
+  }
+
+  async deleteMemberValidationCsv(id: number): Promise<boolean> {
+    const result = await db.delete(memberValidationCsv).where(eq(memberValidationCsv.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Face Recognition Photos
+  async getFaceRecognitionPhotos(eventId?: number): Promise<FaceRecognitionPhoto[]> {
+    let query = db.select().from(faceRecognitionPhotos).where(eq(faceRecognitionPhotos.isActive, true));
+
+    if (eventId) {
+      query = query.where(eq(faceRecognitionPhotos.eventId, eventId));
+    }
+
+    const photos = await query.orderBy(desc(faceRecognitionPhotos.createdAt));
+    return photos;
+  }
+
+  async createFaceRecognitionPhoto(insertPhoto: InsertFaceRecognitionPhoto): Promise<FaceRecognitionPhoto> {
+    const [photo] = await db
+      .insert(faceRecognitionPhotos)
+      .values(insertPhoto)
+      .returning();
+    return photo;
+  }
+
+  async deleteFaceRecognitionPhoto(id: number): Promise<boolean> {
+    const result = await db
+      .update(faceRecognitionPhotos)
+      .set({ isActive: false })
+      .where(eq(faceRecognitionPhotos.id, id))
+      .returning();
+    return result.length > 0;
+  }
+}
+
+// Switch to DatabaseStorage for PostgreSQL or MemStorage for in-memory fallback
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();

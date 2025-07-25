@@ -2,6 +2,21 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
+import { db, pool } from "./db";
+import { 
+  events,
+  eventRegistrations,
+  users,
+  members,
+  attendance,
+  eventReports,
+  invitations,
+  memberValidationCsv,
+  faceRecognitionPhotos,
+  tickets,
+  ticketTransfers
+} from "@shared/schema";
+import { eq, and, isNull, desc, or, ilike, gte, lte, sql } from "drizzle-orm";
 import { 
   hashPassword, 
   comparePassword, 
