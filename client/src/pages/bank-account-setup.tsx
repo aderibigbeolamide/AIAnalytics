@@ -64,50 +64,28 @@ export default function BankAccountSetup() {
     queryFn: () => apiRequest("GET", "/api/users/bank-account"),
   });
 
-  // Auto-detect bank mutation
-  const autoDetectBankMutation = useMutation({
-    mutationFn: (data: { accountNumber: string }) =>
-      apiRequest("POST", "/api/banks/auto-detect", data),
-    onSuccess: (data: any) => {
-      setVerifiedAccount({
-        accountName: data.accountName,
-        accountNumber: data.accountNumber,
-        bankName: data.bankName,
-        bankCode: data.bankCode,
-      });
-      // Auto-fill the bank field
-      form.setValue("bankCode", data.bankCode);
-      toast({
-        title: "Bank Auto-Detected",
-        description: `${data.bankName} - ${data.accountName}`,
-      });
-    },
-    onError: (error: any) => {
-      console.log("Auto-detection failed, allowing manual bank selection");
-      setVerifiedAccount(null);
-    },
-  });
-
-  // Smart bank verification mutation (for manual bank selection)
-  const smartVerifyAccountMutation = useMutation({
+  // Manual bank verification mutation
+  const verifyBankAccountMutation = useMutation({
     mutationFn: (data: { accountNumber: string; bankCode: string }) =>
-      apiRequest("POST", "/api/banks/smart-verify", data),
+      apiRequest("POST", "/api/banks/verify", data),
     onSuccess: (data: any) => {
+      const selectedBank = banks.find((b: Bank) => b.code === form.getValues("bankCode"));
       setVerifiedAccount({
         accountName: data.accountName,
         accountNumber: data.accountNumber,
-        bankName: data.bankName,
-        bankCode: data.bankCode,
+        bankName: selectedBank?.name || "Unknown Bank",
+        bankCode: form.getValues("bankCode"),
       });
       toast({
         title: "Account Verified",
-        description: `${data.bankName} - ${data.accountName}`,
+        description: `${selectedBank?.name} - ${data.accountName}`,
       });
     },
     onError: (error: any) => {
+      console.log("Bank verification failed:", error);
       toast({
         title: "Verification Failed",
-        description: error.message || "Could not verify this account number with the selected bank",
+        description: error.message || "Could not verify account details",
         variant: "destructive",
       });
       setVerifiedAccount(null);
@@ -138,58 +116,42 @@ export default function BankAccountSetup() {
   const watchedAccountNumber = form.watch("accountNumber");
   const watchedBankCode = form.watch("bankCode");
   
-  // Manual verification only - user selects bank first, then enters account number
+  // Clear verification when account number becomes invalid
   useEffect(() => {
     if (watchedAccountNumber && watchedAccountNumber.length < 10) {
-      // Clear verification if account number becomes invalid
       setVerifiedAccount(null);
     }
   }, [watchedAccountNumber]);
 
-  // Verify with manually selected bank when both bank and account number are provided
+  // Verify account when both bank and account number are provided
   useEffect(() => {
     if (watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying) {
-      console.log("Manual bank selected, verifying account...");
+      console.log("Verifying account with selected bank...");
       
       const timeoutId = setTimeout(() => {
         setIsVerifying(true);
-        smartVerifyAccountMutation.mutate(
+        verifyBankAccountMutation.mutate(
           { accountNumber: watchedAccountNumber, bankCode: watchedBankCode },
           {
             onSettled: () => {
-              console.log("Manual verification completed");
+              console.log("Bank verification completed");
               setIsVerifying(false);
             },
           }
         );
-      }, 800); // Brief delay to prevent rapid API calls
+      }, 1000); // 1 second delay to prevent rapid API calls
       
       return () => clearTimeout(timeoutId);
     }
-  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, smartVerifyAccountMutation]);
+  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, verifyBankAccountMutation]);
 
   const onSubmit = (data: BankAccountFormData) => {
-    if (!verifiedAccount && data.accountNumber && data.bankCode) {
-      // Try to verify one more time before submission
-      setIsVerifying(true);
-      smartVerifyAccountMutation.mutate(
-        { accountNumber: data.accountNumber, bankCode: data.bankCode },
-        {
-          onSuccess: () => {
-            // Verification succeeded, proceed with setup
-            setupAccountMutation.mutate(data);
-          },
-          onError: () => {
-            // Allow submission even without verification for manual verification
-            toast({
-              title: "Account Setup",
-              description: "Proceeding with manual verification. Account details will be verified during first payment.",
-            });
-            setupAccountMutation.mutate(data);
-          },
-          onSettled: () => setIsVerifying(false),
-        }
-      );
+    if (!verifiedAccount) {
+      toast({
+        title: "Account Verification Required",
+        description: "Please verify your account details before proceeding.",
+        variant: "destructive",
+      });
       return;
     }
     
