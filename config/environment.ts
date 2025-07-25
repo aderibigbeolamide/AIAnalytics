@@ -46,7 +46,9 @@ export const env = {
   APP_DOMAIN: process.env.APP_DOMAIN || (
     process.env.NODE_ENV === 'production' 
       ? `https://${process.env.REPL_SLUG || 'your-app'}.${process.env.REPL_OWNER || 'replit'}.repl.co`
-      : 'http://localhost:5000'
+      : process.env.REPL_ID 
+        ? 'http://localhost:5000'  // Replit environment
+        : 'http://localhost:3000'  // Local development
   ),
   
   // Email configuration

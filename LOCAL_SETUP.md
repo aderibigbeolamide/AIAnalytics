@@ -1,183 +1,178 @@
-# Local Development Setup Guide
+# Local Development Setup
 
-This guide will help you run the EventValidate AI-powered system on your local machine.
+This guide will help you set up EventValidate on your local machine.
 
-## Prerequisites
+## Quick Setup
 
-- Node.js 18+ installed
-- PostgreSQL database (local or cloud)
-- Git for version control
-
-## Quick Setup Steps
-
-### 1. Clone and Install Dependencies
+Run the automated setup script:
 
 ```bash
-# Navigate to your project directory
-cd /path/to/your/project
+node scripts/setup-local.js
+```
 
-# Install all dependencies
+This script will:
+1. Clean any existing build artifacts
+2. Build the client application
+3. Copy static files to the expected location
+4. Provide next steps for database setup
+
+## Manual Setup (Alternative)
+
+If you prefer to set up manually:
+
+### 1. Install Dependencies
+```bash
 npm install
 ```
 
-### 2. Environment Configuration
-
-Create a `.env` file in the root directory with your database configuration:
-
+### 2. Build Client Application
 ```bash
-# Database Configuration (Replace with your PostgreSQL URL)
-DATABASE_URL=postgresql://username:password@localhost:5432/eventvalidate
+# Build the frontend
+npm run build
 
-# JWT Security
-JWT_SECRET=your-very-secure-jwt-secret-key-here
+# OR specifically build just the client
+vite build
 
-# Application Environment
-NODE_ENV=development
-PORT=5000
-
-# Application Domain (for link generation)
-APP_DOMAIN=http://localhost:5000
-
-# Encryption Key (32 characters)
-ENCRYPTION_KEY=your-32-character-encryption-key-here
-
-# Optional: Email Configuration
-SMTP_HOST=smtp.your-email-provider.com
-SMTP_PORT=587
-SMTP_USER=your-email@domain.com
-SMTP_PASS=your-email-password
-
-# Optional: Paystack Configuration (for payment features)
-PAYSTACK_SECRET_KEY=your-paystack-secret-key
-PAYSTACK_PUBLIC_KEY=your-paystack-public-key
+# Create server public directory and copy files
+mkdir -p server/public
+cp -r dist/public/* server/public/
 ```
 
-### 3. Database Setup
+### 3. Environment Configuration
+
+Create a `.env` file in the project root:
+
+```bash
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/eventvalidate
+
+# Security Settings
+JWT_SECRET=your-secure-jwt-secret-key-here
+ENCRYPTION_KEY=your-32-character-encryption-key-here
+
+# Application Settings
+NODE_ENV=development
+PORT=3000
+APP_DOMAIN=http://localhost:3000
+
+# Optional: Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@domain.com
+SMTP_PASS=your-app-password
+
+# Optional: Payment Integration
+PAYSTACK_SECRET_KEY=sk_test_your_key
+PAYSTACK_PUBLIC_KEY=pk_test_your_key
+
+# Optional: Analytics
+GTM_ID=GTM-XXXXXXXX
+
+# File Upload Settings
+MAX_FILE_SIZE=10485760
+UPLOAD_DIR=uploads
+```
+
+### 4. Database Setup
 
 ```bash
 # Push database schema
 npm run db:push
 
-# Seed with default admin user
+# Create admin user
 npm run seed
-```
-
-### 4. Build Frontend
-
-**IMPORTANT**: You must build the frontend before running the server:
-
-```bash
-# Build the client-side application
-npm run build
-
-# Copy build files to expected server location
-cp -r dist/public server/
 ```
 
 ### 5. Start Development Server
 
 ```bash
-# Start the development server
 npm run dev
 ```
 
-The application will be available at: `http://localhost:5000`
+The application will be available at `http://localhost:3000` (or your configured PORT).
 
-## Default Login Credentials
+## Default Admin Credentials
 
 - **Username**: admin
 - **Password**: password123
 
-## Features Available
+## Project Structure
 
-✅ **Real-time Seat Availability Heatmap**
-- Visual event capacity representation
-- Color-coded seat sections (Available, Reserved, Occupied, Blocked)
-- Auto-refresh capabilities
-- Section-wise occupancy statistics
+```
+EventValidate/
+├── client/                 # React frontend
+│   ├── src/
+│   ├── public/
+│   └── index.html
+├── server/                 # Express backend
+│   ├── public/            # Built frontend files (created during build)
+│   ├── index.ts
+│   ├── routes.ts
+│   └── ...
+├── shared/                # Shared types and schemas
+│   └── schema.ts
+├── config/                # Environment configuration
+│   └── environment.ts
+├── scripts/               # Build and setup scripts
+│   └── setup-local.js
+└── dist/                  # Build output (created during build)
+    └── public/
+```
 
-✅ **AI-Powered Event Recommendations**
-- Personalized suggestions based on user preferences
-- Behavior analysis and match scoring
-- Interest-based filtering
-- Recommendation reasoning
+## Common Issues
 
-✅ **Complete Event Management System**
-- Event creation and management
-- Member registration and validation
-- QR code generation and scanning
-- Payment processing with Paystack
-- Analytics and reporting
+### "Could not find build directory" Error
 
-## Troubleshooting
+This happens when the client hasn't been built yet. Run:
 
-### Build Directory Error
+```bash
+node scripts/setup-local.js
+```
 
-If you see: `Could not find the build directory: /path/to/server/public`
+Or manually:
 
-**Solution**:
 ```bash
 npm run build
-cp -r dist/public server/
+mkdir -p server/public
+cp -r dist/public/* server/public/
 ```
 
 ### Database Connection Issues
 
-1. Ensure PostgreSQL is running
-2. Verify your DATABASE_URL in .env file
-3. Check database permissions
-4. Run `npm run db:push` to sync schema
+1. Make sure PostgreSQL is running locally
+2. Create the database: `createdb eventvalidate`
+3. Check your DATABASE_URL in `.env`
+4. Run: `npm run db:push`
 
 ### Port Already in Use
 
-If port 5000 is busy:
-```bash
-# Change PORT in .env file or kill existing process
-lsof -ti:5000 | xargs kill -9
-```
-
-## Development Commands
+If port 3000 is busy, change the PORT in your `.env` file:
 
 ```bash
-# Start development server
-npm run dev
-
-# Build production version
-npm run build
-
-# Push database schema changes
-npm run db:push
-
-# Open database studio
-npm run db:studio
-
-# Run database seed
-npm run seed
+PORT=3001
+APP_DOMAIN=http://localhost:3001
 ```
 
-## Project Structure
+### Environment Variables Not Loading
 
-```
-├── client/          # React frontend
-├── server/          # Express backend
-├── shared/          # Shared schema/types
-├── dist/           # Built frontend files
-└── server/public/  # Static files served by Express
-```
+Make sure your `.env` file is in the project root directory and contains all required variables. The application will show warnings for missing variables.
 
-## AI Features Demo
+## Development Workflow
 
-Once logged in as admin, navigate to the Dashboard to see:
+1. **Make changes** to client code in `client/src/`
+2. **Rebuild client** when needed: `npm run build` (or use the automated script)
+3. **Copy files**: The setup script handles this automatically
+4. **Restart server**: `npm run dev` will restart automatically
 
-1. **Event Recommendations Panel** - Shows personalized event suggestions
-2. **Seat Heatmap Visualization** - Real-time capacity tracking
-3. **Event Management** - Create events with AI-powered features
+## Deployment
 
-## Need Help?
+For deployment, the application automatically adapts to your deployment environment. See `DEPLOYMENT_GUIDE.md` for platform-specific instructions.
 
-1. Check this guide for common issues
-2. Verify environment configuration
-3. Ensure build step completed successfully
-4. Check console logs for specific errors
+## Environment Detection
 
-The system is now ready with AI-powered seat management and personalized recommendations!
+The application automatically detects:
+- **Local Development**: Uses your `.env` file
+- **Replit**: Uses Replit environment variables
+- **Production**: Uses platform environment variables
+
+No code changes needed between environments!
