@@ -3213,7 +3213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auto-detect bank from account number
+  // Auto-detect bank from account number (optimized with limits)
   app.post("/api/banks/auto-detect", async (req: Request, res: Response) => {
     try {
       const { accountNumber } = req.body;
@@ -3236,13 +3236,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Try to verify with each bank until we find a match
-      for (const bank of banksData.data) {
+      // Prioritize common banks for faster detection
+      const commonBanks = [
+        "044", // Access Bank
+        "058", // GTBank  
+        "070", // Fidelity
+        "011", // First Bank
+        "214", // FCMB
+        "076", // Polaris
+        "082", // Keystone
+        "221", // Stanbic IBTC
+        "232", // Sterling
+        "050", // Ecobank
+        "068", // Standard Chartered
+        "101", // Providus
+        "035", // Wema
+        "301", // Jaiz
+        "303", // Lotus
+        "050211", // Kuda
+      ];
+
+      const allBanks = banksData.data;
+      const prioritizedBanks = [
+        ...allBanks.filter((bank: any) => commonBanks.includes(bank.code)),
+        ...allBanks.filter((bank: any) => !commonBanks.includes(bank.code)).slice(0, 10) // Only try 10 more
+      ];
+
+      // Try to verify with prioritized banks (max 26 banks total)
+      for (let i = 0; i < Math.min(prioritizedBanks.length, 26); i++) {
+        const bank = prioritizedBanks[i];
         try {
-          console.log(`Trying bank: ${bank.name} (${bank.code})`);
-          const verificationData = await verifyBankAccount(accountNumber, bank.code);
+          console.log(`Trying bank ${i + 1}/26: ${bank.name} (${bank.code})`);
           
-          if (verificationData.status) {
+          // Add timeout for each verification request (5 seconds max)
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 5000)
+          );
+          
+          const verificationPromise = verifyBankAccount(accountNumber, bank.code);
+          const verificationData = await Promise.race([verificationPromise, timeoutPromise]);
+          
+          if (verificationData && verificationData.status) {
             console.log(`Found match with ${bank.name}: ${verificationData.data.account_name}`);
             return res.json({
               success: true,
@@ -3253,8 +3287,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         } catch (error) {
-          // Continue to next bank if this one fails
-          console.log(`Failed to verify with ${bank.name}:`, error);
+          // Continue to next bank if this one fails or times out
+          if (error.message === 'Timeout') {
+            console.log(`Timeout verifying with ${bank.name}`);
+          } else {
+            console.log(`Failed to verify with ${bank.name}:`, error.message);
+          }
           continue;
         }
       }
