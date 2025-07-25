@@ -1,14 +1,10 @@
 import { 
-  users, members, events, eventRegistrations, attendance, invitations, eventReports,
-  memberValidationCsv, faceRecognitionPhotos,
   type User, type InsertUser, type Member, type InsertMember,
   type Event, type InsertEvent, type EventRegistration, type InsertEventRegistration,
   type Attendance, type InsertAttendance, type Invitation, type InsertInvitation,
   type EventReport, type InsertEventReport, type MemberValidationCsv, type InsertMemberValidationCsv,
   type FaceRecognitionPhoto, type InsertFaceRecognitionPhoto
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, desc, sql, inArray, like, ilike, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -79,89 +75,143 @@ export interface IStorage {
   deleteFaceRecognitionPhoto(id: number): Promise<boolean>;
 }
 
-export class DatabaseStorage implements IStorage {
+export class MemStorage implements IStorage {
+  private users: Map<number, User> = new Map();
+  private members: Map<number, Member> = new Map();
+  private events: Map<number, Event> = new Map();
+  private eventRegistrations: Map<number, EventRegistration> = new Map();
+  private attendance: Map<number, Attendance> = new Map();
+  private invitations: Map<number, Invitation> = new Map();
+  private eventReports: Map<number, EventReport> = new Map();
+  private memberValidationCsv: Map<number, MemberValidationCsv> = new Map();
+  private faceRecognitionPhotos: Map<number, FaceRecognitionPhoto> = new Map();
+  
+  private nextUserId = 1;
+  private nextMemberId = 1;
+  private nextEventId = 1;
+  private nextEventRegistrationId = 1;
+  private nextAttendanceId = 1;
+  private nextInvitationId = 1;
+  private nextEventReportId = 1;
+  private nextMemberValidationCsvId = 1;
+  private nextFaceRecognitionPhotoId = 1;
+
   // Users
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return this.users.get(id);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    for (const user of this.users.values()) {
+      if (user.username === username) {
+        return user;
+      }
+    }
+    return undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const user: User = {
+      id: this.nextUserId++,
+      createdAt: new Date(),
+      ...insertUser
+    } as User;
+    this.users.set(user.id, user);
     return user;
   }
 
   async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
-    const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
-    return user || undefined;
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser = { ...user, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   // Members
   async getMember(id: number): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.id, id));
-    return member || undefined;
+    const member = this.members.get(id);
+    return member && !member.deletedAt ? member : undefined;
   }
 
   async getMemberByUserId(userId: number): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.userId, userId));
-    return member || undefined;
+    for (const member of this.members.values()) {
+      if (member.userId === userId && !member.deletedAt) {
+        return member;
+      }
+    }
+    return undefined;
   }
 
   async getMemberByUsername(username: string): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.username, username));
-    return member || undefined;
+    for (const member of this.members.values()) {
+      if (member.username === username && !member.deletedAt) {
+        return member;
+      }
+    }
+    return undefined;
   }
 
-
-
   async getMembers(filters?: { auxiliaryBody?: string; search?: string }): Promise<Member[]> {
-    const conditions = [isNull(members.deletedAt)]; // Exclude soft-deleted members
+    const memberList = Array.from(this.members.values())
+      .filter(member => !member.deletedAt);
+
+    let filteredMembers = memberList;
 
     if (filters?.auxiliaryBody) {
-      conditions.push(eq(members.auxiliaryBody, filters.auxiliaryBody));
-    }
-
-    if (filters?.search) {
-      const searchTerm = `%${filters.search}%`;
-      conditions.push(
-        sql`${members.firstName} ILIKE ${searchTerm} OR ${members.lastName} ILIKE ${searchTerm} OR ${members.email} ILIKE ${searchTerm} OR ${members.username} ILIKE ${searchTerm}`
+      filteredMembers = filteredMembers.filter(member => 
+        member.auxiliaryBody === filters.auxiliaryBody
       );
     }
 
-    const query = db.select().from(members).where(and(...conditions));
+    if (filters?.search) {
+      const searchTerm = filters.search.toLowerCase();
+      filteredMembers = filteredMembers.filter(member =>
+        member.firstName?.toLowerCase().includes(searchTerm) ||
+        member.lastName?.toLowerCase().includes(searchTerm) ||
+        member.email?.toLowerCase().includes(searchTerm) ||
+        member.username?.toLowerCase().includes(searchTerm)
+      );
+    }
 
-    return await query.orderBy(desc(members.createdAt));
+    return filteredMembers.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   async createMember(insertMember: InsertMember): Promise<Member> {
-    const [member] = await db.insert(members).values(insertMember).returning();
+    const member: Member = {
+      id: this.nextMemberId++,
+      createdAt: new Date(),
+      ...insertMember
+    } as Member;
+    this.members.set(member.id, member);
     return member;
   }
 
   async updateMember(id: number, updates: Partial<InsertMember>): Promise<Member | undefined> {
-    const [member] = await db.update(members).set(updates).where(eq(members.id, id)).returning();
-    return member || undefined;
+    const member = this.members.get(id);
+    if (!member || member.deletedAt) return undefined;
+    
+    const updatedMember = { ...member, ...updates };
+    this.members.set(id, updatedMember);
+    return updatedMember;
   }
 
   async deleteMember(id: number): Promise<boolean> {
-    // Soft delete by setting deletedAt timestamp
-    const [result] = await db
-      .update(members)
-      .set({ deletedAt: new Date() })
-      .where(and(eq(members.id, id), isNull(members.deletedAt)))
-      .returning();
-    return !!result;
+    const member = this.members.get(id);
+    if (!member || member.deletedAt) return false;
+    
+    const updatedMember = { ...member, deletedAt: new Date() };
+    this.members.set(id, updatedMember);
+    return true;
   }
 
   private determineEventStatus(event: Event): string {
     const now = new Date();
     const startDate = new Date(event.startDate);
-    const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000); // Default to 24 hours later
+    const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
     
     if (event.status === 'cancelled') return 'cancelled';
     
@@ -176,33 +226,32 @@ export class DatabaseStorage implements IStorage {
 
   // Events
   async getEvent(id: number): Promise<Event | undefined> {
-    const [event] = await db.select().from(events).where(eq(events.id, id));
-    if (!event) return undefined;
+    const event = this.events.get(id);
+    if (!event || event.deletedAt) return undefined;
     
     const dynamicStatus = this.determineEventStatus(event);
     if (dynamicStatus !== event.status) {
-      // Update status in database
-      await db.update(events).set({ status: dynamicStatus }).where(eq(events.id, id));
       event.status = dynamicStatus;
+      this.events.set(id, event);
     }
     
     return event;
   }
 
   async getEvents(filters?: { status?: string; createdBy?: number }): Promise<Event[]> {
-    const conditions = [isNull(events.deletedAt)];
+    let eventList = Array.from(this.events.values())
+      .filter(event => !event.deletedAt);
     
     if (filters?.createdBy) {
-      conditions.push(eq(events.createdBy, filters.createdBy));
+      eventList = eventList.filter(event => event.createdBy === filters.createdBy);
     }
     
-    const allEvents = await db.select().from(events).where(and(...conditions)).orderBy(desc(events.createdAt));
-    
-    // Update event statuses dynamically but more efficiently
-    const updatedEvents = allEvents.map(event => {
+    // Update event statuses dynamically
+    const updatedEvents = eventList.map(event => {
       const dynamicStatus = this.determineEventStatus(event);
       if (dynamicStatus !== event.status) {
         event.status = dynamicStatus;
+        this.events.set(event.id, event);
       }
       return event;
     });
@@ -212,37 +261,73 @@ export class DatabaseStorage implements IStorage {
       return updatedEvents.filter(event => event.status === filters.status);
     }
     
-    return updatedEvents;
+    return updatedEvents.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
-    const [event] = await db.insert(events).values(insertEvent as any).returning();
+    const event: Event = {
+      id: this.nextEventId++,
+      createdAt: new Date(),
+      deletedAt: null,
+      endDate: null,
+      registrationStartDate: null,
+      registrationEndDate: null,
+      allowGuests: false,
+      requiresPayment: false,
+      paymentAmount: null,
+      eventType: 'registration',
+      ticketCategories: [],
+      paymentSettings: {
+        requiresPayment: false,
+        paymentMethods: [],
+        paymentRules: { member: false, guest: false, invitee: false },
+        allowManualReceipt: true,
+        useOrganizerAccount: false,
+        platformFeePercentage: 0,
+        splitPayment: false
+      },
+      customRegistrationFields: [],
+      status: 'upcoming',
+      qrCode: null,
+      reportLink: null,
+      description: null,
+      ...insertEvent
+    };
+    this.events.set(event.id, event);
     return event;
   }
 
   async updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event | undefined> {
-    const [event] = await db.update(events).set(updates as any).where(eq(events.id, id)).returning();
-    return event || undefined;
+    const event = this.events.get(id);
+    if (!event || event.deletedAt) return undefined;
+    
+    const updatedEvent = { ...event, ...updates } as Event;
+    this.events.set(id, updatedEvent);
+    return updatedEvent;
   }
 
   async deleteEvent(id: number): Promise<boolean> {
     try {
+      const event = this.events.get(id);
+      if (!event) return false;
+      
       const deletedAt = new Date();
       
       // Soft delete the event
-      const [result] = await db.update(events)
-        .set({ deletedAt })
-        .where(eq(events.id, id))
-        .returning();
+      const updatedEvent = { ...event, deletedAt };
+      this.events.set(id, updatedEvent);
       
-      if (result) {
-        // Also soft delete all registrations for this event
-        await db.update(eventRegistrations)
-          .set({ status: 'cancelled' })
-          .where(eq(eventRegistrations.eventId, id));
+      // Also cancel all registrations for this event
+      for (const registration of this.eventRegistrations.values()) {
+        if (registration.eventId === id) {
+          const updatedRegistration = { ...registration, status: 'cancelled' };
+          this.eventRegistrations.set(registration.id, updatedRegistration);
+        }
       }
       
-      return !!result;
+      return true;
     } catch (error) {
       console.error('Error deleting event:', error);
       return false;
@@ -251,28 +336,34 @@ export class DatabaseStorage implements IStorage {
 
   // Event Registrations
   async getEventRegistration(id: number): Promise<EventRegistration | undefined> {
-    const results = await db.select()
-      .from(eventRegistrations)
-      .leftJoin(members, eq(eventRegistrations.memberId, members.id))
-      .where(eq(eventRegistrations.id, id));
+    const registration = this.eventRegistrations.get(id);
+    if (!registration) return undefined;
     
-    if (results.length === 0) return undefined;
+    // Get associated member if exists
+    if (registration.memberId) {
+      const member = this.members.get(registration.memberId);
+      return { ...registration, member } as any;
+    }
     
-    const result = results[0];
-    return {
-      ...result.event_registrations,
-      member: result.members
-    } as any;
+    return registration;
   }
 
   async getEventRegistrationByQR(qrCode: string): Promise<EventRegistration | undefined> {
-    const [registration] = await db.select().from(eventRegistrations).where(eq(eventRegistrations.qrCode, qrCode));
-    return registration || undefined;
+    for (const registration of this.eventRegistrations.values()) {
+      if (registration.qrCode === qrCode) {
+        return registration;
+      }
+    }
+    return undefined;
   }
 
   async getEventRegistrationByUniqueId(uniqueId: string): Promise<EventRegistration | undefined> {
-    const [registration] = await db.select().from(eventRegistrations).where(eq(eventRegistrations.uniqueId, uniqueId));
-    return registration || undefined;
+    for (const registration of this.eventRegistrations.values()) {
+      if (registration.uniqueId === uniqueId) {
+        return registration;
+      }
+    }
+    return undefined;
   }
 
   async getEventRegistrations(eventId?: number, filters?: { 
@@ -283,84 +374,100 @@ export class DatabaseStorage implements IStorage {
     endDate?: Date;
     status?: string;
   }): Promise<EventRegistration[]> {
-    const conditions = [];
+    let registrationList = Array.from(this.eventRegistrations.values());
     
     if (eventId) {
-      conditions.push(eq(eventRegistrations.eventId, eventId));
+      registrationList = registrationList.filter(reg => reg.eventId === eventId);
     }
     
     if (filters?.auxiliaryBody) {
-      conditions.push(eq(eventRegistrations.guestAuxiliaryBody, filters.auxiliaryBody));
+      registrationList = registrationList.filter(reg => 
+        reg.guestAuxiliaryBody === filters.auxiliaryBody
+      );
     }
     
     if (filters?.uniqueId) {
-      conditions.push(eq(eventRegistrations.uniqueId, filters.uniqueId));
+      registrationList = registrationList.filter(reg => 
+        reg.uniqueId === filters.uniqueId
+      );
     }
     
     if (filters?.chandaNumber) {
-      // Search in custom field data for chanda number
-      conditions.push(sql`${eventRegistrations.customFieldData}->>'chandaNumber' = ${filters.chandaNumber}`);
+      registrationList = registrationList.filter(reg => 
+        reg.customFieldData?.chandaNumber === filters.chandaNumber
+      );
     }
     
     if (filters?.status) {
-      conditions.push(eq(eventRegistrations.status, filters.status));
+      registrationList = registrationList.filter(reg => 
+        reg.status === filters.status
+      );
     }
     
     if (filters?.startDate || filters?.endDate) {
-      if (filters.startDate) {
-        conditions.push(sql`${eventRegistrations.createdAt} >= ${filters.startDate}`);
-      }
-      if (filters.endDate) {
-        conditions.push(sql`${eventRegistrations.createdAt} <= ${filters.endDate}`);
-      }
+      registrationList = registrationList.filter(reg => {
+        const createdAt = new Date(reg.createdAt);
+        if (filters.startDate && createdAt < filters.startDate) return false;
+        if (filters.endDate && createdAt > filters.endDate) return false;
+        return true;
+      });
     }
     
-    let query;
-    if (conditions.length > 0) {
-      query = db.select().from(eventRegistrations).where(and(...conditions));
-    } else {
-      query = db.select().from(eventRegistrations);
-    }
-    
-    return await query.orderBy(desc(eventRegistrations.createdAt));
+    return registrationList.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   async getMemberRegistrations(memberId: number): Promise<EventRegistration[]> {
-    return await db.select().from(eventRegistrations).where(eq(eventRegistrations.memberId, memberId));
+    return Array.from(this.eventRegistrations.values())
+      .filter(reg => reg.memberId === memberId);
   }
 
   async createEventRegistration(insertRegistration: InsertEventRegistration): Promise<EventRegistration> {
-    const [registration] = await db.insert(eventRegistrations).values(insertRegistration).returning();
+    const registration: EventRegistration = {
+      id: this.nextEventRegistrationId++,
+      createdAt: new Date(),
+      ...insertRegistration
+    } as EventRegistration;
+    this.eventRegistrations.set(registration.id, registration);
     return registration;
   }
 
   async updateEventRegistration(id: number, updates: Partial<InsertEventRegistration>): Promise<EventRegistration | undefined> {
-    const [registration] = await db.update(eventRegistrations).set(updates).where(eq(eventRegistrations.id, id)).returning();
-    return registration || undefined;
+    const registration = this.eventRegistrations.get(id);
+    if (!registration) return undefined;
+    
+    const updatedRegistration = { ...registration, ...updates };
+    this.eventRegistrations.set(id, updatedRegistration);
+    return updatedRegistration;
   }
 
   // Attendance
   async getAttendance(eventId: number): Promise<Attendance[]> {
-    return await db.select().from(attendance).where(eq(attendance.eventId, eventId));
+    return Array.from(this.attendance.values())
+      .filter(att => att.eventId === eventId);
   }
 
   async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
-    const [attendanceRecord] = await db.insert(attendance).values(insertAttendance).returning();
+    const attendanceRecord: Attendance = {
+      id: this.nextAttendanceId++,
+      scannedAt: new Date(),
+      ...insertAttendance
+    } as Attendance;
+    this.attendance.set(attendanceRecord.id, attendanceRecord);
     return attendanceRecord;
   }
 
   async getAttendanceStats(): Promise<{ totalScans: number; validationRate: number; scansToday: number }> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
     
-    const [totalScansResult] = await db.select({ count: sql<number>`count(*)` }).from(attendance);
-    const [validScansResult] = await db.select({ count: sql<number>`count(*)` }).from(attendance).where(eq(attendance.validationStatus, 'valid'));
-    const [todayScansResult] = await db.select({ count: sql<number>`count(*)` }).from(attendance).where(sql`${attendance.scannedAt} >= ${todayISO}`);
-    
-    const totalScans = totalScansResult.count || 0;
-    const validScans = validScansResult.count || 0;
-    const scansToday = todayScansResult.count || 0;
+    const allAttendance = Array.from(this.attendance.values());
+    const totalScans = allAttendance.length;
+    const validScans = allAttendance.filter(att => att.validationStatus === 'valid').length;
+    const scansToday = allAttendance.filter(att => 
+      new Date(att.scannedAt).getTime() >= today.getTime()
+    ).length;
     
     return {
       totalScans,
@@ -371,107 +478,128 @@ export class DatabaseStorage implements IStorage {
 
   // Invitations
   async getInvitation(id: number): Promise<Invitation | undefined> {
-    const [invitation] = await db.select().from(invitations).where(eq(invitations.id, id));
-    return invitation || undefined;
+    return this.invitations.get(id);
   }
 
   async getEventInvitations(eventId: number): Promise<Invitation[]> {
-    return await db.select().from(invitations).where(eq(invitations.eventId, eventId));
+    return Array.from(this.invitations.values())
+      .filter(inv => inv.eventId === eventId);
   }
 
   async createInvitation(insertInvitation: InsertInvitation): Promise<Invitation> {
-    const [invitation] = await db.insert(invitations).values(insertInvitation).returning();
+    const invitation: Invitation = {
+      id: this.nextInvitationId++,
+      createdAt: new Date(),
+      ...insertInvitation
+    } as Invitation;
+    this.invitations.set(invitation.id, invitation);
     return invitation;
   }
 
   async updateInvitation(id: number, updates: Partial<InsertInvitation>): Promise<Invitation | undefined> {
-    const [invitation] = await db.update(invitations).set(updates).where(eq(invitations.id, id)).returning();
-    return invitation || undefined;
+    const invitation = this.invitations.get(id);
+    if (!invitation) return undefined;
+    
+    const updatedInvitation = { ...invitation, ...updates };
+    this.invitations.set(id, updatedInvitation);
+    return updatedInvitation;
   }
 
   // Event Reports
   async getEventReport(id: number): Promise<EventReport | undefined> {
-    const [report] = await db.select().from(eventReports).where(eq(eventReports.id, id)).limit(1);
-    return report;
+    return this.eventReports.get(id);
   }
 
   async getEventReports(eventId: number): Promise<EventReport[]> {
-    const reports = await db.select().from(eventReports).where(eq(eventReports.eventId, eventId)).orderBy(desc(eventReports.createdAt));
-    return reports;
+    return Array.from(this.eventReports.values())
+      .filter(report => report.eventId === eventId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getAllEventReports(): Promise<EventReport[]> {
-    const reports = await db.select({
-      id: eventReports.id,
-      eventId: eventReports.eventId,
-      reporterName: eventReports.reporterName,
-      reporterEmail: eventReports.reporterEmail,
-      reporterPhone: eventReports.reporterPhone,
-      reportType: eventReports.reportType,
-      message: eventReports.message,
-      status: eventReports.status,
-      createdAt: eventReports.createdAt,
-      reviewNotes: eventReports.reviewNotes,
-      event: {
-        id: events.id,
-        name: events.name
-      }
-    })
-    .from(eventReports)
-    .leftJoin(events, eq(eventReports.eventId, events.id))
-    .orderBy(desc(eventReports.createdAt));
-    return reports;
+    const reports = Array.from(this.eventReports.values());
+    // Add event name to each report
+    return reports.map(report => {
+      const event = this.events.get(report.eventId);
+      return {
+        ...report,
+        event: event ? { id: event.id, name: event.name } : null
+      } as any;
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async createEventReport(insertReport: InsertEventReport): Promise<EventReport> {
-    const [report] = await db.insert(eventReports).values(insertReport).returning();
+    const report: EventReport = {
+      id: this.nextEventReportId++,
+      createdAt: new Date(),
+      ...insertReport
+    } as EventReport;
+    this.eventReports.set(report.id, report);
     return report;
   }
 
   async updateEventReport(id: number, updates: Partial<InsertEventReport>): Promise<EventReport | undefined> {
-    const [report] = await db.update(eventReports).set(updates).where(eq(eventReports.id, id)).returning();
-    return report || undefined;
+    const report = this.eventReports.get(id);
+    if (!report) return undefined;
+    
+    const updatedReport = { ...report, ...updates };
+    this.eventReports.set(id, updatedReport);
+    return updatedReport;
   }
 
   // Member Validation CSV
   async getMemberValidationCsv(eventId: number): Promise<MemberValidationCsv[]> {
-    const csvs = await db.select().from(memberValidationCsv).where(eq(memberValidationCsv.eventId, eventId)).orderBy(desc(memberValidationCsv.createdAt));
-    return csvs;
+    return Array.from(this.memberValidationCsv.values())
+      .filter(csv => csv.eventId === eventId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async createMemberValidationCsv(insertCsv: InsertMemberValidationCsv): Promise<MemberValidationCsv> {
-    const [csv] = await db.insert(memberValidationCsv).values(insertCsv as any).returning();
+    const csv: MemberValidationCsv = {
+      id: this.nextMemberValidationCsvId++,
+      createdAt: new Date(),
+      ...insertCsv
+    } as MemberValidationCsv;
+    this.memberValidationCsv.set(csv.id, csv);
     return csv;
   }
 
   async deleteMemberValidationCsv(id: number): Promise<boolean> {
-    const result = await db.delete(memberValidationCsv).where(eq(memberValidationCsv.id, id)).returning();
-    return result.length > 0;
+    return this.memberValidationCsv.delete(id);
   }
 
   // Face Recognition Photos
   async getFaceRecognitionPhotos(eventId?: number): Promise<FaceRecognitionPhoto[]> {
-    const conditions = [eq(faceRecognitionPhotos.isActive, true)];
+    let photos = Array.from(this.faceRecognitionPhotos.values())
+      .filter(photo => photo.isActive);
     
     if (eventId) {
-      conditions.push(eq(faceRecognitionPhotos.eventId, eventId));
+      photos = photos.filter(photo => photo.eventId === eventId);
     }
     
-    const photos = await db.select().from(faceRecognitionPhotos)
-      .where(and(...conditions))
-      .orderBy(desc(faceRecognitionPhotos.createdAt));
-    return photos;
+    return photos.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   async createFaceRecognitionPhoto(insertPhoto: InsertFaceRecognitionPhoto): Promise<FaceRecognitionPhoto> {
-    const [photo] = await db.insert(faceRecognitionPhotos).values(insertPhoto).returning();
+    const photo: FaceRecognitionPhoto = {
+      id: this.nextFaceRecognitionPhotoId++,
+      createdAt: new Date(),
+      ...insertPhoto
+    } as FaceRecognitionPhoto;
+    this.faceRecognitionPhotos.set(photo.id, photo);
     return photo;
   }
 
   async deleteFaceRecognitionPhoto(id: number): Promise<boolean> {
-    const [photo] = await db.update(faceRecognitionPhotos).set({ isActive: false }).where(eq(faceRecognitionPhotos.id, id)).returning();
-    return !!photo;
+    const photo = this.faceRecognitionPhotos.get(id);
+    if (!photo) return false;
+    
+    const updatedPhoto = { ...photo, isActive: false };
+    this.faceRecognitionPhotos.set(id, updatedPhoto);
+    return true;
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();
