@@ -3168,27 +3168,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Bank Account Management API Routes for Multi-Tenant Payments
 
-  // Get Nigerian banks list
+  // Get Nigerian banks list (comprehensive including microfinance banks)
   app.get("/api/banks", async (req: Request, res: Response) => {
     try {
       const banksData = await getNigerianBanks();
       
       if (banksData.status) {
+        const banks = banksData.data;
+        
+        // Additional categorization and statistics
+        const commercialBanks = banks.filter((bank: any) => bank.type === 'commercial');
+        const microfinanceBanks = banks.filter((bank: any) => bank.type === 'microfinance');
+        
         res.json({
           success: true,
-          banks: banksData.data
+          banks: banks,
+          statistics: {
+            total: banks.length,
+            commercial: commercialBanks.length,
+            microfinance: microfinanceBanks.length
+          },
+          message: `Found ${banks.length} banks (${commercialBanks.length} commercial, ${microfinanceBanks.length} microfinance)`
         });
       } else {
         res.status(400).json({
           success: false,
-          message: "Failed to fetch banks"
+          message: "Failed to fetch banks from Paystack API"
         });
       }
     } catch (error) {
       console.error("Get banks error:", error);
       res.status(500).json({ 
         success: false,
-        message: "Failed to fetch banks" 
+        message: "Failed to fetch banks. Please check your internet connection and try again." 
       });
     }
   });

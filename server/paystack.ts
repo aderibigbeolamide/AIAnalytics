@@ -132,7 +132,7 @@ export async function verifyBankAccount(accountNumber: string, bankCode: string)
   }
 }
 
-// Get list of Nigerian banks
+// Get comprehensive list of Nigerian banks including microfinance banks
 export async function getNigerianBanks() {
   try {
     const response = await fetch('https://api.paystack.co/bank?country=nigeria', {
@@ -143,6 +143,24 @@ export async function getNigerianBanks() {
     });
 
     const data = await response.json();
+    
+    if (data.status) {
+      // Sort banks by name and categorize
+      const sortedBanks = data.data.sort((a: any, b: any) => a.name.localeCompare(b.name));
+      
+      // Add type categorization for better UX
+      const categorizedBanks = sortedBanks.map((bank: any) => ({
+        ...bank,
+        type: bank.name.toLowerCase().includes('microfinance') || 
+              bank.name.toLowerCase().includes('micro finance') ? 'microfinance' : 'commercial'
+      }));
+      
+      return {
+        ...data,
+        data: categorizedBanks
+      };
+    }
+    
     return data;
   } catch (error) {
     console.error('Get banks error:', error);

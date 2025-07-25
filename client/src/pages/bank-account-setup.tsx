@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, CreditCard, Building2, AlertCircle } from "lucide-react";
+import { CheckCircle, CreditCard, Building2, AlertCircle, Search, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Badge } from "@/components/ui/badge";
 
 const bankAccountSchema = z.object({
   bankCode: z.string().min(1, "Please select a bank"),
@@ -29,6 +30,7 @@ interface Bank {
   id: number;
   name: string;
   code: string;
+  type?: string;
 }
 
 export default function BankAccountSetup() {
@@ -36,6 +38,7 @@ export default function BankAccountSetup() {
   const queryClient = useQueryClient();
   const [verifiedAccount, setVerifiedAccount] = useState<{ accountName: string; accountNumber: string; bankName: string; bankCode: string } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [bankSearchTerm, setBankSearchTerm] = useState("");
 
   const form = useForm<BankAccountFormData>({
     resolver: zodResolver(bankAccountSchema),
@@ -49,7 +52,7 @@ export default function BankAccountSetup() {
     },
   });
 
-  // Fetch banks list
+  // Fetch banks list with comprehensive data
   const { data: banksResponse, isLoading: banksLoading } = useQuery({
     queryKey: ["/api/banks"],
     queryFn: () => apiRequest("GET", "/api/banks"),
@@ -206,7 +209,24 @@ export default function BankAccountSetup() {
   };
 
   const banks = (banksResponse as any)?.banks || [];
+  const bankStats = (banksResponse as any)?.statistics || { total: 0, commercial: 0, microfinance: 0 };
   const hasExistingAccount = (existingAccount as any)?.bankAccount?.paystackSubaccountCode;
+
+  // Filter banks based on search term
+  const filteredBanks = banks.filter((bank: Bank) =>
+    bank.name.toLowerCase().includes(bankSearchTerm.toLowerCase())
+  );
+
+  // Categorize banks
+  const commercialBanks = filteredBanks.filter((bank: Bank) => 
+    !bank.name.toLowerCase().includes('microfinance') && 
+    !bank.name.toLowerCase().includes('micro finance')
+  );
+  
+  const microfinanceBanks = filteredBanks.filter((bank: Bank) => 
+    bank.name.toLowerCase().includes('microfinance') || 
+    bank.name.toLowerCase().includes('micro finance')
+  );
 
   if (accountLoading || banksLoading) {
     return (
@@ -337,12 +357,62 @@ export default function BankAccountSetup() {
                             <SelectTrigger className={verifiedAccount ? "bg-gray-50" : ""}>
                               <SelectValue placeholder={verifiedAccount ? verifiedAccount.bankName : "Bank will be auto-detected"} />
                             </SelectTrigger>
-                            <SelectContent>
-                              {banks.map((bank: Bank) => (
-                                <SelectItem key={bank.code} value={bank.code}>
-                                  {bank.name}
-                                </SelectItem>
-                              ))}
+                            <SelectContent className="max-h-80">
+                              <div className="sticky top-0 bg-white p-2 border-b">
+                                <div className="relative">
+                                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                                  <Input
+                                    placeholder="Search banks..."
+                                    className="pl-8 h-8"
+                                    value={bankSearchTerm}
+                                    onChange={(e) => setBankSearchTerm(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              
+                              {/* Commercial Banks */}
+                              {commercialBanks.length > 0 && (
+                                <>
+                                  <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    Commercial Banks ({commercialBanks.length})
+                                  </div>
+                                  {commercialBanks.map((bank: Bank) => (
+                                    <SelectItem key={bank.code} value={bank.code}>
+                                      <div className="flex items-center justify-between w-full">
+                                        <span>{bank.name}</span>
+                                        <Badge variant="secondary" className="ml-2 text-xs">
+                                          Commercial
+                                        </Badge>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </>
+                              )}
+                              
+                              {/* Microfinance Banks */}
+                              {microfinanceBanks.length > 0 && (
+                                <>
+                                  <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    Microfinance Banks ({microfinanceBanks.length})
+                                  </div>
+                                  {microfinanceBanks.map((bank: Bank) => (
+                                    <SelectItem key={bank.code} value={bank.code}>
+                                      <div className="flex items-center justify-between w-full">
+                                        <span>{bank.name}</span>
+                                        <Badge variant="outline" className="ml-2 text-xs">
+                                          Microfinance
+                                        </Badge>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </>
+                              )}
+                              
+                              {filteredBanks.length === 0 && (
+                                <div className="px-2 py-4 text-center text-sm text-gray-500">
+                                  No banks found matching "{bankSearchTerm}"
+                                </div>
+                              )}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -444,6 +514,48 @@ export default function BankAccountSetup() {
             </CardContent>
           </Card>
         )}
+
+        {/* Bank Information Panel */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Supported Banks
+            </CardTitle>
+            <CardDescription>
+              We support all Nigerian banks including microfinance banks for account verification
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{bankStats.total}</div>
+                <div className="text-sm text-blue-700">Total Banks</div>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{bankStats.commercial}</div>
+                <div className="text-sm text-green-700">Commercial Banks</div>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{bankStats.microfinance}</div>
+                <div className="text-sm text-purple-700">Microfinance Banks</div>
+              </div>
+            </div>
+            
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Account Verification Process:</strong>
+                <ol className="mt-2 space-y-1 text-sm">
+                  <li>1. Enter your 10-digit account number - we'll try to auto-detect your bank</li>
+                  <li>2. If auto-detection fails, manually select your bank from the searchable list</li>
+                  <li>3. We'll verify your account name with the bank for security</li>
+                  <li>4. Once verified, you can receive payments directly to your account</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
 
         <Card className="mt-6">
           <CardHeader>
