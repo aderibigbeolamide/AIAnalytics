@@ -138,45 +138,33 @@ export default function BankAccountSetup() {
   const watchedAccountNumber = form.watch("accountNumber");
   const watchedBankCode = form.watch("bankCode");
   
-  // Auto-detect bank when account number is complete
+  // Manual verification only - user selects bank first, then enters account number
   useEffect(() => {
-    console.log("Form fields changed:", { accountNumber: watchedAccountNumber, bankCode: watchedBankCode, isVerifying });
-    
-    if (watchedAccountNumber && watchedAccountNumber.length === 10 && !isVerifying && !verifiedAccount) {
-      console.log("Triggering auto-detection for account:", watchedAccountNumber);
-      setIsVerifying(true);
-      
-      autoDetectBankMutation.mutate(
-        { accountNumber: watchedAccountNumber },
-        {
-          onSettled: () => {
-            console.log("Auto-detection completed");
-            setIsVerifying(false);
-          },
-        }
-      );
-    } else if (watchedAccountNumber && watchedAccountNumber.length < 10) {
+    if (watchedAccountNumber && watchedAccountNumber.length < 10) {
       // Clear verification if account number becomes invalid
       setVerifiedAccount(null);
-      form.setValue("bankCode", "");
     }
-  }, [watchedAccountNumber, isVerifying, autoDetectBankMutation, verifiedAccount, form]);
+  }, [watchedAccountNumber]);
 
-  // Verify with manually selected bank if auto-detection failed
+  // Verify with manually selected bank when both bank and account number are provided
   useEffect(() => {
     if (watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying) {
-      console.log("Manual bank selected, verifying...");
-      setIsVerifying(true);
+      console.log("Manual bank selected, verifying account...");
       
-      smartVerifyAccountMutation.mutate(
-        { accountNumber: watchedAccountNumber, bankCode: watchedBankCode },
-        {
-          onSettled: () => {
-            console.log("Manual verification completed");
-            setIsVerifying(false);
-          },
-        }
-      );
+      const timeoutId = setTimeout(() => {
+        setIsVerifying(true);
+        smartVerifyAccountMutation.mutate(
+          { accountNumber: watchedAccountNumber, bankCode: watchedBankCode },
+          {
+            onSettled: () => {
+              console.log("Manual verification completed");
+              setIsVerifying(false);
+            },
+          }
+        );
+      }, 800); // Brief delay to prevent rapid API calls
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, smartVerifyAccountMutation]);
 
@@ -307,47 +295,10 @@ export default function BankAccountSetup() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <FormField
                     control={form.control}
-                    name="accountNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Account Number</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Enter your real 10-digit bank account number"
-                            maxLength={10}
-                            type="tel"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                        {isVerifying && (
-                          <p className="text-sm text-blue-600 flex items-center gap-2">
-                            <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-                            Auto-detecting your bank and verifying account...
-                          </p>
-                        )}
-                        {verifiedAccount && (
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
-                            <div className="flex items-center gap-2 text-sm text-green-600 mb-1">
-                              <CheckCircle className="w-4 h-4" />
-                              Account Verified
-                            </div>
-                            <div className="text-sm space-y-1">
-                              <div><span className="font-medium">Bank:</span> {verifiedAccount.bankName}</div>
-                              <div><span className="font-medium">Account Name:</span> {verifiedAccount.accountName}</div>
-                            </div>
-                          </div>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name="bankCode"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Bank {verifiedAccount && "(Auto-detected)"}</FormLabel>
+                        <FormLabel>Select Your Bank</FormLabel>
                         <FormControl>
                           <Select 
                             onValueChange={field.onChange} 
@@ -355,7 +306,7 @@ export default function BankAccountSetup() {
                             disabled={!!verifiedAccount}
                           >
                             <SelectTrigger className={verifiedAccount ? "bg-gray-50" : ""}>
-                              <SelectValue placeholder={verifiedAccount ? verifiedAccount.bankName : "Bank will be auto-detected"} />
+                              <SelectValue placeholder={verifiedAccount ? verifiedAccount.bankName : "Choose your bank first"} />
                             </SelectTrigger>
                             <SelectContent className="max-h-80">
                               <div className="sticky top-0 bg-white p-2 border-b">
@@ -417,15 +368,58 @@ export default function BankAccountSetup() {
                           </Select>
                         </FormControl>
                         <FormMessage />
-                        {!verifiedAccount && watchedAccountNumber && watchedAccountNumber.length === 10 && !isVerifying && (
-                          <div className="text-xs">
-                            <p className="text-amber-600">⚠️ Auto-detection failed. Please select your bank manually below for verification.</p>
+                        {!watchedBankCode && (
+                          <div className="text-xs text-gray-500">
+                            <p>🏦 Select your bank from the {bankStats.total} supported banks (including {bankStats.microfinance} microfinance banks)</p>
                           </div>
                         )}
-                        {!verifiedAccount && (!watchedAccountNumber || watchedAccountNumber.length < 10) && (
-                          <div className="text-xs text-gray-500">
-                            <p>Enter your 10-digit account number - we'll automatically detect your bank</p>
-                            <p className="mt-1 text-amber-600">💡 Make sure to use a real bank account number for verification</p>
+                        {watchedBankCode && !watchedAccountNumber && (
+                          <div className="text-xs text-blue-600">
+                            <p>✅ Bank selected! Now enter your account number below for verification</p>
+                          </div>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="accountNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Enter your 10-digit account number"
+                            maxLength={10}
+                            type="tel"
+                            disabled={!watchedBankCode}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        {!watchedBankCode && (
+                          <p className="text-xs text-gray-500">
+                            Please select your bank first, then enter your account number
+                          </p>
+                        )}
+                        {isVerifying && (
+                          <p className="text-sm text-blue-600 flex items-center gap-2">
+                            <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                            Verifying account with {banks.find((b: Bank) => b.code === watchedBankCode)?.name}...
+                          </p>
+                        )}
+                        {verifiedAccount && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
+                            <div className="flex items-center gap-2 text-sm text-green-600 mb-1">
+                              <CheckCircle className="w-4 h-4" />
+                              Account Verified Successfully
+                            </div>
+                            <div className="text-sm space-y-1">
+                              <div><span className="font-medium">Bank:</span> {verifiedAccount.bankName}</div>
+                              <div><span className="font-medium">Account Name:</span> {verifiedAccount.accountName}</div>
+                              <div><span className="font-medium">Account Number:</span> {verifiedAccount.accountNumber}</div>
+                            </div>
                           </div>
                         )}
                       </FormItem>
