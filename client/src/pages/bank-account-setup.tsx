@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, CreditCard, Building2, AlertCircle, Search, Loader2 } from "lucide-react";
+import { CheckCircle, CreditCard, Building2, AlertCircle, Search, Loader2, ArrowLeft, Edit, DollarSign } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const bankAccountSchema = z.object({
   bankCode: z.string().min(1, "Please select a bank"),
@@ -36,10 +38,35 @@ interface Bank {
 export default function BankAccountSetup() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [verifiedAccount, setVerifiedAccount] = useState<{ accountName: string; accountNumber: string; bankName: string; bankCode: string } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [bankSearchTerm] = useState("");
   const [hasAttemptedVerification, setHasAttemptedVerification] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Edit bank account mutation
+  const editBankAccountMutation = useMutation({
+    mutationFn: async (data: BankAccountFormData) => {
+      const response = await apiRequest("PUT", "/api/users/bank-account", data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Bank account updated successfully",
+      });
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/users/bank-account"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update bank account",
+        variant: "destructive",
+      });
+    },
+  });
 
   const form = useForm<BankAccountFormData>({
     resolver: zodResolver(bankAccountSchema),
@@ -71,6 +98,26 @@ export default function BankAccountSetup() {
       const response = await apiRequest("GET", "/api/users/bank-account");
       return await response.json();
     },
+  });
+
+  // Fetch user's own events to filter payments
+  const { data: userEvents, isLoading: eventsLoading } = useQuery({
+    queryKey: ["/api/events"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/events");
+      return await response.json();
+    },
+    enabled: !!((existingAccount as any)?.bankAccount?.paystackSubaccountCode),
+  });
+
+  // Fetch payment transactions only for user's own events
+  const { data: paymentsData, isLoading: paymentsLoading } = useQuery({
+    queryKey: ["/api/payments/my-events"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/payments/my-events");
+      return await response.json();
+    },
+    enabled: !!((existingAccount as any)?.bankAccount?.paystackSubaccountCode),
   });
 
   // Manual bank verification mutation
@@ -318,48 +365,204 @@ export default function BankAccountSetup() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => setLocation("/dashboard")}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Button>
+        </div>
+
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Bank Account Setup</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment Management</h1>
           <p className="text-gray-600">
-            Setup your bank account to receive payments directly from your events
+            Manage your bank account and track payments from your events
           </p>
         </div>
+
+        <Tabs defaultValue="bank-account" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="bank-account">Bank Account</TabsTrigger>
+            <TabsTrigger value="payments">Payment History</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="bank-account" className="space-y-6 mt-6">
 
         {hasExistingAccount ? (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                Bank Account Connected
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  Bank Account Connected
+                </div>
+                {!isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsEditing(true);
+                      // Pre-populate form with existing data
+                      const bankAccount = (existingAccount as any)?.bankAccount;
+                      form.reset({
+                        bankCode: `${bankAccount?.bankCode}|${bankAccount?.bankName}|${bankAccount?.id || ''}`,
+                        accountNumber: bankAccount?.accountNumber || '',
+                        businessName: bankAccount?.businessName || '',
+                        businessEmail: bankAccount?.businessEmail || '',
+                        businessPhone: bankAccount?.businessPhone || '',
+                        percentageCharge: bankAccount?.percentageCharge || 0,
+                      });
+                    }}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
               </CardTitle>
               <CardDescription>
-                Your bank account is setup and ready to receive payments
+                {isEditing ? "Update your bank account details" : "Your bank account is setup and ready to receive payments"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Bank Name:</span>
-                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.bankName}</span>
+              {isEditing ? (
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit((data) => editBankAccountMutation.mutate(data))} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="bankCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your bank" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-80">
+                                {filteredBanks.map((bank: Bank) => (
+                                  <SelectItem key={bank.id} value={`${bank.code}|${bank.name}|${bank.id}`}>
+                                    {bank.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="accountNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="1234567890" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="businessName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Business Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Your business name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="businessEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Business Email (Optional)</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="email" placeholder="business@example.com" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="businessPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Business Phone (Optional)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="+234 xxx xxx xxxx" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex gap-2">
+                      <Button
+                        type="submit"
+                        disabled={editBankAccountMutation.isPending}
+                        className="flex-1"
+                      >
+                        {editBankAccountMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          "Update Account"
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsEditing(false)}
+                        disabled={editBankAccountMutation.isPending}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Bank Name:</span>
+                    <span className="font-medium">{(existingAccount as any)?.bankAccount?.bankName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Account Number:</span>
+                    <span className="font-medium">{(existingAccount as any)?.bankAccount?.accountNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Account Name:</span>
+                    <span className="font-medium">{(existingAccount as any)?.bankAccount?.accountName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Business Name:</span>
+                    <span className="font-medium">{(existingAccount as any)?.bankAccount?.businessName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Platform Fee:</span>
+                    <span className="font-medium">{(existingAccount as any)?.bankAccount?.percentageCharge}%</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Account Number:</span>
-                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.accountNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Account Name:</span>
-                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.accountName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Business Name:</span>
-                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.businessName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Platform Fee:</span>
-                  <span className="font-medium">{(existingAccount as any)?.bankAccount?.percentageCharge}%</span>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -688,40 +891,115 @@ export default function BankAccountSetup() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Why Setup a Bank Account?</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium">Direct Payments</h4>
-                <p className="text-sm text-gray-600">
-                  Receive payments directly from ticket sales and event registrations
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium">Financial Separation</h4>
-                <p className="text-sm text-gray-600">
-                  Your money stays separate from other organizations using the platform
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium">Instant Settlement</h4>
-                <p className="text-sm text-gray-600">
-                  Funds are settled to your account automatically after successful payments
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Why Setup a Bank Account?</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium">Direct Payments</h4>
+                    <p className="text-sm text-gray-600">
+                      Receive payments directly from ticket sales and event registrations
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium">Financial Separation</h4>
+                    <p className="text-sm text-gray-600">
+                      Your money stays separate from other organizations using the platform
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium">Instant Settlement</h4>
+                    <p className="text-sm text-gray-600">
+                      Funds are settled to your account automatically after successful payments
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="payments" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  Payment History
+                </CardTitle>
+                <CardDescription>
+                  Track payments received from your events
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {paymentsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                  </div>
+                ) : !hasExistingAccount ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-4">Set up your bank account first to start receiving payments</p>
+                    <Button onClick={() => {
+                      const bankAccountTab = document.querySelector('[value="bank-account"]') as HTMLElement;
+                      bankAccountTab?.click();
+                    }}>
+                      Setup Bank Account
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(!paymentsData?.payments || paymentsData.payments.length === 0) ? (
+                      <div className="text-center py-8">
+                        <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600">No payments received yet</p>
+                        <p className="text-sm text-gray-500 mt-2">
+                          Payments will appear here when users pay for your events
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {paymentsData.payments.map((payment: any, index: number) => (
+                          <div key={index} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">{payment.eventName || 'Event Payment'}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {payment.registrationData?.guestName || 'Anonymous'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Ref: {payment.reference}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-green-600">
+                                  ₦{(payment.amount / 100).toLocaleString()}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(payment.createdAt).toLocaleDateString()}
+                                </p>
+                                <Badge variant={payment.status === 'success' ? 'default' : 'secondary'}>
+                                  {payment.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

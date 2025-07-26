@@ -2720,6 +2720,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get payments for user's own events only (privacy-focused)
+  app.get("/api/payments/my-events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id;
+
+      // Get only events created by this user
+      const userEvents = await db
+        .select()
+        .from(events)
+        .where(eq(events.createdBy, userId));
+
+      if (userEvents.length === 0) {
+        return res.json({ payments: [], totalAmount: 0, eventCount: 0 });
+      }
+
+      const eventIds = userEvents.map(e => e.id);
+
+      // Get registrations only for user's events that have payment data
+      const registrationsWithPayments = await db
+        .select()
+        .from(eventRegistrations)
+        .where(
+          and(
+            sql`${eventRegistrations.eventId} = ANY(${eventIds})`,
+            eq(eventRegistrations.paymentStatus, 'paid')
+          )
+        );
+
+      // Get event names for display
+      const eventMap = userEvents.reduce((acc, event) => {
+        acc[event.id] = event.name;
+        return acc;
+      }, {} as Record<number, string>);
+
+      // Format payment data for display
+      const payments = registrationsWithPayments.map(reg => ({
+        id: reg.id,
+        eventId: reg.eventId,
+        eventName: eventMap[reg.eventId] || 'Unknown Event',
+        amount: parseFloat(reg.paymentAmount || '0') * 100, // Convert to kobo for consistency
+        reference: reg.paystackReference,
+        status: reg.paymentStatus,
+        createdAt: reg.createdAt,
+        registrationData: {
+          guestName: reg.guestName,
+          guestEmail: reg.guestEmail,
+          registrationType: reg.registrationType
+        }
+      }));
+
+      const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
+
+      res.json({
+        payments,
+        totalAmount,
+        eventCount: userEvents.length,
+        paidRegistrations: payments.length
+      });
+    } catch (error) {
+      console.error('Get user payments error:', error);
+      res.status(500).json({ message: "Failed to fetch payments" });
+    }
+  });
+
+  // Update bank account details (with edit functionality)
+  app.put("/api/users/bank-account", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { bankCode, accountNumber, businessName, businessEmail, businessPhone, percentageCharge } = req.body;
+
+      // Verify bank account first
+      const verification = await verifyBankAccount(accountNumber, bankCode);
+      if (!verification.status || !verification.data) {
+        return res.status(400).json({ message: "Bank account verification failed" });
+      }
+
+      const accountName = verification.data.account_name;
+      const bankName = verification.data.bank_name;
+
+      // Update user's bank account details
+      await db
+        .update(users)
+        .set({
+          bankCode,
+          accountNumber,
+          accountName,
+          bankName,
+          businessName,
+          businessEmail,
+          businessPhone,
+          percentageCharge,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      res.json({
+        success: true,
+        message: "Bank account updated successfully",
+        bankAccount: {
+          bankCode,
+          accountNumber,
+          accountName,
+          bankName,
+          businessName,
+          businessEmail,
+          businessPhone,
+          percentageCharge
+        }
+      });
+    } catch (error) {
+      console.error('Update bank account error:', error);
+      res.status(500).json({ message: "Failed to update bank account" });
+    }
+  });
+
   // Upload payment receipt
   app.post("/api/payment/upload-receipt/:registrationId", upload.single('receipt'), async (req: Request, res: Response) => {
     try {
