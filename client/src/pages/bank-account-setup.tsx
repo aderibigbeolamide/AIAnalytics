@@ -174,8 +174,10 @@ export default function BankAccountSetup() {
     
     // Common bank name mappings for easier search
     const bankMappings: { [key: string]: string[] } = {
+      'alat': ['alat by wema', 'wema bank'],
       'wema': ['alat by wema', 'wema bank'],
       'gtbank': ['guaranty trust bank', 'gtb'],
+      'gtb': ['guaranty trust bank', 'gtb'],
       'uba': ['united bank for africa'],
       'fcmb': ['first city monument bank'],
       'zenith': ['zenith bank'],
