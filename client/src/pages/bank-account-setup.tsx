@@ -75,19 +75,23 @@ export default function BankAccountSetup() {
 
   // Manual bank verification mutation
   const verifyBankAccountMutation = useMutation({
-    mutationFn: (data: { accountNumber: string; bankCode: string }) =>
-      apiRequest("POST", "/api/banks/verify", data),
+    mutationFn: async (data: { accountNumber: string; bankCode: string }) => {
+      const response = await apiRequest("POST", "/api/banks/verify", data);
+      return await response.json();
+    },
     onSuccess: (data: any) => {
-      const selectedBank = banks.find((b: Bank) => b.code === form.getValues("bankCode"));
+      const bankValue = form.getValues("bankCode");
+      const [bankCode, bankName, bankId] = bankValue.split('|');
+      console.log("Account verification successful:", data);
       setVerifiedAccount({
         accountName: data.accountName,
         accountNumber: data.accountNumber,
-        bankName: selectedBank?.name || "Unknown Bank",
-        bankCode: form.getValues("bankCode"),
+        bankName: bankName || "Unknown Bank",
+        bankCode: bankCode,
       });
       toast({
         title: "Account Verified",
-        description: `${selectedBank?.name} - ${data.accountName}`,
+        description: `${bankName} - ${data.accountName}`,
       });
     },
     onError: (error: any) => {
@@ -103,8 +107,10 @@ export default function BankAccountSetup() {
 
   // Setup bank account mutation
   const setupAccountMutation = useMutation({
-    mutationFn: (data: BankAccountFormData) =>
-      apiRequest("POST", "/api/users/setup-bank-account", data),
+    mutationFn: async (data: BankAccountFormData) => {
+      const response = await apiRequest("POST", "/api/users/setup-bank-account", data);
+      return await response.json();
+    },
     onSuccess: (data: any) => {
       toast({
         title: "Bank Account Setup Complete",
@@ -114,7 +120,7 @@ export default function BankAccountSetup() {
     },
     onError: (error: any) => {
       toast({
-        title: "Setup Failed",
+        title: "Setup Failed", 
         description: error.message || "Failed to setup bank account",
         variant: "destructive",
       });
@@ -123,15 +129,22 @@ export default function BankAccountSetup() {
 
   // Watch form fields for verification
   const watchedAccountNumber = form.watch("accountNumber");
-  const watchedBankCode = form.watch("bankCode");
+  const watchedBankCodeWithName = form.watch("bankCode");
+  const watchedBankCode = watchedBankCodeWithName ? watchedBankCodeWithName.split('|')[0] : "";
   
-  // Clear verification when account number becomes invalid or changes
+  // Clear verification when account number or bank changes
   useEffect(() => {
-    if (watchedAccountNumber && watchedAccountNumber.length < 10) {
+    if (watchedAccountNumber && watchedAccountNumber.length !== 10) {
       setVerifiedAccount(null);
       setHasAttemptedVerification(false);
     }
   }, [watchedAccountNumber]);
+
+  // Reset verification when bank changes
+  useEffect(() => {
+    setVerifiedAccount(null);
+    setHasAttemptedVerification(false);
+  }, [watchedBankCode]);
 
   // Verify account when both bank and account number are provided (only once per combination)
   useEffect(() => {
@@ -220,14 +233,14 @@ export default function BankAccountSetup() {
     return false;
   });
 
-  // Categorize banks and ensure unique keys
+  // Categorize banks and ensure absolutely unique keys
   const commercialBanks = filteredBanks
     .filter((bank: Bank) => !bank.name.toLowerCase().includes('microfinance') && !bank.name.toLowerCase().includes('micro finance'))
-    .map((bank: Bank, index: number) => ({ ...bank, uniqueKey: `commercial-${bank.code}-${index}` }));
+    .map((bank: Bank, index: number) => ({ ...bank, uniqueKey: `commercial-${index}-${bank.id}-${bank.code}` }));
   
   const microfinanceBanks = filteredBanks
     .filter((bank: Bank) => bank.name.toLowerCase().includes('microfinance') || bank.name.toLowerCase().includes('micro finance'))
-    .map((bank: Bank, index: number) => ({ ...bank, uniqueKey: `micro-${bank.code}-${index}` }));
+    .map((bank: Bank, index: number) => ({ ...bank, uniqueKey: `micro-${index}-${bank.id}-${bank.code}` }));
 
   if (accountLoading || banksLoading) {
     return (
@@ -338,7 +351,7 @@ export default function BankAccountSetup() {
                                     Commercial Banks ({commercialBanks.length})
                                   </div>
                                   {commercialBanks.map((bank: any) => (
-                                    <SelectItem key={bank.uniqueKey} value={bank.code}>
+                                    <SelectItem key={bank.uniqueKey} value={`${bank.code}|${bank.name}|${bank.id}`}>
                                       <div className="flex items-center justify-between w-full">
                                         <span>{bank.name}</span>
                                         <Badge variant="secondary" className="ml-2 text-xs">
@@ -357,7 +370,7 @@ export default function BankAccountSetup() {
                                     Microfinance Banks ({microfinanceBanks.length})
                                   </div>
                                   {microfinanceBanks.map((bank: any) => (
-                                    <SelectItem key={bank.uniqueKey} value={bank.code}>
+                                    <SelectItem key={bank.uniqueKey} value={`${bank.code}|${bank.name}|${bank.id}`}>
                                       <div className="flex items-center justify-between w-full">
                                         <span>{bank.name}</span>
                                         <Badge variant="outline" className="ml-2 text-xs">
@@ -428,8 +441,16 @@ export default function BankAccountSetup() {
                             </div>
                             <div className="text-sm space-y-1">
                               <div><span className="font-medium">Bank:</span> {verifiedAccount.bankName}</div>
-                              <div><span className="font-medium">Account Name:</span> {verifiedAccount.accountName}</div>
+                              <div><span className="font-medium">Account Name:</span> <span className="text-green-700 font-semibold">{verifiedAccount.accountName}</span></div>
                               <div><span className="font-medium">Account Number:</span> {verifiedAccount.accountNumber}</div>
+                            </div>
+                          </div>
+                        )}
+                        {watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying && hasAttemptedVerification && (
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
+                            <div className="flex items-center gap-2 text-sm text-red-600">
+                              <AlertCircle className="w-4 h-4" />
+                              Account verification failed. Please check your account number and try again.
                             </div>
                           </div>
                         )}
