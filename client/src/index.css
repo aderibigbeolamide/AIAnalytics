@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile-first responsive base styles */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    @apply overflow-x-hidden;
+  }
+  
+  * {
+    @apply touch-manipulation;
+  }
+}
+
+/* Enhanced mobile components */
+@layer components {
+  .mobile-container {
+    @apply px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto;
+  }
+  
+  .mobile-card {
+    @apply rounded-lg border bg-card text-card-foreground shadow-sm p-3 sm:p-6;
+  }
+  
+  .mobile-button {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background min-h-10 px-4 py-2;
+  }
+  
+  .mobile-input {
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .touch-target {
+    @apply min-h-11 min-w-11 flex items-center justify-center;
+  }
+}
+
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);

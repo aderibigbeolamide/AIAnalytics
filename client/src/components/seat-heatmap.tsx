@@ -41,11 +41,20 @@ const SeatHeatmap: React.FC<SeatHeatmapProps> = ({ eventId, refreshInterval = 50
 
   const { data: seatData, isLoading, error } = useQuery({
     queryKey: ['/api/events', eventId, 'seat-availability'],
-    queryFn: () => apiRequest(`/api/events/${eventId}/seat-availability`) as Promise<SeatAvailability>,
+    queryFn: async () => {
+      try {
+        const response = await apiRequest('GET', `/api/events/${eventId}/seat-availability`);
+        return await response.json() as SeatAvailability;
+      } catch (error) {
+        console.error('Seat availability fetch error:', error);
+        throw error;
+      }
+    },
     refetchInterval: autoRefresh ? refreshInterval : false,
     refetchIntervalInBackground: true,
-    retry: 3,
-    retryDelay: 1000,
+    retry: 2,
+    retryDelay: 2000,
+    enabled: !!eventId,
   });
 
   const getSeatStatusColor = (status: string) => {
@@ -129,76 +138,78 @@ const SeatHeatmap: React.FC<SeatHeatmapProps> = ({ eventId, refreshInterval = 50
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Real-time Seat Availability
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <MapPin className="h-5 w-5 flex-shrink-0" />
+            <span className="truncate">Seat Availability</span>
           </CardTitle>
           <Button
             variant={autoRefresh ? "default" : "outline"}
             size="sm"
             onClick={() => setAutoRefresh(!autoRefresh)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 self-start sm:self-auto"
           >
             <Zap className="h-4 w-4" />
             {autoRefresh ? 'Live' : 'Paused'}
           </Button>
         </div>
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <span>Last updated: {new Date(seatData.lastUpdated).toLocaleTimeString()}</span>
-          <Badge className={getOccupancyColor(occupancyLevel)}>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs md:text-sm text-gray-600">
+          <span>Updated: {new Date(seatData.lastUpdated).toLocaleTimeString()}</span>
+          <Badge className={`${getOccupancyColor(occupancyLevel)} text-xs`}>
             {occupancyRate}% Occupied
           </Badge>
         </div>
       </CardHeader>
       <CardContent>
-        {/* Occupancy Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{seatData.availableSeats}</div>
-            <div className="text-sm text-gray-600">Available</div>
+        {/* Occupancy Overview - Mobile Optimized */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+          <div className="text-center p-2 md:p-3 bg-white rounded-lg shadow-sm">
+            <div className="text-xl md:text-2xl font-bold text-green-600">{seatData.availableSeats}</div>
+            <div className="text-xs md:text-sm text-gray-600">Available</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">
+          <div className="text-center p-2 md:p-3 bg-white rounded-lg shadow-sm">
+            <div className="text-xl md:text-2xl font-bold text-yellow-600">
               {seatData.seatMap.sections.reduce((total, section) => 
                 total + section.seats.filter(seat => seat.status === 'reserved').length, 0
               )}
             </div>
-            <div className="text-sm text-gray-600">Reserved</div>
+            <div className="text-xs md:text-sm text-gray-600">Reserved</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">
+          <div className="text-center p-2 md:p-3 bg-white rounded-lg shadow-sm">
+            <div className="text-xl md:text-2xl font-bold text-red-600">
               {seatData.seatMap.sections.reduce((total, section) => 
                 total + section.seats.filter(seat => seat.status === 'occupied').length, 0
               )}
             </div>
-            <div className="text-sm text-gray-600">Occupied</div>
+            <div className="text-xs md:text-sm text-gray-600">Occupied</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-600">{seatData.totalSeats}</div>
-            <div className="text-sm text-gray-600">Total Seats</div>
+          <div className="text-center p-2 md:p-3 bg-white rounded-lg shadow-sm">
+            <div className="text-xl md:text-2xl font-bold text-gray-600">{seatData.totalSeats}</div>
+            <div className="text-xs md:text-sm text-gray-600">Total</div>
           </div>
         </div>
 
-        {/* User Guide and Legend */}
+        {/* User Guide and Legend - Mobile Optimized */}
         <div className="mb-6 space-y-4">
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
+          <div className="p-3 md:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2 text-sm md:text-base">
+              <CheckCircle className="h-4 w-4 flex-shrink-0" />
               How to Check Seat Availability
             </h3>
-            <div className="text-sm text-blue-800 space-y-1">
-              <p>• <strong>Green seats</strong> = Available for booking</p>
-              <p>• <strong>Yellow seats</strong> = Reserved (temporarily held)</p>
-              <p>• <strong>Red seats</strong> = Occupied (confirmed booking)</p>
-              <p>• <strong>Gray seats</strong> = Blocked (not available)</p>
-              <p>• Click "Show Details" to see individual seat numbers</p>
-              <p>• Hover over seats for row and pricing information</p>
+            <div className="text-xs md:text-sm text-blue-800 space-y-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-1 md:gap-2">
+                <p>• <strong>Green</strong> = Available</p>
+                <p>• <strong>Yellow</strong> = Reserved</p>
+                <p>• <strong>Red</strong> = Occupied</p>
+                <p>• <strong>Gray</strong> = Blocked</p>
+              </div>
+              <p className="mt-2">• Tap "Show Details" to see individual seats</p>
+              <p>• Tap seats for pricing and booking options</p>
             </div>
           </div>
           
-          <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-4 p-3 md:p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-green-500 rounded shadow-sm"></div>
               <span className="text-sm font-medium">Available ({seatData.availableSeats})</span>
@@ -224,77 +235,86 @@ const SeatHeatmap: React.FC<SeatHeatmapProps> = ({ eventId, refreshInterval = 50
           </div>
         </div>
 
-        {/* Seat Map */}
-        <div className="space-y-6">
+        {/* Seat Map - Mobile Optimized */}
+        <div className="space-y-4 md:space-y-6">
           {seatData.seatMap.sections.map((section) => (
-            <div key={section.id} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-lg">{section.name}</h3>
+            <div key={section.id} className="border rounded-lg p-3 md:p-4 bg-white shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <h3 className="font-medium text-base md:text-lg text-gray-900">{section.name}</h3>
                 <Button
                   variant={selectedSection === section.id ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedSection(
                     selectedSection === section.id ? null : section.id
                   )}
+                  className="self-start sm:self-auto"
                 >
                   {selectedSection === section.id ? 'Hide Details' : 'Show Details'}
                 </Button>
               </div>
 
-              {/* Section Overview */}
-              <div className="grid grid-cols-4 gap-2 mb-4 text-sm">
-                <div className="text-center">
-                  <div className="font-bold text-green-600">
+              {/* Section Overview - Mobile Optimized */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 text-xs md:text-sm">
+                <div className="text-center p-2 bg-green-50 rounded">
+                  <div className="font-bold text-green-600 text-sm md:text-base">
                     {section.seats.filter(seat => seat.status === 'available').length}
                   </div>
                   <div className="text-gray-600">Available</div>
                 </div>
-                <div className="text-center">
-                  <div className="font-bold text-yellow-600">
+                <div className="text-center p-2 bg-yellow-50 rounded">
+                  <div className="font-bold text-yellow-600 text-sm md:text-base">
                     {section.seats.filter(seat => seat.status === 'reserved').length}
                   </div>
                   <div className="text-gray-600">Reserved</div>
                 </div>
-                <div className="text-center">
-                  <div className="font-bold text-red-600">
+                <div className="text-center p-2 bg-red-50 rounded">
+                  <div className="font-bold text-red-600 text-sm md:text-base">
                     {section.seats.filter(seat => seat.status === 'occupied').length}
                   </div>
                   <div className="text-gray-600">Occupied</div>
                 </div>
-                <div className="text-center">
-                  <div className="font-bold text-gray-600">{section.seats.length}</div>
+                <div className="text-center p-2 bg-gray-50 rounded">
+                  <div className="font-bold text-gray-600 text-sm md:text-base">{section.seats.length}</div>
                   <div className="text-gray-600">Total</div>
                 </div>
               </div>
 
-              {/* Detailed Seat Grid */}
+              {/* Detailed Seat Grid - Mobile Optimized */}
               {selectedSection === section.id && (
                 <div className="space-y-4">
-                  <div className="text-sm text-gray-600 px-4">
-                    💡 <strong>Tip:</strong> Hover over seats to see pricing and availability. Green seats are ready to book!
+                  <div className="text-xs md:text-sm text-gray-600 px-2 md:px-4 bg-blue-50 p-2 rounded">
+                    💡 <strong>Tip:</strong> Tap seats to see pricing and booking options. Green seats are available!
                   </div>
-                  <div className="grid grid-cols-10 gap-1 p-4 bg-gray-50 rounded">
+                  <div className="grid grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-1 md:gap-2 p-3 md:p-4 bg-gray-50 rounded overflow-x-auto">
                     {section.seats.map((seat) => (
                       <div
                         key={seat.id}
                         className={`
-                          w-8 h-8 rounded text-xs flex items-center justify-center text-white font-medium
-                          cursor-pointer transition-all duration-200 transform hover:scale-110 hover:shadow-lg
+                          w-7 h-7 md:w-8 md:h-8 rounded text-xs flex items-center justify-center text-white font-medium
+                          cursor-pointer transition-all duration-200 transform active:scale-95 md:hover:scale-110 hover:shadow-lg
                           ${getSeatStatusColor(seat.status)}
-                          ${seat.status === 'available' ? 'animate-pulse' : ''}
+                          ${seat.status === 'available' ? 'ring-2 ring-green-300 ring-opacity-50' : ''}
                         `}
                         title={`Row ${seat.row}, Seat ${seat.number}
 Status: ${seat.status.toUpperCase()}
 ${seat.price ? `Price: ₦${seat.price.toLocaleString()}` : ''}
 ${seat.category ? `Category: ${seat.category}` : ''}
-${seat.status === 'available' ? '✅ Click to select this seat' : seat.status === 'occupied' ? '❌ Already taken' : seat.status === 'reserved' ? '⏳ Temporarily held' : '🚫 Not available'}`}
+${seat.status === 'available' ? '✅ Tap to select' : seat.status === 'occupied' ? '❌ Already taken' : seat.status === 'reserved' ? '⏳ Temporarily held' : '🚫 Not available'}`}
                         onClick={() => {
                           if (seat.status === 'available') {
-                            alert(`Seat ${seat.row}${seat.number} selected! 
+                            const message = `Seat ${seat.row}${seat.number} Selected!
+
 Price: ₦${seat.price?.toLocaleString() || 'N/A'}
+Category: ${seat.category || 'Standard'}
 Status: Available for booking
+
+Ready to proceed with booking?`;
                             
-In a real booking system, this would redirect to the payment page.`);
+                            if (confirm(message)) {
+                              alert('In a real booking system, you would now be redirected to the secure payment page.');
+                            }
+                          } else {
+                            alert(`Seat ${seat.row}${seat.number} is ${seat.status}. Please select an available (green) seat.`);
                           }
                         }}
                       >
@@ -302,8 +322,10 @@ In a real booking system, this would redirect to the payment page.`);
                       </div>
                     ))}
                   </div>
-                  <div className="text-center text-sm text-gray-500">
-                    {section.seats.filter(s => s.status === 'available').length} seats available in this section
+                  <div className="text-center text-xs md:text-sm text-gray-500 bg-white p-2 rounded">
+                    <span className="font-medium text-green-600">
+                      {section.seats.filter(s => s.status === 'available').length}
+                    </span> seats available in this section
                   </div>
                 </div>
               )}
@@ -311,15 +333,18 @@ In a real booking system, this would redirect to the payment page.`);
           ))}
         </div>
 
-        {/* Refresh Note */}
-        <div className="mt-6 text-center text-sm text-gray-500">
+        {/* Refresh Note - Mobile Optimized */}
+        <div className="mt-6 text-center text-xs md:text-sm text-gray-500 bg-white p-3 rounded-lg border">
           {autoRefresh ? (
-            <span className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              Auto-refreshing every {refreshInterval / 1000} seconds
-            </span>
+              <span>Live updates every {refreshInterval / 1000}s</span>
+            </div>
           ) : (
-            <span>Auto-refresh is paused. Click refresh button to update manually.</span>
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <span>Auto-refresh paused. Tap "Live" to resume.</span>
+            </div>
           )}
         </div>
       </CardContent>
