@@ -76,29 +76,62 @@ export default function BankAccountSetup() {
   // Manual bank verification mutation
   const verifyBankAccountMutation = useMutation({
     mutationFn: async (data: { accountNumber: string; bankCode: string }) => {
-      const response = await apiRequest("POST", "/api/banks/verify", data);
-      return await response.json();
+      try {
+        console.log("Making verification request with:", data);
+        const response = await apiRequest("POST", "/api/banks/verify", data);
+        const result = await response.json();
+        console.log("Verification API response:", result);
+        return result;
+      } catch (error) {
+        console.error("Verification API error:", error);
+        throw error;
+      }
     },
     onSuccess: (data: any) => {
       const bankValue = form.getValues("bankCode");
       const [bankCode, bankName, bankId] = bankValue.split('|');
       console.log("Account verification successful:", data);
-      setVerifiedAccount({
-        accountName: data.accountName,
-        accountNumber: data.accountNumber,
-        bankName: bankName || "Unknown Bank",
-        bankCode: bankCode,
-      });
-      toast({
-        title: "Account Verified",
-        description: `${bankName} - ${data.accountName}`,
-      });
+      
+      if (data.success && data.accountName) {
+        setVerifiedAccount({
+          accountName: data.accountName,
+          accountNumber: data.accountNumber,
+          bankName: bankName || "Unknown Bank",
+          bankCode: bankCode,
+        });
+        toast({
+          title: "Account Verified",
+          description: `${bankName} - ${data.accountName}`,
+        });
+      } else {
+        console.error("Verification response missing required data:", data);
+        setVerifiedAccount(null);
+        toast({
+          title: "Verification Failed",
+          description: data.message || "Invalid response from verification service",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: any) => {
-      console.log("Bank verification failed:", error);
+      console.error("Bank verification failed:", error);
+      const errorMessage = error.message || "Could not verify account details";
+      
+      // Handle specific error cases
+      let userMessage = errorMessage;
+      if (errorMessage.includes("401")) {
+        userMessage = "Authentication required. Please refresh the page and try again.";
+      } else if (errorMessage.includes("timeout") || errorMessage.includes("ECONNREFUSED")) {
+        userMessage = "Network error. Please check your connection and try again.";
+      } else if (errorMessage.includes("invalid_account")) {
+        userMessage = "Invalid account number. Please check your account number and try again.";
+      } else if (errorMessage.includes("invalid_bank_code")) {
+        userMessage = "Invalid bank selection. Please select your bank and try again.";
+      }
+      
       toast({
         title: "Verification Failed",
-        description: error.message || "Could not verify account details",
+        description: userMessage,
         variant: "destructive",
       });
       setVerifiedAccount(null);
