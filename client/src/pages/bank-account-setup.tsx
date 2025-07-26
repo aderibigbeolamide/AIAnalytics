@@ -181,26 +181,42 @@ export default function BankAccountSetup() {
 
   // Verify account when both bank and account number are provided (only once per combination)
   useEffect(() => {
+    console.log("useEffect - Verification check:", {
+      accountNumber: watchedAccountNumber,
+      accountLength: watchedAccountNumber?.length,
+      bankCode: watchedBankCode,
+      verifiedAccount: !!verifiedAccount,
+      isVerifying,
+      isPending: verifyBankAccountMutation.isPending,
+      hasAttempted: hasAttemptedVerification
+    });
+    
     if (watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying && !verifyBankAccountMutation.isPending && !hasAttemptedVerification) {
-      console.log("Verifying account with selected bank...");
+      console.log("Starting verification process...");
+      console.log("Account Number:", watchedAccountNumber);
+      console.log("Bank Code:", watchedBankCode);
       setHasAttemptedVerification(true);
       
       const timeoutId = setTimeout(() => {
+        console.log("Executing verification mutation...");
         setIsVerifying(true);
         verifyBankAccountMutation.mutate(
           { accountNumber: watchedAccountNumber, bankCode: watchedBankCode },
           {
             onSettled: () => {
-              console.log("Bank verification completed");
+              console.log("Bank verification mutation settled");
               setIsVerifying(false);
             },
           }
         );
       }, 1000); // 1 second delay to prevent rapid API calls
       
-      return () => clearTimeout(timeoutId);
+      return () => {
+        console.log("Clearing verification timeout");
+        clearTimeout(timeoutId);
+      };
     }
-  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, hasAttemptedVerification]);
+  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, hasAttemptedVerification, verifyBankAccountMutation.isPending]);
 
   const onSubmit = (data: BankAccountFormData) => {
     if (!verifiedAccount) {
