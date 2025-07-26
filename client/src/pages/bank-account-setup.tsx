@@ -38,7 +38,7 @@ export default function BankAccountSetup() {
   const queryClient = useQueryClient();
   const [verifiedAccount, setVerifiedAccount] = useState<{ accountName: string; accountNumber: string; bankName: string; bankCode: string } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [bankSearchTerm, setBankSearchTerm] = useState("");
+  const [bankSearchTerm] = useState("");
 
   const form = useForm<BankAccountFormData>({
     resolver: zodResolver(bankAccountSchema),
@@ -61,9 +61,7 @@ export default function BankAccountSetup() {
     },
   });
   
-  // Debug the banks API call
-  console.log("Banks loading:", banksLoading);
-  console.log("Banks error:", banksError);
+
 
   // Fetch existing bank account details
   const { data: existingAccount, isLoading: accountLoading } = useQuery({
@@ -171,12 +169,6 @@ export default function BankAccountSetup() {
   const banks = (banksResponse as any)?.banks || [];
   const bankStats = (banksResponse as any)?.statistics || { total: 0, commercial: 0, microfinance: 0 };
   const hasExistingAccount = (existingAccount as any)?.bankAccount?.paystackSubaccountCode;
-  
-  // Debug logging
-  console.log("Banks response:", banksResponse);
-  console.log("Banks array:", banks);
-  console.log("Banks length:", banks.length);
-  console.log("Bank stats:", bankStats);
 
   // Enhanced bank search with common name mappings
   const filteredBanks = banks.filter((bank: Bank) => {
@@ -330,17 +322,13 @@ export default function BankAccountSetup() {
                               <SelectValue placeholder={verifiedAccount ? verifiedAccount.bankName : "Choose your bank first"} />
                             </SelectTrigger>
                             <SelectContent className="max-h-80">
-                              <div className="sticky top-0 bg-white p-2 border-b">
-                                <div className="relative">
-                                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                                  <Input
-                                    placeholder="Search banks..."
-                                    className="pl-8 h-8"
-                                    value={bankSearchTerm}
-                                    onChange={(e) => setBankSearchTerm(e.target.value)}
-                                  />
+                              {bankSearchTerm && (
+                                <div className="sticky top-0 bg-white p-2 border-b">
+                                  <div className="text-sm text-gray-600">
+                                    Search for "{bankSearchTerm}" - {filteredBanks.length} results
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                               
                               {/* Commercial Banks */}
                               {commercialBanks.length > 0 && (
@@ -348,8 +336,8 @@ export default function BankAccountSetup() {
                                   <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                     Commercial Banks ({commercialBanks.length})
                                   </div>
-                                  {commercialBanks.map((bank: Bank) => (
-                                    <SelectItem key={bank.code} value={bank.code}>
+                                  {commercialBanks.map((bank: Bank, index: number) => (
+                                    <SelectItem key={`${bank.code}-${index}`} value={bank.code}>
                                       <div className="flex items-center justify-between w-full">
                                         <span>{bank.name}</span>
                                         <Badge variant="secondary" className="ml-2 text-xs">
@@ -367,8 +355,8 @@ export default function BankAccountSetup() {
                                   <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                     Microfinance Banks ({microfinanceBanks.length})
                                   </div>
-                                  {microfinanceBanks.map((bank: Bank) => (
-                                    <SelectItem key={bank.code} value={bank.code}>
+                                  {microfinanceBanks.map((bank: Bank, index: number) => (
+                                    <SelectItem key={`${bank.code}-micro-${index}`} value={bank.code}>
                                       <div className="flex items-center justify-between w-full">
                                         <span>{bank.name}</span>
                                         <Badge variant="outline" className="ml-2 text-xs">
