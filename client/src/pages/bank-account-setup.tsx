@@ -39,6 +39,7 @@ export default function BankAccountSetup() {
   const [verifiedAccount, setVerifiedAccount] = useState<{ accountName: string; accountNumber: string; bankName: string; bankCode: string } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [bankSearchTerm] = useState("");
+  const [hasAttemptedVerification, setHasAttemptedVerification] = useState(false);
 
   const form = useForm<BankAccountFormData>({
     resolver: zodResolver(bankAccountSchema),
@@ -124,17 +125,19 @@ export default function BankAccountSetup() {
   const watchedAccountNumber = form.watch("accountNumber");
   const watchedBankCode = form.watch("bankCode");
   
-  // Clear verification when account number becomes invalid
+  // Clear verification when account number becomes invalid or changes
   useEffect(() => {
     if (watchedAccountNumber && watchedAccountNumber.length < 10) {
       setVerifiedAccount(null);
+      setHasAttemptedVerification(false);
     }
   }, [watchedAccountNumber]);
 
-  // Verify account when both bank and account number are provided
+  // Verify account when both bank and account number are provided (only once per combination)
   useEffect(() => {
-    if (watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying) {
+    if (watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying && !verifyBankAccountMutation.isPending && !hasAttemptedVerification) {
       console.log("Verifying account with selected bank...");
+      setHasAttemptedVerification(true);
       
       const timeoutId = setTimeout(() => {
         setIsVerifying(true);
@@ -151,7 +154,7 @@ export default function BankAccountSetup() {
       
       return () => clearTimeout(timeoutId);
     }
-  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, verifyBankAccountMutation]);
+  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, hasAttemptedVerification]);
 
   const onSubmit = (data: BankAccountFormData) => {
     if (!verifiedAccount) {
@@ -217,16 +220,14 @@ export default function BankAccountSetup() {
     return false;
   });
 
-  // Categorize banks
-  const commercialBanks = filteredBanks.filter((bank: Bank) => 
-    !bank.name.toLowerCase().includes('microfinance') && 
-    !bank.name.toLowerCase().includes('micro finance')
-  );
+  // Categorize banks and ensure unique keys
+  const commercialBanks = filteredBanks
+    .filter((bank: Bank) => !bank.name.toLowerCase().includes('microfinance') && !bank.name.toLowerCase().includes('micro finance'))
+    .map((bank: Bank, index: number) => ({ ...bank, uniqueKey: `commercial-${bank.code}-${index}` }));
   
-  const microfinanceBanks = filteredBanks.filter((bank: Bank) => 
-    bank.name.toLowerCase().includes('microfinance') || 
-    bank.name.toLowerCase().includes('micro finance')
-  );
+  const microfinanceBanks = filteredBanks
+    .filter((bank: Bank) => bank.name.toLowerCase().includes('microfinance') || bank.name.toLowerCase().includes('micro finance'))
+    .map((bank: Bank, index: number) => ({ ...bank, uniqueKey: `micro-${bank.code}-${index}` }));
 
   if (accountLoading || banksLoading) {
     return (
@@ -336,8 +337,8 @@ export default function BankAccountSetup() {
                                   <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                     Commercial Banks ({commercialBanks.length})
                                   </div>
-                                  {commercialBanks.map((bank: Bank, index: number) => (
-                                    <SelectItem key={`${bank.code}-${index}`} value={bank.code}>
+                                  {commercialBanks.map((bank: any) => (
+                                    <SelectItem key={bank.uniqueKey} value={bank.code}>
                                       <div className="flex items-center justify-between w-full">
                                         <span>{bank.name}</span>
                                         <Badge variant="secondary" className="ml-2 text-xs">
@@ -355,8 +356,8 @@ export default function BankAccountSetup() {
                                   <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                     Microfinance Banks ({microfinanceBanks.length})
                                   </div>
-                                  {microfinanceBanks.map((bank: Bank, index: number) => (
-                                    <SelectItem key={`${bank.code}-micro-${index}`} value={bank.code}>
+                                  {microfinanceBanks.map((bank: any) => (
+                                    <SelectItem key={bank.uniqueKey} value={bank.code}>
                                       <div className="flex items-center justify-between w-full">
                                         <span>{bank.name}</span>
                                         <Badge variant="outline" className="ml-2 text-xs">
