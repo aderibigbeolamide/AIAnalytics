@@ -448,10 +448,49 @@ export default function BankAccountSetup() {
                         )}
                         {watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying && hasAttemptedVerification && (
                           <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
-                            <div className="flex items-center gap-2 text-sm text-red-600">
+                            <div className="flex items-center gap-2 text-sm text-red-600 mb-2">
                               <AlertCircle className="w-4 h-4" />
-                              Account verification failed. Please check your account number and try again.
+                              Automatic verification failed. Please try again or verify manually.
                             </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setHasAttemptedVerification(false);
+                                setVerifiedAccount(null);
+                              }}
+                              className="mr-2"
+                            >
+                              Try Again
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const bankValue = form.getValues("bankCode");
+                                const accountNum = form.getValues("accountNumber");
+                                const [bankCode, bankName] = bankValue.split('|');
+                                
+                                // Prompt user for account name since verification failed
+                                const accountName = prompt("Since automatic verification failed, please enter your account name as it appears on your bank statement:");
+                                if (accountName && accountName.trim()) {
+                                  setVerifiedAccount({
+                                    accountName: accountName.trim(),
+                                    accountNumber: accountNum,
+                                    bankName: bankName || "Selected Bank",
+                                    bankCode: bankCode,
+                                  });
+                                  toast({
+                                    title: "Manual Verification Complete",
+                                    description: `Account name set to: ${accountName.trim()}`,
+                                  });
+                                }
+                              }}
+                            >
+                              Enter Account Name Manually
+                            </Button>
                           </div>
                         )}
                       </FormItem>

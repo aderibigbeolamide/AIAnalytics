@@ -114,6 +114,9 @@ export async function createPaystackSubaccount(
 // Verify bank account details
 export async function verifyBankAccount(accountNumber: string, bankCode: string) {
   try {
+    console.log(`Verifying account ${accountNumber} with bank code ${bankCode}`);
+    console.log(`Using Paystack Secret Key: ${process.env.PAYSTACK_SECRET_KEY ? 'Available' : 'Missing'}`);
+    
     const response = await fetch(
       `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
       {
@@ -125,6 +128,25 @@ export async function verifyBankAccount(accountNumber: string, bankCode: string)
     );
 
     const data = await response.json();
+    console.log('Paystack verification response:', data);
+    
+    // If the response is unsuccessful, return a more specific error
+    if (!data.status) {
+      let errorMessage = data.message || "Could not resolve account name. Check parameters or try again.";
+      
+      // Provide more helpful error messages based on error codes
+      if (data.code === 'invalid_bank_code') {
+        errorMessage = "Invalid bank code. Please ensure you selected the correct bank.";
+      } else if (data.code === 'invalid_account') {
+        errorMessage = "Invalid account number. Please check your account number and try again.";
+      }
+      
+      return {
+        status: false,
+        message: errorMessage
+      };
+    }
+    
     return data;
   } catch (error) {
     console.error('Bank account verification error:', error);
