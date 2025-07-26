@@ -181,12 +181,14 @@ export default function BankAccountSetup() {
 
   // Stable verification function
   const performVerification = useCallback((accountNumber: string, bankCode: string) => {
-    console.log("Performing verification for:", { accountNumber, bankCode });
+    // Extract just the bank code from the combined value (format: code|name|id)
+    const cleanBankCode = bankCode.split('|')[0];
+    console.log("Performing verification for:", { accountNumber, bankCode: cleanBankCode });
     setIsVerifying(true);
     setHasAttemptedVerification(true);
     
     verifyBankAccountMutation.mutate(
-      { accountNumber, bankCode },
+      { accountNumber, bankCode: cleanBankCode },
       {
         onSettled: () => {
           console.log("Bank verification mutation settled");
@@ -235,7 +237,15 @@ export default function BankAccountSetup() {
       return;
     }
     
-    setupAccountMutation.mutate(data);
+    // Extract just the bank code from the combined value
+    const bankCode = data.bankCode.split('|')[0];
+    const formDataWithCleanBankCode = {
+      ...data,
+      bankCode: bankCode
+    };
+    
+    console.log("Submitting bank account data:", formDataWithCleanBankCode);
+    setupAccountMutation.mutate(formDataWithCleanBankCode);
   };
 
   const banks = (banksResponse as any)?.banks || [];
