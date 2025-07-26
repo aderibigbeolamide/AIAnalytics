@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Users, MapPin, Clock, AlertCircle, CheckCircle, XCircle, Zap } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 interface SeatSection {
   id: string;
@@ -41,9 +42,10 @@ const SeatHeatmap: React.FC<SeatHeatmapProps> = ({ eventId, refreshInterval = 50
   const { data: seatData, isLoading, error } = useQuery({
     queryKey: ['/api/events', eventId, 'seat-availability'],
     queryFn: async () => {
-      const response = await fetch(`/api/events/${eventId}/seat-availability`);
-      if (!response.ok) throw new Error('Failed to fetch seat availability');
-      return response.json() as SeatAvailability;
+      const response = await apiRequest(`/api/events/${eventId}/seat-availability`, {
+        method: 'GET'
+      });
+      return response as SeatAvailability;
     },
     refetchInterval: autoRefresh ? refreshInterval : false,
     refetchIntervalInBackground: true,
