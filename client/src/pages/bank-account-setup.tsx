@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -179,6 +179,23 @@ export default function BankAccountSetup() {
     setHasAttemptedVerification(false);
   }, [watchedBankCode]);
 
+  // Stable verification function
+  const performVerification = useCallback((accountNumber: string, bankCode: string) => {
+    console.log("Performing verification for:", { accountNumber, bankCode });
+    setIsVerifying(true);
+    setHasAttemptedVerification(true);
+    
+    verifyBankAccountMutation.mutate(
+      { accountNumber, bankCode },
+      {
+        onSettled: () => {
+          console.log("Bank verification mutation settled");
+          setIsVerifying(false);
+        },
+      }
+    );
+  }, [verifyBankAccountMutation]);
+
   // Verify account when both bank and account number are provided (only once per combination)
   useEffect(() => {
     console.log("useEffect - Verification check:", {
@@ -191,32 +208,22 @@ export default function BankAccountSetup() {
       hasAttempted: hasAttemptedVerification
     });
     
-    if (watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying && !verifyBankAccountMutation.isPending && !hasAttemptedVerification) {
-      console.log("Starting verification process...");
+    if (watchedAccountNumber && 
+        watchedAccountNumber.length === 10 && 
+        watchedBankCode && 
+        !verifiedAccount && 
+        !isVerifying && 
+        !verifyBankAccountMutation.isPending && 
+        !hasAttemptedVerification) {
+      
+      console.log("✅ All conditions met - Starting verification immediately");
       console.log("Account Number:", watchedAccountNumber);
       console.log("Bank Code:", watchedBankCode);
-      setHasAttemptedVerification(true);
       
-      const timeoutId = setTimeout(() => {
-        console.log("Executing verification mutation...");
-        setIsVerifying(true);
-        verifyBankAccountMutation.mutate(
-          { accountNumber: watchedAccountNumber, bankCode: watchedBankCode },
-          {
-            onSettled: () => {
-              console.log("Bank verification mutation settled");
-              setIsVerifying(false);
-            },
-          }
-        );
-      }, 1000); // 1 second delay to prevent rapid API calls
-      
-      return () => {
-        console.log("Clearing verification timeout");
-        clearTimeout(timeoutId);
-      };
+      // Trigger verification immediately without timeout
+      performVerification(watchedAccountNumber, watchedBankCode);
     }
-  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, hasAttemptedVerification, verifyBankAccountMutation.isPending]);
+  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, hasAttemptedVerification, verifyBankAccountMutation.isPending, performVerification]);
 
   const onSubmit = (data: BankAccountFormData) => {
     if (!verifiedAccount) {
