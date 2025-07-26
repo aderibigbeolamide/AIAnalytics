@@ -2,31 +2,14 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
-import { seed } from "./seed";
-import { env, validateEnvironment, logEnvironmentStatus } from "../config/environment";
 import path from "path";
-
-// Initialize environment and validate configuration
-validateEnvironment();
-logEnvironmentStatus();
+// import { seed } from "./seed";
 
 const app = express();
-app.use(express.json({ limit: `${env.MAX_FILE_SIZE}b` }));
-app.use(express.urlencoded({ extended: false, limit: `${env.MAX_FILE_SIZE}b` }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-// Initialize database seeding based on environment
-if (env.IS_DEVELOPMENT || env.IS_REPLIT) {
-  console.log("⏩ Skipping database seeding - running in development/replit mode");
-} else {
-  console.log("🌱 Production environment detected - database seeding may be required");
-}
-
-try {
-  // Only attempt seeding if database is available
-  // await seed();
-} catch (error) {
-  console.log("Database unavailable, continuing without seeding");
-}
+// await seed();
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(fileStorage.getUploadDirectory()));
@@ -75,13 +58,16 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  // For Replit environment, force static serving since Vite dev has path issues
-  serveStatic(app);
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
 
-  // Serve the app on the configured port
-  // In Replit, this must be 5000 (the only non-firewalled port)
-  // In other environments, use the configured PORT
-  const port = env.IS_REPLIT ? 5000 : env.PORT;
+  // ALWAYS serve the app on port 5000
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
+  const port = 5000;
   server.listen({
     port,
     host: "0.0.0.0",
