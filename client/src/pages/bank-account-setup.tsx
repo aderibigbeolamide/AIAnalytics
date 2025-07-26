@@ -53,15 +53,25 @@ export default function BankAccountSetup() {
   });
 
   // Fetch banks list with comprehensive data
-  const { data: banksResponse, isLoading: banksLoading } = useQuery({
+  const { data: banksResponse, isLoading: banksLoading, error: banksError } = useQuery({
     queryKey: ["/api/banks"],
-    queryFn: () => apiRequest("GET", "/api/banks"),
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/banks");
+      return await response.json();
+    },
   });
+  
+  // Debug the banks API call
+  console.log("Banks loading:", banksLoading);
+  console.log("Banks error:", banksError);
 
   // Fetch existing bank account details
   const { data: existingAccount, isLoading: accountLoading } = useQuery({
     queryKey: ["/api/users/bank-account"],
-    queryFn: () => apiRequest("GET", "/api/users/bank-account"),
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/users/bank-account");
+      return await response.json();
+    },
   });
 
   // Manual bank verification mutation
@@ -161,6 +171,12 @@ export default function BankAccountSetup() {
   const banks = (banksResponse as any)?.banks || [];
   const bankStats = (banksResponse as any)?.statistics || { total: 0, commercial: 0, microfinance: 0 };
   const hasExistingAccount = (existingAccount as any)?.bankAccount?.paystackSubaccountCode;
+  
+  // Debug logging
+  console.log("Banks response:", banksResponse);
+  console.log("Banks array:", banks);
+  console.log("Banks length:", banks.length);
+  console.log("Bank stats:", bankStats);
 
   // Enhanced bank search with common name mappings
   const filteredBanks = banks.filter((bank: Bank) => {
