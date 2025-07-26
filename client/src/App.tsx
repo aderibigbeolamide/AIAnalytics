@@ -33,7 +33,7 @@ import TicketScanner from "@/pages/ticket-scanner";
 import BankAccountSetup from "@/pages/bank-account-setup";
 
 function Router() {
-  const { isAuthenticated, checkAuth, loadFromStorage } = useAuthStore();
+  const { isAuthenticated, checkAuth, loadFromStorage, initializeSessionManagement } = useAuthStore();
   
   // Track page views with Google Tag Manager
   useGTM();
@@ -57,6 +57,9 @@ function Router() {
     loadFromStorage();
     const currentState = useAuthStore.getState();
     console.log('Initial auth state after loading from storage:', currentState);
+    
+    // Initialize session management for mobile reliability
+    initializeSessionManagement();
     
     // Only check auth via API if we have a token but need to validate it
     if (currentState.token && !currentState.isAuthenticated) {
