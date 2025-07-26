@@ -89,6 +89,10 @@ export async function createPaystackSubaccount(
   percentageCharge: number = 0 // Platform fee
 ) {
   try {
+    console.log(`Creating Paystack subaccount for: ${businessName}`);
+    console.log(`Bank Code: ${bankCode}, Account: ${accountNumber}, Charge: ${percentageCharge}%`);
+    console.log(`Using Paystack Secret Key: ${process.env.PAYSTACK_SECRET_KEY ? 'Available' : 'Missing'}`);
+    
     const response = await fetch('https://api.paystack.co/subaccount', {
       method: 'POST',
       headers: {
@@ -104,6 +108,8 @@ export async function createPaystackSubaccount(
     });
 
     const data = await response.json();
+    console.log('Paystack subaccount creation response:', data);
+    
     return data;
   } catch (error) {
     console.error('Paystack subaccount creation error:', error);
