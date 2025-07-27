@@ -3693,6 +3693,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public seat availability endpoint (no authentication required)
+  app.get("/api/events/:id/seat-availability-public", async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      
+      // Get existing seat availability data
+      let seatData = await storage.getEventCapacity(eventId);
+      
+      if (!seatData) {
+        // Create sample seat data if none exists
+        const sampleSeatMap = {
+          sections: [
+            {
+              id: "section-a",
+              name: "Section A (VIP)",
+              seats: Array.from({ length: 50 }, (_, i) => ({
+                id: `a-${i + 1}`,
+                row: String.fromCharCode(65 + Math.floor(i / 10)),
+                number: String((i % 10) + 1),
+                status: Math.random() > 0.7 ? 'occupied' : Math.random() > 0.5 ? 'reserved' : 'available' as 'available' | 'reserved' | 'occupied' | 'blocked',
+                price: 5000,
+                category: 'VIP'
+              }))
+            },
+            {
+              id: "section-b", 
+              name: "Section B (Regular)",
+              seats: Array.from({ length: 100 }, (_, i) => ({
+                id: `b-${i + 1}`,
+                row: String.fromCharCode(65 + Math.floor(i / 20)),
+                number: String((i % 20) + 1),
+                status: Math.random() > 0.6 ? 'occupied' : Math.random() > 0.4 ? 'reserved' : 'available' as 'available' | 'reserved' | 'occupied' | 'blocked',
+                price: 2000,
+                category: 'Regular'
+              }))
+            }
+          ]
+        };
+
+        const totalSeats = sampleSeatMap.sections.reduce((total, section) => total + section.seats.length, 0);
+        const availableSeats = sampleSeatMap.sections.reduce((total, section) => 
+          total + section.seats.filter(seat => seat.status === 'available').length, 0
+        );
+
+        seatData = await storage.createEventCapacity({
+          eventId,
+          totalSeats,
+          availableSeats,
+          seatMap: sampleSeatMap
+        });
+      }
+
+      // Return only essential data for public view (no seat map details)
+      res.json({
+        eventId: seatData.eventId,
+        totalSeats: seatData.totalSeats,
+        availableSeats: seatData.availableSeats,
+        occupancyRate: Math.round(((seatData.totalSeats - seatData.availableSeats) / seatData.totalSeats) * 100),
+        lastUpdated: seatData.updatedAt || new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Public seat availability error:", error);
+      res.status(500).json({ message: "Failed to fetch seat availability" });
+    }
+  });
+
   // User Preferences Endpoints
   app.get("/api/users/preferences", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {

@@ -630,6 +630,15 @@ npm run migrate
   - Local development setup guide created (LOCAL_SETUP.md) for team deployment
   - Build process optimized: `npm run build && cp -r dist/public server/` for local setup
 
+- July 27, 2025. **MAJOR ENHANCEMENT**: Made AI-powered features visible to all users on public pages:
+  - **Real-time Seat Availability**: Now displayed on all public event listings with live updates every 10 seconds
+  - **Color-coded Availability System**: Green (High), Yellow (Limited), Red (Almost Full) with progress bars
+  - **Public API Endpoints**: Created /api/events/:id/seat-availability-public for unauthenticated access
+  - **AI Event Recommendations**: Added personalized suggestions to guest-lookup page for all users
+  - **Mobile-Optimized Display**: Enhanced public pages with responsive seat availability indicators
+  - **Enhanced User Experience**: Users can now see "47 of 150 seats available" with occupancy rates
+  - **Fixed Mobile Session Management**: 5-minute logout issue resolved with page visibility detection
+
 - July 26, 2025. **MIGRATION COMPLETED**: Successfully migrated EventValidate from Replit Agent to Replit environment with enhanced mobile session management:
   - **Mobile Session Persistence Fix**: Implemented comprehensive session management to prevent 5-minute logout issues on mobile devices
   - **Enhanced Authentication Store**: Added robust authentication state persistence with timestamp tracking and activity monitoring

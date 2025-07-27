@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Search, Calendar, QrCode, ArrowLeft, MapPin, Clock, Users, Ticket } from 'lucide-react';
+import { Search, Calendar, QrCode, ArrowLeft, MapPin, Clock, Users, Ticket, TrendingUp, AlertCircle } from 'lucide-react';
 import { CountdownTimer } from '@/components/countdown-timer';
+import EventRecommendations from '@/components/event-recommendations';
+import { PublicSeatAvailability } from '@/components/public-seat-availability';
 import { Link } from 'wouter';
 
 export default function GuestLookup() {
@@ -147,6 +149,11 @@ export default function GuestLookup() {
           </CardContent>
         </Card>
 
+        {/* AI-Powered Event Recommendations */}
+        <div className="mb-8">
+          <EventRecommendations limit={3} />
+        </div>
+
         {/* All Events Section (visible to everyone) */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">All Events</h2>
@@ -201,6 +208,9 @@ export default function GuestLookup() {
                           </div>
                         )}
                       </div>
+                      
+                      {/* Real-time Availability Indicator */}
+                      <PublicSeatAvailability eventId={event.id} />
                       
                       {eventStatus === 'upcoming' && (
                         <CountdownTimer

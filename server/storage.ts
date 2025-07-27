@@ -622,6 +622,71 @@ export class MemStorage implements IStorage {
     this.faceRecognitionPhotos.set(id, updatedPhoto);
     return true;
   }
+
+  // Event Capacity (Seat Heatmap) - Mock implementation for MemStorage
+  async getEventCapacity(eventId: number): Promise<EventCapacity | undefined> {
+    return undefined; // Not implemented in MemStorage
+  }
+
+  async createEventCapacity(capacity: InsertEventCapacity): Promise<EventCapacity> {
+    const eventCapacity: EventCapacity = {
+      id: 1,
+      eventId: capacity.eventId,
+      totalSeats: capacity.totalSeats,
+      availableSeats: capacity.availableSeats,
+      seatMap: capacity.seatMap,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    return eventCapacity;
+  }
+
+  async updateEventCapacity(eventId: number, updates: Partial<InsertEventCapacity>): Promise<EventCapacity | undefined> {
+    return undefined; // Not implemented in MemStorage
+  }
+
+  // User Preferences - Mock implementation for MemStorage
+  async getUserPreferences(userId: number): Promise<UserPreferences | undefined> {
+    return undefined; // Not implemented in MemStorage
+  }
+
+  async updateUserPreferences(userId: number, preferences: InsertUserPreferences): Promise<UserPreferences> {
+    const userPrefs: UserPreferences = {
+      id: 1,
+      userId,
+      preferences: preferences.preferences,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    return userPrefs;
+  }
+
+  // Event Recommendations - Mock implementation for MemStorage
+  async getEventRecommendations(userId: number, limit = 10): Promise<EventRecommendation[]> {
+    return []; // Not implemented in MemStorage
+  }
+
+  async createEventRecommendation(recommendation: InsertEventRecommendation): Promise<EventRecommendation> {
+    const eventRec: EventRecommendation = {
+      id: 1,
+      userId: recommendation.userId,
+      eventId: recommendation.eventId,
+      score: recommendation.score,
+      reasons: recommendation.reasons,
+      status: recommendation.status,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    return eventRec;
+  }
+
+  async updateEventRecommendation(id: number, updates: Partial<InsertEventRecommendation>): Promise<EventRecommendation | undefined> {
+    return undefined; // Not implemented in MemStorage
+  }
+
+  async generateRecommendations(userId: number): Promise<EventRecommendation[]> {
+    return []; // Not implemented in MemStorage
+  }
 }
 
 export class DatabaseStorage implements IStorage {
