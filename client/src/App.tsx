@@ -31,6 +31,7 @@ import BuyTicket from "@/pages/buy-ticket";
 import TicketDetail from "@/pages/ticket-detail";
 import TicketScanner from "@/pages/ticket-scanner";
 import BankAccountSetup from "@/pages/bank-account-setup";
+import PlatformAnalytics from "@/pages/platform-analytics";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage, initializeSessionManagement } = useAuthStore();
@@ -112,6 +113,11 @@ function Router() {
       <Route path="/bank-account-setup">
         <ProtectedRoute>
           <BankAccountSetup />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/platform-analytics">
+        <ProtectedRoute>
+          <PlatformAnalytics />
         </ProtectedRoute>
       </Route>
       <Route path="/invitees">

@@ -119,7 +119,7 @@ export const events = pgTable("events", {
     paymentDescription?: string;
     // Multi-tenant payment settings
     useOrganizerAccount: boolean; // If true, payments go to event organizer's account
-    platformFeePercentage?: number; // Platform fee (0-100)
+    platformFeePercentage?: number; // Platform fee (0-20) - Revenue sharing with platform owner
     splitPayment?: boolean; // Enable payment splitting
   }>().default({
     requiresPayment: false,
@@ -127,7 +127,7 @@ export const events = pgTable("events", {
     paymentRules: { member: false, guest: false, invitee: false },
     allowManualReceipt: true,
     useOrganizerAccount: false,
-    platformFeePercentage: 0,
+    platformFeePercentage: 2, // Default 2% platform fee for revenue sharing
     splitPayment: false
   }),
   customRegistrationFields: jsonb("custom_registration_fields").$type<CustomFormField[]>().default([]),

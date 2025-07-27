@@ -3953,6 +3953,222 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Platform Analytics API - Revenue tracking and monitoring
+  app.get('/api/platform/analytics', authenticateToken, isAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { period = '30d' } = req.query;
+      
+      // Calculate date range based on period
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (period) {
+        case '7d':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30d':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '90d':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case '1y':
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
+
+      // Get all successful payment registrations with platform fees
+      const paidRegistrations = await db
+        .select({
+          id: eventRegistrations.id,
+          eventId: eventRegistrations.eventId,
+          paymentAmount: eventRegistrations.paymentAmount,
+          paymentReference: eventRegistrations.paymentReference,
+          createdAt: eventRegistrations.createdAt,
+          eventName: events.name,
+          organizerBusinessName: users.businessName,
+          organizerPercentageCharge: users.percentageCharge
+        })
+        .from(eventRegistrations)
+        .innerJoin(events, eq(eventRegistrations.eventId, events.id))
+        .innerJoin(users, eq(events.createdBy, users.id))
+        .where(
+          and(
+            eq(eventRegistrations.paymentStatus, "completed"),
+            gte(eventRegistrations.createdAt, startDate),
+            sql`${eventRegistrations.paymentAmount} IS NOT NULL`
+          )
+        )
+        .orderBy(desc(eventRegistrations.createdAt));
+
+      // Get all successful ticket payments with platform fees
+      const paidTickets = await db
+        .select({
+          id: tickets.id,
+          eventId: tickets.eventId,
+          paymentAmount: tickets.paymentAmount,
+          paymentReference: tickets.paymentReference,
+          createdAt: tickets.createdAt,
+          eventName: events.name,
+          organizerBusinessName: users.businessName,
+          organizerPercentageCharge: users.percentageCharge
+        })
+        .from(tickets)
+        .innerJoin(events, eq(tickets.eventId, events.id))
+        .innerJoin(users, eq(events.createdBy, users.id))
+        .where(
+          and(
+            eq(tickets.paymentStatus, "paid"),
+            gte(tickets.createdAt, startDate),
+            sql`${tickets.paymentAmount} IS NOT NULL`
+          )
+        )
+        .orderBy(desc(tickets.createdAt));
+
+      // Calculate platform revenue metrics
+      let totalRevenue = 0;
+      let totalTransactions = 0;
+      let monthlyRevenue = 0;
+      let monthlyTransactions = 0;
+      const organizerStats: { [key: string]: { revenue: number; transactions: number; feePercentage: number } } = {};
+      const recentTransactions: any[] = [];
+      
+      const currentMonth = new Date();
+      currentMonth.setDate(1);
+      currentMonth.setHours(0, 0, 0, 0);
+
+      // Process registration payments
+      for (const registration of paidRegistrations) {
+        const amount = parseFloat(registration.paymentAmount || '0');
+        const feePercentage = registration.organizerPercentageCharge || 2;
+        const platformFee = (amount * feePercentage) / 100;
+        
+        totalRevenue += platformFee;
+        totalTransactions++;
+        
+        if (registration.createdAt >= currentMonth) {
+          monthlyRevenue += platformFee;
+          monthlyTransactions++;
+        }
+        
+        // Track organizer stats
+        const organizerKey = registration.organizerBusinessName || 'Unknown Organization';
+        if (!organizerStats[organizerKey]) {
+          organizerStats[organizerKey] = { revenue: 0, transactions: 0, feePercentage: feePercentage };
+        }
+        organizerStats[organizerKey].revenue += platformFee;
+        organizerStats[organizerKey].transactions++;
+        
+        // Add to recent transactions
+        recentTransactions.push({
+          id: registration.paymentReference || registration.id.toString(),
+          organizationName: organizerKey,
+          eventName: registration.eventName,
+          amount: amount,
+          platformFee: platformFee,
+          feePercentage: feePercentage,
+          date: registration.createdAt.toISOString(),
+          status: 'completed'
+        });
+      }
+
+      // Process ticket payments
+      for (const ticket of paidTickets) {
+        const amount = parseFloat(ticket.paymentAmount || '0');
+        const feePercentage = ticket.organizerPercentageCharge || 2;
+        const platformFee = (amount * feePercentage) / 100;
+        
+        totalRevenue += platformFee;
+        totalTransactions++;
+        
+        if (ticket.createdAt >= currentMonth) {
+          monthlyRevenue += platformFee;
+          monthlyTransactions++;
+        }
+        
+        // Track organizer stats
+        const organizerKey = ticket.organizerBusinessName || 'Unknown Organization';
+        if (!organizerStats[organizerKey]) {
+          organizerStats[organizerKey] = { revenue: 0, transactions: 0, feePercentage: feePercentage };
+        }
+        organizerStats[organizerKey].revenue += platformFee;
+        organizerStats[organizerKey].transactions++;
+        
+        // Add to recent transactions
+        recentTransactions.push({
+          id: ticket.paymentReference || ticket.id.toString(),
+          organizationName: organizerKey,
+          eventName: ticket.eventName,
+          amount: amount,
+          platformFee: platformFee,
+          feePercentage: feePercentage,
+          date: ticket.createdAt.toISOString(),
+          status: 'completed'
+        });
+      }
+
+      // Calculate average fee percentage
+      const allFees = [...paidRegistrations, ...paidTickets].map(item => item.organizerPercentageCharge || 2);
+      const averageFeePercentage = allFees.length > 0 ? allFees.reduce((a, b) => a + b, 0) / allFees.length : 2;
+
+      // Top organizers by revenue
+      const topOrganizers = Object.entries(organizerStats)
+        .map(([name, stats]) => ({
+          organizationName: name,
+          totalRevenue: stats.revenue,
+          transactionCount: stats.transactions,
+          averageFeePercentage: stats.feePercentage
+        }))
+        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+        .slice(0, 10);
+
+      // Generate revenue by month data (last 12 months)
+      const revenueByMonth: any[] = [];
+      for (let i = 11; i >= 0; i--) {
+        const monthDate = new Date();
+        monthDate.setMonth(monthDate.getMonth() - i);
+        monthDate.setDate(1);
+        monthDate.setHours(0, 0, 0, 0);
+        
+        const nextMonth = new Date(monthDate);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        
+        const monthRevenue = [...paidRegistrations, ...paidTickets]
+          .filter(item => item.createdAt >= monthDate && item.createdAt < nextMonth)
+          .reduce((sum, item) => {
+            const amount = parseFloat(item.paymentAmount || '0');
+            const feePercentage = item.organizerPercentageCharge || 2;
+            return sum + (amount * feePercentage) / 100;
+          }, 0);
+          
+        const monthTransactions = [...paidRegistrations, ...paidTickets]
+          .filter(item => item.createdAt >= monthDate && item.createdAt < nextMonth).length;
+        
+        revenueByMonth.push({
+          month: monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          revenue: monthRevenue,
+          transactions: monthTransactions
+        });
+      }
+
+      res.json({
+        totalRevenue,
+        monthlyRevenue,
+        totalTransactions,
+        monthlyTransactions,
+        averageFeePercentage,
+        topOrganizers,
+        revenueByMonth,
+        recentTransactions: recentTransactions.slice(0, 20) // Latest 20 transactions
+      });
+    } catch (error) {
+      console.error('Platform analytics error:', error);
+      res.status(500).json({ message: "Failed to fetch platform analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

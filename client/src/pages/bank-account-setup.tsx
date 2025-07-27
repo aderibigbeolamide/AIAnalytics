@@ -23,7 +23,7 @@ const bankAccountSchema = z.object({
   businessName: z.string().min(2, "Business name is required"),
   businessEmail: z.string().email("Valid email is required").or(z.literal("")).optional(),
   businessPhone: z.string().optional(),
-  percentageCharge: z.number().min(0).max(20).default(0),
+  percentageCharge: z.number().min(0).max(20).default(2), // Default 2% platform fee
 });
 
 type BankAccountFormData = z.infer<typeof bankAccountSchema>;
@@ -76,7 +76,7 @@ export default function BankAccountSetup() {
       businessName: "",
       businessEmail: "",
       businessPhone: "",
-      percentageCharge: 0,
+      percentageCharge: 2,
     },
   });
 
@@ -415,7 +415,7 @@ export default function BankAccountSetup() {
                         businessName: bankAccount?.businessName || '',
                         businessEmail: bankAccount?.businessEmail || '',
                         businessPhone: bankAccount?.businessPhone || '',
-                        percentageCharge: bankAccount?.percentageCharge || 0,
+                        percentageCharge: bankAccount?.percentageCharge || 2,
                       });
                     }}
                   >
@@ -818,15 +818,70 @@ export default function BankAccountSetup() {
                     )}
                   />
 
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">How Multi-Tenant Payments Work:</h4>
-                    <ul className="text-sm text-blue-800 space-y-1">
-                      <li>• Each event organizer receives payments directly to their own bank account</li>
-                      <li>• No mixing of funds between different organizations</li>
-                      <li>• Instant settlement to your account after successful payments</li>
-                      <li>• Complete financial separation for multi-tenant usage</li>
-                      <li>• Platform fee: 0% (Currently free for all users)</li>
-                    </ul>
+                  <FormField
+                    control={form.control}
+                    name="percentageCharge"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <DollarSign className="w-4 h-4" />
+                          Platform Fee (%)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            min="0"
+                            max="20"
+                            step="0.1"
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            placeholder="2.0"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <div className="text-xs text-gray-600">
+                          Platform fee charged on each transaction (0-20%). Default: 2%
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+                    <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                      <DollarSign className="w-5 h-5" />
+                      Revenue Sharing System
+                    </h4>
+                    <div className="space-y-3 text-sm">
+                      <div className="bg-white/70 p-3 rounded-md border border-green-100">
+                        <h5 className="font-medium text-green-800 mb-2">How Platform Fees Work:</h5>
+                        <ul className="text-green-700 space-y-1">
+                          <li>• You earn {form.watch("percentageCharge") || 2}% from every successful payment</li>
+                          <li>• Event organizers keep {100 - (form.watch("percentageCharge") || 2)}% of their event revenue</li>
+                          <li>• Fees are automatically deducted during payment processing</li>
+                          <li>• Platform fees go to your designated platform account</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="bg-white/70 p-3 rounded-md border border-blue-100">
+                        <h5 className="font-medium text-blue-800 mb-2">Example Revenue Calculation:</h5>
+                        <div className="text-blue-700 space-y-1">
+                          <p>Event ticket price: ₦5,000</p>
+                          <p>Platform fee ({form.watch("percentageCharge") || 2}%): <span className="font-semibold text-green-600">₦{((form.watch("percentageCharge") || 2) / 100 * 5000).toFixed(0)}</span></p>
+                          <p>Event organizer receives: <span className="font-semibold text-blue-600">₦{(5000 - ((form.watch("percentageCharge") || 2) / 100 * 5000)).toFixed(0)}</span></p>
+                        </div>
+                      </div>
+
+                      <div className="bg-white/70 p-3 rounded-md border border-purple-100">
+                        <h5 className="font-medium text-purple-800 mb-2">Multi-Tenant Benefits:</h5>
+                        <ul className="text-purple-700 space-y-1">
+                          <li>• Complete financial separation between organizations</li>
+                          <li>• No mixing of funds - each organization has its own account</li>
+                          <li>• Instant settlement to organizer accounts</li>
+                          <li>• Transparent fee structure for all users</li>
+                          <li>• Scalable revenue model for the platform</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
 
                   <Button

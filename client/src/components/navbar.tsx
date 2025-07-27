@@ -109,6 +109,11 @@ export function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
+                      <Link href="/platform-analytics">
+                        <span className="w-full cursor-pointer">Platform Revenue</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <Link href="/settings">
                         <span className="w-full cursor-pointer">Settings</span>
                       </Link>

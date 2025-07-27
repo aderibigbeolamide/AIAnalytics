@@ -7,7 +7,8 @@ export async function initializePaystackPayment(
   reference: string,
   metadata: any = {},
   subaccountCode?: string, // For multi-tenant payments
-  splitConfig?: any // For payment splitting
+  splitConfig?: any, // For payment splitting
+  platformFeePercentage?: number // Platform revenue sharing fee (0-20%)
 ) {
   try {
     const requestBody: any = {
@@ -18,9 +19,23 @@ export async function initializePaystackPayment(
       callback_url: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/payment/callback`,
     };
 
-    // Add subaccount for direct payment to organizer
+    // Add subaccount for direct payment to organizer with platform fee
     if (subaccountCode) {
       requestBody.subaccount = subaccountCode;
+      // If platform fee is specified, set the charge bearer
+      if (platformFeePercentage && platformFeePercentage > 0) {
+        requestBody.bearer = 'subaccount'; // Subaccount bears transaction fees
+        // Calculate platform fee as transaction charge
+        const platformFeeAmount = Math.round((amount * platformFeePercentage) / 100);
+        requestBody.transaction_charge = platformFeeAmount;
+        
+        // Add platform fee info to metadata
+        metadata.platformFee = {
+          percentage: platformFeePercentage,
+          amount: platformFeeAmount,
+          amountInNaira: convertFromKobo(platformFeeAmount)
+        };
+      }
     }
 
     // Add split payment configuration
