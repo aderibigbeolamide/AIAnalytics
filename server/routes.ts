@@ -4597,21 +4597,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve organization (super admin only)
-  app.post("/api/super-admin/organizations/:userId/approve", authenticateToken, requireRole(['super_admin']), async (req: AuthenticatedRequest, res: Response) => {
+  app.post("/api/super-admin/organizations/:organizationId/approve", authenticateToken, requireRole(['super_admin']), async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = parseInt(req.params.userId);
-      const user = await storage.getUserById(userId);
+      const organizationId = parseInt(req.params.organizationId);
+      const organization = await storage.getOrganization(organizationId);
       
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
+      if (!organization) {
+        return res.status(404).json({ message: "Organization not found" });
       }
 
-      if (user.status !== "pending_approval") {
-        return res.status(400).json({ message: "User is not pending approval" });
+      if (organization.status !== "pending") {
+        return res.status(400).json({ message: "Organization is not pending approval" });
       }
 
-      await storage.updateUser(userId, {
-        status: "active",
+      await storage.updateOrganization(organizationId, {
+        status: "approved",
+        approvedAt: new Date(),
+        approvedBy: req.user.id,
       });
 
       res.json({ message: "Organization approved successfully" });
@@ -4624,23 +4626,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get pending organizations (super admin only)
   app.get("/api/super-admin/pending-organizations", authenticateToken, requireRole(['super_admin']), async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const users = await storage.getAllUsers();
-      const pendingOrganizations = users
-        .filter(user => user.status === "pending_approval" && user.role === "admin")
-        .map(user => ({
-          id: user.id,
-          organizationName: user.businessName,
-          contactEmail: user.businessEmail,
-          contactPhone: user.businessPhone,
-          adminUser: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-          },
-          createdAt: user.createdAt,
-        }));
+      // Get organizations with pending status
+      const organizations = await storage.getOrganizations({ status: "pending" });
+      
+      const pendingOrganizations = organizations.map(org => ({
+        id: org.id,
+        organizationName: org.name,
+        contactEmail: org.contactEmail,
+        contactPhone: org.contactPhone,
+        adminUser: {
+          id: org.id,
+          username: org.contactEmail, // Use email as username for now
+          email: org.contactEmail,
+          firstName: org.name,
+          lastName: "Admin",
+        },
+        createdAt: org.createdAt,
+      }));
 
       res.json({
         organizations: pendingOrganizations,
