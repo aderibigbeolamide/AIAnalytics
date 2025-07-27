@@ -85,7 +85,7 @@ function Router() {
       <Route path="/ticket/:ticketId" component={TicketDetail} />
       <Route path="/login" component={OrganizationLogin} />
       <Route path="/register" component={OrganizationRegister} />
-      <Route path="/super-admin" component={SuperAdminLogin} />
+      <Route path="/super-admin-login" component={SuperAdminLogin} />
       <Route path="/register-organization" component={OrganizationRegistration} />
       
       {/* Root and landing route always go to landing page */}

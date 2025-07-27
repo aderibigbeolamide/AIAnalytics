@@ -85,8 +85,7 @@ const loadAuthState = () => {
       
       console.log('Loaded auth state from localStorage:', { 
         token: !!token, 
-        user, 
-        member, 
+        userRole: user?.role,
         authAge: Date.now() - authTimestamp,
         lastActivity: lastActivityTime 
       });
@@ -130,7 +129,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       const data = await response.json();
       
-      console.log('Login successful:', data);
+      console.log('Login successful');
       
       const { token, user, member } = data;
       

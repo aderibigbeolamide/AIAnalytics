@@ -13,16 +13,20 @@ async function seed() {
     
     if (!existingSuperAdmin) {
       // Create super admin user
-      const hashedPassword = await hashPassword('superadmin123');
+      const hashedPassword = await hashPassword('superadmin2025!');
       await db.insert(users).values({
         username: 'superadmin',
+        email: 'superadmin@eventvalidate.com',
         password: hashedPassword,
-        role: 'super_admin'
+        role: 'super_admin',
+        firstName: 'Super',
+        lastName: 'Admin',
+        status: 'active'
       });
       
       console.log('Super admin user created successfully');
       console.log('Username: superadmin');
-      console.log('Password: superadmin123');
+      console.log('Password: superadmin2025!');
     } else {
       console.log('Super admin user already exists');
     }
@@ -37,8 +41,12 @@ async function seed() {
       const hashedPassword = await hashPassword('password123');
       await db.insert(users).values({
         username: 'admin',
+        email: 'admin@eventvalidate.com',
         password: hashedPassword,
-        role: 'admin'
+        role: 'admin',
+        firstName: 'System',
+        lastName: 'Admin',
+        status: 'active'
       });
       
       console.log('Admin user created successfully');
