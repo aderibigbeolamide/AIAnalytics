@@ -18,7 +18,9 @@ import {
   Building2,
   UserCheck,
   BarChart3,
-  Clock
+  Clock,
+  ArrowLeft,
+  Home
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -214,16 +216,38 @@ export default function SuperAdminDashboard() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Super Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            Platform oversight and organization management
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLocation("/dashboard")}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Super Admin Dashboard</h1>
+            <p className="text-muted-foreground">
+              Platform oversight and organization management
+            </p>
+          </div>
         </div>
-        <Badge variant="outline" className="text-purple-600 border-purple-200">
-          <Shield className="w-4 h-4 mr-2" />
-          Super Admin
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation("/dashboard")}
+            className="flex items-center gap-2"
+          >
+            <Home className="w-4 h-4" />
+            Main Dashboard
+          </Button>
+          <Badge variant="outline" className="text-purple-600 border-purple-200">
+            <Shield className="w-4 h-4 mr-2" />
+            Super Admin
+          </Badge>
+        </div>
       </div>
 
       {/* Platform Statistics */}
