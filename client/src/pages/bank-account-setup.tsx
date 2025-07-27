@@ -21,10 +21,7 @@ const bankAccountSchema = z.object({
   bankCode: z.string().min(1, "Please select a bank"),
   accountNumber: z.string().min(10, "Account number must be at least 10 digits"),
   businessName: z.string().min(2, "Business name is required"),
-  businessEmail: z.union([
-    z.string().email("Valid email is required"),
-    z.literal("")
-  ]).optional(),
+  businessEmail: z.string().email("Valid email is required").or(z.literal("")).optional(),
   businessPhone: z.string().optional(),
   percentageCharge: z.number().min(0).max(20).default(0),
 });
@@ -300,7 +297,7 @@ export default function BankAccountSetup() {
 
   const banks = (banksResponse as any)?.banks || [];
   const bankStats = (banksResponse as any)?.statistics || { total: 0, commercial: 0, microfinance: 0 };
-  const hasExistingAccount = (existingAccount as any)?.bankAccount?.paystackSubaccountCode;
+  const hasExistingAccount = (existingAccount as any)?.bankAccount && (existingAccount as any)?.bankAccount?.accountNumber;
 
   // Enhanced bank search with common name mappings
   const filteredBanks = banks.filter((bank: Bank) => {
