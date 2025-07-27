@@ -126,8 +126,8 @@ export function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/platform-analytics">
-                        <span className="w-full cursor-pointer">Platform Revenue</span>
+                      <Link href="/organization-profile">
+                        <span className="w-full cursor-pointer">Organization Profile</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -203,6 +203,15 @@ export function Navbar() {
                         className="w-full justify-start px-3 py-2 text-left text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                       >
                         Bank Account
+                      </Button>
+                    </Link>
+                    <Link href="/organization-profile">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full justify-start px-3 py-2 text-left text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                      >
+                        Organization Profile
                       </Button>
                     </Link>
                     <Link href="/settings">

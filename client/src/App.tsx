@@ -37,6 +37,7 @@ import OrganizationRegistration from "@/pages/organization-registration";
 import OrganizationRegister from "@/pages/organization-register";
 import SuperAdminLogin from "@/pages/super-admin-login";
 import OrganizationLogin from "@/pages/organization-login";
+import OrganizationProfile from "@/pages/organization-profile";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage, initializeSessionManagement } = useAuthStore();
@@ -121,6 +122,11 @@ function Router() {
       <Route path="/bank-account-setup">
         <ProtectedRoute>
           <BankAccountSetup />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/organization-profile">
+        <ProtectedRoute>
+          <OrganizationProfile />
         </ProtectedRoute>
       </Route>
       <Route path="/platform-analytics">
