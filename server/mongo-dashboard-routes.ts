@@ -495,6 +495,7 @@ export function registerMongoDashboardRoutes(app: Express) {
 
       // Extract just the bank code from the combined value (format: "code|name|id")
       const cleanBankCode = bankCode.includes('|') ? bankCode.split('|')[0] : bankCode;
+      console.log(`Bank account edit: Original bankCode: "${bankCode}", Cleaned: "${cleanBankCode}", Account: ${accountNumber}`);
 
       // Verify the account before updating
       const paystackModule = await import("./paystack");
