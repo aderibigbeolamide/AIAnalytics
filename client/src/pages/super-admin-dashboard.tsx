@@ -138,7 +138,10 @@ export default function SuperAdminDashboard() {
     users: User[];
     pagination: any;
   }>({
-    queryKey: ["/api/super-admin/users", { search: userSearch, role: userRole }],
+    queryKey: ["/api/super-admin/users", { 
+      search: userSearch, 
+      role: userRole === "all_roles" ? "" : userRole 
+    }],
   });
 
   // Fetch events
@@ -146,7 +149,9 @@ export default function SuperAdminDashboard() {
     events: Event[];
     pagination: any;
   }>({
-    queryKey: ["/api/super-admin/events", { status: eventStatus }],
+    queryKey: ["/api/super-admin/events", { 
+      status: eventStatus === "all_statuses" ? "" : eventStatus 
+    }],
   });
 
   // Fetch pending organizations
@@ -315,7 +320,7 @@ export default function SuperAdminDashboard() {
                     <SelectValue placeholder="Filter by role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Roles</SelectItem>
+                    <SelectItem value="all_roles">All Roles</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="member">Member</SelectItem>
                     <SelectItem value="guest">Guest</SelectItem>
@@ -420,7 +425,7 @@ export default function SuperAdminDashboard() {
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all_statuses">All Statuses</SelectItem>
                     <SelectItem value="upcoming">Upcoming</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
