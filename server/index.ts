@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { registerMongoAuthRoutes } from "./mongo-auth-routes";
 import { registerMongoSuperAdminRoutes } from "./mongo-super-admin-routes";
+import { registerMongoDashboardRoutes } from "./mongo-dashboard-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
 import { connectToMongoDB } from "./mongodb";
@@ -55,6 +56,7 @@ app.use((req, res, next) => {
   // Register MongoDB routes first (they will override the old ones)
   registerMongoAuthRoutes(app);
   registerMongoSuperAdminRoutes(app);
+  registerMongoDashboardRoutes(app);
   
   const server = await registerRoutes(app);
 
