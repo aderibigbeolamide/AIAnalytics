@@ -659,6 +659,7 @@ npm run migrate
   - Application running successfully on port 5000 with all core features operational
   - All authentication flows confirmed working with proper JWT token management
   - Migration checklist completed with all items marked as complete
+  - Clarified local development setup: seeding is separate one-time command after npm run dev
 
   **LATEST MIGRATION UPDATE - July 27, 2025:**
   - Fixed super admin authentication routing conflicts by separating `/super-admin-login` and `/super-admin` paths
