@@ -75,7 +75,7 @@ router.post('/register', async (req, res) => {
       firstName: admin.firstName,
       lastName: admin.lastName,
       role: 'admin',
-      status: 'active'
+      status: 'pending_approval'
     });
 
     res.status(201).json({
