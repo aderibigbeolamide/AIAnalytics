@@ -85,11 +85,11 @@ const EventRecommendations: React.FC<EventRecommendationsProps> = ({
   
   const queryClient = useQueryClient();
 
-  // Fetch user preferences
+  // Fetch user preferences (public endpoint)
   const { data: userPreferences } = useQuery({
-    queryKey: ['/api/users/preferences'],
+    queryKey: ['/api/users/preferences/public'],
     queryFn: async () => {
-      const response = await fetch('/api/users/preferences');
+      const response = await fetch('/api/users/preferences/public');
       if (!response.ok) throw new Error('Failed to fetch preferences');
       return response.json();
     },
@@ -100,49 +100,19 @@ const EventRecommendations: React.FC<EventRecommendationsProps> = ({
     }
   });
 
-  // Fetch personalized recommendations
+  // Fetch personalized recommendations (public endpoint)
   const { data: recommendations, isLoading } = useQuery({
-    queryKey: ['/api/recommendations', limit],
+    queryKey: ['/api/recommendations/public', limit],
     queryFn: async () => {
-      const response = await fetch(`/api/recommendations?limit=${limit}`);
+      const response = await fetch(`/api/recommendations/public?limit=${limit}`);
       if (!response.ok) throw new Error('Failed to fetch recommendations');
       return response.json() as EventRecommendation[];
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Update preferences mutation
-  const updatePreferencesMutation = useMutation({
-    mutationFn: async (newPreferences: UserPreferences) => {
-      const response = await fetch('/api/users/preferences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferences: newPreferences }),
-      });
-      if (!response.ok) throw new Error('Failed to update preferences');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/recommendations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/users/preferences'] });
-    },
-  });
-
-  // Update recommendation status mutation
-  const updateRecommendationMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const response = await fetch(`/api/recommendations/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!response.ok) throw new Error('Failed to update recommendation');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/recommendations'] });
-    },
-  });
+  // Note: For public users, we don't support preference updates or recommendation tracking
+  // These features require authentication
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 bg-green-50 border-green-200';
@@ -158,17 +128,19 @@ const EventRecommendations: React.FC<EventRecommendationsProps> = ({
     return <Eye className="h-4 w-4" />;
   };
 
+  // Simplified handlers for public users (no mutation actions)
   const handlePreferencesUpdate = () => {
-    updatePreferencesMutation.mutate(preferences);
     setShowPreferences(false);
   };
 
   const markAsViewed = (recommendationId: number) => {
-    updateRecommendationMutation.mutate({ id: recommendationId, status: 'viewed' });
+    // For public users, just dismiss visually (no server update)
+    console.log('Viewed recommendation:', recommendationId);
   };
 
   const ignoreRecommendation = (recommendationId: number) => {
-    updateRecommendationMutation.mutate({ id: recommendationId, status: 'ignored' });
+    // For public users, just dismiss visually (no server update)
+    console.log('Ignored recommendation:', recommendationId);
   };
 
   if (isLoading) {

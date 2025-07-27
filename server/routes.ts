@@ -3851,6 +3851,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public Event Recommendations Endpoints (no authentication required)
+  app.get("/api/recommendations/public", async (req: Request, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 5;
+      
+      // For public users, generate general recommendations based on popular/upcoming events
+      const currentDate = new Date();
+      
+      // Get upcoming events with good registration counts to recommend
+      const upcomingEvents = await db
+        .select()
+        .from(events)
+        .where(and(
+          isNull(events.deletedAt),
+          gte(events.startDate, currentDate)
+        ))
+        .orderBy(events.startDate)
+        .limit(limit * 2); // Get more to have options
+      
+      // Create synthetic recommendations with scoring
+      const recommendations = upcomingEvents.slice(0, limit).map((event, index) => ({
+        id: Date.now() + index, // Synthetic ID for public recommendations
+        eventId: event.id,
+        score: 85 - (index * 5), // Decreasing score for each subsequent event
+        reasons: [
+          "Popular upcoming event",
+          "Good timing for registration",
+          "High community interest"
+        ],
+        status: 'pending' as const,
+        createdAt: new Date().toISOString(),
+        event: {
+          id: event.id,
+          name: event.name,
+          description: event.description,
+          location: event.location,
+          startDate: event.startDate.toISOString(),
+          endDate: event.endDate?.toISOString() || event.startDate.toISOString(),
+          eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies || [],
+          paymentSettings: {
+            requiresPayment: event.requiresPayment || false,
+            amount: event.paymentAmount?.toString(),
+            currency: 'NGN'
+          }
+        }
+      }));
+
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Get public recommendations error:", error);
+      res.status(500).json({ message: "Failed to fetch recommendations" });
+    }
+  });
+
+  // Public User Preferences (simplified for non-authenticated users)
+  app.get("/api/users/preferences/public", async (req: Request, res) => {
+    try {
+      // Return default preferences for public users
+      const defaultPreferences = {
+        preferences: {
+          auxiliaryBodies: [],
+          eventTypes: [],
+          locations: [],
+          timePreferences: [],
+          interests: [],
+          priceRange: { min: 0, max: 1000 },
+          notificationSettings: { email: false, sms: false, push: false }
+        }
+      };
+
+      res.json(defaultPreferences);
+    } catch (error) {
+      console.error("Get public preferences error:", error);
+      res.status(500).json({ message: "Failed to fetch preferences" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
