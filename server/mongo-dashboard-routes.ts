@@ -306,41 +306,91 @@ export function registerMongoDashboardRoutes(app: Express) {
     }
   });
 
+  // Simple test endpoint to check routing
+  app.get("/api/banks-test", async (req: Request, res: Response) => {
+    console.log("Test banks endpoint hit");
+    res.json({ message: "Banks test endpoint working", timestamp: new Date() });
+  });
+
   // Get Nigerian banks list - Essential for bank account setup
   app.get("/api/banks", async (req: Request, res: Response) => {
+    console.log("Banks API endpoint hit - starting bank fetch...");
+    
     try {
-      // Get banks from Paystack API
-      const { getNigerianBanks } = await import("./paystack");
-      const banksData = await getNigerianBanks();
+      // Check if Paystack key is available
+      if (!process.env.PAYSTACK_SECRET_KEY) {
+        console.error("PAYSTACK_SECRET_KEY not configured");
+        return res.json({
+          success: false,
+          message: "Bank service configuration missing"
+        });
+      }
+
+      console.log("Paystack key available, making API call...");
       
-      if (banksData.status) {
-        const banks = banksData.data;
+      // Direct fetch to Paystack API
+      const response = await fetch('https://api.paystack.co/bank?country=nigeria', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log("Paystack API response status:", response.status);
+      
+      if (!response.ok) {
+        console.error("Paystack API error:", response.status, response.statusText);
+        return res.json({
+          success: false,
+          message: `Paystack API error: ${response.status}`
+        });
+      }
+
+      const data = await response.json();
+      console.log("Paystack data received:", data?.status ? "Success" : "Failed");
+      
+      if (data && data.status) {
+        const banks = data.data || [];
         
-        // Additional categorization and statistics
-        const commercialBanks = banks.filter((bank: any) => bank.type === 'commercial');
-        const microfinanceBanks = banks.filter((bank: any) => bank.type === 'microfinance');
+        // Sort banks alphabetically
+        const sortedBanks = banks.sort((a: any, b: any) => a.name.localeCompare(b.name));
         
-        res.json({
+        // Categorize banks
+        const categorizedBanks = sortedBanks.map((bank: any) => ({
+          ...bank,
+          type: bank.name.toLowerCase().includes('microfinance') || 
+                bank.name.toLowerCase().includes('micro finance') ? 'microfinance' : 'commercial'
+        }));
+        
+        const commercialBanks = categorizedBanks.filter((bank: any) => bank.type === 'commercial');
+        const microfinanceBanks = categorizedBanks.filter((bank: any) => bank.type === 'microfinance');
+        
+        console.log(`Returning ${categorizedBanks.length} banks (${commercialBanks.length} commercial, ${microfinanceBanks.length} microfinance)`);
+        
+        return res.json({
           success: true,
-          banks: banks,
+          banks: categorizedBanks,
           statistics: {
-            total: banks.length,
+            total: categorizedBanks.length,
             commercial: commercialBanks.length,
             microfinance: microfinanceBanks.length
           },
-          message: `Found ${banks.length} banks (${commercialBanks.length} commercial, ${microfinanceBanks.length} microfinance)`
+          message: `Found ${categorizedBanks.length} banks including ${microfinanceBanks.length} microfinance banks`
         });
       } else {
-        res.status(400).json({
+        console.error("Paystack response not successful:", data?.message || "Unknown error");
+        return res.json({
           success: false,
-          message: "Failed to fetch banks from Paystack API"
+          message: data?.message || "Failed to fetch banks from Paystack API"
         });
       }
     } catch (error) {
-      console.error("Get banks error:", error);
-      res.status(500).json({ 
+      console.error("Banks API error:", error);
+      return res.json({ 
         success: false,
-        message: "Failed to fetch banks. Please check your internet connection and try again." 
+        message: "Failed to fetch banks. Please check your internet connection and try again.",
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   });
