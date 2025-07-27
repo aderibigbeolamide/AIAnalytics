@@ -2,7 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
-import { autoSeed } from "./auto-seed";
+import { connectToMongoDB } from "./mongodb";
+import { mongoAutoSeed } from "./mongo-auto-seed";
 import path from "path";
 
 const app = express();
@@ -43,8 +44,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Connect to MongoDB
+  await connectToMongoDB();
+  
   // Run auto-seeding before starting the server
-  await autoSeed();
+  await mongoAutoSeed();
   
   const server = await registerRoutes(app);
 

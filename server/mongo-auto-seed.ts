@@ -1,16 +1,11 @@
 import bcrypt from "bcrypt";
-import { connectToMongoDB, disconnectFromMongoDB } from "../server/mongodb";
 import { User } from "@shared/mongoose-schema";
 
-async function seed() {
-  console.log("Setting up default users...");
+export async function mongoAutoSeed() {
+  console.log("🌱 Auto-seeding: Checking if database needs seeding...");
   
   try {
-    console.log("🔍 Checking database connection...");
-    await connectToMongoDB();
-    console.log("✅ Database connection successful");
-    
-    // Check for existing super admin user
+    // Check if super admin user exists
     console.log("🔍 Checking for existing super admin user...");
     const existingSuperAdmin = await User.findOne({ username: "superadmin" });
     
@@ -24,20 +19,18 @@ async function seed() {
         password: hashedPassword,
         firstName: "Super",
         lastName: "Admin",
-        role: "super_admin", 
+        role: "super_admin",
         status: "active",
         emailVerified: true,
         twoFactorEnabled: false
       });
       
       console.log("✅ Super admin user created successfully");
-      console.log("Username: superadmin");
-      console.log("Password: superadmin2025!");
     } else {
       console.log("✓ Super admin user already exists");
     }
     
-    // Check for existing admin user
+    // Check if admin user exists
     console.log("🔍 Checking for existing admin user...");
     const existingAdmin = await User.findOne({ username: "admin" });
     
@@ -47,7 +40,7 @@ async function seed() {
       
       await User.create({
         username: "admin",
-        email: "admin@eventvalidate.com", 
+        email: "admin@eventvalidate.com",
         password: hashedPassword,
         firstName: "Admin",
         lastName: "User",
@@ -58,26 +51,13 @@ async function seed() {
       });
       
       console.log("✅ Admin user created successfully");
-      console.log("Username: admin");
-      console.log("Password: password123");
     } else {
       console.log("✓ Admin user already exists");
     }
     
-    console.log("🔐 Please change the passwords after first login");
-    console.log("🎉 Seeding completed successfully!");
-    
+    console.log("✓ Database already contains users, skipping auto-seed");
   } catch (error) {
-    console.error("❌ Error seeding database:", error);
-    console.log("\n🔧 Troubleshooting tips:");
-    console.log("1. Check if your MONGODB_URI is correct");
-    console.log("2. Ensure your database is running and accessible");
-    console.log("3. Check your network connection");
-  } finally {
-    console.log("🔌 Database connection closed");
-    await disconnectFromMongoDB();
-    process.exit(0);
+    console.error("⚠️ Auto-seeding failed:", error);
+    console.log("💡 You can manually run: npm run seed");
   }
 }
-
-seed();
