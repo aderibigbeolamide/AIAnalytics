@@ -1,23 +1,31 @@
 import { 
   users, members, events, eventRegistrations, attendance, eventReports, invitations, 
   memberValidationCsv, faceRecognitionPhotos, tickets, ticketTransfers,
-  eventCapacity, userPreferences, eventRecommendations,
+  eventCapacity, userPreferences, eventRecommendations, organizations,
   type User, type InsertUser, type Member, type InsertMember,
   type Event, type InsertEvent, type EventRegistration, type InsertEventRegistration,
   type Attendance, type InsertAttendance, type Invitation, type InsertInvitation,
   type EventReport, type InsertEventReport, type MemberValidationCsv, type InsertMemberValidationCsv,
   type FaceRecognitionPhoto, type InsertFaceRecognitionPhoto, type Ticket, type TicketTransfer,
   type EventCapacity, type InsertEventCapacity, type UserPreferences, type InsertUserPreferences,
-  type EventRecommendation, type InsertEventRecommendation
+  type EventRecommendation, type InsertEventRecommendation, type Organization, type InsertOrganization
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull, desc, or, ilike, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
+  // Organizations
+  getOrganization(id: number): Promise<Organization | undefined>;
+  getOrganizationByEmail(email: string): Promise<Organization | undefined>;
+  getOrganizations(filters?: { status?: string }): Promise<Organization[]>;
+  createOrganization(organization: InsertOrganization): Promise<Organization>;
+  updateOrganization(id: number, updates: Partial<InsertOrganization>): Promise<Organization | undefined>;
+  
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserById(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined>;
 
@@ -118,6 +126,27 @@ export class MemStorage implements IStorage {
   private nextMemberValidationCsvId = 1;
   private nextFaceRecognitionPhotoId = 1;
 
+  // Organizations - Not implemented in MemStorage
+  async getOrganization(id: number): Promise<Organization | undefined> {
+    return undefined;
+  }
+
+  async getOrganizationByEmail(email: string): Promise<Organization | undefined> {
+    return undefined;
+  }
+
+  async getOrganizations(): Promise<Organization[]> {
+    return [];
+  }
+
+  async createOrganization(organization: InsertOrganization): Promise<Organization> {
+    throw new Error("Organizations not supported in MemStorage");
+  }
+
+  async updateOrganization(id: number, updates: Partial<InsertOrganization>): Promise<Organization | undefined> {
+    return undefined;
+  }
+
   // Users
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
@@ -125,6 +154,14 @@ export class MemStorage implements IStorage {
 
   async getUserById(id: number): Promise<User | undefined> {
     return this.users.get(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.email === email);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.username === username);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
@@ -689,6 +726,40 @@ export class MemStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Organizations
+  async getOrganization(id: number): Promise<Organization | undefined> {
+    const [organization] = await db.select().from(organizations).where(eq(organizations.id, id));
+    return organization;
+  }
+
+  async getOrganizationByEmail(email: string): Promise<Organization | undefined> {
+    const [organization] = await db.select().from(organizations).where(eq(organizations.contactEmail, email));
+    return organization;
+  }
+
+  async getOrganizations(filters?: { status?: string }): Promise<Organization[]> {
+    let query = db.select().from(organizations);
+    
+    if (filters?.status) {
+      query = query.where(eq(organizations.status, filters.status));
+    }
+    
+    return await query.orderBy(desc(organizations.createdAt));
+  }
+
+  async createOrganization(organization: InsertOrganization): Promise<Organization> {
+    const [created] = await db.insert(organizations).values(organization).returning();
+    return created;
+  }
+
+  async updateOrganization(id: number, updates: Partial<InsertOrganization>): Promise<Organization | undefined> {
+    const [updated] = await db.update(organizations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(organizations.id, id))
+      .returning();
+    return updated;
+  }
+
   // Users
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -702,6 +773,11 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
   }
 

@@ -38,25 +38,63 @@ export interface CustomFormField {
   };
 }
 
-export const users = pgTable("users", {
+// Organizations table for multi-tenant support
+export const organizations = pgTable("organizations", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  role: text("role").notNull().default("member"), // admin, member, guest, invitee
+  name: text("name").notNull(),
+  description: text("description"),
+  contactEmail: text("contact_email").notNull().unique(),
+  contactPhone: text("contact_phone"),
+  address: text("address"),
+  website: text("website"),
+  logoUrl: text("logo_url"),
+  status: text("status").notNull().default("pending"), // pending, approved, suspended, rejected
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  subscriptionPlan: text("subscription_plan").notNull().default("basic"), // basic, premium, enterprise
+  subscriptionStatus: text("subscription_status").notNull().default("active"), // active, suspended, cancelled
+  maxEvents: integer("max_events").notNull().default(10),
+  maxMembers: integer("max_members").notNull().default(500),
+  settings: jsonb("settings").default({}).notNull(),
   // Paystack subaccount for receiving payments
-  paystackSubaccountCode: text("paystack_subaccount_code"), // Paystack subaccount code
+  paystackSubaccountCode: text("paystack_subaccount_code"),
   bankName: text("bank_name"),
   accountNumber: text("account_number"),
   accountName: text("account_name"),
   bankCode: text("bank_code"),
-  // Business details for subaccount verification
   businessName: text("business_name"),
   businessEmail: text("business_email"),
   businessPhone: text("business_phone"),
   settlementBank: text("settlement_bank"),
-  percentageCharge: integer("percentage_charge").default(0), // Platform fee percentage (0-100)
+  percentageCharge: integer("percentage_charge").default(0),
   isVerified: boolean("is_verified").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id),
+  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  role: text("role").notNull().default("member"), // super_admin, admin, member, guest, invitee
+  status: text("status").notNull().default("active"), // active, suspended, inactive
+  profilePicture: text("profile_picture"),
+  phoneNumber: text("phone_number"),
+  lastLogin: timestamp("last_login"),
+  passwordChangedAt: timestamp("password_changed_at"),
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
+  twoFactorSecret: text("two_factor_secret"),
+  resetPasswordToken: text("reset_password_token"),
+  resetPasswordExpires: timestamp("reset_password_expires"),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  emailVerificationToken: text("email_verification_token"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const members = pgTable("members", {
@@ -80,6 +118,7 @@ export const members = pgTable("members", {
 
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
   name: text("name").notNull(),
   description: text("description"),
   location: text("location").notNull(),
@@ -468,7 +507,19 @@ export const insertInvitationSchema = createInsertSchema(invitations).omit({
   qrCode: true,
 });
 
+// Organization schema
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  approvedBy: true,
+  approvedAt: true,
+});
+
 // Types
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type Organization = typeof organizations.$inferSelect;
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 

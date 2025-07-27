@@ -4653,6 +4653,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Import organization routes
+  const organizationRoutes = await import("./organization-routes");
+  app.use('/api/organizations', organizationRoutes.default);
+
   const httpServer = createServer(app);
   return httpServer;
 }
