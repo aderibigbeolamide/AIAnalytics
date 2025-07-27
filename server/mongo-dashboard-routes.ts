@@ -493,9 +493,12 @@ export function registerMongoDashboardRoutes(app: Express) {
         percentageCharge = 2 
       } = req.body;
 
+      // Extract just the bank code from the combined value (format: "code|name|id")
+      const cleanBankCode = bankCode.includes('|') ? bankCode.split('|')[0] : bankCode;
+
       // Verify the account before updating
       const paystackModule = await import("./paystack");
-      const verificationData = await paystackModule.verifyBankAccount(accountNumber, bankCode);
+      const verificationData = await paystackModule.verifyBankAccount(accountNumber, cleanBankCode);
       
       if (!verificationData.status) {
         return res.status(400).json({
@@ -506,15 +509,15 @@ export function registerMongoDashboardRoutes(app: Express) {
 
       // Get bank name from banks list
       const banksData = await paystackModule.getNigerianBanks();
-      const selectedBank = banksData.data?.find((bank: any) => bank.code === bankCode);
-      const bankName = selectedBank ? selectedBank.name : `Bank Code ${bankCode}`;
+      const selectedBank = banksData.data?.find((bank: any) => bank.code === cleanBankCode);
+      const bankName = selectedBank ? selectedBank.name : `Bank Code ${cleanBankCode}`;
 
       // Update user with new bank account details
       await mongoStorage.updateUser(userId, {
         bankName: bankName,
         accountNumber: accountNumber,
         accountName: verificationData.data.account_name,
-        bankCode: bankCode,
+        bankCode: cleanBankCode,
         businessName: businessName,
         businessEmail: businessEmail,
         businessPhone: businessPhone,
