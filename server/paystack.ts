@@ -148,7 +148,33 @@ export async function verifyBankAccount(accountNumber: string, bankCode: string)
       }
     );
 
-    const data = await response.json();
+    if (!response.ok) {
+      console.error('Paystack API response not OK:', response.status, response.statusText);
+      return {
+        status: false,
+        message: `API error: ${response.status} ${response.statusText}`
+      };
+    }
+
+    const responseText = await response.text();
+    if (!responseText) {
+      console.error('Empty response from Paystack API');
+      return {
+        status: false,
+        message: 'Empty response from bank verification service'
+      };
+    }
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse Paystack response:', responseText);
+      return {
+        status: false,
+        message: 'Invalid response format from bank verification service'
+      };
+    }
     console.log('Paystack verification response:', data);
     
     // If the response is unsuccessful, return a more specific error

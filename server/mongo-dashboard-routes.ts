@@ -504,6 +504,11 @@ export function registerMongoDashboardRoutes(app: Express) {
         });
       }
 
+      // Get bank name from banks list
+      const banksData = await paystackModule.getNigerianBanks();
+      const selectedBank = banksData.data?.find((bank: any) => bank.code === bankCode);
+      const bankName = selectedBank ? selectedBank.name : `Bank Code ${bankCode}`;
+
       // Create Paystack subaccount
       const subaccountData = await paystackModule.createSubaccount({
         business_name: businessName,
@@ -529,7 +534,7 @@ export function registerMongoDashboardRoutes(app: Express) {
       // Update user with bank account details
       await mongoStorage.updateUser(userId, {
         paystackSubaccountCode: subaccountData.data.subaccount_code,
-        bankName: subaccountData.data.bank?.name || 'Unknown Bank',
+        bankName: bankName,
         accountNumber: accountNumber,
         accountName: verificationData.data.account_name,
         bankCode: bankCode,
@@ -573,8 +578,8 @@ export function registerMongoDashboardRoutes(app: Express) {
       } = req.body;
 
       // Verify the bank account first
-      const { verifyBankAccount } = await import("./paystack");
-      const verificationData = await verifyBankAccount(accountNumber, bankCode);
+      const paystackModule = await import("./paystack");
+      const verificationData = await paystackModule.verifyBankAccount(accountNumber, bankCode);
 
       if (!verificationData.status) {
         return res.status(400).json({
@@ -583,9 +588,14 @@ export function registerMongoDashboardRoutes(app: Express) {
         });
       }
 
+      // Get bank name from banks list
+      const banksData = await paystackModule.getNigerianBanks();
+      const selectedBank = banksData.data?.find((bank: any) => bank.code === bankCode);
+      const bankName = selectedBank ? selectedBank.name : `Bank Code ${bankCode}`;
+
       // Update user with new bank account details
       await mongoStorage.updateUser(userId, {
-        bankName: verificationData.data.bank_name || 'Unknown Bank',
+        bankName: bankName,
         accountNumber: accountNumber,
         accountName: verificationData.data.account_name,
         bankCode: bankCode,
