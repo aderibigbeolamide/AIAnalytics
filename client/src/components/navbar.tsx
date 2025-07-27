@@ -29,7 +29,7 @@ export function Navbar() {
       { href: "/events", label: "Events", roles: ["admin"] },
       { href: "/scanner", label: "Scan QR", roles: ["admin"] },
       { href: "/reports", label: "Reports", roles: ["admin"] },
-      { href: "/bank-account-setup", label: "Bank Account", roles: ["admin"] },
+
     ];
 
     return [...baseItems, ...adminItems].filter(item => 
@@ -101,6 +101,20 @@ export function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {user?.role === 'admin' && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/bank-account-setup">
+                        <span className="w-full cursor-pointer">Bank Account</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings">
+                        <span className="w-full cursor-pointer">Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuItem onClick={logout}>
                   Logout
                 </DropdownMenuItem>
@@ -158,6 +172,28 @@ export function Navbar() {
                     {member ? `${member.firstName} ${member.lastName}` : user?.username}
                   </span>
                 </div>
+                {user?.role === 'admin' && (
+                  <>
+                    <Link href="/bank-account-setup">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full justify-start px-3 py-2 text-left text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                      >
+                        Bank Account
+                      </Button>
+                    </Link>
+                    <Link href="/settings">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full justify-start px-3 py-2 text-left text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                      >
+                        Settings
+                      </Button>
+                    </Link>
+                  </>
+                )}
                 <Button
                   variant="ghost"
                   onClick={() => {
