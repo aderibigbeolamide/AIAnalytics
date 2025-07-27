@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { registerMongoAuthRoutes } from "./mongo-auth-routes";
+import { registerMongoSuperAdminRoutes } from "./mongo-super-admin-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
 import { connectToMongoDB } from "./mongodb";
@@ -51,8 +52,9 @@ app.use((req, res, next) => {
   // Run auto-seeding before starting the server
   await mongoAutoSeed();
   
-  // Register MongoDB auth routes first (they will override the old ones)
+  // Register MongoDB routes first (they will override the old ones)
   registerMongoAuthRoutes(app);
+  registerMongoSuperAdminRoutes(app);
   
   const server = await registerRoutes(app);
 
