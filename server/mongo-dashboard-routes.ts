@@ -476,6 +476,66 @@ export function registerMongoDashboardRoutes(app: Express) {
     }
   });
 
+  // Update user's bank account details (PRIVATE - only for account owner)
+  app.put("/api/users/bank-account", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { 
+        bankCode, 
+        accountNumber, 
+        businessName, 
+        businessEmail, 
+        businessPhone,
+        percentageCharge = 2 
+      } = req.body;
+
+      // Verify the account before updating
+      const paystackModule = await import("./paystack");
+      const verificationData = await paystackModule.verifyBankAccount(accountNumber, bankCode);
+      
+      if (!verificationData.status) {
+        return res.status(400).json({
+          success: false,
+          message: verificationData.message || "Account verification failed"
+        });
+      }
+
+      // Get bank name from banks list
+      const banksData = await paystackModule.getNigerianBanks();
+      const selectedBank = banksData.data?.find((bank: any) => bank.code === bankCode);
+      const bankName = selectedBank ? selectedBank.name : `Bank Code ${bankCode}`;
+
+      // Update user with new bank account details
+      await mongoStorage.updateUser(userId, {
+        bankName: bankName,
+        accountNumber: accountNumber,
+        accountName: verificationData.data.account_name,
+        bankCode: bankCode,
+        businessName: businessName,
+        businessEmail: businessEmail,
+        businessPhone: businessPhone,
+        percentageCharge: percentageCharge,
+        isVerified: true
+      });
+
+      res.json({
+        success: true,
+        message: "Bank account updated successfully",
+        accountName: verificationData.data.account_name
+      });
+    } catch (error: any) {
+      console.error("Update bank account error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to update bank account" 
+      });
+    }
+  });
+
   // Setup bank account for user (create Paystack subaccount)
   app.post("/api/users/setup-bank-account", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
