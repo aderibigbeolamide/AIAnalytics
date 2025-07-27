@@ -59,7 +59,10 @@ export default function OrganizationRegister() {
       await apiRequest('POST', '/api/organizations/register', {
         organizationName: formData.name,
         contactEmail: formData.contactEmail,
-        contactPhone: formData.contactPhone,
+        contactPhone: formData.contactPhone || "",
+        address: formData.address || "",
+        website: formData.website || "",
+        description: formData.description || "",
         adminUsername: formData.adminUsername,
         adminPassword: formData.adminPassword,
         adminFirstName: formData.adminFirstName,

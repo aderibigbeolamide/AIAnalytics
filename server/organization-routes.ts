@@ -7,15 +7,19 @@ import { z } from "zod";
 
 const router = Router();
 
-// Organization registration schema
+// Organization registration schema - only essential fields required
 const organizationRegistrationSchema = z.object({
   organizationName: z.string().min(1, "Organization name is required"),
   contactEmail: z.string().email("Valid email is required"),
-  contactPhone: z.string().min(1, "Contact phone is required"),
   adminUsername: z.string().min(3, "Username must be at least 3 characters"),
   adminPassword: z.string().min(6, "Password must be at least 6 characters"),
   adminFirstName: z.string().min(1, "First name is required"),
   adminLastName: z.string().min(1, "Last name is required"),
+  // Optional fields that can be filled later
+  contactPhone: z.string().optional(),
+  address: z.string().optional(),
+  website: z.string().optional(),
+  description: z.string().optional(),
 });
 
 // Register new organization with admin user
@@ -44,7 +48,7 @@ router.post('/register', async (req: Request, res: Response) => {
     const hashedPassword = await hashPassword(data.adminPassword);
 
     // Create admin user (simplified approach for migration)
-    await storage.createUser({
+    const newUser = await storage.createUser({
       username: data.adminUsername,
       email: data.contactEmail,
       password: hashedPassword,

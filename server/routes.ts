@@ -4529,26 +4529,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app[method](`/api${path}`, authenticateToken, requireRole(['super_admin']), handler);
   });
 
-  // Organization registration route (public)
+  // Organization registration route (public) - simplified validation for user-friendly registration
   app.post("/api/organizations/register", async (req: Request, res: Response) => {
     try {
       const { 
         organizationName, 
-        description, 
         contactEmail, 
         contactPhone, 
         address, 
         website,
+        description,
         adminUsername, 
-        adminEmail, 
         adminPassword, 
         adminFirstName, 
         adminLastName 
       } = req.body;
 
-      // Validate required fields
-      if (!organizationName || !contactEmail || !adminUsername || !adminEmail || !adminPassword || !adminFirstName || !adminLastName) {
-        return res.status(400).json({ message: "All required fields must be provided" });
+      // Validate only essential required fields - contact info, website, address, description are optional
+      if (!organizationName || !contactEmail || !adminUsername || !adminPassword || !adminFirstName || !adminLastName) {
+        return res.status(400).json({ message: "Please fill in all required fields: Organization Name, Contact Email, Admin Username, Admin Password, Admin First Name, and Admin Last Name" });
       }
 
       // Check if admin username or email already exists
