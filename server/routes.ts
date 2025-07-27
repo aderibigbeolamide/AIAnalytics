@@ -242,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 registrationType: row.registration_type,
                 guestName: row.guest_name,
                 guestEmail: row.guest_email,
-                guestJamaat: row.guest_jamaat,
+                
                 guestAuxiliaryBody: row.guest_auxiliary_body,
                 guestCircuit: row.guest_circuit,
                 uniqueId: row.unique_id,
@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               registrationType: row.registration_type,
               guestName: row.guest_name,
               guestEmail: row.guest_email,
-              guestJamaat: row.guest_jamaat,
+              
               guestAuxiliaryBody: row.guest_auxiliary_body,
               guestCircuit: row.guest_circuit,
               uniqueId: row.unique_id,
@@ -328,7 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               registrationType: row.registration_type,
               guestName: row.guest_name,
               guestEmail: row.guest_email,
-              guestJamaat: row.guest_jamaat,
+              
               guestAuxiliaryBody: row.guest_auxiliary_body,
               guestCircuit: row.guest_circuit,
               uniqueId: row.unique_id,
@@ -834,12 +834,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/events/:id/registrations", authenticateToken, async (req, res) => {
     try {
       const eventId = parseInt(req.params.id);
-      const { auxiliaryBody, uniqueId, chandaNumber, startDate, endDate, status } = req.query;
+      const { auxiliaryBody, uniqueId, startDate, endDate, status } = req.query;
       
       const filters = {
         auxiliaryBody: auxiliaryBody as string,
         uniqueId: uniqueId as string,
-        chandaNumber: chandaNumber as string,
         startDate: startDate ? new Date(startDate as string) : undefined,
         endDate: endDate ? new Date(endDate as string) : undefined,
         status: status as string,
@@ -886,12 +885,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Global registrations filter route
   app.get("/api/registrations", authenticateToken, async (req, res) => {
     try {
-      const { eventId, auxiliaryBody, uniqueId, chandaNumber, startDate, endDate, status } = req.query;
+      const { eventId, auxiliaryBody, uniqueId,  startDate, endDate, status } = req.query;
       
       const filters = {
         auxiliaryBody: auxiliaryBody as string,
         uniqueId: uniqueId as string,
-        chandaNumber: chandaNumber as string,
         startDate: startDate ? new Date(startDate as string) : undefined,
         endDate: endDate ? new Date(endDate as string) : undefined,
         status: status as string,
@@ -1129,8 +1127,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastName: formData.lastName || formData.LastName || 'User',
 
             auxiliaryBody: getAuxiliaryBody(),
-            chandaNumber: formData.chandaNumber || formData.ChandaNumber || null,
-            circuit: formData.circuit || formData.Circuit || null,
             email: email || `${uniqueUsername}@event.local`,
             status: "active"
           });
@@ -1352,7 +1348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`CSV validation required for member registration:`, {
           name: registration.guestName,
           email: registration.guestEmail,
-          chanda: registration.guestChandaNumber
+          
         });
         
         // Check if user exists in any of the CSV files
@@ -1980,7 +1976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`CSV validation required for member registration:`, {
           name: registration.guestName,
           email: registration.guestEmail,
-          chanda: registration.guestChandaNumber
+          
         });
         
         // Check if user exists in any of the CSV files
@@ -1989,7 +1985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Support multiple possible field names for CSV data
             const csvName = member.name || member.Fullname || member.fullName || member.fullname;
             const csvEmail = member.email || member.Email || member.emailAddress;
-            const csvChanda = member.chandaNumber || member.ChandaNO || member.chandaNo || member.chanda_number;
+            
             
             // Compare name (case insensitive)
             const nameMatch = csvName && registration.guestName && 
@@ -2191,7 +2187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/events/:eventId/face-recognition", authenticateToken, requireRole(["admin"]), upload.single('photoFile'), async (req: AuthenticatedRequest, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
-      const { memberName, auxiliaryBody, chandaNumber, memberId } = req.body;
+      const { memberName, auxiliaryBody,  memberId } = req.body;
       
       if (!req.file || !memberName) {
         return res.status(400).json({ message: "Photo file and member name are required" });
@@ -2207,7 +2203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         photoUrl,
         memberName,
         auxiliaryBody,
-        chandaNumber,
+        
         uploadedBy: req.user!.id,
         isActive: true
       });
@@ -2487,7 +2483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Starting CSV validation for registration:`, {
           name: registration.guestName,
           email: registration.guestEmail,
-          chanda: registration.guestChandaNumber
+          
         });
         // Check if user exists in any of the CSV files
         csvValidationPassed = csvData.some(csv => 
@@ -2497,7 +2493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const csvFirstName = member.FirstName || member.firstName || member.first_name;
             const csvLastName = member.LastName || member.lastName || member.last_name;
             const csvEmail = member.email || member.Email || member.emailAddress;
-            const csvChanda = member.chandaNumber || member.ChandaNO || member.chandaNo || member.chanda_number;
+            
             
             // Construct full name from first and last name if available
             let constructedName = '';

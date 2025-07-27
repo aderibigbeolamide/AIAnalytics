@@ -45,7 +45,6 @@ export interface IStorage {
   getEventRegistrations(eventId?: number, filters?: { 
     auxiliaryBody?: string; 
     uniqueId?: string; 
-    chandaNumber?: string; 
     startDate?: Date; 
     endDate?: Date;
     status?: string;
@@ -396,7 +395,6 @@ export class MemStorage implements IStorage {
   async getEventRegistrations(eventId?: number, filters?: { 
     auxiliaryBody?: string; 
     uniqueId?: string; 
-    chandaNumber?: string; 
     startDate?: Date; 
     endDate?: Date;
     status?: string;
@@ -419,11 +417,7 @@ export class MemStorage implements IStorage {
       );
     }
     
-    if (filters?.chandaNumber) {
-      registrationList = registrationList.filter(reg => 
-        reg.customFieldData?.chandaNumber === filters.chandaNumber
-      );
-    }
+
     
     if (filters?.status) {
       registrationList = registrationList.filter(reg => 
