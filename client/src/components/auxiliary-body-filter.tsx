@@ -28,7 +28,7 @@ export function AuxiliaryBodyFilter({
           <SelectItem value="all">All Auxiliary Bodies</SelectItem>
         )}
         {auxiliaryBodies.length === 0 ? (
-          <SelectItem value="none" disabled>No auxiliary bodies available</SelectItem>
+          <SelectItem value="no_bodies_available" disabled>No auxiliary bodies available</SelectItem>
         ) : (
           auxiliaryBodies.filter((body: string) => body && body.trim()).map((body: string) => (
             <SelectItem key={body} value={body}>
