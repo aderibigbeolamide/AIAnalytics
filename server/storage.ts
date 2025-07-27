@@ -16,6 +16,7 @@ import { eq, and, isNull, desc, or, ilike, gte, lte, sql } from "drizzle-orm";
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
+  getUserById(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined>;
@@ -120,6 +121,10 @@ export class MemStorage implements IStorage {
 
   // Users
   async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserById(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
 
@@ -692,6 +697,11 @@ export class MemStorage implements IStorage {
 export class DatabaseStorage implements IStorage {
   // Users
   async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserById(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }

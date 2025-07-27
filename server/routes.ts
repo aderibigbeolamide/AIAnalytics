@@ -26,6 +26,7 @@ import {
   generateToken, 
   authenticateToken, 
   requireRole,
+  isAdmin,
   type AuthenticatedRequest 
 } from "./auth";
 import { 
@@ -486,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Count registrations by auxiliary body
       allRegistrations.forEach(reg => {
-        const auxBody = reg.member?.auxiliaryBody || reg.guestAuxiliaryBody;
+        const auxBody = reg.guestAuxiliaryBody;
         if (auxBody) {
           if (!auxiliaryBodyStats[auxBody]) {
             auxiliaryBodyStats[auxBody] = {
@@ -574,11 +575,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Member routes
   app.get("/api/members", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
-      const { auxiliaryBody, search, chandaNumber } = req.query;
+      const { auxiliaryBody, search } = req.query;
       const members = await storage.getMembers({
         auxiliaryBody: auxiliaryBody as string,
         search: search as string,
-        chandaNumber: chandaNumber as string,
       });
       res.json(members);
     } catch (error) {
@@ -1127,7 +1127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             username: uniqueUsername,
             firstName: formData.firstName || formData.FirstName || 'Unknown',
             lastName: formData.lastName || formData.LastName || 'User',
-            jamaat: formData.jamaat || formData.Jamaat || 'Unknown',
+
             auxiliaryBody: getAuxiliaryBody(),
             chandaNumber: formData.chandaNumber || formData.ChandaNumber || null,
             circuit: formData.circuit || formData.Circuit || null,
