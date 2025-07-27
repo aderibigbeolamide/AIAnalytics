@@ -283,22 +283,19 @@ export function registerMongoDashboardRoutes(app: Express) {
         return res.status(400).json({ message: "No image file provided" });
       }
 
-      // Generate unique filename
-      const timestamp = Date.now();
-      const ext = path.extname(req.file.originalname);
-      const filename = `profile_${userId}_${timestamp}${ext}`;
+
 
       // Save file using fileStorage
-      const filePath = await fileStorage.saveFile(req.file.buffer, filename, 'profile-images');
+      const uploadedFile = await fileStorage.saveFile(req.file, 'profile-images');
 
       // Update user profile with image path
       await mongoStorage.updateUser(userId, {
-        profileImage: filePath,
+        profileImage: uploadedFile.url,
       });
 
       res.json({ 
         message: "Profile image updated successfully",
-        imageUrl: filePath 
+        imageUrl: uploadedFile.url 
       });
     } catch (error) {
       console.error("Error uploading profile image:", error);

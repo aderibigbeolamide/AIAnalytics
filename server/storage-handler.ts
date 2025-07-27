@@ -116,8 +116,10 @@ export class FileStorageHandler {
   private async saveToLocal(file: Express.Multer.File, folder?: string): Promise<UploadedFile> {
     await this.ensureUploadDirectory();
 
-    // Generate unique filename
-    const fileExtension = path.extname(file.originalname);
+
+
+    // Generate unique filename - handle case where originalname might be undefined
+    const fileExtension = file.originalname ? path.extname(file.originalname) : '.jpg';
     const filename = `${nanoid()}_${Date.now()}${fileExtension}`;
     
     // Create subfolder if specified
