@@ -11,13 +11,13 @@ export async function seed() {
     if (!existingSuperAdmin) {
       const hashedPassword = await hashPassword('superadmin2025!');
       await storage.createUser({
-        username: 'superadmin',
-        email: 'superadmin@eventvalidate.com',
-        password: hashedPassword,
-        role: 'super_admin',
-        firstName: 'Super',
-        lastName: 'Admin',
-        status: 'active'
+        username: ['superadmin'], // changed to array to match expected type
+        email: ['superadmin@eventvalidate.com'],
+        password: [hashedPassword],
+        role: ['super_admin'],
+        firstName: ['Super'],
+        lastName: ['Admin'],
+        status: ['active']
       });
       console.log('✅ Super admin user created');
       console.log('🔐 Username: superadmin');
