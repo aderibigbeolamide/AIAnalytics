@@ -1,21 +1,15 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-dotenv.config();
 
-const MONGODB_URI = process.env.DATABASE_URL;
+const MONGODB_URI = 'mongodb+srv://hafiztech56:eventdb@eventdb.b5av4hv.mongodb.net/eventvalidate?retryWrites=true&w=majority';
 
 console.log("Connecting to MongoDB...");
-
-if (!MONGODB_URI) {
-  throw new Error("DATABASE_URL environment variable is not defined.");
-}
 
 let isConnected = false;
 
 export const connectToMongoDB = async () => {
   if (isConnected) {
     console.log("MongoDB already connected");
-    await mongoose.connect(MONGODB_URI as string);
+    return;
   }
 
   try {
