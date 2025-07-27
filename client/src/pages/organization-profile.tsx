@@ -158,13 +158,20 @@ export default function OrganizationProfile() {
       }
       return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      console.log('Image upload success:', data);
+      
+      // Force immediate state update
       setProfileImage(data.imageUrl);
+      
+      // Invalidate and refetch profile data
+      await queryClient.invalidateQueries({ queryKey: ['/api/organization/profile'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/organization/profile'] });
+      
       toast({
         title: "Profile Image Updated",
         description: "Your profile image has been updated successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/organization/profile'] });
     },
     onError: (error: any) => {
       toast({
@@ -465,13 +472,21 @@ export default function OrganizationProfile() {
               <div className="flex items-center gap-6">
                 <Avatar className="w-24 h-24">
                   <AvatarImage 
-                    src={profileImage || profile?.profileImage} 
-                    alt="Organization profile" 
+                    src={(profileImage || profile?.profileImage) + `?t=${Date.now()}`} 
+                    alt="Organization profile"
+                    key={profileImage || profile?.profileImage || 'default'}
                   />
                   <AvatarFallback className="text-2xl">
                     {profile?.businessName?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || "O"}
                   </AvatarFallback>
                 </Avatar>
+                
+                {/* Debug info */}
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>State Image: {profileImage || 'none'}</div>
+                  <div>Profile Image: {profile?.profileImage || 'none'}</div>
+                  <div>Final URL: {profileImage || profile?.profileImage || 'none'}</div>
+                </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="profile-image" className="cursor-pointer">
