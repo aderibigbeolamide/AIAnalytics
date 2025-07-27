@@ -425,7 +425,7 @@ export default function BankAccountSetup() {
                 )}
               </CardTitle>
               <CardDescription>
-                {isEditing ? "Update your bank account details" : "Your bank account is setup and ready to receive payments"}
+                {isEditing ? "Update your bank account details. Your information remains private and secure." : "Your bank account is setup and ready to receive payments. 🔒 Private and secure - only you can see these details."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -573,7 +573,9 @@ export default function BankAccountSetup() {
                 Setup Your Bank Account
               </CardTitle>
               <CardDescription>
-                Connect your bank account to receive payments from ticket sales and registrations
+                Connect your bank account to receive payments from ticket sales and registrations.
+                <br />
+                🔒 <strong>Privacy Protected:</strong> Your bank details are private and only visible to you. Platform admins can only see the 2% platform fee deducted from transactions, never your full revenue amounts.
               </CardDescription>
             </CardHeader>
             <CardContent>

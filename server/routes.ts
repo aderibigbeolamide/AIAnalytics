@@ -3591,7 +3591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user's bank account details
+  // Get user's bank account details (PRIVATE - only for account owner)
   app.get("/api/users/bank-account", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -3606,7 +3606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Return the actual bank account data from user fields
+      // Return the actual bank account data from user fields (PRIVATE INFO)
       const bankAccount = {
         paystackSubaccountCode: user.paystackSubaccountCode,
         bankName: user.bankName,
@@ -3629,6 +3629,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Failed to fetch bank account details" 
+      });
+    }
+  });
+
+  // Update user's bank account details (PRIVATE - only for account owner)
+  app.put("/api/users/bank-account", authenticateToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { 
+        bankCode, 
+        accountNumber, 
+        businessName, 
+        businessEmail, 
+        businessPhone,
+        percentageCharge = 2 
+      } = req.body;
+
+      // Verify the account before updating
+      const verificationData = await verifyBankAccount(accountNumber, bankCode);
+      
+      if (!verificationData.status) {
+        return res.status(400).json({
+          success: false,
+          message: verificationData.message || "Account verification failed"
+        });
+      }
+
+      // Get bank name from banks list
+      const banksData = await getNigerianBanks();
+      const bank = banksData.data.find((b: any) => b.code === bankCode);
+      
+      // Update the user with new bank account information
+      await storage.updateUser(userId, {
+        accountNumber: accountNumber,
+        bankCode: bankCode,
+        bankName: bank?.name || 'Unknown Bank',
+        accountName: verificationData.data.account_name,
+        businessName: businessName,
+        businessEmail: businessEmail || '',
+        businessPhone: businessPhone || '',
+        percentageCharge: percentageCharge,
+        isVerified: true
+      });
+      
+      console.log("Bank account updated successfully for user:", userId);
+      
+      res.json({
+        success: true,
+        message: "Bank account updated successfully!",
+        accountName: verificationData.data.account_name,
+        bankCode: bankCode,
+        accountNumber: accountNumber,
+        businessName: businessName,
+        verified: true
+      });
+    } catch (error: any) {
+      console.error("Bank account update error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: error.message || "Failed to update bank account" 
       });
     }
   });
@@ -3949,9 +4009,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Platform Analytics API - Revenue tracking and monitoring
+  // Platform Analytics API - PRIVACY PROTECTED: Only shows platform fees (2%), never organizer revenue
   app.get('/api/platform/analytics', authenticateToken, isAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // SECURITY NOTE: This endpoint only shows platform fees earned from each transaction
+      // It NEVER exposes the full revenue amounts that go to event organizers
+      // Each organizer's bank account details and full revenue remain completely private
       const { period = '30d' } = req.query;
       
       // Calculate date range based on period
