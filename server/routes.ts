@@ -3552,13 +3552,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Return success response - the main functionality (automatic verification) is working perfectly
+      // Get bank name from banks list
+      const banksData = await getNigerianBanks();
+      const bank = banksData.data.find((b: any) => b.code === bankCode);
+      
+      // Update the user with bank account information directly in the user fields
+      await storage.updateUser(userId, {
+        accountNumber: accountNumber,
+        bankCode: bankCode,
+        bankName: bank?.name || 'Unknown Bank',
+        accountName: verificationData.data.account_name,
+        businessName: businessName,
+        businessEmail: businessEmail || '',
+        businessPhone: businessPhone || '',
+        percentageCharge: percentageCharge,
+        isVerified: true
+      });
+      
       console.log("Bank verification successful for:", verificationData.data.account_name);
       console.log("Business Details:", { businessName, businessEmail, businessPhone });
       
       res.json({
         success: true,
-        message: "Bank account verified successfully! The automatic verification is working perfectly.",
+        message: "Bank account setup completed successfully!",
         accountName: verificationData.data.account_name,
         bankCode: bankCode,
         accountNumber: accountNumber,
@@ -3584,24 +3600,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       
-      // For now, return empty bank account data to allow frontend to work
-      // This allows the bank search functionality to be tested
-      const defaultBankAccount = {
-        paystackSubaccountCode: null,
-        bankName: null,
-        accountNumber: null,
-        accountName: null,
-        bankCode: null,
-        businessName: null,
-        businessEmail: null,
-        businessPhone: null,
-        percentageCharge: 0,
-        isVerified: false
+      // Get the actual user data from the database
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found"
+        });
+      }
+      
+      // Return the actual bank account data from user fields
+      const bankAccount = {
+        paystackSubaccountCode: user.paystackSubaccountCode,
+        bankName: user.bankName,
+        accountNumber: user.accountNumber,
+        accountName: user.accountName,
+        bankCode: user.bankCode,
+        businessName: user.businessName,
+        businessEmail: user.businessEmail,
+        businessPhone: user.businessPhone,
+        percentageCharge: user.percentageCharge || 0,
+        isVerified: user.isVerified || false
       };
 
       res.json({
         success: true,
-        bankAccount: defaultBankAccount
+        bankAccount: bankAccount
       });
     } catch (error: any) {
       console.error("Get bank account error:", error);
