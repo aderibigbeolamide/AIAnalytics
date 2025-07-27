@@ -24,16 +24,43 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       const allEvents = await mongoStorage.getEvents();
       const allMembers = await mongoStorage.getMembers();
 
+      // Calculate recent activity (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentUsers = allUsers.filter(u => u.createdAt >= thirtyDaysAgo).length;
+      const recentOrganizations = allOrganizations.filter(o => o.createdAt >= thirtyDaysAgo).length;
+      const recentEvents = allEvents.filter(e => e.createdAt >= thirtyDaysAgo).length;
+      const recentMembers = allMembers.filter(m => m.createdAt >= thirtyDaysAgo).length;
+
       const statistics = {
         overview: {
           totalUsers: allUsers.length,
           totalOrganizations: allOrganizations.length,
           totalEvents: allEvents.length,
           totalMembers: allMembers.length,
+          totalAdmins: allUsers.filter(u => u.role === 'admin').length,
+          totalRegistrations: 0, // No registrations in current schema
           activeUsers: allUsers.filter(u => u.status === 'active').length,
           approvedOrganizations: allOrganizations.filter(o => o.status === 'approved').length,
           upcomingEvents: allEvents.filter(e => e.status === 'upcoming').length,
           activeMembers: allMembers.filter(m => m.status === 'active').length
+        },
+        recent: {
+          newUsers: recentUsers,
+          newOrganizations: recentOrganizations,
+          newEvents: recentEvents,
+          newMembers: recentMembers
+        },
+        events: {
+          active: allEvents.filter(e => e.status === 'active').length,
+          upcoming: allEvents.filter(e => e.status === 'upcoming').length,
+          completed: allEvents.filter(e => e.status === 'completed').length,
+          cancelled: allEvents.filter(e => e.status === 'cancelled').length,
+          draft: allEvents.filter(e => e.status === 'draft').length
+        },
+        registrations: {
+          validationRate: 100 // Default since no registrations yet
         },
         usersByRole: allUsers.reduce((acc: any, user) => {
           acc[user.role] = (acc[user.role] || 0) + 1;
