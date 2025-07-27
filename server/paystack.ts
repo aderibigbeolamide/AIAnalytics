@@ -210,3 +210,33 @@ export async function getNigerianBanks() {
     throw error;
   }
 }
+
+// Create Paystack subaccount for direct payments to organizers
+export async function createSubaccount(data: {
+  business_name: string;
+  bank_code: string;
+  account_number: string;
+  percentage_charge: number;
+  description?: string;
+  primary_contact_email?: string;
+  primary_contact_name?: string;
+  primary_contact_phone?: string;
+  metadata?: any;
+}) {
+  try {
+    const response = await fetch('https://api.paystack.co/subaccount', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Create subaccount error:', error);
+    throw error;
+  }
+}

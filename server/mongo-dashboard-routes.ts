@@ -494,8 +494,8 @@ export function registerMongoDashboardRoutes(app: Express) {
       } = req.body;
 
       // Verify the bank account first
-      const { verifyBankAccount, createSubaccount } = await import("./paystack");
-      const verificationData = await verifyBankAccount(accountNumber, bankCode);
+      const paystackModule = await import("./paystack");
+      const verificationData = await paystackModule.verifyBankAccount(accountNumber, bankCode);
 
       if (!verificationData.status) {
         return res.status(400).json({
@@ -505,7 +505,7 @@ export function registerMongoDashboardRoutes(app: Express) {
       }
 
       // Create Paystack subaccount
-      const subaccountData = await createSubaccount({
+      const subaccountData = await paystackModule.createSubaccount({
         business_name: businessName,
         bank_code: bankCode,
         account_number: accountNumber,

@@ -120,6 +120,23 @@ export interface IUser extends Document {
   resetPasswordExpires?: Date;
   emailVerified: boolean;
   emailVerificationToken?: string;
+  // Bank account fields
+  paystackSubaccountCode?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
+  bankCode?: string;
+  businessName?: string;
+  businessEmail?: string;
+  businessPhone?: string;
+  percentageCharge?: number;
+  isVerified?: boolean;
+  // Organization profile fields
+  phone?: string;
+  address?: string;
+  description?: string;
+  website?: string;
+  profileImage?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -143,6 +160,23 @@ const UserSchema = new Schema<IUser>({
   resetPasswordExpires: { type: Date },
   emailVerified: { type: Boolean, required: true, default: false },
   emailVerificationToken: { type: String },
+  // Bank account fields
+  paystackSubaccountCode: { type: String },
+  bankName: { type: String },
+  accountNumber: { type: String },
+  accountName: { type: String },
+  bankCode: { type: String },
+  businessName: { type: String },
+  businessEmail: { type: String },
+  businessPhone: { type: String },
+  percentageCharge: { type: Number, default: 2 },
+  isVerified: { type: Boolean, default: false },
+  // Organization profile fields
+  phone: { type: String },
+  address: { type: String },
+  description: { type: String },
+  website: { type: String },
+  profileImage: { type: String },
 }, { timestamps: true });
 
 // Member Schema
