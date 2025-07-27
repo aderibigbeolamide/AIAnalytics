@@ -1,26 +1,25 @@
 // Organization-specific routes for multi-tenant system
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { storage } from "./storage";
-import { insertOrganizationSchema } from "@shared/schema";
+import { hashPassword } from "./auth";
 import { z } from "zod";
 
 const router = Router();
 
 // Organization registration schema
 const organizationRegistrationSchema = z.object({
-  organization: insertOrganizationSchema,
-  admin: z.object({
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    username: z.string().min(3, "Username must be at least 3 characters"),
-    email: z.string().email("Valid email is required"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-  })
+  organizationName: z.string().min(1, "Organization name is required"),
+  contactEmail: z.string().email("Valid email is required"),
+  contactPhone: z.string().min(1, "Contact phone is required"),
+  adminUsername: z.string().min(3, "Username must be at least 3 characters"),
+  adminPassword: z.string().min(6, "Password must be at least 6 characters"),
+  adminFirstName: z.string().min(1, "First name is required"),
+  adminLastName: z.string().min(1, "Last name is required"),
 });
 
 // Register new organization with admin user
-router.post('/register', async (req, res) => {
+router.post('/register', async (req: Request, res: Response) => {
   try {
     const validation = organizationRegistrationSchema.safeParse(req.body);
     
@@ -31,56 +30,32 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const { organization, admin } = validation.data;
-
-    // Check if organization email already exists
-    const existingOrg = await storage.getOrganizationByEmail(organization.contactEmail);
-    if (existingOrg) {
-      return res.status(409).json({
-        error: 'An organization with this email already exists'
-      });
-    }
+    const data = validation.data;
 
     // Check if admin username already exists
-    const existingUser = await storage.getUserByUsername(admin.username);
+    const existingUser = await storage.getUserByUsername(data.adminUsername);
     if (existingUser) {
       return res.status(409).json({
         error: 'Username already taken'
       });
     }
 
-    // Check if admin email already exists
-    const existingUserByEmail = await storage.getUserByEmail(admin.email);
-    if (existingUserByEmail) {
-      return res.status(409).json({
-        error: 'Email already registered'
-      });
-    }
-
-    // Create organization (pending approval)
-    const newOrganization = await storage.createOrganization({
-      ...organization,
-      status: 'pending'
-    });
-
     // Hash admin password
-    const hashedPassword = await bcrypt.hash(admin.password, 10);
+    const hashedPassword = await hashPassword(data.adminPassword);
 
-    // Create admin user for the organization
+    // Create admin user (simplified approach for migration)
     await storage.createUser({
-      organizationId: newOrganization.id,
-      username: admin.username,
-      email: admin.email,
+      username: data.adminUsername,
+      email: data.contactEmail,
       password: hashedPassword,
-      firstName: admin.firstName,
-      lastName: admin.lastName,
+      firstName: data.adminFirstName,
+      lastName: data.adminLastName,
       role: 'admin',
       status: 'pending_approval'
     });
 
     res.status(201).json({
       message: 'Organization registered successfully. Awaiting approval.',
-      organizationId: newOrganization.id,
       status: 'pending'
     });
   } catch (error) {

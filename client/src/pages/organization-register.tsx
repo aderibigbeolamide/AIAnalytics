@@ -59,21 +59,13 @@ export default function OrganizationRegister() {
       await apiRequest('/api/organizations/register', {
         method: 'POST',
         body: JSON.stringify({
-          organization: {
-            name: formData.name,
-            description: formData.description,
-            contactEmail: formData.contactEmail,
-            contactPhone: formData.contactPhone,
-            address: formData.address,
-            website: formData.website
-          },
-          admin: {
-            firstName: formData.adminFirstName,
-            lastName: formData.adminLastName,
-            username: formData.adminUsername,
-            email: formData.contactEmail,
-            password: formData.adminPassword
-          }
+          organizationName: formData.name,
+          contactEmail: formData.contactEmail,
+          contactPhone: formData.contactPhone,
+          adminUsername: formData.adminUsername,
+          adminPassword: formData.adminPassword,
+          adminFirstName: formData.adminFirstName,
+          adminLastName: formData.adminLastName
         })
       });
 
