@@ -215,25 +215,27 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      {/* Mobile-friendly header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setLocation("/dashboard")}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 self-start"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
+            <span className="hidden sm:inline">Back to Dashboard</span>
+            <span className="sm:hidden">Back</span>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Super Admin Dashboard</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Super Admin Dashboard</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               Platform oversight and organization management
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-start md:self-auto">
           <Button
             variant="ghost"
             size="sm"
@@ -241,17 +243,19 @@ export default function SuperAdminDashboard() {
             className="flex items-center gap-2"
           >
             <Home className="w-4 h-4" />
-            Main Dashboard
+            <span className="hidden sm:inline">Main Dashboard</span>
+            <span className="sm:hidden">Main</span>
           </Button>
           <Badge variant="outline" className="text-purple-600 border-purple-200">
             <Shield className="w-4 h-4 mr-2" />
-            Super Admin
+            <span className="hidden sm:inline">Super Admin</span>
+            <span className="sm:hidden">Admin</span>
           </Badge>
         </div>
       </div>
 
-      {/* Platform Statistics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Platform Statistics - Mobile responsive grid */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Users"
           value={statistics.overview.totalUsers}
@@ -280,8 +284,8 @@ export default function SuperAdminDashboard() {
         />
       </div>
 
-      {/* Event Statistics */}
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Event Statistics - Mobile responsive */}
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <StatCard
           title="Active Events"
           value={statistics.events.active}
@@ -309,18 +313,28 @@ export default function SuperAdminDashboard() {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="users">User Management</TabsTrigger>
-          <TabsTrigger value="events">Event Oversight</TabsTrigger>
-          <TabsTrigger value="organizations">
-            Organization Approvals
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1">
+          <TabsTrigger value="users" className="text-xs md:text-sm">
+            <span className="hidden sm:inline">User Management</span>
+            <span className="sm:hidden">Users</span>
+          </TabsTrigger>
+          <TabsTrigger value="events" className="text-xs md:text-sm">
+            <span className="hidden sm:inline">Event Oversight</span>
+            <span className="sm:hidden">Events</span>
+          </TabsTrigger>
+          <TabsTrigger value="organizations" className="relative text-xs md:text-sm">
+            <span className="hidden sm:inline">Organization Approvals</span>
+            <span className="sm:hidden">Orgs</span>
             {pendingOrganizations && pendingOrganizations.total > 0 && (
-              <Badge variant="destructive" className="ml-2">
+              <Badge variant="destructive" className="ml-1 md:ml-2 px-1 md:px-1.5 py-0.5 text-xs">
                 {pendingOrganizations.total}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="analytics">Platform Analytics</TabsTrigger>
+          <TabsTrigger value="analytics" className="text-xs md:text-sm">
+            <span className="hidden sm:inline">Platform Analytics</span>
+            <span className="sm:hidden">Analytics</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -332,15 +346,15 @@ export default function SuperAdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <Input
                   placeholder="Search users..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="max-w-sm"
+                  className="w-full sm:max-w-sm"
                 />
                 <Select value={userRole} onValueChange={setUserRole}>
-                  <SelectTrigger className="max-w-sm">
+                  <SelectTrigger className="w-full sm:max-w-sm">
                     <SelectValue placeholder="Filter by role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -353,17 +367,18 @@ export default function SuperAdminDashboard() {
                 </Select>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Organization</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">User</TableHead>
+                      <TableHead className="hidden md:table-cell">Organization</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead className="hidden sm:table-cell">Status</TableHead>
+                      <TableHead className="hidden lg:table-cell">Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {usersData?.users.map((user) => (
                     <TableRow key={user.id}>
@@ -430,6 +445,7 @@ export default function SuperAdminDashboard() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -443,9 +459,9 @@ export default function SuperAdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <Select value={eventStatus} onValueChange={setEventStatus}>
-                  <SelectTrigger className="max-w-sm">
+                  <SelectTrigger className="w-full sm:max-w-sm">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -458,17 +474,18 @@ export default function SuperAdminDashboard() {
                 </Select>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Event</TableHead>
-                    <TableHead>Organizer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Registrations</TableHead>
-                    <TableHead>Attendance</TableHead>
-                    <TableHead>Created</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[150px]">Event</TableHead>
+                      <TableHead className="hidden md:table-cell">Organizer</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="hidden sm:table-cell">Registrations</TableHead>
+                      <TableHead className="hidden lg:table-cell">Attendance</TableHead>
+                      <TableHead className="hidden lg:table-cell">Created</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {eventsData?.events.map((event) => (
                     <TableRow key={event.id}>
@@ -522,6 +539,7 @@ export default function SuperAdminDashboard() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -543,61 +561,66 @@ export default function SuperAdminDashboard() {
             </CardHeader>
             <CardContent>
               {pendingOrganizations && pendingOrganizations.organizations.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Organization</TableHead>
-                      <TableHead>Admin User</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Registered</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[150px]">Organization</TableHead>
+                        <TableHead className="hidden md:table-cell">Admin User</TableHead>
+                        <TableHead className="hidden sm:table-cell">Contact</TableHead>
+                        <TableHead className="hidden lg:table-cell">Registered</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
                   <TableBody>
                     {pendingOrganizations.organizations.map((org) => (
                       <TableRow key={org.id}>
                         <TableCell>
                           <div className="font-medium">{org.organizationName}</div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <div>
-                            <div className="font-medium">
+                            <div className="font-medium text-sm">
                               {org.adminUser.firstName} {org.adminUser.lastName}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-xs text-muted-foreground">
                               @{org.adminUser.username}
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell">
                           <div>
-                            <div>{org.contactEmail}</div>
+                            <div className="text-sm">{org.contactEmail}</div>
                             {org.contactPhone && (
-                              <div className="text-sm text-muted-foreground">
+                              <div className="text-xs text-muted-foreground">
                                 {org.contactPhone}
                               </div>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
                           {new Date(org.createdAt).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <Button
                               size="sm"
                               onClick={() => handleOrganizationApproval(org.adminUser.id)}
+                              className="w-full sm:w-auto"
                             >
                               <CheckCircle className="w-4 h-4 mr-2" />
-                              Approve
+                              <span className="hidden sm:inline">Approve</span>
+                              <span className="sm:hidden">✓</span>
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleUserStatusUpdate(org.adminUser.id, 'suspended')}
+                              className="w-full sm:w-auto"
                             >
                               <XCircle className="w-4 h-4 mr-2" />
-                              Reject
+                              <span className="hidden sm:inline">Reject</span>
+                              <span className="sm:hidden">✗</span>
                             </Button>
                           </div>
                         </TableCell>
@@ -605,6 +628,7 @@ export default function SuperAdminDashboard() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               ) : (
                 <div className="text-center py-8">
                   <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
