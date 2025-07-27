@@ -66,25 +66,56 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-// Get organization status (for checking approval)
-router.get('/status/:email', async (req, res) => {
+// Organization login endpoint
+router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { email } = req.params;
+    const { username, password } = req.body;
     
-    const organization = await storage.getOrganizationByEmail(email);
-    if (!organization) {
-      return res.status(404).json({
-        error: 'Organization not found'
+    if (!username || !password) {
+      return res.status(400).json({
+        error: 'Username and password are required'
       });
     }
 
+    // Find user by username
+    const user = await storage.getUserByUsername(username);
+    if (!user) {
+      return res.status(401).json({
+        error: 'Invalid credentials'
+      });
+    }
+
+    // Check if user is approved
+    if (user.status !== 'active') {
+      return res.status(403).json({
+        error: 'Account pending approval or inactive'
+      });
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({
+        error: 'Invalid credentials'
+      });
+    }
+
+    // Generate JWT token (you'll need to implement this)
+    // const token = generateToken(user);
+
     res.json({
-      status: organization.status,
-      approvedAt: organization.approvedAt,
-      rejectionReason: organization.rejectionReason
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      }
+      // token
     });
   } catch (error) {
-    console.error('Organization status check error:', error);
+    console.error('Organization login error:', error);
     res.status(500).json({
       error: 'Internal server error'
     });

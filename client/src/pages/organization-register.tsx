@@ -56,17 +56,14 @@ export default function OrganizationRegister() {
     }
 
     try {
-      await apiRequest('/api/organizations/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          organizationName: formData.name,
-          contactEmail: formData.contactEmail,
-          contactPhone: formData.contactPhone,
-          adminUsername: formData.adminUsername,
-          adminPassword: formData.adminPassword,
-          adminFirstName: formData.adminFirstName,
-          adminLastName: formData.adminLastName
-        })
+      await apiRequest('POST', '/api/organizations/register', {
+        organizationName: formData.name,
+        contactEmail: formData.contactEmail,
+        contactPhone: formData.contactPhone,
+        adminUsername: formData.adminUsername,
+        adminPassword: formData.adminPassword,
+        adminFirstName: formData.adminFirstName,
+        adminLastName: formData.adminLastName
       });
 
       setSuccess(true);
