@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuthStore } from "@/lib/auth";
+import { useAuthStore, getAuthHeaders } from "@/lib/auth";
 import { 
   ArrowLeft, 
   Camera, 
@@ -142,7 +142,16 @@ export default function OrganizationProfile() {
       const formData = new FormData();
       formData.append('profileImage', file);
       
-      const response = await apiRequest('POST', '/api/organization/profile-image', formData);
+      // Use direct fetch for file uploads instead of apiRequest
+      const authHeaders = getAuthHeaders();
+      const response = await fetch('/api/organization/profile-image', {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          // Don't set Content-Type - browser will set it with boundary for FormData
+        },
+        body: formData,
+      });
       
       if (!response.ok) {
         throw new Error('Failed to upload image');
