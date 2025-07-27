@@ -21,7 +21,10 @@ const bankAccountSchema = z.object({
   bankCode: z.string().min(1, "Please select a bank"),
   accountNumber: z.string().min(10, "Account number must be at least 10 digits"),
   businessName: z.string().min(2, "Business name is required"),
-  businessEmail: z.string().email("Valid email is required").optional(),
+  businessEmail: z.union([
+    z.string().email("Valid email is required"),
+    z.literal("")
+  ]).optional(),
   businessPhone: z.string().optional(),
   percentageCharge: z.number().min(0).max(20).default(0),
 });

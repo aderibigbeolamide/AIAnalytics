@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings, User, Shield, Palette, Database, Eye, EyeOff } from "lucide-react";
+import { Settings, User, Shield, Palette, Database } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
 import { Navbar } from "@/components/navbar";
@@ -16,11 +16,6 @@ import { useTheme } from "@/components/theme-provider";
 export default function SettingsPage() {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
 
   // Fetch current settings
   const { data: settings, isLoading } = useQuery({
@@ -33,67 +28,7 @@ export default function SettingsPage() {
     },
   });
 
-  // Password change mutation
-  const changePasswordMutation = useMutation({
-    mutationFn: async (passwordData: { currentPassword: string; newPassword: string }) => {
-      const response = await fetch("/api/auth/change-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify(passwordData),
-      });
-      
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to change password");
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Password Changed",
-        description: "Your password has been successfully updated.",
-      });
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Password Change Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
-  const handlePasswordChange = () => {
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Password Mismatch",
-        description: "New password and confirmation do not match.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast({
-        title: "Password Too Short",
-        description: "Password must be at least 8 characters long.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    changePasswordMutation.mutate({
-      currentPassword,
-      newPassword,
-    });
-  };
 
   if (isLoading) {
     return (
@@ -158,70 +93,11 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Password Change */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="current-password"
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    >
-                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="new-password">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="new-password"
-                      type={showNewPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password (min. 8 characters)"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                    >
-                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                  />
-                </div>
-
-                <Button 
-                  onClick={handlePasswordChange}
-                  disabled={!currentPassword || !newPassword || !confirmPassword || changePasswordMutation.isPending}
-                  className="w-full sm:w-auto"
-                >
-                  {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
-                </Button>
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
+                <h4 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Account Information</h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  Your account settings and preferences are managed through the admin dashboard. Contact your system administrator for account modifications.
+                </p>
               </div>
             </CardContent>
           </Card>
