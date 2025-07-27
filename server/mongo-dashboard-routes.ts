@@ -305,4 +305,258 @@ export function registerMongoDashboardRoutes(app: Express) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // Get Nigerian banks list - Essential for bank account setup
+  app.get("/api/banks", async (req: Request, res: Response) => {
+    try {
+      // Get banks from Paystack API
+      const { getNigerianBanks } = await import("./paystack");
+      const banksData = await getNigerianBanks();
+      
+      if (banksData.status) {
+        const banks = banksData.data;
+        
+        // Additional categorization and statistics
+        const commercialBanks = banks.filter((bank: any) => bank.type === 'commercial');
+        const microfinanceBanks = banks.filter((bank: any) => bank.type === 'microfinance');
+        
+        res.json({
+          success: true,
+          banks: banks,
+          statistics: {
+            total: banks.length,
+            commercial: commercialBanks.length,
+            microfinance: microfinanceBanks.length
+          },
+          message: `Found ${banks.length} banks (${commercialBanks.length} commercial, ${microfinanceBanks.length} microfinance)`
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Failed to fetch banks from Paystack API"
+        });
+      }
+    } catch (error) {
+      console.error("Get banks error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch banks. Please check your internet connection and try again." 
+      });
+    }
+  });
+
+  // Verify bank account details
+  app.post("/api/banks/verify", async (req: Request, res: Response) => {
+    try {
+      const { accountNumber, bankCode } = req.body;
+
+      if (!accountNumber || !bankCode) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Account number and bank code are required" 
+        });
+      }
+
+      const { verifyBankAccount } = await import("./paystack");
+      const verificationData = await verifyBankAccount(accountNumber, bankCode);
+
+      if (verificationData.status) {
+        res.json({
+          success: true,
+          accountName: verificationData.data.account_name,
+          accountNumber: verificationData.data.account_number
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: verificationData.message || "Account verification failed"
+        });
+      }
+    } catch (error) {
+      console.error("Bank verification error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to verify bank account" 
+      });
+    }
+  });
+
+  // Get user's bank account details (PRIVATE - only for account owner)
+  app.get("/api/users/bank-account", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      // Get the actual user data from MongoDB
+      const user = await mongoStorage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found"
+        });
+      }
+      
+      // Return the actual bank account data from user fields (PRIVATE INFO)
+      const bankAccount = {
+        paystackSubaccountCode: user.paystackSubaccountCode,
+        bankName: user.bankName,
+        accountNumber: user.accountNumber,
+        accountName: user.accountName,
+        bankCode: user.bankCode,
+        businessName: user.businessName,
+        businessEmail: user.businessEmail,
+        businessPhone: user.businessPhone,
+        percentageCharge: user.percentageCharge || 0,
+        isVerified: user.isVerified || false
+      };
+
+      res.json({
+        success: true,
+        bankAccount: bankAccount
+      });
+    } catch (error: any) {
+      console.error("Get bank account error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch bank account details" 
+      });
+    }
+  });
+
+  // Setup bank account for user (create Paystack subaccount)
+  app.post("/api/users/setup-bank-account", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { 
+        bankCode, 
+        accountNumber, 
+        businessName, 
+        businessEmail, 
+        businessPhone,
+        percentageCharge = 2 
+      } = req.body;
+
+      // Verify the bank account first
+      const { verifyBankAccount, createSubaccount } = await import("./paystack");
+      const verificationData = await verifyBankAccount(accountNumber, bankCode);
+
+      if (!verificationData.status) {
+        return res.status(400).json({
+          success: false,
+          message: verificationData.message || "Account verification failed"
+        });
+      }
+
+      // Create Paystack subaccount
+      const subaccountData = await createSubaccount({
+        business_name: businessName,
+        bank_code: bankCode,
+        account_number: accountNumber,
+        percentage_charge: percentageCharge,
+        description: `Subaccount for ${businessName}`,
+        primary_contact_email: businessEmail,
+        primary_contact_name: businessName,
+        primary_contact_phone: businessPhone,
+        metadata: {
+          user_id: userId
+        }
+      });
+
+      if (!subaccountData.status) {
+        return res.status(400).json({
+          success: false,
+          message: subaccountData.message || "Failed to create subaccount"
+        });
+      }
+
+      // Update user with bank account details
+      await mongoStorage.updateUser(userId, {
+        paystackSubaccountCode: subaccountData.data.subaccount_code,
+        bankName: subaccountData.data.bank?.name || 'Unknown Bank',
+        accountNumber: accountNumber,
+        accountName: verificationData.data.account_name,
+        bankCode: bankCode,
+        businessName: businessName,
+        businessEmail: businessEmail,
+        businessPhone: businessPhone,
+        percentageCharge: percentageCharge,
+        isVerified: true
+      });
+
+      res.json({
+        success: true,
+        message: "Bank account setup successfully",
+        subaccountCode: subaccountData.data.subaccount_code,
+        accountName: verificationData.data.account_name
+      });
+    } catch (error: any) {
+      console.error("Setup bank account error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to setup bank account" 
+      });
+    }
+  });
+
+  // Update bank account for user
+  app.put("/api/users/bank-account", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { 
+        bankCode, 
+        accountNumber, 
+        businessName, 
+        businessEmail, 
+        businessPhone,
+        percentageCharge = 2 
+      } = req.body;
+
+      // Verify the bank account first
+      const { verifyBankAccount } = await import("./paystack");
+      const verificationData = await verifyBankAccount(accountNumber, bankCode);
+
+      if (!verificationData.status) {
+        return res.status(400).json({
+          success: false,
+          message: verificationData.message || "Account verification failed"
+        });
+      }
+
+      // Update user with new bank account details
+      await mongoStorage.updateUser(userId, {
+        bankName: verificationData.data.bank_name || 'Unknown Bank',
+        accountNumber: accountNumber,
+        accountName: verificationData.data.account_name,
+        bankCode: bankCode,
+        businessName: businessName,
+        businessEmail: businessEmail,
+        businessPhone: businessPhone,
+        percentageCharge: percentageCharge,
+        isVerified: true
+      });
+
+      res.json({
+        success: true,
+        message: "Bank account updated successfully",
+        accountName: verificationData.data.account_name
+      });
+    } catch (error: any) {
+      console.error("Update bank account error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to update bank account" 
+      });
+    }
+  });
 }
