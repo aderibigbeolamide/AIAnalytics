@@ -3,6 +3,7 @@ import { users } from '../shared/schema.js';
 import { hashPassword } from './auth.js';
 
 let seedingCompleted = false;
+let connectionAttempted = false;
 
 export async function autoSeed() {
   // Skip if already completed in this session
@@ -10,14 +11,32 @@ export async function autoSeed() {
     return;
   }
 
+  // Skip if we already tried and failed to avoid repeated attempts
+  if (connectionAttempted) {
+    return;
+  }
+
   console.log('🌱 Auto-seeding: Checking if database needs seeding...');
+  connectionAttempted = true;
   
+  const timeout = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Database connection timeout after 10 seconds')), 10000)
+  );
+
   try {
-    // Test database connection first
-    await db.execute('SELECT 1 as test');
+    // Test database connection with timeout
+    await Promise.race([
+      db.execute('SELECT 1 as test'),
+      timeout
+    ]);
+    
+    console.log('✅ Database connection successful');
     
     // Check if any users exist
-    const existingUsers = await db.query.users.findMany({ limit: 1 });
+    const existingUsers = await Promise.race([
+      db.query.users.findMany({ limit: 1 }),
+      timeout
+    ]) as any[];
     
     if (existingUsers.length === 0) {
       console.log('📝 No users found, running auto-seed...');
@@ -59,8 +78,22 @@ export async function autoSeed() {
     }
     
   } catch (error) {
-    console.log('⚠️ Auto-seeding failed, database might not be ready yet:', error instanceof Error ? error.message : error);
-    // Don't throw error to prevent app startup failure
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    
+    if (errorMsg.includes('ETIMEDOUT') || errorMsg.includes('timeout')) {
+      console.log('⚠️ Database connection timed out. This is normal for external databases.');
+      console.log('💡 To manually seed your database, run: npm run seed');
+      console.log('🌐 Note: External databases (like Render) may have connection limits from local environments');
+    } else if (errorMsg.includes('ECONNREFUSED')) {
+      console.log('⚠️ Database connection refused. Database server might not be running.');
+      console.log('💡 Check your DATABASE_URL and ensure the database is accessible');
+    } else {
+      console.log('⚠️ Auto-seeding failed:', errorMsg);
+      console.log('💡 You can manually run: npm run seed');
+    }
+    
+    // Mark as completed to prevent retry attempts
+    seedingCompleted = true;
   }
 }
 
