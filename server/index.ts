@@ -1,8 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { createServer } from "http";
+// import { registerRoutes } from "./routes"; // DISABLED - All routes migrated to MongoDB
 import { registerMongoAuthRoutes } from "./mongo-auth-routes";
 import { registerMongoSuperAdminRoutes } from "./mongo-super-admin-routes";
 import { registerMongoDashboardRoutes } from "./mongo-dashboard-routes";
+import { registerMongoRoutes } from "./mongo-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
 import { connectToMongoDB } from "./mongodb";
@@ -53,12 +55,14 @@ app.use((req, res, next) => {
   // Run auto-seeding before starting the server
   await mongoAutoSeed();
   
-  // Register MongoDB routes first (they will override the old ones)
+  // Register MongoDB routes only (PostgreSQL routes disabled)
   registerMongoAuthRoutes(app);
   registerMongoSuperAdminRoutes(app);
   registerMongoDashboardRoutes(app);
+  registerMongoRoutes(app);
   
-  const server = await registerRoutes(app);
+  // Create HTTP server directly since legacy routes disabled
+  const server = createServer(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

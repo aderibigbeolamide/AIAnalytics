@@ -110,8 +110,8 @@ export function registerMongoDashboardRoutes(app: Express) {
     }
   });
 
-  // Get auxiliary bodies
-  app.get("/api/auxiliary-bodies", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  // Get auxiliary bodies (public endpoint)
+  app.get("/api/auxiliary-bodies", async (req: Request, res: Response) => {
     try {
       // Return default auxiliary bodies for now
       const auxiliaryBodies = [
