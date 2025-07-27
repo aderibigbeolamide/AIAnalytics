@@ -10,7 +10,11 @@ export interface AuthenticatedRequest extends Request {
   user?: {
     id: number;
     username: string;
+    email: string;
     role: string;
+    organizationId?: number;
+    firstName?: string;
+    lastName?: string;
   };
 }
 
@@ -22,13 +26,37 @@ export async function comparePassword(password: string, hash: string): Promise<b
   return bcrypt.compare(password, hash);
 }
 
-export function generateToken(payload: { id: number; username: string; role: string }): string {
+export function generateToken(payload: { 
+  id: number; 
+  username: string; 
+  email: string;
+  role: string; 
+  organizationId?: number;
+  firstName?: string;
+  lastName?: string;
+}): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
 }
 
-export function verifyToken(token: string): { id: number; username: string; role: string } | null {
+export function verifyToken(token: string): { 
+  id: number; 
+  username: string; 
+  email: string;
+  role: string; 
+  organizationId?: number;
+  firstName?: string;
+  lastName?: string;
+} | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { id: number; username: string; role: string };
+    return jwt.verify(token, JWT_SECRET) as { 
+      id: number; 
+      username: string; 
+      email: string;
+      role: string; 
+      organizationId?: number;
+      firstName?: string;
+      lastName?: string;
+    };
   } catch {
     return null;
   }
@@ -70,8 +98,38 @@ export function isAdmin(req: AuthenticatedRequest, res: Response, next: NextFunc
     return res.status(401).json({ message: "Authentication required" });
   }
 
-  if (req.user.role !== "admin") {
+  if (!["admin", "super_admin"].includes(req.user.role)) {
     return res.status(403).json({ message: "Admin access required" });
+  }
+
+  next();
+}
+
+export function isSuperAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  if (req.user.role !== "super_admin") {
+    return res.status(403).json({ message: "Super admin access required" });
+  }
+
+  next();
+}
+
+export function requireOrganizationAccess(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  // Super admin can access all organizations
+  if (req.user.role === "super_admin") {
+    return next();
+  }
+
+  // Regular admins and members must belong to an organization
+  if (!req.user.organizationId) {
+    return res.status(403).json({ message: "Organization access required" });
   }
 
   next();

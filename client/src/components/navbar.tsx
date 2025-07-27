@@ -29,10 +29,13 @@ export function Navbar() {
       { href: "/events", label: "Events", roles: ["admin"] },
       { href: "/scanner", label: "Scan QR", roles: ["admin"] },
       { href: "/reports", label: "Reports", roles: ["admin"] },
-
     ];
 
-    return [...baseItems, ...adminItems].filter(item => 
+    const superAdminItems = [
+      { href: "/super-admin", label: "Super Admin", roles: ["super_admin"] },
+    ];
+
+    return [...baseItems, ...adminItems, ...superAdminItems].filter(item => 
       item.roles.includes(user?.role || 'guest')
     );
   };
@@ -101,6 +104,20 @@ export function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {user?.role === 'super_admin' && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/super-admin">
+                        <span className="w-full cursor-pointer">Super Admin</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/platform-analytics">
+                        <span className="w-full cursor-pointer">Platform Revenue</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 {user?.role === 'admin' && (
                   <>
                     <DropdownMenuItem asChild>

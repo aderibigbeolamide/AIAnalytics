@@ -32,6 +32,8 @@ import TicketDetail from "@/pages/ticket-detail";
 import TicketScanner from "@/pages/ticket-scanner";
 import BankAccountSetup from "@/pages/bank-account-setup";
 import PlatformAnalytics from "@/pages/platform-analytics";
+import SuperAdminDashboard from "@/pages/super-admin-dashboard";
+import OrganizationRegistration from "@/pages/organization-registration";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage, initializeSessionManagement } = useAuthStore();
@@ -79,6 +81,7 @@ function Router() {
       <Route path="/buy-ticket/:eventId" component={BuyTicket} />
       <Route path="/ticket/:ticketId" component={TicketDetail} />
       <Route path="/login" component={Login} />
+      <Route path="/register-organization" component={OrganizationRegistration} />
       
       {/* Root and landing route always go to landing page */}
       <Route path="/" component={LandingPage} />
@@ -118,6 +121,11 @@ function Router() {
       <Route path="/platform-analytics">
         <ProtectedRoute>
           <PlatformAnalytics />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/super-admin">
+        <ProtectedRoute>
+          <SuperAdminDashboard />
         </ProtectedRoute>
       </Route>
       <Route path="/invitees">

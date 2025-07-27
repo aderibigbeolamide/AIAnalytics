@@ -4228,6 +4228,431 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Super Admin Routes
+  const superAdminRoutes = {
+    // Get platform statistics
+    '/super-admin/statistics': async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        // Get total counts
+        const [users, events, registrations, members] = await Promise.all([
+          storage.getAllUsers(),
+          storage.getEvents(),
+          storage.getEventRegistrations(),
+          storage.getMembers(),
+        ]);
+
+        // Calculate statistics
+        const adminUsers = users.filter(user => user.role === 'admin');
+        const superAdmins = users.filter(user => user.role === 'super_admin');
+        const activeEvents = events.filter(event => event.status === 'upcoming' || event.status === 'active');
+        const completedEvents = events.filter(event => event.status === 'completed');
+        const pendingRegistrations = registrations.filter(reg => reg.status === 'registered');
+        const attendedRegistrations = registrations.filter(reg => reg.status === 'attended');
+
+        // Get recent activity (last 30 days)
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const recentUsers = users.filter(user => new Date(user.createdAt) > thirtyDaysAgo);
+        const recentEvents = events.filter(event => new Date(event.createdAt) > thirtyDaysAgo);
+        const recentRegistrations = registrations.filter(reg => new Date(reg.createdAt) > thirtyDaysAgo);
+
+        const statistics = {
+          overview: {
+            totalUsers: users.length,
+            totalAdmins: adminUsers.length,
+            totalSuperAdmins: superAdmins.length,
+            totalEvents: events.length,
+            totalRegistrations: registrations.length,
+            totalMembers: members.length,
+          },
+          events: {
+            active: activeEvents.length,
+            completed: completedEvents.length,
+            cancelled: events.filter(e => e.status === 'cancelled').length,
+            draft: events.filter(e => e.status === 'draft').length,
+          },
+          registrations: {
+            pending: pendingRegistrations.length,
+            attended: attendedRegistrations.length,
+            validationRate: registrations.length > 0 ? 
+              Math.round((attendedRegistrations.length / registrations.length) * 100) : 0,
+          },
+          recent: {
+            newUsers: recentUsers.length,
+            newEvents: recentEvents.length,
+            newRegistrations: recentRegistrations.length,
+          }
+        };
+
+        res.json(statistics);
+      } catch (error) {
+        console.error("Error fetching platform statistics:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    },
+
+    // Get all users with details
+    '/super-admin/users': async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 50;
+        const role = req.query.role as string;
+        const search = req.query.search as string;
+        
+        let users = await storage.getAllUsers();
+        
+        // Apply filters
+        if (role) {
+          users = users.filter(user => user.role === role);
+        }
+        
+        if (search) {
+          const searchLower = search.toLowerCase();
+          users = users.filter(user => 
+            user.username.toLowerCase().includes(searchLower) ||
+            (user.email && user.email.toLowerCase().includes(searchLower)) ||
+            (user.firstName && user.firstName.toLowerCase().includes(searchLower)) ||
+            (user.lastName && user.lastName.toLowerCase().includes(searchLower))
+          );
+        }
+
+        // Sort by creation date (newest first)
+        users.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        // Paginate
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedUsers = users.slice(startIndex, endIndex);
+
+        // Remove sensitive information
+        const sanitizedUsers = paginatedUsers.map(user => ({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          status: user.status,
+          businessName: user.businessName,
+          businessEmail: user.businessEmail,
+          lastLogin: user.lastLogin,
+          createdAt: user.createdAt,
+        }));
+
+        res.json({
+          users: sanitizedUsers,
+          pagination: {
+            page,
+            limit,
+            total: users.length,
+            totalPages: Math.ceil(users.length / limit),
+          }
+        });
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    },
+
+    // Update user status (suspend/activate)
+    '/super-admin/users/:id/status': async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = parseInt(req.params.id);
+        const { status } = req.body;
+        
+        if (!['active', 'suspended', 'inactive'].includes(status)) {
+          return res.status(400).json({ message: "Invalid status" });
+        }
+
+        const user = await storage.getUserById(userId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        // Prevent super admins from suspending themselves
+        if (userId === req.user!.id && status === 'suspended') {
+          return res.status(400).json({ message: "Cannot suspend yourself" });
+        }
+
+        await storage.updateUser(userId, { status });
+
+        res.json({ message: `User ${status} successfully` });
+      } catch (error) {
+        console.error("Error updating user status:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    },
+
+    // Get all events with admin details
+    '/super-admin/events': async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 50;
+        const status = req.query.status as string;
+        
+        let events = await storage.getEvents();
+        
+        // Apply status filter
+        if (status) {
+          events = events.filter(event => event.status === status);
+        }
+        
+        // Get creator details for each event
+        const eventsWithCreators = await Promise.all(
+          events.map(async (event) => {
+            const creator = await storage.getUserById(event.createdBy);
+            const registrations = await storage.getEventRegistrations(event.id);
+            
+            return {
+              ...event,
+              creator: creator ? {
+                id: creator.id,
+                username: creator.username,
+                email: creator.email,
+                firstName: creator.firstName,
+                lastName: creator.lastName,
+                businessName: creator.businessName,
+              } : null,
+              registrationCount: registrations.length,
+              attendedCount: registrations.filter(r => r.status === 'attended').length,
+            };
+          })
+        );
+
+        // Sort by creation date (newest first)
+        eventsWithCreators.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        // Paginate
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedEvents = eventsWithCreators.slice(startIndex, endIndex);
+
+        res.json({
+          events: paginatedEvents,
+          pagination: {
+            page,
+            limit,
+            total: eventsWithCreators.length,
+            totalPages: Math.ceil(eventsWithCreators.length / limit),
+          }
+        });
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    },
+
+    // Get system activity log
+    '/super-admin/activity': async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 100;
+        
+        // Get recent events, registrations, and user activities
+        const [events, registrations, users] = await Promise.all([
+          storage.getEvents(),
+          storage.getEventRegistrations(),
+          storage.getAllUsers(),
+        ]);
+
+        // Create activity timeline
+        const activities = [];
+
+        // Add event activities
+        events.forEach(event => {
+          activities.push({
+            type: 'event_created',
+            timestamp: event.createdAt,
+            userId: event.createdBy,
+            details: {
+              eventId: event.id,
+              eventName: event.name,
+              status: event.status,
+            }
+          });
+        });
+
+        // Add registration activities
+        registrations.forEach(reg => {
+          activities.push({
+            type: 'user_registered',
+            timestamp: reg.createdAt,
+            userId: reg.userId,
+            details: {
+              eventId: reg.eventId,
+              registrationType: reg.registrationType,
+              status: reg.status,
+            }
+          });
+        });
+
+        // Add user activities
+        users.forEach(user => {
+          activities.push({
+            type: 'user_created',
+            timestamp: user.createdAt,
+            userId: user.id,
+            details: {
+              username: user.username,
+              role: user.role,
+              status: user.status,
+            }
+          });
+        });
+
+        // Sort by timestamp (newest first)
+        activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+        // Paginate
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedActivities = activities.slice(startIndex, endIndex);
+
+        res.json({
+          activities: paginatedActivities,
+          pagination: {
+            page,
+            limit,
+            total: activities.length,
+            totalPages: Math.ceil(activities.length / limit),
+          }
+        });
+      } catch (error) {
+        console.error("Error fetching activity log:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  };
+
+  // Register super admin routes
+  Object.entries(superAdminRoutes).forEach(([path, handler]) => {
+    const method = path.includes('status') ? 'put' : 'get';
+    app[method](`/api${path}`, authenticateToken, requireRole(['super_admin']), handler);
+  });
+
+  // Organization registration route (public)
+  app.post("/api/organizations/register", async (req: Request, res: Response) => {
+    try {
+      const { 
+        organizationName, 
+        description, 
+        contactEmail, 
+        contactPhone, 
+        address, 
+        website,
+        adminUsername, 
+        adminEmail, 
+        adminPassword, 
+        adminFirstName, 
+        adminLastName 
+      } = req.body;
+
+      // Validate required fields
+      if (!organizationName || !contactEmail || !adminUsername || !adminEmail || !adminPassword || !adminFirstName || !adminLastName) {
+        return res.status(400).json({ message: "All required fields must be provided" });
+      }
+
+      // Check if admin username or email already exists
+      const existingUser = await storage.getUserByUsername(adminUsername);
+      if (existingUser) {
+        return res.status(400).json({ message: "Admin username already exists" });
+      }
+
+      const existingUsers = await storage.getAllUsers();
+      const emailExists = existingUsers.some(user => user.email === adminEmail);
+      if (emailExists) {
+        return res.status(400).json({ message: "Admin email already exists" });
+      }
+
+      // Create admin user with organization details in the description
+      const hashedPassword = await hashPassword(adminPassword);
+      const adminUser = await storage.createUser({
+        username: adminUsername,
+        email: adminEmail,
+        password: hashedPassword,
+        firstName: adminFirstName,
+        lastName: adminLastName,
+        role: "admin",
+        status: "pending_approval", // New status for approval workflow
+        // Store organization info in user metadata
+        businessName: organizationName,
+        businessEmail: contactEmail,
+        businessPhone: contactPhone || '',
+      });
+
+      res.status(201).json({
+        message: "Organization registration submitted successfully. Awaiting super admin approval.",
+        organization: {
+          name: organizationName,
+          status: "pending_approval",
+          adminUser: {
+            id: adminUser.id,
+            username: adminUser.username,
+            email: adminUser.email,
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Organization registration error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Approve organization (super admin only)
+  app.post("/api/super-admin/organizations/:userId/approve", authenticateToken, requireRole(['super_admin']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.status !== "pending_approval") {
+        return res.status(400).json({ message: "User is not pending approval" });
+      }
+
+      await storage.updateUser(userId, {
+        status: "active",
+      });
+
+      res.json({ message: "Organization approved successfully" });
+    } catch (error) {
+      console.error("Error approving organization:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get pending organizations (super admin only)
+  app.get("/api/super-admin/pending-organizations", authenticateToken, requireRole(['super_admin']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      const pendingOrganizations = users
+        .filter(user => user.status === "pending_approval" && user.role === "admin")
+        .map(user => ({
+          id: user.id,
+          organizationName: user.businessName,
+          contactEmail: user.businessEmail,
+          contactPhone: user.businessPhone,
+          adminUser: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+          },
+          createdAt: user.createdAt,
+        }));
+
+      res.json({
+        organizations: pendingOrganizations,
+        total: pendingOrganizations.length,
+      });
+    } catch (error) {
+      console.error("Error fetching pending organizations:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
