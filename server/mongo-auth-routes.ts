@@ -11,6 +11,11 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const usernameUpdateSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username must be less than 50 characters"),
+  currentPassword: z.string().min(1, "Current password is required"),
+});
+
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
@@ -104,7 +109,7 @@ export function registerMongoAuthRoutes(app: Express) {
       
       // Generate token
       const token = generateToken({
-        id: user._id.toString(),
+        id: (user._id as any).toString(),
         username: user.username,
         email: user.email,
         role: user.role,
@@ -116,7 +121,7 @@ export function registerMongoAuthRoutes(app: Express) {
       res.json({ 
         token, 
         user: {
-          id: user._id.toString(),
+          id: (user._id as any).toString(),
           username: user.username,
           email: user.email,
           role: user.role,
@@ -143,7 +148,7 @@ export function registerMongoAuthRoutes(app: Express) {
       
       res.json({
         user: {
-          id: user._id.toString(),
+          id: (user._id as any).toString(),
           username: user.username,
           email: user.email,
           role: user.role,
@@ -155,6 +160,73 @@ export function registerMongoAuthRoutes(app: Express) {
       
     } catch (error) {
       console.error("Get user error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update username
+  app.put("/api/organization/username", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { username, currentPassword } = usernameUpdateSchema.parse(req.body);
+      
+      // Get current user to verify password
+      const user = await mongoStorage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+      if (!isValidPassword) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      // Check if username is already taken by another user
+      const existingUser = await mongoStorage.getUserByUsername(username);
+      if (existingUser && (existingUser._id as any).toString() !== req.user!.id) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+
+      // Update username
+      const updatedUser = await mongoStorage.updateUser(req.user!.id, { username });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Failed to update user" });
+      }
+      
+      // Generate new token with updated username
+      const token = generateToken({
+        id: (updatedUser._id as any).toString(),
+        username: updatedUser.username,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        organizationId: updatedUser.organizationId?.toString(),
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+      });
+
+      res.json({ 
+        message: "Username updated successfully",
+        username: updatedUser.username,
+        token, // Send new token with updated username
+        user: {
+          id: (updatedUser._id as any).toString(),
+          username: updatedUser.username,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          organizationId: updatedUser.organizationId?.toString(),
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+        }
+      });
+      
+    } catch (error) {
+      console.error("Username update error:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      
       res.status(500).json({ message: "Internal server error" });
     }
   });

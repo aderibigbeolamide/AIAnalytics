@@ -46,8 +46,14 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+const usernameSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username must be less than 50 characters"),
+  currentPassword: z.string().min(1, "Current password is required for username changes"),
+});
+
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 type PasswordFormData = z.infer<typeof passwordSchema>;
+type UsernameFormData = z.infer<typeof usernameSchema>;
 
 export default function OrganizationProfile() {
   const [, setLocation] = useLocation();
@@ -86,6 +92,15 @@ export default function OrganizationProfile() {
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
+    },
+  });
+
+  // Username form
+  const usernameForm = useForm<UsernameFormData>({
+    resolver: zodResolver(usernameSchema),
+    defaultValues: {
+      username: user?.username || "",
+      currentPassword: "",
     },
   });
 
@@ -134,6 +149,45 @@ export default function OrganizationProfile() {
       toast({
         title: "Password Update Failed",
         description: error.message || "Failed to update password. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update username mutation
+  const updateUsernameMutation = useMutation({
+    mutationFn: async (data: UsernameFormData) => {
+      const response = await apiRequest('PUT', '/api/organization/username', data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update username');
+      }
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Username Updated",
+        description: "Your username has been updated successfully.",
+      });
+      usernameForm.reset({
+        username: data.username,
+        currentPassword: "",
+      });
+      // Update auth store with new token and user data
+      if (data.token && data.user) {
+        // Save to localStorage manually and update store state
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        localStorage.setItem('auth_timestamp', Date.now().toString());
+        localStorage.setItem('auth_last_activity', Date.now().toString());
+      }
+      // Invalidate auth to refresh user data
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Username Update Failed",
+        description: error.message || "Failed to update username. Please try again.",
         variant: "destructive",
       });
     },
@@ -189,6 +243,10 @@ export default function OrganizationProfile() {
 
   const handlePasswordSubmit = (data: PasswordFormData) => {
     updatePasswordMutation.mutate(data);
+  };
+
+  const handleUsernameSubmit = (data: UsernameFormData) => {
+    updateUsernameMutation.mutate(data);
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -380,19 +438,85 @@ export default function OrganizationProfile() {
         </TabsContent>
 
         <TabsContent value="security">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="w-5 h-5" />
-                Security Settings
-              </CardTitle>
-              <CardDescription>
-                Change your account password
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)} className="space-y-6">
+          <div className="space-y-6">
+            {/* Username Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Username Settings
+                </CardTitle>
+                <CardDescription>
+                  Change your account username
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...usernameForm}>
+                  <form onSubmit={usernameForm.handleSubmit(handleUsernameSubmit)} className="space-y-6">
+                    <FormField
+                      control={usernameForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter new username" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={usernameForm.control}
+                      name="currentPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Current Password</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="password" placeholder="Enter current password to confirm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button 
+                      type="submit" 
+                      disabled={updateUsernameMutation.isPending}
+                      className="w-full md:w-auto"
+                    >
+                      {updateUsernameMutation.isPending ? (
+                        <>
+                          <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <User className="w-4 h-4 mr-2" />
+                          Update Username
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+
+            {/* Password Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="w-5 h-5" />
+                  Password Settings
+                </CardTitle>
+                <CardDescription>
+                  Change your account password
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...passwordForm}>
+                  <form onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)} className="space-y-6">
                   <FormField
                     control={passwordForm.control}
                     name="currentPassword"
@@ -456,6 +580,7 @@ export default function OrganizationProfile() {
               </Form>
             </CardContent>
           </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="image">
