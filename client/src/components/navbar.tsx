@@ -1,9 +1,10 @@
-import { Bell, Menu, X } from "lucide-react";
+import { Bell, Menu, X, User } from "lucide-react";
 import { useState } from "react";
 // Logo image placed in public folder for proper asset handling
 import { useAuthStore } from "@/lib/auth";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -16,6 +17,12 @@ export function Navbar() {
   const { user, member, logout } = useAuthStore();
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Query organization profile for profile image (only for admins)
+  const { data: profile } = useQuery<{ profileImage?: string }>({
+    queryKey: ['/api/organization/profile'],
+    enabled: user?.role === 'admin',
+  });
 
   // Filter navigation items based on user role
   const getNavItems = () => {
@@ -94,8 +101,13 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      {user?.username?.[0]?.toUpperCase() || "U"}
+                    <AvatarImage 
+                      src={profile?.profileImage || undefined} 
+                      alt="Profile"
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                      <User className="w-4 h-4" />
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium text-gray-700">
@@ -186,8 +198,13 @@ export function Navbar() {
               <div className="border-t border-gray-200 pt-3 mt-3">
                 <div className="flex items-center px-3 py-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      {user?.username?.[0]?.toUpperCase() || "U"}
+                    <AvatarImage 
+                      src={profile?.profileImage || undefined} 
+                      alt="Profile"
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                      <User className="w-4 h-4" />
                     </AvatarFallback>
                   </Avatar>
                   <span className="ml-3 text-base font-medium text-gray-700">

@@ -474,13 +474,8 @@ export default function OrganizationProfile() {
                 <div className="relative">
                   <Avatar className="w-24 h-24">
                     <AvatarImage 
-                      src={
-                        (profileImage || profile?.profileImage) 
-                          ? `${profileImage || profile?.profileImage}?t=${Date.now()}` 
-                          : undefined
-                      } 
+                      src={profileImage || profile?.profileImage || undefined} 
                       alt="Organization profile"
-                      key={profileImage || profile?.profileImage || 'default'}
                       className="object-cover"
                     />
                     <AvatarFallback className="text-2xl bg-blue-100 text-blue-600">
