@@ -472,20 +472,37 @@ export default function OrganizationProfile() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-6">
-                <Avatar className="w-24 h-24">
-                  <AvatarImage 
-                    src={
-                      (profileImage || profile?.profileImage) 
-                        ? `${profileImage || profile?.profileImage}?t=${Date.now()}` 
-                        : undefined
-                    } 
-                    alt="Organization profile"
-                    key={profileImage || profile?.profileImage || 'default'}
-                  />
-                  <AvatarFallback className="text-2xl">
-                    {profile?.businessName?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || "O"}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="w-24 h-24">
+                    <AvatarImage 
+                      src={
+                        (profileImage || profile?.profileImage) 
+                          ? `${profileImage || profile?.profileImage}?t=${Date.now()}` 
+                          : undefined
+                      } 
+                      alt="Organization profile"
+                      key={profileImage || profile?.profileImage || 'default'}
+                      onLoad={() => console.log('Image loaded successfully')}
+                      onError={(e) => console.log('Image failed to load:', e)}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="text-2xl">
+                      {profile?.businessName?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || "O"}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  {/* Direct image test */}
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-500 mb-1">Direct image test:</p>
+                    <img 
+                      src={profileImage || profile?.profileImage} 
+                      alt="Direct test" 
+                      className="w-16 h-16 object-cover rounded border"
+                      onLoad={() => console.log('Direct image loaded')}
+                      onError={(e) => console.log('Direct image failed:', e)}
+                    />
+                  </div>
+                </div>
                 
                 {/* Debug info */}
                 <div className="text-xs text-gray-500 space-y-1 p-2 bg-gray-50 rounded">
