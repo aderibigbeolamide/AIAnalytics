@@ -59,7 +59,9 @@ export default function OrganizationProfile() {
     queryKey: ['/api/organization/profile'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/organization/profile');
-      return await response.json();
+      const data = await response.json();
+      console.log('Profile data received:', data);
+      return data;
     },
   });
 
@@ -472,7 +474,11 @@ export default function OrganizationProfile() {
               <div className="flex items-center gap-6">
                 <Avatar className="w-24 h-24">
                   <AvatarImage 
-                    src={(profileImage || profile?.profileImage) + `?t=${Date.now()}`} 
+                    src={
+                      (profileImage || profile?.profileImage) 
+                        ? `${profileImage || profile?.profileImage}?t=${Date.now()}` 
+                        : undefined
+                    } 
                     alt="Organization profile"
                     key={profileImage || profile?.profileImage || 'default'}
                   />
@@ -482,10 +488,17 @@ export default function OrganizationProfile() {
                 </Avatar>
                 
                 {/* Debug info */}
-                <div className="text-xs text-gray-500 space-y-1">
+                <div className="text-xs text-gray-500 space-y-1 p-2 bg-gray-50 rounded">
+                  <div><strong>Debug Info:</strong></div>
                   <div>State Image: {profileImage || 'none'}</div>
                   <div>Profile Image: {profile?.profileImage || 'none'}</div>
                   <div>Final URL: {profileImage || profile?.profileImage || 'none'}</div>
+                  <div>Image Source: {
+                    (profileImage || profile?.profileImage) 
+                      ? `${profileImage || profile?.profileImage}?t=${Date.now()}` 
+                      : 'undefined'
+                  }</div>
+                  <div>Profile loaded: {profile ? 'Yes' : 'No'}</div>
                 </div>
                 
                 <div className="space-y-2">
