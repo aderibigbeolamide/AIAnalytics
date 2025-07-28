@@ -24,7 +24,8 @@ import {
   MapPin, 
   Lock,
   Save,
-  Upload
+  Upload,
+  User
 } from "lucide-react";
 
 const organizationSchema = z.object({
@@ -161,8 +162,6 @@ export default function OrganizationProfile() {
       return await response.json();
     },
     onSuccess: async (data) => {
-      console.log('Image upload success:', data);
-      
       // Force immediate state update
       setProfileImage(data.imageUrl);
       
@@ -482,40 +481,12 @@ export default function OrganizationProfile() {
                       } 
                       alt="Organization profile"
                       key={profileImage || profile?.profileImage || 'default'}
-                      onLoad={() => console.log('Image loaded successfully')}
-                      onError={(e) => console.log('Image failed to load:', e)}
                       className="object-cover"
                     />
-                    <AvatarFallback className="text-2xl">
-                      {profile?.businessName?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || "O"}
+                    <AvatarFallback className="text-2xl bg-blue-100 text-blue-600">
+                      <User className="w-12 h-12" />
                     </AvatarFallback>
                   </Avatar>
-                  
-                  {/* Direct image test */}
-                  <div className="mt-2">
-                    <p className="text-xs text-gray-500 mb-1">Direct image test:</p>
-                    <img 
-                      src={profileImage || profile?.profileImage} 
-                      alt="Direct test" 
-                      className="w-16 h-16 object-cover rounded border"
-                      onLoad={() => console.log('Direct image loaded')}
-                      onError={(e) => console.log('Direct image failed:', e)}
-                    />
-                  </div>
-                </div>
-                
-                {/* Debug info */}
-                <div className="text-xs text-gray-500 space-y-1 p-2 bg-gray-50 rounded">
-                  <div><strong>Debug Info:</strong></div>
-                  <div>State Image: {profileImage || 'none'}</div>
-                  <div>Profile Image: {profile?.profileImage || 'none'}</div>
-                  <div>Final URL: {profileImage || profile?.profileImage || 'none'}</div>
-                  <div>Image Source: {
-                    (profileImage || profile?.profileImage) 
-                      ? `${profileImage || profile?.profileImage}?t=${Date.now()}` 
-                      : 'undefined'
-                  }</div>
-                  <div>Profile loaded: {profile ? 'Yes' : 'No'}</div>
                 </div>
                 
                 <div className="space-y-2">

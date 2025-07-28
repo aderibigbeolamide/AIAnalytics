@@ -102,7 +102,6 @@ export function QRScanner({ onClose }: QRScannerProps) {
 
   const startCamera = async () => {
     try {
-      console.log("Starting camera...");
       setCameraStatus('initializing');
       setCameraError(null);
       
@@ -114,7 +113,6 @@ export function QRScanner({ onClose }: QRScannerProps) {
       // First try with back camera, fallback to any available camera
       let stream;
       try {
-        console.log("Trying back camera...");
         stream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: "environment",
