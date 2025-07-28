@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { EnhancedCard } from "@/components/ui/enhanced-card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { LoadingCard } from "@/components/ui/loading-spinner";
+// Removed LoadingCard import as it doesn't exist
 import SeatHeatmap from "@/components/seat-heatmap";
 import EventRecommendations from "@/components/event-recommendations";
 
@@ -152,19 +152,19 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background dark:bg-gray-900">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Enhanced Header */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-3">Event Management Dashboard</h1>
-              <p className="text-lg text-gray-600">Manage members, events, and track attendance with AI-powered validation</p>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3">Event Management Dashboard</h1>
+              <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-300">Manage members, events, and track attendance with AI-powered validation</p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <Button 
                 onClick={() => setIsEventModalOpen(true)} 
                 size="lg"
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg w-full sm:w-auto"
               >
                 <Plus className="h-5 w-5" />
                 Create Event
@@ -173,7 +173,7 @@ export default function Dashboard() {
                 onClick={() => setIsMemberModalOpen(true)} 
                 variant="outline" 
                 size="lg"
-                className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+                className="w-full sm:w-auto flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
               >
                 <UserPlus className="h-5 w-5" />
                 Add Member
@@ -182,7 +182,7 @@ export default function Dashboard() {
                 onClick={() => setIsScannerOpen(true)} 
                 variant="outline" 
                 size="lg"
-                className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50"
+                className="w-full sm:w-auto flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50"
               >
                 <Camera className="h-5 w-5" />
                 QR Scanner
@@ -192,7 +192,7 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Navigation Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-2 mb-6 sm:mb-8">
           <div className="flex flex-wrap gap-2">
             {[
               { id: "overview", label: "Overview", icon: BarChart },
@@ -203,10 +203,10 @@ export default function Dashboard() {
                 key={id}
                 variant={currentView === id ? "default" : "ghost"}
                 onClick={() => setCurrentView(id as any)}
-                className={`flex items-center gap-2 px-6 py-3 ${
+                className={`flex items-center gap-2 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base ${
                   currentView === id 
                     ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -217,7 +217,7 @@ export default function Dashboard() {
         </div>
 
         {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <EnhancedCard
             title="Total Members"
             value={stats?.totalMembers || 0}
@@ -257,9 +257,9 @@ export default function Dashboard() {
 
         {/* Auxiliary Body Statistics */}
         {stats?.auxiliaryBodyStats && Object.keys(stats.auxiliaryBodyStats).length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Auxiliary Body Statistics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="mb-6 sm:mb-8">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Auxiliary Body Statistics</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {Object.entries(stats.auxiliaryBodyStats).map(([auxBody, bodyStats]: [string, any]) => (
                 <Card key={auxBody} className="hover:shadow-lg transition-shadow">
                   <CardContent className="p-6">

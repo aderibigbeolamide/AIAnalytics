@@ -106,9 +106,9 @@ export function Navbar() {
                     <AvatarImage 
                       src={profile?.profileImage || undefined} 
                       alt="Profile"
-                      className="object-cover"
+                      className="object-cover object-center w-full h-full"
                     />
-                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                    <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
                       <User className="w-4 h-4" />
                     </AvatarFallback>
                   </Avatar>
@@ -182,14 +182,14 @@ export function Navbar() {
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-gray-200">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               {navItems.map((item) => (
                 <Link key={item.href} href={item.href}>
                   <span
                     className={`block px-3 py-2 rounded-md text-base font-medium transition-colors cursor-pointer ${
                       isActive(item.href)
-                        ? "text-primary bg-blue-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        ? "text-primary bg-blue-50 dark:bg-blue-900/50"
+                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
@@ -204,13 +204,13 @@ export function Navbar() {
                     <AvatarImage 
                       src={profile?.profileImage || undefined} 
                       alt="Profile"
-                      className="object-cover"
+                      className="object-cover object-center w-full h-full"
                     />
-                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                    <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
                       <User className="w-4 h-4" />
                     </AvatarFallback>
                   </Avatar>
-                  <span className="ml-3 text-base font-medium text-gray-700">
+                  <span className="ml-3 text-base font-medium text-gray-700 dark:text-gray-300">
                     {member ? `${member.firstName} ${member.lastName}` : user?.username}
                   </span>
                 </div>

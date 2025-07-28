@@ -39,6 +39,34 @@
   .touch-target {
     @apply min-h-11 min-w-11 flex items-center justify-center;
   }
+
+  /* Profile image proper fitting */
+  .profile-avatar {
+    @apply w-full h-full object-cover object-center;
+  }
+
+  /* Mobile-friendly responsive grid */
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+
+  /* Better mobile form layout */
+  .mobile-form-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6;
+  }
+
+  /* Mobile-optimized text sizes */
+  .mobile-heading {
+    @apply text-xl sm:text-2xl lg:text-3xl font-bold;
+  }
+
+  .mobile-subheading {
+    @apply text-lg sm:text-xl font-semibold;
+  }
+
+  .mobile-text {
+    @apply text-sm sm:text-base;
+  }
 }
 
 :root {

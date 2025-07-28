@@ -287,8 +287,8 @@ export default function OrganizationProfile() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -300,18 +300,18 @@ export default function OrganizationProfile() {
         </div>
       </div>
 
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Organization Profile</h1>
-        <p className="text-gray-600">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Organization Profile</h1>
+        <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
           Manage your organization details, profile image, and account settings
         </p>
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile">Profile Information</TabsTrigger>
-          <TabsTrigger value="security">Security Settings</TabsTrigger>
-          <TabsTrigger value="image">Profile Image</TabsTrigger>
+          <TabsTrigger value="profile" className="text-xs sm:text-sm">Profile Information</TabsTrigger>
+          <TabsTrigger value="security" className="text-xs sm:text-sm">Security Settings</TabsTrigger>
+          <TabsTrigger value="image" className="text-xs sm:text-sm">Profile Image</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -328,7 +328,7 @@ export default function OrganizationProfile() {
             <CardContent>
               <Form {...organizationForm}>
                 <form onSubmit={organizationForm.handleSubmit(handleProfileSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <FormField
                       control={organizationForm.control}
                       name="businessName"
@@ -595,23 +595,23 @@ export default function OrganizationProfile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <Avatar className="w-24 h-24">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                <div className="relative flex-shrink-0">
+                  <Avatar className="w-24 h-24 sm:w-32 sm:h-32">
                     <AvatarImage 
                       src={profileImage || profile?.profileImage || undefined} 
                       alt="Organization profile"
-                      className="object-cover"
+                      className="object-cover object-center w-full h-full"
                     />
-                    <AvatarFallback className="text-2xl bg-blue-100 text-blue-600">
-                      <User className="w-12 h-12" />
+                    <AvatarFallback className="text-2xl bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
+                      <User className="w-12 h-12 sm:w-16 sm:h-16" />
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-3 text-center sm:text-left w-full sm:w-auto">
                   <Label htmlFor="profile-image" className="cursor-pointer">
-                    <Button asChild disabled={uploadImageMutation.isPending}>
+                    <Button asChild disabled={uploadImageMutation.isPending} className="w-full sm:w-auto">
                       <span>
                         {uploadImageMutation.isPending ? (
                           <>
@@ -634,7 +634,7 @@ export default function OrganizationProfile() {
                     onChange={handleImageUpload}
                     className="hidden"
                   />
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     JPG, PNG or GIF. Maximum size 5MB.
                   </p>
                 </div>
