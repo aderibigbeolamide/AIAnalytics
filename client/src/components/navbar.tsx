@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Navbar() {
   const { user, member, logout } = useAuthStore();
@@ -54,7 +55,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo - Mobile Optimized */}
@@ -82,7 +83,7 @@ export function Navbar() {
                     className={`px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
                       isActive(item.href)
                         ? "text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
                     }`}
                   >
                     {item.label}
@@ -94,6 +95,7 @@ export function Navbar() {
 
           {/* Desktop Right Side */}
           <div className="hidden md:flex items-center space-x-4">
+            <ThemeToggle />
             <Button variant="ghost" size="sm">
               <Bell className="h-5 w-5" />
             </Button>
@@ -110,7 +112,7 @@ export function Navbar() {
                       <User className="w-4 h-4" />
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {member ? `${member.firstName} ${member.lastName}` : user?.username}
                   </span>
                 </Button>
@@ -158,6 +160,7 @@ export function Navbar() {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center space-x-2">
+            <ThemeToggle />
             <Button variant="ghost" size="sm">
               <Bell className="h-5 w-5" />
             </Button>
