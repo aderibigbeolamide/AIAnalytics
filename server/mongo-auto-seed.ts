@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { User } from "@shared/mongoose-schema";
+import { User, Organization } from "@shared/mongoose-schema";
 
 export async function mongoAutoSeed() {
   console.log("🌱 Auto-seeding: Checking if database needs seeding...");
@@ -30,6 +30,28 @@ export async function mongoAutoSeed() {
       console.log("✓ Super admin user already exists");
     }
     
+    // Check if default organization exists
+    console.log("🔍 Checking for default organization...");
+    let defaultOrg = await Organization.findOne({ name: "Default Organization" });
+    
+    if (!defaultOrg) {
+      console.log("📝 Creating default organization...");
+      defaultOrg = await Organization.create({
+        name: "Default Organization",
+        contactEmail: "admin@eventvalidate.com",
+        status: "approved",
+        subscriptionPlan: "pro",
+        subscriptionStatus: "active",
+        maxEvents: 100,
+        maxMembers: 1000,
+        createdAt: new Date(),
+        approvedAt: new Date()
+      });
+      console.log("✅ Default organization created successfully");
+    } else {
+      console.log("✓ Default organization already exists");
+    }
+
     // Check if admin user exists
     console.log("🔍 Checking for existing admin user...");
     const existingAdmin = await User.findOne({ username: "admin" });
@@ -47,15 +69,25 @@ export async function mongoAutoSeed() {
         role: "admin",
         status: "active",
         emailVerified: true,
-        twoFactorEnabled: false
+        twoFactorEnabled: false,
+        organizationId: defaultOrg._id
       });
       
       console.log("✅ Admin user created successfully");
     } else {
       console.log("✓ Admin user already exists");
+      
+      // Update admin user with organization if not set
+      if (!existingAdmin.organizationId) {
+        console.log("📝 Updating admin user with organization...");
+        await User.findByIdAndUpdate(existingAdmin._id, {
+          organizationId: defaultOrg._id
+        });
+        console.log("✅ Admin user updated with organization");
+      }
     }
     
-    console.log("✓ Database already contains users, skipping auto-seed");
+    console.log("✓ Database seeding completed successfully");
   } catch (error) {
     console.error("⚠️ Auto-seeding failed:", error);
     console.log("💡 You can manually run: npm run seed");
