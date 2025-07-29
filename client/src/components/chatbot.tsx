@@ -149,71 +149,7 @@ export default function ChatbotComponent() {
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       setSessionId(newSessionId);
       
-      // Load saved messages if any
-      const savedMessages = localStorage.getItem('chatbot_messages');
-      if (savedMessages) {
-        try {
-          const parsed = JSON.parse(savedMessages);
-          setMessages(parsed);
-        } catch (error) {
-          console.error('Error loading saved messages:', error);
-        }
-      } else {
-        // Initial welcome message with quick actions
-        const welcomeMessage: Message = {
-          id: `msg_${Date.now()}`,
-          text: "👋 Hi! How can we help?",
-          sender: 'bot',
-          timestamp: new Date(),
-          type: 'text'
-        };
-        
-        const faqMessage: Message = {
-          id: `msg_${Date.now() + 1}`,
-          text: "Here are some quick help options:",
-          sender: 'bot',
-          timestamp: new Date(),
-          type: 'text'
-        };
-        
-        const quickActionsMessage: Message = {
-          id: `msg_${Date.now() + 2}`,
-          text: "", // Empty text as we'll use the type to render buttons
-          sender: 'bot',
-          timestamp: new Date(),
-          type: 'quick_actions'
-        };
-        
-        setMessages([welcomeMessage, faqMessage, quickActionsMessage]);
-      }
-      
-      // Check admin status
-      checkAdminStatus();
-      
-      // Set up periodic admin status checks
-      const statusInterval = setInterval(checkAdminStatus, 30000); // Check every 30 seconds
-      return () => clearInterval(statusInterval);
-    }
-  }, [isOpen, sessionId]);
-
-  useEffect(() => {
-    // Initialize session
-    const existingSessionId = localStorage.getItem('chatbot_session_id');
-    const savedMessages = localStorage.getItem('chatbot_messages');
-    
-    if (existingSessionId && savedMessages) {
-      setSessionId(existingSessionId);
-      const parsedMessages = JSON.parse(savedMessages).map((msg: any) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp)
-      }));
-      setMessages(parsedMessages);
-    } else {
-      const newSessionId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      setSessionId(newSessionId);
-      localStorage.setItem('chatbot_session_id', newSessionId);
-      
-      // Add welcome message with FAQ buttons
+      // Always show welcome messages and FAQ buttons when opening chat
       const welcomeMessage: Message = {
         id: `msg_${Date.now()}`,
         text: "👋 Hi! How can we help?",
@@ -232,15 +168,32 @@ export default function ChatbotComponent() {
       
       const quickActionsMessage: Message = {
         id: `msg_${Date.now() + 2}`,
-        text: "",
+        text: "", // Empty text as we'll use the type to render buttons
         sender: 'bot',
         timestamp: new Date(),
         type: 'quick_actions'
       };
       
       setMessages([welcomeMessage, faqMessage, quickActionsMessage]);
+      
+      // Check admin status
+      checkAdminStatus();
+      
+      // Set up periodic admin status checks
+      const statusInterval = setInterval(checkAdminStatus, 30000); // Check every 30 seconds
+      return () => clearInterval(statusInterval);
     }
+  }, [isOpen, sessionId]);
 
+  useEffect(() => {
+    // Initialize session only if chat is not yet opened
+    if (!isOpen) {
+      const existingSessionId = localStorage.getItem('chatbot_session_id');
+      if (existingSessionId) {
+        setSessionId(existingSessionId);
+      }
+    }
+    
     // Check admin online status
     checkAdminStatus();
   }, []);
@@ -628,7 +581,27 @@ export default function ChatbotComponent() {
     setIsEscalated(false);
     setShowEmailInput(false);
     setUserEmail("");
-  };
+  }
+
+  const showHelpOptions = () => {
+    const helpMessage: Message = {
+      id: `msg_${Date.now()}`,
+      text: "Here are the available help options:",
+      sender: 'bot',
+      timestamp: new Date(),
+      type: 'text'
+    };
+    
+    const quickActionsMessage: Message = {
+      id: `msg_${Date.now() + 1}`,
+      text: "",
+      sender: 'bot',
+      timestamp: new Date(),
+      type: 'quick_actions'
+    };
+    
+    setMessages(prev => [...prev, helpMessage, quickActionsMessage]);
+  };;
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -874,6 +847,14 @@ export default function ChatbotComponent() {
                 onKeyPress={handleKeyPress}
                 className="flex-1"
               />
+              <Button
+                variant="outline"
+                onClick={showHelpOptions}
+                disabled={isTyping}
+                className="px-2"
+              >
+                ?
+              </Button>
               <Button onClick={sendMessage} disabled={!inputText.trim() || isTyping}>
                 <Send className="h-4 w-4" />
               </Button>
