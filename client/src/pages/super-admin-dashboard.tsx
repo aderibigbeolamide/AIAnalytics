@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Users, 
   Calendar, 
@@ -20,7 +28,11 @@ import {
   BarChart3,
   Clock,
   ArrowLeft,
-  Home
+  Home,
+  Send,
+  Bell,
+  MessageSquare,
+  Megaphone
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -100,6 +112,29 @@ interface PendingOrganization {
   createdAt: string;
 }
 
+interface Organization {
+  id: string;
+  name: string;
+  contactEmail: string;
+  status: string;
+  adminCount: number;
+}
+
+// Notification schemas
+const broadcastMessageSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  message: z.string().min(1, "Message is required"),
+  priority: z.enum(["low", "medium", "high"]).default("medium"),
+  expirationDays: z.number().min(1).max(365).default(30)
+});
+
+const organizationMessageSchema = z.object({
+  organizationId: z.string().min(1, "Organization is required"),
+  title: z.string().min(1, "Title is required"),
+  message: z.string().min(1, "Message is required"),
+  priority: z.enum(["low", "medium", "high"]).default("medium")
+});
+
 function StatCard({ title, value, description, icon: Icon, trend }: {
   title: string;
   value: number;
@@ -129,6 +164,33 @@ export default function SuperAdminDashboard() {
   const [userSearch, setUserSearch] = useState("");
   const [userRole, setUserRole] = useState<string>("");
   const [eventStatus, setEventStatus] = useState<string>("");
+  const [broadcastDialogOpen, setBroadcastDialogOpen] = useState(false);
+  const [orgMessageDialogOpen, setOrgMessageDialogOpen] = useState(false);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Form for broadcast messages
+  const broadcastForm = useForm<z.infer<typeof broadcastMessageSchema>>({
+    resolver: zodResolver(broadcastMessageSchema),
+    defaultValues: {
+      title: "",
+      message: "",
+      priority: "medium",
+      expirationDays: 30
+    }
+  });
+
+  // Form for organization messages
+  const orgMessageForm = useForm<z.infer<typeof organizationMessageSchema>>({
+    resolver: zodResolver(organizationMessageSchema),
+    defaultValues: {
+      organizationId: "",
+      title: "",
+      message: "",
+      priority: "medium"
+    }
+  });
 
   // Fetch platform statistics
   const { data: statistics } = useQuery<PlatformStatistics>({
@@ -162,6 +224,57 @@ export default function SuperAdminDashboard() {
     total: number;
   }>({
     queryKey: ["/api/super-admin/pending-organizations"],
+  });
+
+  // Fetch all organizations for notification sending
+  const { data: organizationsData } = useQuery<{
+    organizations: Organization[];
+  }>({
+    queryKey: ["/api/super-admin/organizations"],
+  });
+
+  // Broadcast message mutation
+  const broadcastMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof broadcastMessageSchema>) => {
+      return apiRequest('POST', '/api/super-admin/broadcast-message', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Broadcast message sent to all organizations"
+      });
+      setBroadcastDialogOpen(false);
+      broadcastForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send broadcast message",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Organization message mutation
+  const orgMessageMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof organizationMessageSchema>) => {
+      return apiRequest('POST', '/api/super-admin/send-message', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Message sent to organization successfully"
+      });
+      setOrgMessageDialogOpen(false);
+      orgMessageForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message",
+        variant: "destructive"
+      });
+    }
   });
 
   const handleUserStatusUpdate = async (userId: number, status: string) => {
@@ -313,7 +426,7 @@ export default function SuperAdminDashboard() {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5 gap-1">
           <TabsTrigger value="users" className="text-xs md:text-sm">
             <span className="hidden sm:inline">User Management</span>
             <span className="sm:hidden">Users</span>
@@ -330,6 +443,10 @@ export default function SuperAdminDashboard() {
                 {pendingOrganizations.total}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="text-xs md:text-sm">
+            <Bell className="w-4 h-4 lg:mr-2" />
+            <span className="hidden lg:inline">Notifications</span>
           </TabsTrigger>
           <TabsTrigger value="analytics" className="text-xs md:text-sm">
             <span className="hidden sm:inline">Platform Analytics</span>
@@ -638,6 +755,266 @@ export default function SuperAdminDashboard() {
                   </p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Broadcast Message Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Megaphone className="w-5 h-5" />
+                  Broadcast Message
+                </CardTitle>
+                <CardDescription>
+                  Send message to all organizations using the platform
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Dialog open={broadcastDialogOpen} onOpenChange={setBroadcastDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full">
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Broadcast Message
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Broadcast Message to All Organizations</DialogTitle>
+                      <DialogDescription>
+                        This message will be sent to all active organizations on the platform.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...broadcastForm}>
+                      <form onSubmit={broadcastForm.handleSubmit((data) => broadcastMutation.mutate(data))} className="space-y-4">
+                        <FormField
+                          control={broadcastForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Title</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Message title..." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={broadcastForm.control}
+                          name="message"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Message</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Your message to all organizations..." rows={4} {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={broadcastForm.control}
+                            name="priority"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Priority</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="low">Low</SelectItem>
+                                    <SelectItem value="medium">Medium</SelectItem>
+                                    <SelectItem value="high">High</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={broadcastForm.control}
+                            name="expirationDays"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Expires (days)</FormLabel>
+                                <FormControl>
+                                  <Input type="number" min="1" max="365" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="submit" disabled={broadcastMutation.isPending} className="flex-1">
+                            {broadcastMutation.isPending ? "Sending..." : "Send to All Organizations"}
+                          </Button>
+                          <Button type="button" variant="outline" onClick={() => setBroadcastDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+
+            {/* Organization Message Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  Organization Message
+                </CardTitle>
+                <CardDescription>
+                  Send targeted message to specific organization
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Dialog open={orgMessageDialogOpen} onOpenChange={setOrgMessageDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Organization Message
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Send Message to Organization</DialogTitle>
+                      <DialogDescription>
+                        Send a direct message to admins of a specific organization.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...orgMessageForm}>
+                      <form onSubmit={orgMessageForm.handleSubmit((data) => orgMessageMutation.mutate(data))} className="space-y-4">
+                        <FormField
+                          control={orgMessageForm.control}
+                          name="organizationId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Organization</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select organization..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {organizationsData?.organizations.map((org) => (
+                                    <SelectItem key={org.id} value={org.id}>
+                                      {org.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={orgMessageForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Title</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Message title..." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={orgMessageForm.control}
+                          name="message"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Message</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Your message to the organization..." rows={4} {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={orgMessageForm.control}
+                          name="priority"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Priority</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="low">Low</SelectItem>
+                                  <SelectItem value="medium">Medium</SelectItem>
+                                  <SelectItem value="high">High</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="flex gap-2">
+                          <Button type="submit" disabled={orgMessageMutation.isPending} className="flex-1">
+                            {orgMessageMutation.isPending ? "Sending..." : "Send Message"}
+                          </Button>
+                          <Button type="button" variant="outline" onClick={() => setOrgMessageDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Notification Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                Notification Statistics
+              </CardTitle>
+              <CardDescription>
+                Platform-wide notification metrics and status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {organizationsData?.organizations.length || 0}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Active Organizations</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">Online</div>
+                  <p className="text-sm text-muted-foreground">Notification System</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">Real-time</div>
+                  <p className="text-sm text-muted-foreground">Delivery</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">Multi-tenant</div>
+                  <p className="text-sm text-muted-foreground">Separation</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
