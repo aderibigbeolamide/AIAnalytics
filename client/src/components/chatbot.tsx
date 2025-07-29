@@ -159,7 +159,7 @@ export default function ChatbotComponent() {
           console.error('Error loading saved messages:', error);
         }
       } else {
-        // Initial welcome message
+        // Initial welcome message with quick actions
         const welcomeMessage: Message = {
           id: `msg_${Date.now()}`,
           text: PREDEFINED_RESPONSES.greeting,
@@ -167,7 +167,16 @@ export default function ChatbotComponent() {
           timestamp: new Date(),
           type: 'text'
         };
-        setMessages([welcomeMessage]);
+        
+        const quickActionsMessage: Message = {
+          id: `msg_${Date.now() + 1}`,
+          text: "", // Empty text as we'll use the type to render buttons
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'quick_actions'
+        };
+        
+        setMessages([welcomeMessage, quickActionsMessage]);
       }
       
       // Check admin status
@@ -315,7 +324,11 @@ export default function ChatbotComponent() {
       type: 'text'
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => {
+      // Remove quick_actions message and add user message
+      const filteredMessages = prev.filter(msg => msg.type !== 'quick_actions');
+      return [...filteredMessages, userMessage];
+    });
     setIsTyping(true);
 
     // Handle contact support specially
@@ -629,39 +642,108 @@ export default function ChatbotComponent() {
           {/* Messages */}
           <div className="flex-1 p-4 overflow-y-auto h-[480px] space-y-4">
             {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex gap-2",
-                  message.sender === 'user' ? "justify-end" : "justify-start"
-                )}
-              >
-                {message.sender !== 'user' && (
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs",
-                    message.sender === 'bot' ? "bg-blue-600" : "bg-green-600"
-                  )}>
-                    {message.sender === 'bot' ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
+              <div key={message.id}>
+                {message.type === 'quick_actions' ? (
+                  // Render quick action buttons inline
+                  <div className="flex gap-2 justify-start mb-4">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs">
+                      <Bot className="h-4 w-4" />
+                    </div>
+                    <div className="max-w-[80%]">
+                      <div className="bg-gray-100 p-3 rounded-lg text-sm">
+                        <div className="text-xs font-medium mb-3 text-gray-600">Choose what you need help with:</div>
+                        <div className="grid grid-cols-1 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickAction('organization_register')}
+                            className="text-xs h-8 justify-start text-left w-full"
+                          >
+                            🏢 How to register my organization?
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickAction('user_register')}
+                            className="text-xs h-8 justify-start text-left w-full"
+                          >
+                            🎫 How to register for an event?
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickAction('buy_ticket')}
+                            className="text-xs h-8 justify-start text-left w-full"
+                          >
+                            🎟️ How to buy a ticket?
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickAction('validate_event')}
+                            className="text-xs h-8 justify-start text-left w-full"
+                          >
+                            ✅ How to validate for an event?
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickAction('explore_features')}
+                            className="text-xs h-8 justify-start text-left w-full"
+                          >
+                            🔍 How to explore platform features?
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickAction('contact_support')}
+                            className="text-xs h-8 justify-start text-left w-full"
+                          >
+                            📞 Contact customer support
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-xs mt-1 opacity-70 text-gray-500">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Regular message rendering
+                  <div
+                    className={cn(
+                      "flex gap-2 mb-4",
+                      message.sender === 'user' ? "justify-end" : "justify-start"
+                    )}
+                  >
+                    {message.sender !== 'user' && (
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs",
+                        message.sender === 'bot' ? "bg-blue-600" : "bg-green-600"
+                      )}>
+                        {message.sender === 'bot' ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                      </div>
+                    )}
+                    <div
+                      className={cn(
+                        "max-w-[80%] p-3 rounded-lg text-sm",
+                        message.sender === 'user' 
+                          ? "bg-blue-600 text-white ml-auto" 
+                          : message.sender === 'admin'
+                          ? "bg-green-100 text-green-800 border border-green-200"
+                          : "bg-gray-100 text-gray-800"
+                      )}
+                    >
+                      <div className="whitespace-pre-wrap">{message.text}</div>
+                      <div className={cn(
+                        "text-xs mt-1 opacity-70",
+                        message.sender === 'user' ? "text-blue-100" : "text-gray-500"
+                      )}>
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
                   </div>
                 )}
-                <div
-                  className={cn(
-                    "max-w-[80%] p-3 rounded-lg text-sm",
-                    message.sender === 'user' 
-                      ? "bg-blue-600 text-white ml-auto" 
-                      : message.sender === 'admin'
-                      ? "bg-green-100 text-green-800 border border-green-200"
-                      : "bg-gray-100 text-gray-800"
-                  )}
-                >
-                  <div className="whitespace-pre-wrap">{message.text}</div>
-                  <div className={cn(
-                    "text-xs mt-1 opacity-70",
-                    message.sender === 'user' ? "text-blue-100" : "text-gray-500"
-                  )}>
-                    {new Date(message.timestamp).toLocaleTimeString()}
-                  </div>
-                </div>
               </div>
             ))}
             
@@ -683,69 +765,10 @@ export default function ChatbotComponent() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Action Buttons */}
-          {!isEscalated && messages.length <= 1 && (
-            <div className="px-4 py-3 border-t bg-gray-50">
-              <div className="text-xs font-medium mb-3 text-gray-600">Common Questions - Click Any Below</div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('organization_register')}
-                  className="text-xs h-9 justify-start text-left"
-                >
-                  🏢 Register Organization
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('user_register')}
-                  className="text-xs h-9 justify-start text-left"
-                >
-                  🎫 Register for Event
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('buy_ticket')}
-                  className="text-xs h-9 justify-start text-left"
-                >
-                  🎟️ Buy a Ticket
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('validate_event')}
-                  className="text-xs h-9 justify-start text-left"
-                >
-                  ✅ Validate for Event
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('explore_features')}
-                  className="text-xs h-9 justify-start text-left"
-                >
-                  🔍 Explore Features
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('contact_support')}
-                  className="text-xs h-9 justify-start text-left"
-                >
-                  📞 Contact Support
-                </Button>
-              </div>
-              <div className="mt-2 text-xs text-gray-500 text-center">
-                Or type your question in the box below
-              </div>
-            </div>
-          )}
-
-          {!isEscalated && messages.length > 1 && (
-            <div className="px-4 py-2 border-t">
-              <div className="flex gap-2 flex-wrap">
+          {/* Contact Support Option for ongoing conversations */}
+          {!isEscalated && messages.length > 2 && (
+            <div className="px-4 py-2 border-t bg-gray-50">
+              <div className="flex gap-2 justify-center">
                 <Button
                   variant="outline"
                   size="sm"
@@ -754,7 +777,7 @@ export default function ChatbotComponent() {
                   className="text-xs"
                 >
                   <Phone className="h-3 w-3 mr-1" />
-                  Contact Support
+                  Need more help? Contact Support
                 </Button>
               </div>
             </div>
