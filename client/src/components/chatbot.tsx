@@ -630,7 +630,7 @@ export default function ChatbotComponent() {
       ref={chatRef}
       className={cn(
         "fixed bottom-6 right-6 z-50 bg-white rounded-lg shadow-2xl border",
-        isMinimized ? "w-80 h-16" : "w-80 h-[450px] max-h-[80vh]"
+        isMinimized ? "w-80 h-16" : "w-80 h-[400px] max-h-[70vh]"
       )}
     >
       {/* Header */}
@@ -673,7 +673,7 @@ export default function ChatbotComponent() {
       {!isMinimized && (
         <>
           {/* Messages */}
-          <div className="flex-1 p-3 overflow-y-auto h-[320px] space-y-3">
+          <div className="flex-1 p-3 overflow-y-auto max-h-[280px] space-y-3">
             {messages.map((message) => (
               <div key={message.id}>
                 {message.type === 'quick_actions' ? (
@@ -840,7 +840,7 @@ export default function ChatbotComponent() {
           )}
 
           {/* Input */}
-          <div className="p-4 border-t">
+          <div className="p-3 border-t bg-gray-50 flex-shrink-0">
             <div className="flex gap-2">
               <Input
                 placeholder={isEscalated ? "Message customer support..." : "Type your message..."}
