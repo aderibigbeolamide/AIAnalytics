@@ -108,7 +108,11 @@ export default function ChatbotComponent() {
     
     if (existingSessionId && savedMessages) {
       setSessionId(existingSessionId);
-      setMessages(JSON.parse(savedMessages));
+      const parsedMessages = JSON.parse(savedMessages).map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+      }));
+      setMessages(parsedMessages);
     } else {
       const newSessionId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       setSessionId(newSessionId);
@@ -466,7 +470,7 @@ export default function ChatbotComponent() {
                     "text-xs mt-1 opacity-70",
                     message.sender === 'user' ? "text-blue-100" : "text-gray-500"
                   )}>
-                    {message.timestamp.toLocaleTimeString()}
+                    {new Date(message.timestamp).toLocaleTimeString()}
                   </div>
                 </div>
               </div>
