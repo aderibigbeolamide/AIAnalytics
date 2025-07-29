@@ -2,7 +2,7 @@
 
 ## Overview
 
-EventValidate is a full-stack web application built for organizations to validate member attendance at events using AI-powered QR code scanning. The system enables administrators to manage members, create events, and track attendance efficiently through an intelligent validation process.
+EventValidate is a comprehensive AI-powered member validation system built for multi-tenant organization management. The platform provides event management, member validation, QR code scanning, ticket systems, payment processing, and real-time notification services. It features a dual-admin architecture with super admin oversight and organization-specific administration capabilities.
 
 ## System Architecture
 
@@ -18,19 +18,23 @@ EventValidate is a full-stack web application built for organizations to validat
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js framework
 - **Language**: TypeScript with ES modules
-- **Database**: PostgreSQL with Drizzle ORM
-- **Database Provider**: Neon Database (serverless PostgreSQL)
+- **Database**: MongoDB with Mongoose ODM
+- **Database Provider**: MongoDB Atlas (cloud-hosted NoSQL database)
 - **Authentication**: JWT tokens with bcrypt password hashing
 - **API**: RESTful API with Express middleware
+- **File Storage**: Local file system with Cloudinary integration
+- **Payment Processing**: Paystack API integration with multi-tenant support
 
 ### Database Schema
-The system uses PostgreSQL with the following core entities:
-- **Users**: Authentication and role management (admin, member, guest, invitee)
+The system uses MongoDB with the following core collections:
+- **Organizations**: Multi-tenant organization management with subscription plans
+- **Users**: Authentication and role management (super_admin, admin, member, guest, invitee)
 - **Members**: Detailed member profiles with auxiliary body classification
-- **Events**: Event management with eligibility rules
-- **Event Registrations**: Links members to events with QR codes
-- **Attendance**: Tracks actual event attendance through scanning
-- **Invitations**: Manages guest and invitee access
+- **Events**: Event management with eligibility rules and payment settings
+- **Event Registrations**: Links members to events with QR codes and payment tracking
+- **Tickets**: Ticket-based event system with purchase and transfer capabilities
+- **Notifications**: Real-time notification system for organization communication
+- **User Preferences**: AI recommendation system preferences and settings
 
 ## Key Components
 
@@ -53,10 +57,34 @@ The system uses PostgreSQL with the following core entities:
 - **Role-based data access** with proper authorization
 
 ### Event Management
-- **Event creation and management** with eligibility rules
-- **Auxiliary body filtering** for targeted events
+- **Dual Event System**: Traditional registration events and simplified ticket-based events
+- **Event creation and management** with eligibility rules and payment configurations
+- **Auxiliary body filtering** for targeted events with flexible custom fields
 - **Guest and invitee support** with configurable permissions
 - **Status tracking** (upcoming, active, completed, cancelled)
+- **Payment Integration**: Paystack integration with multi-tenant bank account routing
+- **Ticket System**: Complete ticket purchase, transfer, and validation workflow
+
+### Multi-Tenant Organization System
+- **Organization Management**: Complete multi-tenant architecture with organization isolation
+- **Super Admin Dashboard**: System oversight with organization approval and management
+- **Organization Registration**: Public registration flow for new organizations
+- **Subscription Management**: Pro/Enterprise plans with event and member limits
+- **Bank Account Integration**: Organization-specific payment routing with privacy protection
+
+### Comprehensive Notification System
+- **Real-time Notifications**: In-app notification system with unread count badges
+- **Notification Bell Component**: Navbar integration with popup interface and message display
+- **Super Admin Messaging**: Broadcast messages to all organizations and targeted messaging
+- **Organization Communication**: Internal messaging system for organization admins
+- **Notification Types**: Broadcast, alerts, individual messages, and system notifications
+- **Notification Management**: Mark as read, delete, and notification preferences
+
+### AI-Powered Features
+- **Seat Availability Heatmap**: Real-time event capacity visualization with color-coded sections
+- **Event Recommendation Engine**: AI-powered suggestions based on user preferences and behavior
+- **Public Seat Tracking**: Live occupancy rates displayed on public event pages
+- **Personalized Suggestions**: User preference management and intelligent event matching
 
 ## Data Flow
 
@@ -69,11 +97,12 @@ The system uses PostgreSQL with the following core entities:
 ## External Dependencies
 
 ### Core Dependencies
-- **@neondatabase/serverless**: PostgreSQL database connectivity
-- **drizzle-orm**: Type-safe database ORM with PostgreSQL adapter
+- **mongodb**: MongoDB database connectivity and operations
+- **mongoose**: MongoDB object modeling and schema validation
 - **@tanstack/react-query**: Server state management and caching
 - **wouter**: Lightweight React router
 - **zustand**: Minimal state management library
+- **paystack**: Payment processing and bank verification API
 
 ### UI and Styling
 - **@radix-ui/***: Comprehensive accessible UI component library
@@ -673,6 +702,18 @@ npm run migrate
   - Super admin dashboard fully functional with complete statistics structure and recent activity tracking
   - Regular admin dashboard fully functional with proper array data from MongoDB
   - **STATUS**: COMPLETE - All features migrated to MongoDB, zero PostgreSQL dependencies remaining
+
+- July 29, 2025. **NOTIFICATION SYSTEM FULLY OPERATIONAL**: Completed comprehensive notification system implementation with successful broadcast messaging:
+  - **Fixed Notification Delivery Issue**: Resolved admin user not receiving notifications by creating default organization and linking admin user
+  - **Auto-Seed Enhancement**: Updated MongoDB auto-seed to create default organization and associate admin user for notification delivery
+  - **Verified Notification Flow**: Super admin broadcast messages now successfully reach organization admins
+  - **Complete Notification Workflow**: End-to-end testing confirmed: super admin sends broadcast → admin receives notification with unread count
+  - **Organization-Based Notifications**: All notification types now properly routed through organization membership
+  - **Multi-Tenant Notification Isolation**: Each organization receives only their relevant notifications
+  - **Notification Bell Integration**: Navbar notification bell displays correct unread counts and message content
+  - **Real-time Notification Updates**: Notification system refreshes automatically when new messages arrive
+  - **Database Organization Structure**: Default organization created with proper subscription and approval settings
+  - **User-Organization Linking**: Existing admin users automatically linked to default organization for notification access
 
 - July 29, 2025. **MIGRATION COMPLETED**: Successfully migrated EventValidate from Replit Agent to Replit environment with comprehensive in-app notification system:
   - **Complete In-App Notification System**: Implemented MongoDB-based notification service with real-time frontend updates
