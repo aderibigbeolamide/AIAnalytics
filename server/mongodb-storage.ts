@@ -19,8 +19,12 @@ export interface IMongoStorage {
   getUserByUsername(username: string): Promise<IUser | null>;
   getUserByEmail(email: string): Promise<IUser | null>;
   getAllUsers(): Promise<IUser[]>;
+  getUsersByRole(role: string): Promise<IUser[]>;
   createUser(user: InsertUser): Promise<IUser>;
   updateUser(id: string, updates: Partial<InsertUser>): Promise<IUser | null>;
+
+  // Notifications
+  createNotification(notification: { recipientId: string; title: string; message: string; type?: string; priority?: string; metadata?: any }): Promise<any>;
 
   // Members
   getMember(id: string): Promise<IMember | null>;
@@ -171,6 +175,34 @@ export class MongoStorage implements IMongoStorage {
     } catch (error) {
       console.error('Error updating user:', error);
       return null;
+    }
+  }
+
+  async getUsersByRole(role: string): Promise<IUser[]> {
+    try {
+      return await User.find({ role }).populate('organizationId').sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting users by role:', error);
+      return [];
+    }
+  }
+
+  async createNotification(notification: { recipientId: string; title: string; message: string; type?: string; priority?: string; metadata?: any }): Promise<any> {
+    try {
+      const { Notification } = await import('@shared/mongoose-schema');
+      const newNotification = new Notification({
+        recipientId: notification.recipientId,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type || 'general',
+        priority: notification.priority || 'medium',
+        data: notification.metadata || {},
+        isRead: false
+      });
+      return await newNotification.save();
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      throw error;
     }
   }
 

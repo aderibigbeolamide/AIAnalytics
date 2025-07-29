@@ -261,4 +261,46 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // Handle chatbot message forwarding
+  app.post("/api/super-admin/chatbot-message", async (req: Request, res: Response) => {
+    try {
+      const { message, type, metadata } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      // Get all super admin users to send the notification
+      const superAdmins = await mongoStorage.getUsersByRole('super_admin');
+      
+      if (superAdmins.length === 0) {
+        return res.status(404).json({ message: "No super admin users found" });
+      }
+
+      // Create notification for each super admin
+      const notifications = [];
+      for (const admin of superAdmins) {
+        const notification = await mongoStorage.createNotification({
+          recipientId: (admin._id as any).toString(),
+          title: "Chatbot Inquiry",
+          message: message,
+          type: type || 'chatbot_inquiry',
+          priority: 'medium',
+          metadata: metadata || {}
+        });
+        notifications.push(notification);
+      }
+
+      console.log(`Chatbot message forwarded to ${superAdmins.length} super admin(s)`);
+
+      res.json({ 
+        message: "Message forwarded to super admin successfully",
+        notificationsSent: notifications.length
+      });
+    } catch (error) {
+      console.error("Error forwarding chatbot message:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 }

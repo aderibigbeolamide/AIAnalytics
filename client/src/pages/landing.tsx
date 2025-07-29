@@ -28,6 +28,7 @@ import {
   CreditCard,
   Ticket
 } from "lucide-react";
+import ChatbotComponent from "@/components/chatbot";
 // Logo image placed in public folder for proper asset handling
 
 export function LandingPage() {
@@ -976,6 +977,9 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
+      
+      {/* Chatbot Component */}
+      <ChatbotComponent />
     </div>
   );
 }
