@@ -201,6 +201,44 @@ export function setupNotificationRoutes(app: Application) {
     }
   });
 
+  // Debug endpoint to check notification system state
+  app.get("/api/debug/notification-system", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { User, Organization, Notification } = await import('../shared/mongoose-schema.js');
+
+      const [allUsers, allOrgs, allNotifications] = await Promise.all([
+        User.find({}).select('_id username role organizationId status'),
+        Organization.find({}).select('_id name status'),
+        Notification.find({}).sort({ createdAt: -1 }).limit(10)
+      ]);
+
+      res.json({
+        users: allUsers.map(u => ({
+          id: (u._id as any).toString(),
+          username: u.username,
+          role: u.role,
+          organizationId: (u.organizationId as any)?.toString(),
+          status: u.status
+        })),
+        organizations: allOrgs.map(o => ({
+          id: (o._id as any).toString(),
+          name: o.name,
+          status: o.status
+        })),
+        recentNotifications: allNotifications.map(n => ({
+          id: (n._id as any).toString(),
+          recipientId: (n.recipientId as any)?.toString(),
+          type: n.type,
+          title: n.title,
+          createdAt: n.createdAt
+        }))
+      });
+    } catch (error) {
+      console.error("Error in debug endpoint:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get notification statistics (for super admin dashboard)
   app.get("/api/super-admin/notification-stats", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
