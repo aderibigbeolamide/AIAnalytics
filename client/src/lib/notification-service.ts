@@ -30,44 +30,39 @@ export class NotificationService {
       params.set('unreadOnly', 'true');
     }
 
-    const response = await apiRequest(`/api/notifications?${params.toString()}`);
-    return response;
+    const response = await apiRequest('GET', `/api/notifications?${params.toString()}`);
+    return await response.json();
   }
 
   /**
    * Get unread notification count
    */
   static async getUnreadCount(): Promise<number> {
-    const response = await apiRequest('/api/notifications/unread-count');
-    return response.count;
+    const response = await apiRequest('GET', '/api/notifications/unread-count');
+    const data = await response.json();
+    return data.count;
   }
 
   /**
    * Mark notification as read
    */
   static async markAsRead(notificationId: string): Promise<Notification> {
-    const response = await apiRequest(`/api/notifications/${notificationId}/read`, {
-      method: 'PATCH'
-    });
-    return response;
+    const response = await apiRequest('PATCH', `/api/notifications/${notificationId}/read`);
+    return await response.json();
   }
 
   /**
    * Mark all notifications as read
    */
   static async markAllAsRead(): Promise<void> {
-    await apiRequest('/api/notifications/read-all', {
-      method: 'PATCH'
-    });
+    await apiRequest('PATCH', '/api/notifications/read-all');
   }
 
   /**
    * Delete notification
    */
   static async deleteNotification(notificationId: string): Promise<void> {
-    await apiRequest(`/api/notifications/${notificationId}`, {
-      method: 'DELETE'
-    });
+    await apiRequest('DELETE', `/api/notifications/${notificationId}`);
   }
 
   /**
@@ -79,14 +74,11 @@ export class NotificationService {
     message: string,
     priority: string = 'medium'
   ): Promise<void> {
-    await apiRequest('/api/super-admin/send-message', {
-      method: 'POST',
-      body: JSON.stringify({
-        organizationId,
-        title,
-        message,
-        priority
-      })
+    await apiRequest('POST', '/api/super-admin/send-message', {
+      organizationId,
+      title,
+      message,
+      priority
     });
   }
 
@@ -100,15 +92,12 @@ export class NotificationService {
     priority: string = 'medium',
     expirationDays: number = 30
   ): Promise<void> {
-    await apiRequest('/api/super-admin/send-alert', {
-      method: 'POST',
-      body: JSON.stringify({
-        organizationId,
-        title,
-        message,
-        priority,
-        expirationDays
-      })
+    await apiRequest('POST', '/api/super-admin/send-alert', {
+      organizationId,
+      title,
+      message,
+      priority,
+      expirationDays
     });
   }
 
@@ -121,14 +110,11 @@ export class NotificationService {
     priority: string = 'medium',
     expirationDays: number = 30
   ): Promise<void> {
-    await apiRequest('/api/super-admin/broadcast-message', {
-      method: 'POST',
-      body: JSON.stringify({
-        title,
-        message,
-        priority,
-        expirationDays
-      })
+    await apiRequest('POST', '/api/super-admin/broadcast-message', {
+      title,
+      message,
+      priority,
+      expirationDays
     });
   }
 
@@ -136,17 +122,15 @@ export class NotificationService {
    * Get notification statistics (super admin only)
    */
   static async getNotificationStats(): Promise<any> {
-    const response = await apiRequest('/api/super-admin/notification-stats');
-    return response;
+    const response = await apiRequest('GET', '/api/super-admin/notification-stats');
+    return await response.json();
   }
 
   /**
    * Clean up expired notifications
    */
   static async cleanupExpired(): Promise<void> {
-    await apiRequest('/api/notifications/cleanup', {
-      method: 'POST'
-    });
+    await apiRequest('POST', '/api/notifications/cleanup');
   }
 }
 
