@@ -162,21 +162,29 @@ export default function ChatbotComponent() {
         // Initial welcome message with quick actions
         const welcomeMessage: Message = {
           id: `msg_${Date.now()}`,
-          text: PREDEFINED_RESPONSES.greeting,
+          text: "👋 Hi! How can we help?",
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'text'
+        };
+        
+        const faqMessage: Message = {
+          id: `msg_${Date.now() + 1}`,
+          text: "Here are some quick help options:",
           sender: 'bot',
           timestamp: new Date(),
           type: 'text'
         };
         
         const quickActionsMessage: Message = {
-          id: `msg_${Date.now() + 1}`,
+          id: `msg_${Date.now() + 2}`,
           text: "", // Empty text as we'll use the type to render buttons
           sender: 'bot',
           timestamp: new Date(),
           type: 'quick_actions'
         };
         
-        setMessages([welcomeMessage, quickActionsMessage]);
+        setMessages([welcomeMessage, faqMessage, quickActionsMessage]);
       }
       
       // Check admin status
@@ -205,15 +213,32 @@ export default function ChatbotComponent() {
       setSessionId(newSessionId);
       localStorage.setItem('chatbot_session_id', newSessionId);
       
-      // Add welcome message
+      // Add welcome message with FAQ buttons
       const welcomeMessage: Message = {
         id: `msg_${Date.now()}`,
-        text: PREDEFINED_RESPONSES.greeting,
+        text: "👋 Hi! How can we help?",
         sender: 'bot',
         timestamp: new Date(),
         type: 'text'
       };
-      setMessages([welcomeMessage]);
+      
+      const faqMessage: Message = {
+        id: `msg_${Date.now() + 1}`,
+        text: "Here are some quick help options:",
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'text'
+      };
+      
+      const quickActionsMessage: Message = {
+        id: `msg_${Date.now() + 2}`,
+        text: "",
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'quick_actions'
+      };
+      
+      setMessages([welcomeMessage, faqMessage, quickActionsMessage]);
     }
 
     // Check admin online status
@@ -630,7 +655,7 @@ export default function ChatbotComponent() {
       ref={chatRef}
       className={cn(
         "fixed bottom-6 right-6 z-50 bg-white rounded-lg shadow-2xl border",
-        isMinimized ? "w-80 h-16" : "w-80 h-[350px] max-h-[60vh] flex flex-col"
+        isMinimized ? "w-80 h-16" : "w-80 h-[450px] max-h-[75vh] flex flex-col"
       )}
     >
       {/* Header */}
