@@ -198,6 +198,18 @@ export default function ChatbotComponent() {
     checkAdminStatus();
   }, []);
 
+  // Start polling when escalated
+  useEffect(() => {
+    if (isEscalated && sessionId) {
+      // Initial poll immediately
+      setTimeout(pollForAdminResponse, 500);
+      
+      // Set up continuous polling
+      const pollInterval = setInterval(pollForAdminResponse, 2000);
+      return () => clearInterval(pollInterval);
+    }
+  }, [isEscalated, sessionId]);
+
   useEffect(() => {
     // Save messages to localStorage
     if (messages.length > 0) {
@@ -496,6 +508,9 @@ export default function ChatbotComponent() {
         
         setMessages(prev => [...prev, statusMessage]);
         
+        // Start polling for admin responses immediately
+        setTimeout(pollForAdminResponse, 1000);
+        
         toast({
           title: "Connected to Support",
           description: adminOnlineStatus ? "Admin is online and will respond soon" : "Your message has been forwarded to support",
@@ -547,20 +562,27 @@ export default function ChatbotComponent() {
 
   const pollForAdminResponse = async () => {
     try {
-      const response = await fetch(`/api/chatbot/admin-response/${sessionId}`);
+      // Get the last message ID to avoid duplicates
+      const lastAdminMessage = messages.filter(m => m.sender === 'admin').pop();
+      const lastMessageId = lastAdminMessage?.id || '';
+      
+      const url = lastMessageId ? 
+        `/api/chatbot/admin-response/${sessionId}?lastMessageId=${lastMessageId}` :
+        `/api/chatbot/admin-response/${sessionId}`;
+      
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        if (data.hasNewMessages) {
-          data.messages.forEach((msg: any) => {
-            const adminMessage: Message = {
-              id: `msg_${Date.now()}_${Math.random()}`,
-              text: msg.text,
-              sender: 'admin',
-              timestamp: new Date(msg.timestamp),
-              type: 'text'
-            };
-            setMessages(prev => [...prev, adminMessage]);
-          });
+        if (data.hasNewMessages && data.messages.length > 0) {
+          const newAdminMessages = data.messages.map((msg: any) => ({
+            id: msg.id || `msg_${Date.now()}_${Math.random()}`,
+            text: msg.text || msg.message,
+            sender: 'admin' as const,
+            timestamp: new Date(msg.timestamp),
+            type: 'text' as const
+          }));
+          
+          setMessages(prev => [...prev, ...newAdminMessages]);
         }
       }
     } catch (error) {
@@ -569,7 +591,7 @@ export default function ChatbotComponent() {
     
     // Continue polling if escalated
     if (isEscalated) {
-      setTimeout(pollForAdminResponse, 3000);
+      setTimeout(pollForAdminResponse, 2000); // Poll every 2 seconds for faster response
     }
   };
 
