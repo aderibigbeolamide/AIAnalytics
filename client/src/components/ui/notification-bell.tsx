@@ -9,12 +9,12 @@ import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { Separator } from './separator';
 import { NotificationService, type Notification, getNotificationIcon, getNotificationColor, formatNotificationTime } from '../../lib/notification-service';
 import { useToast } from '../../hooks/use-toast';
-import { useRouter } from 'wouter';
+import { useLocation } from 'wouter';
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
-  const [, navigate] = useRouter();
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
   // Get unread count
@@ -95,7 +95,7 @@ export function NotificationBell() {
 
     // Navigate to action URL if available
     if (notification.actionUrl) {
-      navigate(notification.actionUrl);
+      setLocation(notification.actionUrl);
       setIsOpen(false);
     }
   };
