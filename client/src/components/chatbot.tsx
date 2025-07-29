@@ -382,21 +382,67 @@ export default function ChatbotComponent() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputText.trim();
     setInputText("");
     setIsTyping(true);
 
     // If escalated, send to admin
     if (isEscalated) {
-      await sendToAdmin(inputText.trim());
+      await sendToAdmin(currentInput);
       setIsTyping(false);
       return;
     }
 
-    // Simulate typing delay
-    setTimeout(async () => {
-      const responseType = analyzeMessage(inputText);
+    try {
+      // Send to AI-powered backend
+      const response = await fetch('/api/chatbot/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: currentInput,
+          sessionId: sessionId,
+          conversationHistory: messages.slice(-10) // Send last 10 messages for context
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        const botMessage: Message = {
+          id: `msg_${Date.now() + 1}`,
+          text: data.response,
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'text'
+        };
+
+        setMessages(prev => [...prev, botMessage]);
+
+        // Add suggested actions if provided
+        if (data.suggestedActions && data.suggestedActions.length > 0) {
+          const suggestionsMessage: Message = {
+            id: `msg_${Date.now() + 2}`,
+            text: `Here are some helpful suggestions: ${data.suggestedActions.join(', ')}`,
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quick_reply'
+          };
+          
+          setTimeout(() => {
+            setMessages(prev => [...prev, suggestionsMessage]);
+          }, 500);
+        }
+      } else {
+        throw new Error('Failed to get response');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
       
-      // Check if it's a quick action response type
+      // Fallback to local response
+      const responseType = analyzeMessage(currentInput);
+      
       let responseText: string;
       if (QUICK_ACTION_RESPONSES[responseType as keyof typeof QUICK_ACTION_RESPONSES]) {
         responseText = QUICK_ACTION_RESPONSES[responseType as keyof typeof QUICK_ACTION_RESPONSES];
@@ -415,22 +461,9 @@ export default function ChatbotComponent() {
       };
 
       setMessages(prev => [...prev, botMessage]);
+    } finally {
       setIsTyping(false);
-
-      // If default response, offer escalation
-      if (responseType === 'default_response') {
-        setTimeout(() => {
-          const escalationMessage: Message = {
-            id: `msg_${Date.now() + 2}`,
-            text: "Would you like me to connect you with our customer support team?",
-            sender: 'bot',
-            timestamp: new Date(),
-            type: 'quick_reply'
-          };
-          setMessages(prev => [...prev, escalationMessage]);
-        }, 1000);
-      }
-    }, 1500);
+    }
   };
 
   const escalateToAdmin = async () => {
