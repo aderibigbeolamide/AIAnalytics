@@ -75,7 +75,30 @@ const PREDEFINED_RESPONSES = {
   
   payment_info: "EventValidate uses secure payment processing:\n\n💳 **Payment Methods:**\n• Online payments via Paystack\n• Manual payment verification\n• Organization-specific bank accounts\n\n🔒 **Security:**\n• End-to-end encryption\n• PCI compliant processing\n• Multi-tenant financial separation\n\n💰 **Pricing:**\n• Free for basic event management\n• Pro plans for advanced features\n• Pay-per-event options available",
   
-  default_response: "I understand you're looking for help, but I might need to connect you with our support team for a more detailed answer. Would you like me to:\n\n📞 Forward your question to our customer support?\n📖 Show you our help documentation?\n🔍 Try rephrasing your question differently?"
+  default_response: "I understand you're looking for help, but I might need to connect you with our support team for a more detailed answer. Would you like me to:\n\n📞 Forward your question to our customer support?\n📖 Show you our help documentation?\n🔍 Try rephrasing your question differently?",
+
+  quick_actions: {
+    organization_register: "How do I register my organization?",
+    create_event: "How do I create an event?", 
+    user_register: "How do I register for an event?",
+    payment_help: "How do payments work?",
+    qr_validation: "How does QR code validation work?",
+    contact_support: "I need to speak to someone"
+  }
+};
+
+const QUICK_ACTION_RESPONSES = {
+  organization_register: "To register your organization:\n\n1. Click 'Register Organization' on the landing page\n2. Fill in your organization details\n3. Wait for admin approval\n4. Once approved, you'll receive login credentials\n5. Start creating events!\n\nWould you like help with any specific step?",
+  
+  create_event: "Creating an event is easy:\n\n1. Login to your organization dashboard\n2. Click 'Create Event' in the Events section\n3. Choose between Registration Event or Ticket Event\n4. Fill in event details, dates, and requirements\n5. Set up payment options if needed\n6. Publish your event\n\nNeed help with event configuration?",
+  
+  user_register: "To register for an event:\n\n1. Find the event on our public listings\n2. Click 'Register' or scan the event QR code\n3. Fill in your information\n4. Upload required documents if needed\n5. Complete payment if required\n6. Get your personal QR code for event entry\n\nAny questions about the registration process?",
+  
+  payment_help: "EventValidate payment system:\n\n💳 **Payment Methods:**\n• Secure online payments via Paystack\n• Manual payment verification at events\n• Organization-specific bank accounts\n\n🔒 **Security:**\n• Bank-level encryption\n• PCI compliant processing\n• No card details stored\n\nNeed help with a specific payment?",
+  
+  qr_validation: "QR code validation process:\n\n1. **Event QR Code:** Links to registration page\n2. **Personal QR Code:** Generated after registration\n3. **Validation:** Admins scan personal QR codes at events\n4. **Security:** Encrypted data with timestamp validation\n5. **Backup:** Manual ID validation also available\n\nQuestions about QR scanning?",
+  
+  contact_support: "I'll connect you with our customer support team right away! They can help with:\n\n• Account issues\n• Technical problems\n• Payment questions\n• Event management\n• Any other concerns\n\nPlease provide your email so they can follow up with you."
 };
 
 export default function ChatbotComponent() {
@@ -91,6 +114,7 @@ export default function ChatbotComponent() {
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const scrollToBottom = () => {
@@ -140,6 +164,20 @@ export default function ChatbotComponent() {
     }
   }, [messages]);
 
+  // Click outside to close chatbot
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (chatRef.current && !chatRef.current.contains(event.target as Node) && isOpen && !isMinimized) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, isMinimized]);
+
   const checkAdminStatus = async () => {
     try {
       const response = await fetch('/api/chatbot/admin-status');
@@ -188,6 +226,58 @@ export default function ChatbotComponent() {
     return 'default_response';
   };
 
+  const handleQuickAction = (actionKey: string) => {
+    // Add user message for the quick action
+    const userMessage: Message = {
+      id: `msg_${Date.now()}`,
+      text: PREDEFINED_RESPONSES.quick_actions[actionKey as keyof typeof PREDEFINED_RESPONSES.quick_actions],
+      sender: 'user',
+      timestamp: new Date(),
+      type: 'text'
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsTyping(true);
+
+    // Handle contact support specially
+    if (actionKey === 'contact_support') {
+      setTimeout(() => {
+        const botMessage: Message = {
+          id: `msg_${Date.now() + 1}`,
+          text: QUICK_ACTION_RESPONSES[actionKey as keyof typeof QUICK_ACTION_RESPONSES],
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'text'
+        };
+        setMessages(prev => [...prev, botMessage]);
+        setIsTyping(false);
+        
+        // Auto-trigger escalation for contact support
+        setTimeout(() => {
+          if (!userEmail) {
+            setShowEmailInput(true);
+          } else {
+            escalateToAdmin();
+          }
+        }, 1000);
+      }, 1500);
+      return;
+    }
+
+    // Regular quick action response
+    setTimeout(() => {
+      const botMessage: Message = {
+        id: `msg_${Date.now() + 1}`,
+        text: QUICK_ACTION_RESPONSES[actionKey as keyof typeof QUICK_ACTION_RESPONSES],
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'text'
+      };
+      setMessages(prev => [...prev, botMessage]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
   const sendMessage = async () => {
     if (!inputText.trim()) return;
 
@@ -213,7 +303,9 @@ export default function ChatbotComponent() {
     // Simulate typing delay
     setTimeout(async () => {
       const responseType = analyzeMessage(inputText);
-      const responseText = PREDEFINED_RESPONSES[responseType as keyof typeof PREDEFINED_RESPONSES];
+      const responseText = responseType === 'quick_actions' 
+        ? PREDEFINED_RESPONSES.default_response
+        : PREDEFINED_RESPONSES[responseType as keyof Omit<typeof PREDEFINED_RESPONSES, 'quick_actions'>];
       
       const botMessage: Message = {
         id: `msg_${Date.now() + 1}`,
@@ -394,10 +486,13 @@ export default function ChatbotComponent() {
   }
 
   return (
-    <div className={cn(
-      "fixed bottom-6 right-6 z-50 bg-white rounded-lg shadow-2xl border",
-      isMinimized ? "w-80 h-16" : "w-96 h-[600px]"
-    )}>
+    <div 
+      ref={chatRef}
+      className={cn(
+        "fixed bottom-6 right-6 z-50 bg-white rounded-lg shadow-2xl border",
+        isMinimized ? "w-80 h-16" : "w-96 h-[600px]"
+      )}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-blue-600 text-white rounded-t-lg">
         <div className="flex items-center gap-2">
@@ -495,6 +590,62 @@ export default function ChatbotComponent() {
           </div>
 
           {/* Quick Action Buttons */}
+          {!isEscalated && messages.length <= 1 && (
+            <div className="px-4 py-3 border-t bg-gray-50">
+              <div className="text-xs font-medium mb-3 text-gray-600">Quick Help</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickAction('organization_register')}
+                  className="text-xs h-8 justify-start"
+                >
+                  🏢 Register Org
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickAction('create_event')}
+                  className="text-xs h-8 justify-start"
+                >
+                  📅 Create Event
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickAction('user_register')}
+                  className="text-xs h-8 justify-start"
+                >
+                  ✅ Join Event
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickAction('payment_help')}
+                  className="text-xs h-8 justify-start"
+                >
+                  💳 Payments
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickAction('qr_validation')}
+                  className="text-xs h-8 justify-start"
+                >
+                  📱 QR Codes
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickAction('contact_support')}
+                  className="text-xs h-8 justify-start"
+                >
+                  📞 Support
+                </Button>
+              </div>
+            </div>
+          )}
+
           {!isEscalated && messages.length > 1 && (
             <div className="px-4 py-2 border-t">
               <div className="flex gap-2 flex-wrap">
