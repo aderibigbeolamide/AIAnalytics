@@ -24,7 +24,7 @@ interface Message {
   text: string;
   sender: 'bot' | 'user' | 'admin';
   timestamp: Date;
-  type?: 'text' | 'quick_reply' | 'escalation';
+  type?: 'text' | 'quick_reply' | 'escalation' | 'quick_actions';
 }
 
 interface ChatSession {
