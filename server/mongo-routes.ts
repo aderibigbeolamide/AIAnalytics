@@ -706,6 +706,51 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Test notification endpoint (for demonstration)
+  app.post("/api/notifications/create-test", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Create a test payment notification
+      const notification = await NotificationService.createNotification({
+        organizationId: userId,
+        recipientId: userId,
+        type: 'payment_received',
+        title: 'Payment Received - NGN5,000',
+        message: 'John Doe has made a payment of NGN5,000 for Annual Conference 2025. This is a demonstration of the automatic payment notification system.',
+        priority: 'high',
+        category: 'payments',
+        actionUrl: '/dashboard',
+        actionLabel: 'View Dashboard',
+        data: {
+          eventName: 'Annual Conference 2025',
+          paymentAmount: 5000,
+          currency: 'NGN',
+          payerName: 'John Doe'
+        }
+      });
+
+      res.json({ 
+        message: "Test notification created successfully",
+        notification: {
+          id: notification._id.toString(),
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          priority: notification.priority,
+          isRead: notification.isRead,
+          createdAt: notification.createdAt
+        }
+      });
+    } catch (error) {
+      console.error("Error creating test notification:", error);
+      res.status(500).json({ message: "Failed to create test notification" });
+    }
+  });
+
   // ================ ADDITIONAL ENDPOINTS ================
 
   // ================ ORGANIZATION MANAGEMENT ================
