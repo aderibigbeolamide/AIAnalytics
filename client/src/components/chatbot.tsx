@@ -1,126 +1,100 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageCircle, Send, X, Bot, User, ExternalLink } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  MessageCircle, 
+  X, 
+  Send, 
+  Bot, 
+  User, 
+  Phone, 
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Minimize2,
+  Maximize2
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
-  type: 'user' | 'bot';
-  content: string;
+  text: string;
+  sender: 'bot' | 'user' | 'admin';
   timestamp: Date;
-  actions?: Array<{
-    label: string;
-    action: string;
-    url?: string;
-  }>;
+  type?: 'text' | 'quick_reply' | 'escalation';
 }
 
-interface ChatbotProps {
-  className?: string;
+interface ChatSession {
+  id: string;
+  userId?: string;
+  userEmail?: string;
+  isEscalated: boolean;
+  adminId?: string;
+  status: 'active' | 'resolved' | 'pending_admin';
+  messages: Message[];
+  createdAt: Date;
+  lastActivity: Date;
 }
 
-const EventValidateKnowledgeBase = {
-  // Organization onboarding and setup
-  organization: {
-    keywords: ['organization', 'register organization', 'setup', 'onboard', 'create account', 'admin account'],
-    responses: [
-      {
-        content: "To register your organization on EventValidate:\n\n1. **Visit the Landing Page** - Go to our homepage\n2. **Click 'Register Organization'** - Find this button on the main page\n3. **Fill Organization Details** - Provide business name, contact info, and description\n4. **Wait for Approval** - Super admin will review and approve your organization\n5. **Start Managing Events** - Once approved, login and create your first event\n\n**Features for Organizations:**\n• Create unlimited events\n• Manage member registrations\n• QR code validation system\n• Payment processing with Paystack\n• Real-time analytics dashboard",
-        actions: [
-          { label: "Register Organization", action: "navigate", url: "/landing" },
-          { label: "View Pricing", action: "navigate", url: "/landing#pricing" }
-        ]
-      }
-    ]
-  },
-
-  // User registration and validation
-  userRegistration: {
-    keywords: ['register for event', 'attend event', 'validation', 'qr code', 'validate myself', 'join event'],
-    responses: [
-      {
-        content: "To register and validate for an event:\n\n**Finding Events:**\n1. **Browse Public Events** - Visit our event listings\n2. **Scan Event QR Code** - Use your phone camera\n3. **Search by Organization** - Find events by group name\n\n**Registration Process:**\n1. **Fill Registration Form** - Provide required details\n2. **Make Payment** (if required) - Secure online payment\n3. **Get Your QR Code** - Download your personal validation code\n4. **Attend the Event** - Show QR code for validation\n\n**Validation Methods:**\n• QR code scanning\n• Manual ID verification\n• Face recognition (if enabled)",
-        actions: [
-          { label: "Browse Events", action: "navigate", url: "/guest-lookup" },
-          { label: "How Validation Works", action: "topic", url: "validation-process" }
-        ]
-      }
-    ]
-  },
-
-  // Features and capabilities
-  features: {
-    keywords: ['features', 'what can', 'capabilities', 'what does', 'how does', 'functionality'],
-    responses: [
-      {
-        content: "**EventValidate Key Features:**\n\n**For Organizations:**\n• 🎫 **Event Management** - Create registration & ticket-based events\n• 👥 **Member Database** - Import and manage member lists\n• 💳 **Payment Processing** - Integrated Paystack payments\n• 📊 **Analytics Dashboard** - Real-time event statistics\n• 🔔 **Notification System** - Instant messaging and alerts\n• 🏦 **Bank Integration** - Direct payments to your account\n\n**For Users:**\n• 📱 **Easy Registration** - Simple form-based signup\n• 🎟️ **Digital Tickets** - QR codes for validation\n• 💰 **Secure Payments** - Protected online transactions\n• ⚡ **Instant Validation** - Quick event entry\n• 🔍 **Event Discovery** - Find events by organization",
-        actions: [
-          { label: "See All Features", action: "navigate", url: "/landing#features" },
-          { label: "Watch Demo", action: "topic", url: "demo" }
-        ]
-      }
-    ]
-  },
-
-  // Pricing and plans
-  pricing: {
-    keywords: ['price', 'cost', 'plan', 'subscription', 'fee', 'payment', 'how much'],
-    responses: [
-      {
-        content: "**EventValidate Pricing:**\n\n**💡 Starter Plan - FREE**\n• Up to 3 events per month\n• 50 members maximum\n• Basic QR validation\n• Email support\n\n**🚀 Pro Plan - ₦15,000/month**\n• Unlimited events\n• Unlimited members\n• Advanced validation (face recognition)\n• Payment processing\n• Priority support\n• Custom branding\n\n**🏢 Enterprise - Custom**\n• Multi-organization management\n• API access\n• White-label solution\n• Dedicated support\n• Custom integrations\n\n**Platform Fee:** 2% of transaction value for payment processing",
-        actions: [
-          { label: "View Full Pricing", action: "navigate", url: "/landing#pricing" },
-          { label: "Contact Sales", action: "forward", url: "pricing-inquiry" }
-        ]
-      }
-    ]
-  },
-
-  // Technical support
-  technical: {
-    keywords: ['error', 'not working', 'bug', 'problem', 'issue', 'help', 'support', 'technical'],
-    responses: [
-      {
-        content: "**Technical Support Available:**\n\n**Common Issues & Solutions:**\n• **QR Code Not Scanning** - Ensure good lighting and steady hands\n• **Payment Failed** - Check card details and network connection\n• **Can't Login** - Verify username/password or contact admin\n• **Event Not Found** - Check if event is still active\n\n**Get Help:**\n• Check our FAQ section\n• Contact your organization admin\n• Report technical issues to super admin\n\n**For urgent technical issues, I'll forward your message to our super admin team for immediate assistance.**",
-        actions: [
-          { label: "Report Technical Issue", action: "forward", url: "technical-support" },
-          { label: "Contact Admin", action: "forward", url: "admin-contact" }
-        ]
-      }
-    ]
-  },
-
-  // Default welcome and navigation
-  welcome: {
-    keywords: ['hello', 'hi', 'help', 'start', 'welcome', 'guide'],
-    responses: [
-      {
-        content: "👋 **Welcome to EventValidate!**\n\nI'm here to help you navigate our platform. Choose what you'd like to do:\n\n**🏢 For Organizations:**\n• Register your organization\n• Learn about event management\n• Understand pricing and features\n\n**👤 For Event Attendees:**\n• Find and register for events\n• Learn about validation process\n• Get help with attendance\n\n**❓ General Questions:**\n• Platform features and capabilities\n• Technical support\n• Pricing information\n\nWhat would you like to know more about?",
-        actions: [
-          { label: "I'm an Organization", action: "topic", url: "organization" },
-          { label: "I want to attend an event", action: "topic", url: "userRegistration" },
-          { label: "Show me features", action: "topic", url: "features" }
-        ]
-      }
-    ]
-  }
+const KNOWLEDGE_BASE = {
+  greetings: [
+    "hello", "hi", "hey", "good morning", "good afternoon", "good evening"
+  ],
+  organization_keywords: [
+    "organization", "company", "business", "admin", "manage", "create event", 
+    "host event", "setup", "register organization"
+  ],
+  user_keywords: [
+    "register", "attend", "validate", "qr code", "event", "ticket", 
+    "registration", "join event"
+  ],
+  features_keywords: [
+    "features", "what can", "how does", "capabilities", "functionality"
+  ],
+  navigation_keywords: [
+    "navigate", "how to use", "guide", "help", "tutorial", "steps"
+  ],
+  payment_keywords: [
+    "payment", "pay", "cost", "price", "fee", "billing", "subscription"
+  ]
 };
 
-const ChatbotComponent: React.FC<ChatbotProps> = ({ className }) => {
+const PREDEFINED_RESPONSES = {
+  greeting: "Hello! Welcome to EventValidate! 👋 I'm here to help you understand our platform. Are you:\n\n🏢 An organization looking to manage events?\n👤 A user wanting to register for events?\n❓ Looking for general information about our features?",
+  
+  organization_help: "Great! EventValidate helps organizations manage events efficiently. Here's what you can do:\n\n✅ Create and manage events\n✅ Set up QR code validation\n✅ Track member registrations\n✅ Handle payments through Paystack\n✅ Generate attendance reports\n✅ Multi-tenant organization support\n\nWould you like me to guide you through:\n• Organization registration\n• Creating your first event\n• Setting up payment processing",
+  
+  user_help: "Perfect! As a user, you can easily participate in events. Here's how:\n\n✅ Find events on our public listings\n✅ Register for events using QR codes or direct links\n✅ Upload required documents (ID, photos)\n✅ Make payments for paid events\n✅ Get your personal QR code for event entry\n✅ Track your registered events\n\nWould you like help with:\n• Finding events\n• Registration process\n• Payment assistance",
+  
+  features_overview: "EventValidate offers comprehensive event management:\n\n🎯 **For Organizations:**\n• Multi-tenant event management\n• QR code generation and validation\n• Payment processing integration\n• Member database management\n• Real-time analytics and reporting\n\n👥 **For Users:**\n• Easy event discovery\n• Quick registration process\n• Secure payment options\n• Digital ticket management\n• Event reminders and updates",
+  
+  navigation_guide: "Here's how to navigate EventValidate:\n\n🏢 **Organizations:**\n1. Register your organization\n2. Complete admin verification\n3. Access your dashboard\n4. Create and manage events\n5. Monitor registrations\n\n👤 **Users:**\n1. Browse public events\n2. Click 'Register' or scan QR code\n3. Fill registration form\n4. Complete payment (if required)\n5. Get your validation QR code",
+  
+  payment_info: "EventValidate uses secure payment processing:\n\n💳 **Payment Methods:**\n• Online payments via Paystack\n• Manual payment verification\n• Organization-specific bank accounts\n\n🔒 **Security:**\n• End-to-end encryption\n• PCI compliant processing\n• Multi-tenant financial separation\n\n💰 **Pricing:**\n• Free for basic event management\n• Pro plans for advanced features\n• Pay-per-event options available",
+  
+  default_response: "I understand you're looking for help, but I might need to connect you with our support team for a more detailed answer. Would you like me to:\n\n📞 Forward your question to our customer support?\n📖 Show you our help documentation?\n🔍 Try rephrasing your question differently?"
+};
+
+export default function ChatbotComponent() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputText, setInputText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string>("");
+  const [isEscalated, setIsEscalated] = useState(false);
+  const [adminOnlineStatus, setAdminOnlineStatus] = useState<boolean>(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [showEmailInput, setShowEmailInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -128,165 +102,286 @@ const ChatbotComponent: React.FC<ChatbotProps> = ({ className }) => {
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      // Add welcome message when chatbot opens
-      addBotMessage(EventValidateKnowledgeBase.welcome.responses[0]);
-    }
-  }, [isOpen]);
-
-  const addBotMessage = (response: any) => {
-    const botMessage: Message = {
-      id: Date.now().toString(),
-      type: 'bot',
-      content: response.content,
-      timestamp: new Date(),
-      actions: response.actions
-    };
-    setMessages(prev => [...prev, botMessage]);
-  };
-
-  const addUserMessage = (content: string) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content,
-      timestamp: new Date()
-    };
-    setMessages(prev => [...prev, userMessage]);
-  };
-
-  const findBestResponse = (userInput: string): any => {
-    const input = userInput.toLowerCase();
+    // Initialize session
+    const existingSessionId = localStorage.getItem('chatbot_session_id');
+    const savedMessages = localStorage.getItem('chatbot_messages');
     
-    // Check each knowledge base category
-    for (const [category, data] of Object.entries(EventValidateKnowledgeBase)) {
-      const keywords = data.keywords;
-      const hasMatch = keywords.some(keyword => input.includes(keyword.toLowerCase()));
+    if (existingSessionId && savedMessages) {
+      setSessionId(existingSessionId);
+      setMessages(JSON.parse(savedMessages));
+    } else {
+      const newSessionId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setSessionId(newSessionId);
+      localStorage.setItem('chatbot_session_id', newSessionId);
       
-      if (hasMatch) {
-        return data.responses[0];
-      }
+      // Add welcome message
+      const welcomeMessage: Message = {
+        id: `msg_${Date.now()}`,
+        text: PREDEFINED_RESPONSES.greeting,
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'text'
+      };
+      setMessages([welcomeMessage]);
     }
 
-    // If no match found, suggest forwarding to admin
-    return {
-      content: "I understand you have a specific question that I might not be able to answer completely. Let me forward your message to our super admin team who can provide you with detailed assistance.\n\n**Your question will be sent to the admin team, and they'll respond through the notification system when available.**\n\nIn the meantime, here are some common topics I can help with:",
-      actions: [
-        { label: "Forward to Admin", action: "forward", url: "general-inquiry" },
-        { label: "Organization Setup", action: "topic", url: "organization" },
-        { label: "Event Registration", action: "topic", url: "userRegistration" },
-        { label: "Platform Features", action: "topic", url: "features" }
-      ]
-    };
+    // Check admin online status
+    checkAdminStatus();
+  }, []);
+
+  useEffect(() => {
+    // Save messages to localStorage
+    if (messages.length > 0) {
+      localStorage.setItem('chatbot_messages', JSON.stringify(messages));
+    }
+  }, [messages]);
+
+  const checkAdminStatus = async () => {
+    try {
+      const response = await fetch('/api/chatbot/admin-status');
+      if (response.ok) {
+        const data = await response.json();
+        setAdminOnlineStatus(data.isOnline);
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
   };
 
-  const forwardToSuperAdmin = async (userQuestion: string, category: string) => {
+  const analyzeMessage = (text: string): string => {
+    const lowerText = text.toLowerCase();
+    
+    // Check for greetings
+    if (KNOWLEDGE_BASE.greetings.some(greeting => lowerText.includes(greeting))) {
+      return 'greeting';
+    }
+    
+    // Check for organization-related queries
+    if (KNOWLEDGE_BASE.organization_keywords.some(keyword => lowerText.includes(keyword))) {
+      return 'organization_help';
+    }
+    
+    // Check for user-related queries
+    if (KNOWLEDGE_BASE.user_keywords.some(keyword => lowerText.includes(keyword))) {
+      return 'user_help';
+    }
+    
+    // Check for features
+    if (KNOWLEDGE_BASE.features_keywords.some(keyword => lowerText.includes(keyword))) {
+      return 'features_overview';
+    }
+    
+    // Check for navigation help
+    if (KNOWLEDGE_BASE.navigation_keywords.some(keyword => lowerText.includes(keyword))) {
+      return 'navigation_guide';
+    }
+    
+    // Check for payment info
+    if (KNOWLEDGE_BASE.payment_keywords.some(keyword => lowerText.includes(keyword))) {
+      return 'payment_info';
+    }
+    
+    return 'default_response';
+  };
+
+  const sendMessage = async () => {
+    if (!inputText.trim()) return;
+
+    const userMessage: Message = {
+      id: `msg_${Date.now()}`,
+      text: inputText.trim(),
+      sender: 'user',
+      timestamp: new Date(),
+      type: 'text'
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputText("");
+    setIsTyping(true);
+
+    // If escalated, send to admin
+    if (isEscalated) {
+      await sendToAdmin(inputText.trim());
+      setIsTyping(false);
+      return;
+    }
+
+    // Simulate typing delay
+    setTimeout(async () => {
+      const responseType = analyzeMessage(inputText);
+      const responseText = PREDEFINED_RESPONSES[responseType as keyof typeof PREDEFINED_RESPONSES];
+      
+      const botMessage: Message = {
+        id: `msg_${Date.now() + 1}`,
+        text: responseText,
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'text'
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+      setIsTyping(false);
+
+      // If default response, offer escalation
+      if (responseType === 'default_response') {
+        setTimeout(() => {
+          const escalationMessage: Message = {
+            id: `msg_${Date.now() + 2}`,
+            text: "Would you like me to connect you with our customer support team?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quick_reply'
+          };
+          setMessages(prev => [...prev, escalationMessage]);
+        }, 1000);
+      }
+    }, 1500);
+  };
+
+  const escalateToAdmin = async () => {
+    if (!userEmail && !showEmailInput) {
+      setShowEmailInput(true);
+      return;
+    }
+
+    if (!userEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please provide your email for follow-up support",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      const response = await fetch('/api/super-admin/chatbot-message', {
+      const response = await fetch('/api/chatbot/escalate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: `**Chatbot Inquiry - ${category}**\n\nUser Question: "${userQuestion}"\n\nCategory: ${category}\nTimestamp: ${new Date().toLocaleString()}\n\nPlease respond to this user inquiry when available.`,
-          type: 'chatbot_inquiry',
-          metadata: {
-            originalQuestion: userQuestion,
-            category: category,
-            timestamp: new Date().toISOString()
-          }
-        })
+          sessionId,
+          userEmail,
+          messages: messages.slice(-5), // Send last 5 messages for context
+          adminOnlineStatus
+        }),
       });
 
       if (response.ok) {
-        toast({
-          title: "Message Forwarded",
-          description: "Your question has been sent to our admin team. They'll respond soon!",
-        });
+        setIsEscalated(true);
+        setShowEmailInput(false);
         
-        addBotMessage({
-          content: "✅ **Your message has been forwarded to our super admin team!**\n\nThey'll review your question and respond through the notification system. You can check for responses by:\n\n• Visiting our platform dashboard\n• Looking for notification updates\n• Checking back in a few hours\n\nIs there anything else I can help you with right now?",
-          actions: [
-            { label: "Visit Dashboard", action: "navigate", url: "/dashboard" },
-            { label: "Browse Events", action: "navigate", url: "/guest-lookup" }
-          ]
+        const statusMessage: Message = {
+          id: `msg_${Date.now()}`,
+          text: adminOnlineStatus 
+            ? "🟢 Great! I've connected you with our customer support team. An admin is online and will respond shortly."
+            : "🟡 I've forwarded your question to our customer support team. An admin will respond to your email once they're online. You can continue chatting here and they'll see your messages.",
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'escalation'
+        };
+        
+        setMessages(prev => [...prev, statusMessage]);
+        
+        toast({
+          title: "Connected to Support",
+          description: adminOnlineStatus ? "Admin is online and will respond soon" : "Your message has been forwarded to support",
         });
       } else {
-        throw new Error('Failed to forward message');
+        throw new Error('Failed to escalate');
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to forward message. Please try again or contact support directly.",
+        title: "Connection Failed",
+        description: "Unable to connect to support. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendToAdmin = async (message: string) => {
+    try {
+      const response = await fetch('/api/chatbot/send-to-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId,
+          message,
+          userEmail
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
       
-      addBotMessage({
-        content: "❌ **Sorry, I couldn't forward your message right now.**\n\nPlease try one of these alternatives:\n\n• Try again in a few moments\n• Contact support directly through our platform\n• Visit our help section for common questions",
-        actions: [
-          { label: "Try Again", action: "forward", url: "general-inquiry" },
-          { label: "Visit Help", action: "navigate", url: "/landing#features" }
-        ]
+      // Poll for admin responses
+      pollForAdminResponse();
+    } catch (error) {
+      toast({
+        title: "Message Failed",
+        description: "Unable to send message to support",
+        variant: "destructive"
       });
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
-
-    const userQuestion = inputValue.trim();
-    setInputValue('');
-    setIsLoading(true);
-
-    // Add user message
-    addUserMessage(userQuestion);
-
-    // Simulate thinking time
-    setTimeout(() => {
-      const response = findBestResponse(userQuestion);
-      addBotMessage(response);
-      setIsLoading(false);
-    }, 1000);
-  };
-
-  const handleActionClick = async (action: any) => {
-    if (action.action === 'navigate' && action.url) {
-      window.open(action.url, '_blank');
-    } else if (action.action === 'topic') {
-      const topicData = EventValidateKnowledgeBase[action.url as keyof typeof EventValidateKnowledgeBase];
-      if (topicData) {
-        addBotMessage(topicData.responses[0]);
+  const pollForAdminResponse = async () => {
+    try {
+      const response = await fetch(`/api/chatbot/admin-response/${sessionId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.hasNewMessages) {
+          data.messages.forEach((msg: any) => {
+            const adminMessage: Message = {
+              id: `msg_${Date.now()}_${Math.random()}`,
+              text: msg.text,
+              sender: 'admin',
+              timestamp: new Date(msg.timestamp),
+              type: 'text'
+            };
+            setMessages(prev => [...prev, adminMessage]);
+          });
+        }
       }
-    } else if (action.action === 'forward') {
-      const lastUserMessage = messages.filter(m => m.type === 'user').pop();
-      if (lastUserMessage) {
-        await forwardToSuperAdmin(lastUserMessage.content, action.url);
-      }
+    } catch (error) {
+      console.error('Error polling for admin response:', error);
+    }
+    
+    // Continue polling if escalated
+    if (isEscalated) {
+      setTimeout(pollForAdminResponse, 3000);
     }
   };
 
-  const formatMessageContent = (content: string) => {
-    return content.split('\n').map((line, index) => {
-      // Handle bold text
-      const boldFormatted = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      // Handle bullet points
-      const bulletFormatted = boldFormatted.replace(/^• /, '• ');
-      
-      return (
-        <div key={index} className={line.startsWith('•') ? 'ml-2' : ''}>
-          <span dangerouslySetInnerHTML={{ __html: bulletFormatted }} />
-        </div>
-      );
-    });
+  const closeChat = () => {
+    localStorage.removeItem('chatbot_session_id');
+    localStorage.removeItem('chatbot_messages');
+    setIsOpen(false);
+    setMessages([]);
+    setIsEscalated(false);
+    setShowEmailInput(false);
+    setUserEmail("");
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
   if (!isOpen) {
     return (
-      <div className={cn("fixed bottom-6 right-6 z-50", className)}>
+      <div className="fixed bottom-6 right-6 z-50">
         <Button
           onClick={() => setIsOpen(true)}
-          size="lg"
-          className="rounded-full h-14 w-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200"
+          className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
         >
           <MessageCircle className="h-6 w-6" />
         </Button>
@@ -295,123 +390,164 @@ const ChatbotComponent: React.FC<ChatbotProps> = ({ className }) => {
   }
 
   return (
-    <div className={cn("fixed bottom-6 right-6 z-50", className)}>
-      <Card className="w-80 sm:w-96 h-[500px] shadow-2xl border-0 bg-white dark:bg-gray-900">
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Bot className="h-5 w-5" />
-              <CardTitle className="text-lg">EventValidate Assistant</CardTitle>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-              className="text-white hover:bg-white/20 h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+    <div className={cn(
+      "fixed bottom-6 right-6 z-50 bg-white rounded-lg shadow-2xl border",
+      isMinimized ? "w-80 h-16" : "w-96 h-[600px]"
+    )}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-blue-600 text-white rounded-t-lg">
+        <div className="flex items-center gap-2">
+          <Bot className="h-5 w-5" />
+          <div>
+            <div className="font-semibold">EventValidate Support</div>
+            {isEscalated && (
+              <div className="text-xs flex items-center gap-1">
+                <div className={cn(
+                  "w-2 h-2 rounded-full",
+                  adminOnlineStatus ? "bg-green-400" : "bg-yellow-400"
+                )} />
+                {adminOnlineStatus ? "Admin Online" : "Admin Offline"}
+              </div>
+            )}
           </div>
-          <Badge variant="secondary" className="w-fit bg-white/20 text-white border-0">
-            Online • Ready to help
-          </Badge>
-        </CardHeader>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="text-white hover:bg-blue-700 p-1"
+          >
+            {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={closeChat}
+            className="text-white hover:bg-blue-700 p-1"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
-        <CardContent className="p-0 h-[380px] flex flex-col">
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {messages.map((message) => (
+      {!isMinimized && (
+        <>
+          {/* Messages */}
+          <div className="flex-1 p-4 overflow-y-auto h-[480px] space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={cn(
+                  "flex gap-2",
+                  message.sender === 'user' ? "justify-end" : "justify-start"
+                )}
+              >
+                {message.sender !== 'user' && (
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs",
+                    message.sender === 'bot' ? "bg-blue-600" : "bg-green-600"
+                  )}>
+                    {message.sender === 'bot' ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                  </div>
+                )}
                 <div
-                  key={message.id}
                   className={cn(
-                    "flex gap-2",
-                    message.type === 'user' ? 'justify-end' : 'justify-start'
+                    "max-w-[80%] p-3 rounded-lg text-sm",
+                    message.sender === 'user' 
+                      ? "bg-blue-600 text-white ml-auto" 
+                      : message.sender === 'admin'
+                      ? "bg-green-100 text-green-800 border border-green-200"
+                      : "bg-gray-100 text-gray-800"
                   )}
                 >
-                  {message.type === 'bot' && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center">
-                      <Bot className="h-4 w-4 text-white" />
-                    </div>
-                  )}
-                  
+                  <div className="whitespace-pre-wrap">{message.text}</div>
                   <div className={cn(
-                    "max-w-[80%] rounded-lg p-3 text-sm",
-                    message.type === 'user' 
-                      ? "bg-blue-600 text-white" 
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    "text-xs mt-1 opacity-70",
+                    message.sender === 'user' ? "text-blue-100" : "text-gray-500"
                   )}>
-                    <div className="whitespace-pre-wrap">
-                      {formatMessageContent(message.content)}
-                    </div>
-                    
-                    {message.actions && message.actions.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {message.actions.map((action, index) => (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleActionClick(action)}
-                            className="w-full justify-start text-xs"
-                          >
-                            {action.action === 'navigate' && <ExternalLink className="h-3 w-3 mr-1" />}
-                            {action.label}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {message.type === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                      <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="ml-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
+                    {message.timestamp.toLocaleTimeString()}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            ))}
+            
+            {isTyping && (
+              <div className="flex gap-2">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <div className="bg-gray-100 p-3 rounded-lg">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
-          </ScrollArea>
+          </div>
 
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex space-x-2">
+          {/* Quick Action Buttons */}
+          {!isEscalated && messages.length > 1 && (
+            <div className="px-4 py-2 border-t">
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={escalateToAdmin}
+                  disabled={isLoading}
+                  className="text-xs"
+                >
+                  <Phone className="h-3 w-3 mr-1" />
+                  Contact Support
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Email Input */}
+          {showEmailInput && (
+            <div className="p-4 border-t bg-gray-50">
+              <div className="text-sm font-medium mb-2">Your Email (for follow-up)</div>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  className="text-sm"
+                />
+                <Button
+                  onClick={escalateToAdmin}
+                  disabled={isLoading || !userEmail}
+                  size="sm"
+                >
+                  Connect
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Input */}
+          <div className="p-4 border-t">
+            <div className="flex gap-2">
               <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Ask me anything about EventValidate..."
+                placeholder={isEscalated ? "Message customer support..." : "Type your message..."}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="flex-1"
-                disabled={isLoading}
               />
-              <Button
-                onClick={handleSendMessage}
-                size="sm"
-                disabled={isLoading || !inputValue.trim()}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-              >
+              <Button onClick={sendMessage} disabled={!inputText.trim() || isTyping}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </>
+      )}
     </div>
   );
-};
-
-export default ChatbotComponent;
+}
