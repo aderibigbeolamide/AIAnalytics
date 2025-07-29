@@ -597,7 +597,7 @@ export default function ChatbotComponent() {
       ref={chatRef}
       className={cn(
         "fixed bottom-6 right-6 z-50 bg-white rounded-lg shadow-2xl border",
-        isMinimized ? "w-80 h-16" : "w-96 h-[600px]"
+        isMinimized ? "w-80 h-16" : "w-80 h-[450px] max-h-[80vh]"
       )}
     >
       {/* Header */}
@@ -640,7 +640,7 @@ export default function ChatbotComponent() {
       {!isMinimized && (
         <>
           {/* Messages */}
-          <div className="flex-1 p-4 overflow-y-auto h-[480px] space-y-4">
+          <div className="flex-1 p-3 overflow-y-auto h-[320px] space-y-3">
             {messages.map((message) => (
               <div key={message.id}>
                 {message.type === 'quick_actions' ? (
@@ -649,15 +649,15 @@ export default function ChatbotComponent() {
                     <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs">
                       <Bot className="h-4 w-4" />
                     </div>
-                    <div className="max-w-[80%]">
-                      <div className="bg-gray-100 p-3 rounded-lg text-sm">
-                        <div className="text-xs font-medium mb-3 text-gray-600">Choose what you need help with:</div>
-                        <div className="grid grid-cols-1 gap-2">
+                    <div className="max-w-[85%]">
+                      <div className="bg-gray-100 p-2 rounded-lg text-sm">
+                        <div className="text-xs font-medium mb-2 text-gray-600">Choose what you need help with:</div>
+                        <div className="grid grid-cols-1 gap-1">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleQuickAction('organization_register')}
-                            className="text-xs h-8 justify-start text-left w-full"
+                            className="text-xs h-7 justify-start text-left w-full"
                           >
                             🏢 How to register my organization?
                           </Button>
@@ -665,7 +665,7 @@ export default function ChatbotComponent() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleQuickAction('user_register')}
-                            className="text-xs h-8 justify-start text-left w-full"
+                            className="text-xs h-7 justify-start text-left w-full"
                           >
                             🎫 How to register for an event?
                           </Button>
@@ -673,7 +673,7 @@ export default function ChatbotComponent() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleQuickAction('buy_ticket')}
-                            className="text-xs h-8 justify-start text-left w-full"
+                            className="text-xs h-7 justify-start text-left w-full"
                           >
                             🎟️ How to buy a ticket?
                           </Button>
@@ -681,7 +681,7 @@ export default function ChatbotComponent() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleQuickAction('validate_event')}
-                            className="text-xs h-8 justify-start text-left w-full"
+                            className="text-xs h-7 justify-start text-left w-full"
                           >
                             ✅ How to validate for an event?
                           </Button>
@@ -689,7 +689,7 @@ export default function ChatbotComponent() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleQuickAction('explore_features')}
-                            className="text-xs h-8 justify-start text-left w-full"
+                            className="text-xs h-7 justify-start text-left w-full"
                           >
                             🔍 How to explore platform features?
                           </Button>
@@ -697,7 +697,7 @@ export default function ChatbotComponent() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleQuickAction('contact_support')}
-                            className="text-xs h-8 justify-start text-left w-full"
+                            className="text-xs h-7 justify-start text-left w-full"
                           >
                             📞 Contact customer support
                           </Button>
