@@ -4,6 +4,7 @@ import { authenticateToken, type AuthenticatedRequest } from "./mongo-auth-route
 import multer from "multer";
 import { nanoid } from "nanoid";
 import QRCode from "qrcode";
+import { NotificationService } from "./notification-service";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -400,6 +401,308 @@ export function registerMongoRoutes(app: Express) {
     } catch (error) {
       console.error("Error uploading face photo:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ================ PAYMENT ENDPOINTS ================
+
+  // Initialize payment for event registration
+  app.post("/api/payment/initialize", async (req: Request, res: Response) => {
+    try {
+      const { eventId, email, registrationData, amount, currency = "NGN" } = req.body;
+
+      if (!eventId || !email || !amount) {
+        return res.status(400).json({ message: "Event ID, email, and amount are required" });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEventById(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Initialize Paystack payment
+      const { initializePaystackPayment } = await import('./paystack');
+      
+      const reference = `REG_${Date.now()}_${nanoid(8)}`;
+      
+      const paymentData = await initializePaystackPayment({
+        email,
+        amount: amount * 100, // Convert to kobo for NGN
+        reference,
+        currency,
+        metadata: {
+          eventId,
+          eventName: event.name,
+          userEmail: email,
+          registrationData: JSON.stringify(registrationData),
+          type: 'event_registration'
+        }
+      });
+
+      if (paymentData.status) {
+        res.json({
+          success: true,
+          authorization_url: paymentData.data.authorization_url,
+          reference: paymentData.data.reference
+        });
+      } else {
+        res.status(400).json({ message: "Payment initialization failed" });
+      }
+    } catch (error) {
+      console.error("Payment initialization error:", error);
+      res.status(500).json({ message: "Payment initialization failed" });
+    }
+  });
+
+  // Verify payment for event registration
+  app.get("/api/payment/verify/:reference", async (req: Request, res: Response) => {
+    try {
+      const { reference } = req.params;
+
+      // Verify payment with Paystack
+      const { verifyPaystackPayment } = await import('./paystack');
+      const verificationData = await verifyPaystackPayment(reference);
+
+      if (verificationData.status && verificationData.data.status === 'success') {
+        const metadata = verificationData.data.metadata;
+        const eventId = metadata.eventId;
+        const registrationData = JSON.parse(metadata.registrationData);
+        const amount = verificationData.data.amount / 100; // Convert from kobo
+        const currency = verificationData.data.currency;
+
+        // Get event details
+        const event = await mongoStorage.getEventById(eventId);
+        if (!event) {
+          return res.status(404).json({ message: "Event not found" });
+        }
+
+        // Create the registration
+        const registrationId = nanoid(12);
+        const qrData = {
+          registrationId,
+          eventId,
+          timestamp: Date.now(),
+          type: registrationData.registrationType || 'member'
+        };
+
+        // Generate QR code
+        const qrCodeData = JSON.stringify(qrData);
+        const qrCodeImage = await QRCode.toDataURL(qrCodeData);
+
+        // Create registration with payment data
+        const registration = await mongoStorage.createEventRegistration({
+          ...registrationData,
+          eventId,
+          registrationId,
+          paymentStatus: 'paid',
+          paymentReference: reference,
+          paymentAmount: amount,
+          paymentCurrency: currency,
+          qrCode: qrCodeImage,
+          status: 'confirmed',
+          paymentMethod: 'paystack',
+          createdAt: new Date()
+        });
+
+        // Send payment notification to organization admin
+        await NotificationService.createPaymentNotification(
+          event.organizationId.toString(),
+          eventId,
+          amount,
+          currency,
+          registrationData.firstName + ' ' + registrationData.lastName,
+          'event_registration'
+        );
+
+        // Send registration notification
+        await NotificationService.createRegistrationNotification(
+          event.organizationId.toString(),
+          eventId,
+          registration._id.toString(),
+          registrationData.firstName + ' ' + registrationData.lastName,
+          registrationData.registrationType || 'member'
+        );
+
+        res.json({
+          success: true,
+          message: "Payment verified and registration completed",
+          registration: {
+            id: registration._id.toString(),
+            ...registration.toObject(),
+            qrCode: qrCodeImage
+          }
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Payment verification failed"
+        });
+      }
+    } catch (error) {
+      console.error("Payment verification error:", error);
+      res.status(500).json({ message: "Payment verification failed" });
+    }
+  });
+
+  // Initialize ticket purchase payment
+  app.post("/api/tickets/initialize-payment", async (req: Request, res: Response) => {
+    try {
+      const { ticketId } = req.body;
+
+      if (!ticketId) {
+        return res.status(400).json({ message: "Ticket ID is required" });
+      }
+
+      // Get ticket details
+      const ticket = await mongoStorage.getTicketById(ticketId);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEventById(ticket.eventId.toString());
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Initialize Paystack payment
+      const { initializePaystackPayment } = await import('./paystack');
+      
+      const reference = `TKT_${Date.now()}_${nanoid(8)}`;
+      
+      const paymentData = await initializePaystackPayment({
+        email: ticket.ownerEmail,
+        amount: ticket.price * 100, // Convert to kobo
+        reference,
+        currency: ticket.currency,
+        metadata: {
+          ticketId: ticket._id.toString(),
+          eventId: ticket.eventId.toString(),
+          eventName: event.name,
+          ticketNumber: ticket.ticketNumber,
+          type: 'ticket_purchase'
+        }
+      });
+
+      if (paymentData.status) {
+        res.json({
+          success: true,
+          authorization_url: paymentData.data.authorization_url,
+          reference: paymentData.data.reference
+        });
+      } else {
+        res.status(400).json({ message: "Payment initialization failed" });
+      }
+    } catch (error) {
+      console.error("Ticket payment initialization error:", error);
+      res.status(500).json({ message: "Ticket payment initialization failed" });
+    }
+  });
+
+  // Verify ticket payment
+  app.get("/api/tickets/verify-payment/:reference", async (req: Request, res: Response) => {
+    try {
+      const { reference } = req.params;
+
+      // Verify payment with Paystack
+      const { verifyPaystackPayment } = await import('./paystack');
+      const verificationData = await verifyPaystackPayment(reference);
+
+      if (verificationData.status && verificationData.data.status === 'success') {
+        const metadata = verificationData.data.metadata;
+        const ticketId = metadata.ticketId;
+        const amount = verificationData.data.amount / 100; // Convert from kobo
+
+        // Update ticket payment status
+        const updatedTicket = await mongoStorage.updateTicket(ticketId, {
+          paymentStatus: 'paid',
+          paymentReference: reference,
+          status: 'paid'
+        });
+
+        if (!updatedTicket) {
+          return res.status(404).json({ message: "Ticket not found" });
+        }
+
+        // Get event details for notification
+        const event = await mongoStorage.getEventById(updatedTicket.eventId.toString());
+        if (event) {
+          // Send payment notification to organization admin
+          await NotificationService.createPaymentNotification(
+            event.organizationId.toString(),
+            event._id.toString(),
+            amount,
+            updatedTicket.currency,
+            updatedTicket.ownerName,
+            'ticket_purchase'
+          );
+        }
+
+        res.json({
+          success: true,
+          message: "Payment verified successfully",
+          ticket: {
+            id: updatedTicket._id.toString(),
+            ...updatedTicket.toObject()
+          }
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Payment verification failed"
+        });
+      }
+    } catch (error) {
+      console.error("Ticket payment verification error:", error);
+      res.status(500).json({ message: "Failed to verify payment" });
+    }
+  });
+
+  // Manual payment verification (for receipt uploads)
+  app.post("/api/payment/verify-manual", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { registrationId, status = 'paid' } = req.body;
+
+      if (!registrationId) {
+        return res.status(400).json({ message: "Registration ID is required" });
+      }
+
+      // Update registration payment status
+      const updatedRegistration = await mongoStorage.updateEventRegistration(registrationId, {
+        paymentStatus: status,
+        paymentMethod: 'manual',
+        status: status === 'paid' ? 'confirmed' : 'pending'
+      });
+
+      if (!updatedRegistration) {
+        return res.status(404).json({ message: "Registration not found" });
+      }
+
+      // Get event details for notification
+      const event = await mongoStorage.getEventById(updatedRegistration.eventId.toString());
+      if (event && status === 'paid') {
+        // Send payment notification
+        await NotificationService.createPaymentNotification(
+          event.organizationId.toString(),
+          event._id.toString(),
+          updatedRegistration.paymentAmount || 0,
+          updatedRegistration.paymentCurrency || 'NGN',
+          updatedRegistration.firstName + ' ' + updatedRegistration.lastName,
+          'event_registration'
+        );
+      }
+
+      res.json({ 
+        message: `Payment ${status} successfully`,
+        registration: {
+          id: updatedRegistration._id.toString(),
+          ...updatedRegistration.toObject()
+        }
+      });
+    } catch (error) {
+      console.error('Manual payment verification error:', error);
+      res.status(500).json({ message: "Payment verification failed" });
     }
   });
 

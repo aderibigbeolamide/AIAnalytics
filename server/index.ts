@@ -5,6 +5,7 @@ import { registerMongoAuthRoutes } from "./mongo-auth-routes";
 import { registerMongoSuperAdminRoutes } from "./mongo-super-admin-routes";
 import { registerMongoDashboardRoutes } from "./mongo-dashboard-routes";
 import { registerMongoRoutes } from "./mongo-routes";
+import { setupNotificationRoutes } from "./notification-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
 import { connectToMongoDB } from "./mongodb";
@@ -60,6 +61,7 @@ app.use((req, res, next) => {
   registerMongoSuperAdminRoutes(app);
   registerMongoDashboardRoutes(app);
   registerMongoRoutes(app);
+  setupNotificationRoutes(app);
   
   // Create HTTP server directly since legacy routes disabled
   const server = createServer(app);

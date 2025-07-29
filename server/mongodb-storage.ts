@@ -1,6 +1,6 @@
 import { 
-  Organization, User, Member, Event, EventRegistration,
-  type IOrganization, type IUser, type IMember, type IEvent, type IEventRegistration,
+  Organization, User, Member, Event, EventRegistration, Ticket,
+  type IOrganization, type IUser, type IMember, type IEvent, type IEventRegistration, type ITicket,
   type InsertOrganization, type InsertUser, type InsertEvent
 } from "@shared/mongoose-schema";
 import mongoose from 'mongoose';
@@ -52,6 +52,14 @@ export interface IMongoStorage {
   getMemberRegistrations(memberId: string): Promise<IEventRegistration[]>;
   createEventRegistration(registration: Partial<IEventRegistration>): Promise<IEventRegistration>;
   updateEventRegistration(id: string, updates: Partial<IEventRegistration>): Promise<IEventRegistration | null>;
+
+  // Tickets
+  getTicket(id: string): Promise<ITicket | null>;
+  getTicketById(id: string): Promise<ITicket | null>;
+  getTicketByNumber(ticketNumber: string): Promise<ITicket | null>;
+  getTickets(filters?: { eventId?: string; status?: string; paymentStatus?: string }): Promise<ITicket[]>;
+  createTicket(ticket: Partial<ITicket>): Promise<ITicket>;
+  updateTicket(id: string, updates: Partial<ITicket>): Promise<ITicket | null>;
 }
 
 export class MongoStorage implements IMongoStorage {
@@ -404,6 +412,69 @@ export class MongoStorage implements IMongoStorage {
       return await EventRegistration.findByIdAndUpdate(id, updates, { new: true }).populate('eventId memberId validatedBy');
     } catch (error) {
       console.error('Error updating event registration:', error);
+      return null;
+    }
+  }
+
+  // Tickets
+  async getTicket(id: string): Promise<ITicket | null> {
+    try {
+      return await Ticket.findById(id).populate('eventId organizationId validatedBy');
+    } catch (error) {
+      console.error('Error getting ticket:', error);
+      return null;
+    }
+  }
+
+  async getTicketById(id: string): Promise<ITicket | null> {
+    return this.getTicket(id);
+  }
+
+  async getTicketByNumber(ticketNumber: string): Promise<ITicket | null> {
+    try {
+      return await Ticket.findOne({ ticketNumber }).populate('eventId organizationId validatedBy');
+    } catch (error) {
+      console.error('Error getting ticket by number:', error);
+      return null;
+    }
+  }
+
+  async getTickets(filters?: { eventId?: string; status?: string; paymentStatus?: string }): Promise<ITicket[]> {
+    try {
+      const query: any = {};
+      
+      if (filters?.eventId) {
+        query.eventId = new mongoose.Types.ObjectId(filters.eventId);
+      }
+      if (filters?.status) {
+        query.status = filters.status;
+      }
+      if (filters?.paymentStatus) {
+        query.paymentStatus = filters.paymentStatus;
+      }
+      
+      return await Ticket.find(query).populate('eventId organizationId validatedBy').sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting tickets:', error);
+      return [];
+    }
+  }
+
+  async createTicket(ticket: Partial<ITicket>): Promise<ITicket> {
+    try {
+      const newTicket = new Ticket(ticket);
+      return await newTicket.save();
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+      throw error;
+    }
+  }
+
+  async updateTicket(id: string, updates: Partial<ITicket>): Promise<ITicket | null> {
+    try {
+      return await Ticket.findByIdAndUpdate(id, updates, { new: true }).populate('eventId organizationId validatedBy');
+    } catch (error) {
+      console.error('Error updating ticket:', error);
       return null;
     }
   }

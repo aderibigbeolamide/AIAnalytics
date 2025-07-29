@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationBell } from "@/components/ui/notification-bell";
 
 export function Navbar() {
   const { user, member, logout } = useAuthStore();
@@ -96,9 +97,7 @@ export function Navbar() {
           {/* Desktop Right Side */}
           <div className="hidden md:flex items-center space-x-4">
             <ThemeToggle />
-            <Button variant="ghost" size="sm">
-              <Bell className="h-5 w-5" />
-            </Button>
+            {user && <NotificationBell />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2">

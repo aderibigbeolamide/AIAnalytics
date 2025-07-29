@@ -334,11 +334,103 @@ const EventRegistrationSchema = new Schema<IEventRegistration>({
 }, { timestamps: true });
 
 // Export the models
+// Notification Schema
+export interface INotification extends Document {
+  organizationId: mongoose.Types.ObjectId;
+  recipientId: mongoose.Types.ObjectId; // User ID who will receive the notification
+  senderId?: mongoose.Types.ObjectId; // User ID who sent the notification (for super admin messages)
+  type: string; // payment_received, ticket_purchased, event_registration, super_admin_message, system_alert
+  title: string;
+  message: string;
+  data?: any; // Additional data (event details, payment info, etc.)
+  priority: string; // low, medium, high, urgent
+  isRead: boolean;
+  readAt?: Date;
+  actionUrl?: string; // URL to navigate when notification is clicked
+  actionLabel?: string; // Button text for action
+  expiresAt?: Date; // When notification should be auto-deleted
+  category: string; // payments, events, messages, system
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const NotificationSchema = new Schema<INotification>({
+  organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
+  recipientId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  senderId: { type: Schema.Types.ObjectId, ref: 'User' },
+  type: { type: String, required: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  data: { type: Schema.Types.Mixed },
+  priority: { type: String, required: true, default: "medium" },
+  isRead: { type: Boolean, required: true, default: false },
+  readAt: { type: Date },
+  actionUrl: { type: String },
+  actionLabel: { type: String },
+  expiresAt: { type: Date },
+  category: { type: String, required: true },
+}, { timestamps: true });
+
+// Add indexes for performance
+NotificationSchema.index({ recipientId: 1, isRead: 1, createdAt: -1 });
+NotificationSchema.index({ organizationId: 1, createdAt: -1 });
+NotificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+// Ticket Schema (for ticket-based events)
+export interface ITicket extends Document {
+  eventId: mongoose.Types.ObjectId;
+  organizationId: mongoose.Types.ObjectId;
+  ownerEmail: string;
+  ownerPhone?: string;
+  ownerName: string;
+  ticketNumber: string;
+  category: string;
+  price: number;
+  currency: string;
+  status: string; // pending, paid, cancelled, used
+  paymentStatus: string; // pending, paid, failed, refunded
+  paymentReference?: string;
+  paymentMethod?: string;
+  qrCode: string;
+  validatedAt?: Date;
+  validatedBy?: mongoose.Types.ObjectId;
+  transferHistory: Array<{
+    fromEmail?: string;
+    toEmail: string;
+    transferredAt: Date;
+    reason?: string;
+  }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const TicketSchema = new Schema<ITicket>({
+  eventId: { type: Schema.Types.ObjectId, ref: 'Event', required: true },
+  organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
+  ownerEmail: { type: String, required: true },
+  ownerPhone: { type: String },
+  ownerName: { type: String, required: true },
+  ticketNumber: { type: String, required: true, unique: true },
+  category: { type: String, required: true },
+  price: { type: Number, required: true },
+  currency: { type: String, required: true, default: "NGN" },
+  status: { type: String, required: true, default: "pending" },
+  paymentStatus: { type: String, required: true, default: "pending" },
+  paymentReference: { type: String },
+  paymentMethod: { type: String },
+  qrCode: { type: String, required: true },
+  validatedAt: { type: Date },
+  validatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  transferHistory: [{ type: Schema.Types.Mixed }],
+}, { timestamps: true });
+
 export const Organization = mongoose.model<IOrganization>('Organization', OrganizationSchema);
 export const User = mongoose.model<IUser>('User', UserSchema);
 export const Member = mongoose.model<IMember>('Member', MemberSchema);
 export const Event = mongoose.model<IEvent>('Event', EventSchema);
 export const EventRegistration = mongoose.model<IEventRegistration>('EventRegistration', EventRegistrationSchema);
+export const Notification = mongoose.model<INotification>('Notification', NotificationSchema);
+export const Ticket = mongoose.model<ITicket>('Ticket', TicketSchema);
 
 // Zod schemas for validation
 export const insertOrganizationSchema = z.object({
