@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = 'mongodb+srv://hafiztech56:eventdb@eventdb.b5av4hv.mongodb.net/eventvalidate?retryWrites=true&w=majority';
+// Use environment variable for MongoDB URI with fallback for development
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://hafiztech56:eventdb@eventdb.b5av4hv.mongodb.net/eventvalidate?retryWrites=true&w=majority';
 
 console.log("Connecting to MongoDB...");
 
