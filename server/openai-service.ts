@@ -4,9 +4,9 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ 
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY 
-});
+}) : null;
 
 interface EventValidateContext {
   userType: 'organization' | 'member' | 'guest' | 'general';
@@ -20,6 +20,13 @@ export class OpenAIService {
     userMessage: string, 
     context: EventValidateContext
   ): Promise<{ response: string; suggestedActions?: string[] }> {
+    if (!openai) {
+      return {
+        response: "I apologize, but AI chat functionality is currently unavailable. Please contact our support team for assistance with your request.",
+        suggestedActions: ["Contact Support", "Visit Help Center"]
+      };
+    }
+
     try {
       const systemPrompt = this.buildSystemPrompt(context);
       
@@ -56,6 +63,13 @@ export class OpenAIService {
     userPreferences: any,
     availableEvents: any[]
   ): Promise<{ recommendations: any[]; reasoning: string }> {
+    if (!openai) {
+      return { 
+        recommendations: availableEvents.map(event => ({ id: event.id, score: 0.5 })), 
+        reasoning: "AI recommendations are currently unavailable. Showing all available events." 
+      };
+    }
+
     try {
       const prompt = `Based on user preferences and available events, provide personalized event recommendations.
       
@@ -80,6 +94,10 @@ export class OpenAIService {
   }
 
   static async generateEventDescription(eventData: any): Promise<string> {
+    if (!openai) {
+      return "Event description not available. AI description generation is currently unavailable.";
+    }
+
     try {
       const prompt = `Create an engaging event description based on this event data: ${JSON.stringify(eventData)}
       
