@@ -133,6 +133,7 @@ export default function ChatbotComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   const scrollToBottom = () => {
@@ -145,36 +146,39 @@ export default function ChatbotComponent() {
 
   useEffect(() => {
     if (isOpen && !sessionId) {
-      // Generate session ID and initialize welcome message
+      // Generate session ID and initialize welcome message only if no existing messages
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       setSessionId(newSessionId);
+      localStorage.setItem('chatbot_session_id', newSessionId);
       
-      // Always show welcome messages and FAQ buttons when opening chat
-      const welcomeMessage: Message = {
-        id: `msg_${Date.now()}`,
-        text: "👋 Hi! How can we help?",
-        sender: 'bot',
-        timestamp: new Date(),
-        type: 'text'
-      };
-      
-      const faqMessage: Message = {
-        id: `msg_${Date.now() + 1}`,
-        text: "Here are some quick help options:",
-        sender: 'bot',
-        timestamp: new Date(),
-        type: 'text'
-      };
-      
-      const quickActionsMessage: Message = {
-        id: `msg_${Date.now() + 2}`,
-        text: "", // Empty text as we'll use the type to render buttons
-        sender: 'bot',
-        timestamp: new Date(),
-        type: 'quick_actions'
-      };
-      
-      setMessages([welcomeMessage, faqMessage, quickActionsMessage]);
+      // Only show welcome messages if no existing chat history
+      if (messages.length === 0) {
+        const welcomeMessage: Message = {
+          id: `msg_${Date.now()}`,
+          text: "👋 Hi! How can we help?",
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'text'
+        };
+        
+        const faqMessage: Message = {
+          id: `msg_${Date.now() + 1}`,
+          text: "Here are some quick help options:",
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'text'
+        };
+        
+        const quickActionsMessage: Message = {
+          id: `msg_${Date.now() + 2}`,
+          text: "", // Empty text as we'll use the type to render buttons
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'quick_actions'
+        };
+        
+        setMessages([welcomeMessage, faqMessage, quickActionsMessage]);
+      }
       
       // Check admin status
       checkAdminStatus();
@@ -183,15 +187,42 @@ export default function ChatbotComponent() {
       const statusInterval = setInterval(checkAdminStatus, 30000); // Check every 30 seconds
       return () => clearInterval(statusInterval);
     }
-  }, [isOpen, sessionId]);
+  }, [isOpen, sessionId, messages.length]);
 
   useEffect(() => {
-    // Initialize session only if chat is not yet opened
-    if (!isOpen) {
-      const existingSessionId = localStorage.getItem('chatbot_session_id');
-      if (existingSessionId) {
-        setSessionId(existingSessionId);
+    // Initialize session and restore chat history on component mount
+    const existingSessionId = localStorage.getItem('chatbot_session_id');
+    const savedMessages = localStorage.getItem('chatbot_messages');
+    const savedEscalationState = localStorage.getItem('chatbot_escalated');
+    const savedUserEmail = localStorage.getItem('chatbot_user_email');
+    
+    if (existingSessionId) {
+      setSessionId(existingSessionId);
+    }
+    
+    // Restore chat history if it exists
+    if (savedMessages) {
+      try {
+        const parsedMessages = JSON.parse(savedMessages);
+        // Convert timestamp strings back to Date objects
+        const messagesWithDates = parsedMessages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+        setMessages(messagesWithDates);
+      } catch (error) {
+        console.error('Error parsing saved messages:', error);
       }
+    }
+    
+    // Restore escalation state
+    if (savedEscalationState === 'true') {
+      setIsEscalated(true);
+    }
+    
+    // Restore user email
+    if (savedUserEmail) {
+      setUserEmail(savedUserEmail);
     }
     
     // Check admin online status
@@ -200,13 +231,22 @@ export default function ChatbotComponent() {
 
   // Start polling when escalated
   useEffect(() => {
+    // Clear any existing polling interval first
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
     if (isEscalated && sessionId) {
-      // Initial poll immediately
-      setTimeout(pollForAdminResponse, 500);
+      // Set up single polling interval using ref
+      pollingIntervalRef.current = setInterval(pollForAdminResponse, 2000);
       
-      // Set up continuous polling
-      const pollInterval = setInterval(pollForAdminResponse, 2000);
-      return () => clearInterval(pollInterval);
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      };
     }
   }, [isEscalated, sessionId]);
 
@@ -216,6 +256,35 @@ export default function ChatbotComponent() {
       localStorage.setItem('chatbot_messages', JSON.stringify(messages));
     }
   }, [messages]);
+
+  // Save escalation state to localStorage
+  useEffect(() => {
+    localStorage.setItem('chatbot_escalated', isEscalated.toString());
+  }, [isEscalated]);
+
+  // Save user email to localStorage
+  useEffect(() => {
+    if (userEmail) {
+      localStorage.setItem('chatbot_user_email', userEmail);
+    }
+  }, [userEmail]);
+
+  // Save session ID to localStorage
+  useEffect(() => {
+    if (sessionId) {
+      localStorage.setItem('chatbot_session_id', sessionId);
+    }
+  }, [sessionId]);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Click outside to close chatbot
   useEffect(() => {
@@ -562,44 +631,53 @@ export default function ChatbotComponent() {
 
   const pollForAdminResponse = async () => {
     try {
-      // Get the last message ID to avoid duplicates
-      const lastAdminMessage = messages.filter(m => m.sender === 'admin').pop();
-      const lastMessageId = lastAdminMessage?.id || '';
-      
-      const url = lastMessageId ? 
-        `/api/chatbot/admin-response/${sessionId}?lastMessageId=${lastMessageId}` :
-        `/api/chatbot/admin-response/${sessionId}`;
-      
-      const response = await fetch(url);
+      const response = await fetch(`/api/chatbot/admin-response/${sessionId}`);
       if (response.ok) {
         const data = await response.json();
         if (data.hasNewMessages && data.messages.length > 0) {
           const newAdminMessages = data.messages.map((msg: any) => ({
-            id: msg.id || `msg_${Date.now()}_${Math.random()}`,
+            id: msg.id || `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             text: msg.text || msg.message,
             sender: 'admin' as const,
             timestamp: new Date(msg.timestamp),
             type: 'text' as const
           }));
           
-          setMessages(prev => [...prev, ...newAdminMessages]);
+          // Only add messages that don't already exist
+          setMessages(prev => {
+            const existingMessageIds = prev.map(m => m.id);
+            const trulyNewMessages = newAdminMessages.filter(msg => !existingMessageIds.includes(msg.id));
+            
+            if (trulyNewMessages.length > 0) {
+              return [...prev, ...trulyNewMessages];
+            }
+            return prev;
+          });
         }
       }
     } catch (error) {
       console.error('Error polling for admin response:', error);
     }
-    
-    // Continue polling if escalated
-    if (isEscalated) {
-      setTimeout(pollForAdminResponse, 2000); // Poll every 2 seconds for faster response
-    }
+    // Removed the setTimeout recursive call - now handled by setInterval in useEffect
   };
 
   const closeChat = () => {
+    // Clear polling interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    
+    // Clear all chat-related localStorage data
     localStorage.removeItem('chatbot_session_id');
     localStorage.removeItem('chatbot_messages');
+    localStorage.removeItem('chatbot_escalated');
+    localStorage.removeItem('chatbot_user_email');
+    
+    // Reset all state
     setIsOpen(false);
     setMessages([]);
+    setSessionId("");
     setIsEscalated(false);
     setShowEmailInput(false);
     setUserEmail("");
