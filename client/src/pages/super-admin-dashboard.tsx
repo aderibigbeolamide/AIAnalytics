@@ -120,6 +120,17 @@ interface Organization {
   adminCount: number;
 }
 
+interface ChatSession {
+  id: string;
+  userEmail?: string;
+  isEscalated: boolean;
+  adminId?: string;
+  status: 'active' | 'resolved' | 'pending_admin';
+  messages: any[];
+  createdAt: string;
+  lastActivity: string;
+}
+
 // Notification schemas
 const broadcastMessageSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -231,6 +242,12 @@ export default function SuperAdminDashboard() {
     organizations: Organization[];
   }>({
     queryKey: ["/api/super-admin/organizations"],
+  });
+
+  // Fetch active chat sessions
+  const { data: chatSessions, refetch: refetchChatSessions } = useQuery<ChatSession[]>({
+    queryKey: ["/api/admin/chat-sessions"],
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
   // Broadcast message mutation
@@ -426,7 +443,7 @@ export default function SuperAdminDashboard() {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5 gap-1">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 gap-1">
           <TabsTrigger value="users" className="text-xs md:text-sm">
             <span className="hidden sm:inline">User Management</span>
             <span className="sm:hidden">Users</span>
@@ -441,6 +458,16 @@ export default function SuperAdminDashboard() {
             {pendingOrganizations && pendingOrganizations.total > 0 && (
               <Badge variant="destructive" className="ml-1 md:ml-2 px-1 md:px-1.5 py-0.5 text-xs">
                 {pendingOrganizations.total}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="support" className="relative text-xs md:text-sm">
+            <MessageSquare className="w-4 h-4 lg:mr-2" />
+            <span className="hidden lg:inline">Customer Support</span>
+            <span className="lg:hidden">Support</span>
+            {chatSessions && chatSessions.length > 0 && (
+              <Badge variant="destructive" className="ml-1 md:ml-2 px-1 md:px-1.5 py-0.5 text-xs">
+                {chatSessions.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -1015,6 +1042,72 @@ export default function SuperAdminDashboard() {
                   <p className="text-sm text-muted-foreground">Separation</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="support" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5" />
+                Customer Support Chat Sessions
+              </CardTitle>
+              <CardDescription>
+                Manage escalated user support requests and chat conversations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!chatSessions || chatSessions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <h3 className="text-lg font-medium mb-2">No Active Chat Sessions</h3>
+                  <p>All support requests have been resolved or no users need assistance.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {chatSessions.map((session) => (
+                    <div key={session.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                          <div>
+                            <div className="font-medium">
+                              {session.userEmail || 'Anonymous User'}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Started {new Date(session.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={session.status === 'active' ? 'default' : 'outline'}>
+                            {session.status}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            onClick={() => setLocation(`/super-admin-chat/${session.id}`)}
+                            className="ml-2"
+                          >
+                            <MessageSquare className="w-4 h-4 mr-1" />
+                            Chat
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-gray-600 mb-2">
+                        <strong>Messages:</strong> {session.messages.length}
+                      </div>
+                      
+                      {session.messages.length > 0 && (
+                        <div className="text-sm text-gray-500 italic bg-gray-50 p-2 rounded">
+                          Last message: "{session.messages[session.messages.length - 1]?.text?.substring(0, 100)}..."
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
