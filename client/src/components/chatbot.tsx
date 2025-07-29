@@ -41,46 +41,58 @@ interface ChatSession {
 
 const KNOWLEDGE_BASE = {
   greetings: [
-    "hello", "hi", "hey", "good morning", "good afternoon", "good evening"
+    "hello", "hi", "hey", "good morning", "good afternoon", "good evening", "help"
   ],
   organization_keywords: [
     "organization", "company", "business", "admin", "manage", "create event", 
-    "host event", "setup", "register organization"
+    "host event", "setup", "register organization", "org", "organize"
   ],
   user_keywords: [
     "register", "attend", "validate", "qr code", "event", "ticket", 
-    "registration", "join event"
+    "registration", "join event", "buy ticket", "purchase"
   ],
   features_keywords: [
-    "features", "what can", "how does", "capabilities", "functionality"
+    "features", "what can", "how does", "capabilities", "functionality", 
+    "explore", "tour", "overview"
   ],
   navigation_keywords: [
-    "navigate", "how to use", "guide", "help", "tutorial", "steps"
+    "navigate", "how to use", "guide", "help", "tutorial", "steps",
+    "get started", "begin"
   ],
   payment_keywords: [
-    "payment", "pay", "cost", "price", "fee", "billing", "subscription"
+    "payment", "pay", "cost", "price", "fee", "billing", "subscription",
+    "money", "charge", "bank"
+  ],
+  validation_keywords: [
+    "validate", "validation", "verify", "check in", "attendance", "entry"
+  ],
+  ticket_keywords: [
+    "ticket", "buy", "purchase", "booking", "reserve"
   ]
 };
 
 const PREDEFINED_RESPONSES = {
-  greeting: "Hello! Welcome to EventValidate! 👋 I'm here to help you understand our platform. Are you:\n\n🏢 An organization looking to manage events?\n👤 A user wanting to register for events?\n❓ Looking for general information about our features?",
+  greeting: "Hello! Welcome to EventValidate! 👋 I'm here to help you understand our platform. Choose what you need help with:\n\n🏢 Organization registration and management\n🎫 Event registration and validation\n🎟️ Buying tickets for events\n💳 Payment and billing questions\n🔍 Exploring platform features\n📞 Speaking with customer support",
   
-  organization_help: "Great! EventValidate helps organizations manage events efficiently. Here's what you can do:\n\n✅ Create and manage events\n✅ Set up QR code validation\n✅ Track member registrations\n✅ Handle payments through Paystack\n✅ Generate attendance reports\n✅ Multi-tenant organization support\n\nWould you like me to guide you through:\n• Organization registration\n• Creating your first event\n• Setting up payment processing",
+  organization_help: "Great! EventValidate helps organizations manage events efficiently. Here's what you can do:\n\n✅ Register your organization\n✅ Create and manage events\n✅ Set up QR code validation\n✅ Track member registrations\n✅ Handle payments through Paystack\n✅ Generate attendance reports\n✅ Multi-tenant organization support\n\nWould you like me to guide you through:\n• Organization registration process\n• Creating your first event\n• Setting up payment processing\n• Managing members and registrations",
   
-  user_help: "Perfect! As a user, you can easily participate in events. Here's how:\n\n✅ Find events on our public listings\n✅ Register for events using QR codes or direct links\n✅ Upload required documents (ID, photos)\n✅ Make payments for paid events\n✅ Get your personal QR code for event entry\n✅ Track your registered events\n\nWould you like help with:\n• Finding events\n• Registration process\n• Payment assistance",
+  user_help: "Perfect! As a user, you can easily participate in events. Here's how:\n\n✅ Find events on our public listings\n✅ Register for events using QR codes or direct links\n✅ Upload required documents (ID, photos)\n✅ Make payments for paid events\n✅ Get your personal QR code for event entry\n✅ Track your registered events\n\nWould you like help with:\n• Finding and joining events\n• Registration process step-by-step\n• Validation and QR codes\n• Payment assistance",
   
-  features_overview: "EventValidate offers comprehensive event management:\n\n🎯 **For Organizations:**\n• Multi-tenant event management\n• QR code generation and validation\n• Payment processing integration\n• Member database management\n• Real-time analytics and reporting\n\n👥 **For Users:**\n• Easy event discovery\n• Quick registration process\n• Secure payment options\n• Digital ticket management\n• Event reminders and updates",
+  features_overview: "EventValidate offers comprehensive event management:\n\n🎯 **For Organizations:**\n• Multi-tenant event management\n• QR code generation and validation\n• Payment processing integration\n• Member database management\n• Real-time analytics and reporting\n• AI-powered features (seat availability, recommendations)\n\n👥 **For Users:**\n• Easy event discovery\n• Quick registration process\n• Secure payment options\n• Digital ticket management\n• Event reminders and updates\n• Personalized event recommendations",
   
-  navigation_guide: "Here's how to navigate EventValidate:\n\n🏢 **Organizations:**\n1. Register your organization\n2. Complete admin verification\n3. Access your dashboard\n4. Create and manage events\n5. Monitor registrations\n\n👤 **Users:**\n1. Browse public events\n2. Click 'Register' or scan QR code\n3. Fill registration form\n4. Complete payment (if required)\n5. Get your validation QR code",
+  navigation_guide: "Here's how to navigate EventValidate:\n\n🏢 **Organizations:**\n1. Register your organization on the landing page\n2. Wait for admin approval\n3. Login to your organization dashboard\n4. Create and manage events\n5. Monitor registrations and payments\n\n👤 **Users:**\n1. Browse public events on the homepage\n2. Click 'Register' or scan QR code\n3. Fill registration form with your details\n4. Complete payment (if required)\n5. Get your validation QR code\n6. Present QR code at event for validation",
   
-  payment_info: "EventValidate uses secure payment processing:\n\n💳 **Payment Methods:**\n• Online payments via Paystack\n• Manual payment verification\n• Organization-specific bank accounts\n\n🔒 **Security:**\n• End-to-end encryption\n• PCI compliant processing\n• Multi-tenant financial separation\n\n💰 **Pricing:**\n• Free for basic event management\n• Pro plans for advanced features\n• Pay-per-event options available",
+  payment_info: "EventValidate uses secure payment processing:\n\n💳 **Payment Methods:**\n• Online payments via Paystack (Nigeria's leading payment processor)\n• Manual payment verification at events\n• Organization-specific bank accounts for direct payments\n\n🔒 **Security:**\n• Bank-level encryption\n• PCI compliant processing\n• Multi-tenant financial separation\n• No card details stored on our servers\n\n💰 **Pricing:**\n• Free for basic event management\n• Pro plans for advanced features\n• Pay-per-event options available\n• Competitive transaction fees",
   
-  default_response: "I understand you're looking for help, but I might need to connect you with our support team for a more detailed answer. Would you like me to:\n\n📞 Forward your question to our customer support?\n📖 Show you our help documentation?\n🔍 Try rephrasing your question differently?",
+  default_response: "I understand you're looking for help, but I might need to connect you with our support team for a more detailed answer. Would you like me to:\n\n📞 Forward your question to our customer support?\n📖 Show you our help documentation?\n🔍 Try rephrasing your question differently?\n\nOur support team can help with specific account issues, technical problems, and detailed guidance.",
 
   quick_actions: {
     organization_register: "How do I register my organization?",
     create_event: "How do I create an event?", 
     user_register: "How do I register for an event?",
+    buy_ticket: "How do I buy a ticket?",
+    validate_event: "How do I validate myself for an event?",
+    explore_features: "How can I explore the platform features?",
     payment_help: "How do payments work?",
     qr_validation: "How does QR code validation work?",
     contact_support: "I need to speak to someone"
@@ -88,17 +100,23 @@ const PREDEFINED_RESPONSES = {
 };
 
 const QUICK_ACTION_RESPONSES = {
-  organization_register: "To register your organization:\n\n1. Click 'Register Organization' on the landing page\n2. Fill in your organization details\n3. Wait for admin approval\n4. Once approved, you'll receive login credentials\n5. Start creating events!\n\nWould you like help with any specific step?",
+  organization_register: "To register your organization:\n\n1. Go to the EventValidate landing page\n2. Click 'Register Organization' button\n3. Fill in your organization details (name, contact info, etc.)\n4. Submit the registration form\n5. Wait for super admin approval (usually 24-48 hours)\n6. Once approved, you'll receive login credentials\n7. Login and start creating events!\n\n📧 You'll get email notifications about your approval status.\n\nWould you like help with any specific step?",
   
-  create_event: "Creating an event is easy:\n\n1. Login to your organization dashboard\n2. Click 'Create Event' in the Events section\n3. Choose between Registration Event or Ticket Event\n4. Fill in event details, dates, and requirements\n5. Set up payment options if needed\n6. Publish your event\n\nNeed help with event configuration?",
+  create_event: "Creating an event is easy:\n\n1. Login to your organization dashboard\n2. Click 'Events' in the sidebar menu\n3. Click 'Create Event' button\n4. Choose between:\n   • Registration Event (traditional with validation)\n   • Ticket Event (simplified ticket purchasing)\n5. Fill in event details (name, date, location, description)\n6. Set up payment options if needed\n7. Configure registration requirements\n8. Publish your event\n\n✅ Your event will appear in public listings immediately!\n\nNeed help with event configuration?",
   
-  user_register: "To register for an event:\n\n1. Find the event on our public listings\n2. Click 'Register' or scan the event QR code\n3. Fill in your information\n4. Upload required documents if needed\n5. Complete payment if required\n6. Get your personal QR code for event entry\n\nAny questions about the registration process?",
+  user_register: "To register for an event:\n\n1. Browse events on the homepage or public event listings\n2. Find an event you want to attend\n3. Click 'Register' button or scan the event QR code\n4. Fill in the registration form with:\n   • Your name\n   • Contact information\n   • Required documents/photos if needed\n5. Complete payment if the event requires it\n6. Get your personal QR code for event entry\n7. Save or print your QR code\n8. Present it at the event for validation\n\n📱 You can also track all your events in 'My Events' section!\n\nAny questions about the registration process?",
+
+  buy_ticket: "To buy tickets for an event:\n\n1. Browse available events on our homepage\n2. Look for events with purple 'Buy Ticket' buttons\n3. Click 'Buy Ticket' on the event you want\n4. Select your ticket category (Regular, VIP, etc.)\n5. Fill in your contact information\n6. Choose payment method:\n   • Online payment via Paystack\n   • Manual payment at the event\n7. Complete the payment process\n8. Get your digital ticket with QR code\n9. Download or save your ticket\n\n🎫 Your ticket contains all event details and validation QR code!\n\nNeed help with ticket purchasing?",
+
+  validate_event: "To validate yourself for an event:\n\n1. **After Registration:** You'll receive a personal QR code\n2. **At the Event:** Present your QR code to event staff\n3. **QR Scanning:** Staff will scan your code for instant validation\n4. **Manual Backup:** If QR fails, staff can validate using your ID number\n5. **Verification:** System checks your registration and payment status\n6. **Entry Granted:** Once validated, you're marked as attended\n\n🔐 **Security Features:**\n• Encrypted QR codes\n• Timestamp validation\n• Payment verification\n• Member database checking\n\nQuestions about the validation process?",
+
+  explore_features: "EventValidate offers many powerful features:\n\n🏢 **For Organizations:**\n• Multi-tenant event management\n• QR code generation and validation\n• Payment processing via Paystack\n• Member database management\n• Real-time analytics and reporting\n• Bank account setup for direct payments\n• CSV member validation\n• Face recognition validation\n\n👥 **For Users:**\n• Easy event discovery and registration\n• Secure payment options\n• Digital ticket management\n• QR code validation\n• Event tracking in 'My Events'\n• AI-powered event recommendations\n\n🤖 **AI Features:**\n• Seat availability heatmaps\n• Personalized event recommendations\n• Real-time occupancy tracking\n\nWant to learn more about any specific feature?",
   
-  payment_help: "EventValidate payment system:\n\n💳 **Payment Methods:**\n• Secure online payments via Paystack\n• Manual payment verification at events\n• Organization-specific bank accounts\n\n🔒 **Security:**\n• Bank-level encryption\n• PCI compliant processing\n• No card details stored\n\nNeed help with a specific payment?",
+  payment_help: "EventValidate payment system:\n\n💳 **Payment Methods:**\n• Secure online payments via Paystack (Nigeria's leading processor)\n• Manual payment verification at events\n• Organization-specific bank accounts for direct routing\n\n🔒 **Security:**\n• Bank-level encryption (256-bit SSL)\n• PCI compliant processing\n• No card details stored on our servers\n• Multi-tenant financial separation\n\n💰 **Fees:**\n• Transparent pricing\n• Competitive transaction fees\n• Organizations keep 98% of payments\n• Platform fee: 2% of successful transactions\n\n🏦 **For Organizations:**\n• Setup your own bank account for direct payments\n• Real-time payment tracking\n• Automated payment confirmations\n\nNeed help with a specific payment?",
   
-  qr_validation: "QR code validation process:\n\n1. **Event QR Code:** Links to registration page\n2. **Personal QR Code:** Generated after registration\n3. **Validation:** Admins scan personal QR codes at events\n4. **Security:** Encrypted data with timestamp validation\n5. **Backup:** Manual ID validation also available\n\nQuestions about QR scanning?",
+  qr_validation: "QR code validation process:\n\n📱 **Two Types of QR Codes:**\n1. **Event QR Code:** Links to registration page (displayed in dashboards)\n2. **Personal QR Code:** Generated after successful registration\n\n🔍 **Validation Process:**\n1. User registers for event\n2. System generates encrypted personal QR code\n3. At event, admin scans personal QR code\n4. System validates registration, payment, and eligibility\n5. Entry granted or denied based on validation\n\n🔒 **Security Features:**\n• Encrypted data with timestamp validation\n• Payment status verification\n• Member database cross-checking\n• CSV validation (if enabled)\n• Face recognition backup (optional)\n\n🛡️ **Backup Methods:**\n• Manual ID number validation\n• Name-based lookup\n• Phone number verification\n\nQuestions about QR scanning or validation?",
   
-  contact_support: "I'll connect you with our customer support team right away! They can help with:\n\n• Account issues\n• Technical problems\n• Payment questions\n• Event management\n• Any other concerns\n\nPlease provide your email so they can follow up with you."
+  contact_support: "I'll connect you with our customer support team right away! They can help with:\n\n• Account and login issues\n• Technical problems and bugs\n• Payment and billing questions\n• Event management guidance\n• Feature requests and feedback\n• Organization approval status\n• API and integration support\n\n📧 Please provide your email address so our support team can follow up with you directly. This ensures you get personalized help even after this chat ends.\n\n⏰ **Response Times:**\n• Online admin: Immediate response\n• Offline admin: Within 24 hours via email"
 };
 
 export default function ChatbotComponent() {
@@ -124,6 +142,42 @@ export default function ChatbotComponent() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (isOpen && !sessionId) {
+      // Generate session ID and initialize welcome message
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setSessionId(newSessionId);
+      
+      // Load saved messages if any
+      const savedMessages = localStorage.getItem('chatbot_messages');
+      if (savedMessages) {
+        try {
+          const parsed = JSON.parse(savedMessages);
+          setMessages(parsed);
+        } catch (error) {
+          console.error('Error loading saved messages:', error);
+        }
+      } else {
+        // Initial welcome message
+        const welcomeMessage: Message = {
+          id: `msg_${Date.now()}`,
+          text: PREDEFINED_RESPONSES.greeting,
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'text'
+        };
+        setMessages([welcomeMessage]);
+      }
+      
+      // Check admin status
+      checkAdminStatus();
+      
+      // Set up periodic admin status checks
+      const statusInterval = setInterval(checkAdminStatus, 30000); // Check every 30 seconds
+      return () => clearInterval(statusInterval);
+    }
+  }, [isOpen, sessionId]);
 
   useEffect(() => {
     // Initialize session
@@ -196,6 +250,31 @@ export default function ChatbotComponent() {
     // Check for greetings
     if (KNOWLEDGE_BASE.greetings.some(greeting => lowerText.includes(greeting))) {
       return 'greeting';
+    }
+    
+    // Check for specific question patterns first
+    if (lowerText.includes('buy ticket') || lowerText.includes('purchase ticket') || KNOWLEDGE_BASE.ticket_keywords.some(keyword => lowerText.includes(keyword))) {
+      return 'buy_ticket';
+    }
+    
+    if (lowerText.includes('validate') || lowerText.includes('validation') || KNOWLEDGE_BASE.validation_keywords.some(keyword => lowerText.includes(keyword))) {
+      return 'validate_event';
+    }
+    
+    if (lowerText.includes('register organization') || lowerText.includes('register my org')) {
+      return 'organization_register';
+    }
+    
+    if (lowerText.includes('create event') || lowerText.includes('make event')) {
+      return 'create_event';
+    }
+    
+    if (lowerText.includes('register for') || lowerText.includes('join event')) {
+      return 'user_register';
+    }
+    
+    if (lowerText.includes('explore') || lowerText.includes('features') || lowerText.includes('what can')) {
+      return 'explore_features';
     }
     
     // Check for organization-related queries
@@ -303,9 +382,16 @@ export default function ChatbotComponent() {
     // Simulate typing delay
     setTimeout(async () => {
       const responseType = analyzeMessage(inputText);
-      const responseText = responseType === 'quick_actions' 
-        ? PREDEFINED_RESPONSES.default_response
-        : PREDEFINED_RESPONSES[responseType as keyof Omit<typeof PREDEFINED_RESPONSES, 'quick_actions'>];
+      
+      // Check if it's a quick action response type
+      let responseText: string;
+      if (QUICK_ACTION_RESPONSES[responseType as keyof typeof QUICK_ACTION_RESPONSES]) {
+        responseText = QUICK_ACTION_RESPONSES[responseType as keyof typeof QUICK_ACTION_RESPONSES];
+      } else if (PREDEFINED_RESPONSES[responseType as keyof Omit<typeof PREDEFINED_RESPONSES, 'quick_actions'>]) {
+        responseText = PREDEFINED_RESPONSES[responseType as keyof Omit<typeof PREDEFINED_RESPONSES, 'quick_actions'>];
+      } else {
+        responseText = PREDEFINED_RESPONSES.default_response;
+      }
       
       const botMessage: Message = {
         id: `msg_${Date.now() + 1}`,
@@ -351,13 +437,19 @@ export default function ChatbotComponent() {
 
     setIsLoading(true);
     try {
+      // Ensure sessionId exists
+      const currentSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      if (!sessionId) {
+        setSessionId(currentSessionId);
+      }
+
       const response = await fetch('/api/chatbot/escalate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sessionId,
+          sessionId: currentSessionId,
           userEmail,
           messages: messages.slice(-5), // Send last 5 messages for context
           adminOnlineStatus
@@ -385,12 +477,14 @@ export default function ChatbotComponent() {
           description: adminOnlineStatus ? "Admin is online and will respond soon" : "Your message has been forwarded to support",
         });
       } else {
-        throw new Error('Failed to escalate');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || 'Failed to escalate');
       }
     } catch (error) {
+      console.error('Escalation error:', error);
       toast({
         title: "Connection Failed",
-        description: "Unable to connect to support. Please try again.",
+        description: error instanceof Error ? error.message : "Unable to connect to support. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -592,56 +686,59 @@ export default function ChatbotComponent() {
           {/* Quick Action Buttons */}
           {!isEscalated && messages.length <= 1 && (
             <div className="px-4 py-3 border-t bg-gray-50">
-              <div className="text-xs font-medium mb-3 text-gray-600">Quick Help</div>
+              <div className="text-xs font-medium mb-3 text-gray-600">Common Questions - Click Any Below</div>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickAction('organization_register')}
-                  className="text-xs h-8 justify-start"
+                  className="text-xs h-9 justify-start text-left"
                 >
-                  🏢 Register Org
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('create_event')}
-                  className="text-xs h-8 justify-start"
-                >
-                  📅 Create Event
+                  🏢 Register Organization
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickAction('user_register')}
-                  className="text-xs h-8 justify-start"
+                  className="text-xs h-9 justify-start text-left"
                 >
-                  ✅ Join Event
+                  🎫 Register for Event
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleQuickAction('payment_help')}
-                  className="text-xs h-8 justify-start"
+                  onClick={() => handleQuickAction('buy_ticket')}
+                  className="text-xs h-9 justify-start text-left"
                 >
-                  💳 Payments
+                  🎟️ Buy a Ticket
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleQuickAction('qr_validation')}
-                  className="text-xs h-8 justify-start"
+                  onClick={() => handleQuickAction('validate_event')}
+                  className="text-xs h-9 justify-start text-left"
                 >
-                  📱 QR Codes
+                  ✅ Validate for Event
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickAction('explore_features')}
+                  className="text-xs h-9 justify-start text-left"
+                >
+                  🔍 Explore Features
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickAction('contact_support')}
-                  className="text-xs h-8 justify-start"
+                  className="text-xs h-9 justify-start text-left"
                 >
-                  📞 Support
+                  📞 Contact Support
                 </Button>
+              </div>
+              <div className="mt-2 text-xs text-gray-500 text-center">
+                Or type your question in the box below
               </div>
             </div>
           )}
