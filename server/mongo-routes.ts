@@ -5,6 +5,7 @@ import multer from "multer";
 import { nanoid } from "nanoid";
 import QRCode from "qrcode";
 import { NotificationService } from "./notification-service";
+import mongoose from "mongoose";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -32,10 +33,10 @@ export function registerMongoRoutes(app: Express) {
   // Get public events (no authentication required)
   app.get("/api/events/public", async (req: Request, res: Response) => {
     try {
-      const events = await mongoStorage.getEvents({ status: { $in: ['upcoming', 'active'] } });
+      const events = await mongoStorage.getEvents();
       
-      const publicEvents = events.map(event => ({
-        id: event._id.toString(),
+      const publicEvents = events.filter(event => ['upcoming', 'active'].includes(event.status)).map(event => ({
+        id: event._id?.toString(),
         name: event.name,
         description: event.description,
         location: event.location,
@@ -101,10 +102,22 @@ export function registerMongoRoutes(app: Express) {
   // Create event
   app.post("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      console.log('Creating event with user:', req.user);
+      console.log('User ID:', req.user!.id, 'Org ID:', req.user?.organizationId);
+      
+      // Validate ObjectId strings before conversion
+      if (!req.user!.id || !mongoose.Types.ObjectId.isValid(req.user!.id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      if (!req.user?.organizationId || !mongoose.Types.ObjectId.isValid(req.user.organizationId)) {
+        return res.status(400).json({ message: "Invalid organization ID" });
+      }
+      
       const eventData = {
         ...req.body,
-        createdBy: req.user!.id,
-        organizationId: req.user?.organizationId,
+        createdBy: new mongoose.Types.ObjectId(req.user!.id),
+        organizationId: new mongoose.Types.ObjectId(req.user.organizationId),
         createdAt: new Date(),
         status: req.body.status || 'upcoming'
       };
@@ -112,7 +125,7 @@ export function registerMongoRoutes(app: Express) {
       const event = await mongoStorage.createEvent(eventData);
       
       res.status(201).json({
-        id: event._id.toString(),
+        id: event._id?.toString(),
         ...event.toObject(),
         organizationId: event.organizationId?.toString(),
         createdBy: event.createdBy?.toString()

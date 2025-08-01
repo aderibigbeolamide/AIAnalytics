@@ -89,7 +89,7 @@ export function registerMongoAuthRoutes(app: Express) {
       
       console.log(`Login attempt for user: ${username}`);
       
-      // Find user by username
+      // Find user by username (without populate to get raw ObjectId)
       const user = await mongoStorage.getUserByUsername(username.trim());
       
       if (!user) {
@@ -113,7 +113,7 @@ export function registerMongoAuthRoutes(app: Express) {
         username: user.username,
         email: user.email,
         role: user.role,
-        organizationId: user.organizationId?.toString(),
+        organizationId: (user.organizationId as any)?._id?.toString() || user.organizationId?.toString(),
         firstName: user.firstName,
         lastName: user.lastName,
       });
@@ -125,7 +125,7 @@ export function registerMongoAuthRoutes(app: Express) {
           username: user.username,
           email: user.email,
           role: user.role,
-          organizationId: user.organizationId?.toString(),
+          organizationId: (user.organizationId as any)?._id?.toString() || user.organizationId?.toString(),
           firstName: user.firstName,
           lastName: user.lastName,
         }
@@ -152,7 +152,7 @@ export function registerMongoAuthRoutes(app: Express) {
           username: user.username,
           email: user.email,
           role: user.role,
-          organizationId: user.organizationId?.toString(),
+          organizationId: (user.organizationId as any)?._id?.toString() || user.organizationId?.toString(),
           firstName: user.firstName,
           lastName: user.lastName,
         }
