@@ -313,7 +313,7 @@ export class MongoStorage implements IMongoStorage {
         query.organizationId = filters.organizationId;
       }
       
-      return await Event.find(query).populate('organizationId createdBy').sort({ createdAt: -1 });
+      return await Event.find(query).sort({ createdAt: -1 });
     } catch (error) {
       console.error('Error getting events:', error);
       return [];
@@ -332,7 +332,7 @@ export class MongoStorage implements IMongoStorage {
 
   async updateEvent(id: string, updates: Partial<InsertEvent>): Promise<IEvent | null> {
     try {
-      return await Event.findByIdAndUpdate(id, updates, { new: true }).populate('organizationId createdBy');
+      return await Event.findByIdAndUpdate(id, updates, { new: true });
     } catch (error) {
       console.error('Error updating event:', error);
       return null;
@@ -413,7 +413,7 @@ export class MongoStorage implements IMongoStorage {
         }
       }
       
-      return await EventRegistration.find(query).populate('eventId memberId validatedBy').sort({ createdAt: -1 });
+      return await EventRegistration.find(query).sort({ createdAt: -1 });
     } catch (error) {
       console.error('Error getting event registrations:', error);
       return [];
@@ -422,7 +422,7 @@ export class MongoStorage implements IMongoStorage {
 
   async getMemberRegistrations(memberId: string): Promise<IEventRegistration[]> {
     try {
-      return await EventRegistration.find({ memberId }).populate('eventId memberId validatedBy').sort({ createdAt: -1 });
+      return await EventRegistration.find({ memberId }).sort({ createdAt: -1 });
     } catch (error) {
       console.error('Error getting member registrations:', error);
       return [];
@@ -441,7 +441,7 @@ export class MongoStorage implements IMongoStorage {
 
   async updateEventRegistration(id: string, updates: Partial<IEventRegistration>): Promise<IEventRegistration | null> {
     try {
-      return await EventRegistration.findByIdAndUpdate(id, updates, { new: true }).populate('eventId memberId validatedBy');
+      return await EventRegistration.findByIdAndUpdate(id, updates, { new: true });
     } catch (error) {
       console.error('Error updating event registration:', error);
       return null;
@@ -451,7 +451,7 @@ export class MongoStorage implements IMongoStorage {
   // Tickets
   async getTicket(id: string): Promise<ITicket | null> {
     try {
-      return await Ticket.findById(id).populate('eventId organizationId validatedBy');
+      return await Ticket.findById(id);
     } catch (error) {
       console.error('Error getting ticket:', error);
       return null;
@@ -464,7 +464,7 @@ export class MongoStorage implements IMongoStorage {
 
   async getTicketByNumber(ticketNumber: string): Promise<ITicket | null> {
     try {
-      return await Ticket.findOne({ ticketNumber }).populate('eventId organizationId validatedBy');
+      return await Ticket.findOne({ ticketNumber });
     } catch (error) {
       console.error('Error getting ticket by number:', error);
       return null;
@@ -485,7 +485,7 @@ export class MongoStorage implements IMongoStorage {
         query.paymentStatus = filters.paymentStatus;
       }
       
-      return await Ticket.find(query).populate('eventId organizationId validatedBy').sort({ createdAt: -1 });
+      return await Ticket.find(query).sort({ createdAt: -1 });
     } catch (error) {
       console.error('Error getting tickets:', error);
       return [];
@@ -504,7 +504,7 @@ export class MongoStorage implements IMongoStorage {
 
   async updateTicket(id: string, updates: Partial<ITicket>): Promise<ITicket | null> {
     try {
-      return await Ticket.findByIdAndUpdate(id, updates, { new: true }).populate('eventId organizationId validatedBy');
+      return await Ticket.findByIdAndUpdate(id, updates, { new: true });
     } catch (error) {
       console.error('Error updating ticket:', error);
       return null;
