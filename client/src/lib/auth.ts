@@ -73,6 +73,14 @@ const loadAuthState = () => {
       const authTimestamp = timestamp ? parseInt(timestamp) : Date.now();
       const lastActivityTime = lastActivity ? parseInt(lastActivity) : Date.now();
       
+      // Check if token contains malformed organizationId (stringified MongoDB document)
+      if (user?.organizationId && typeof user.organizationId === 'string' && 
+          user.organizationId.includes('_id: new ObjectId(')) {
+        console.log('Detected malformed organizationId in token, clearing auth state to force re-login');
+        clearAuthState();
+        return { token: null, user: null, member: null, isAuthenticated: false, lastActivity: Date.now() };
+      }
+      
       // Check if token is too old (more than 6 days, giving 1 day buffer for 7-day expiry)
       const sixDaysInMs = 6 * 24 * 60 * 60 * 1000;
       const isTokenExpired = Date.now() - authTimestamp > sixDaysInMs;
