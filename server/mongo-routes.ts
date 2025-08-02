@@ -565,7 +565,7 @@ export function registerMongoRoutes(app: Express) {
       }
 
       // Get event details
-      const event = await mongoStorage.getEventById(eventId);
+      const event = await mongoStorage.getEvent(eventId);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
@@ -577,11 +577,28 @@ export function registerMongoRoutes(app: Express) {
 
       // Get payment rule for registration type
       const registrationType = registrationData.registrationType || 'member';
-      const paymentRule = event.paymentSettings.paymentRules?.[registrationType];
       
-      if (!paymentRule) {
+      // Check if payment is required for this registration type
+      let amountInNaira = 0;
+      if (event.paymentSettings.paymentRules && typeof event.paymentSettings.paymentRules === 'object') {
+        // Check if this registration type requires payment
+        if (event.paymentSettings.paymentRules[registrationType] === true) {
+          amountInNaira = parseFloat(event.paymentSettings.amount?.toString() || '5000');
+        } else if (typeof event.paymentSettings.paymentRules[registrationType] === 'object') {
+          amountInNaira = parseFloat(event.paymentSettings.paymentRules[registrationType].amount?.toString() || '5000');
+        } else {
+          return res.status(400).json({ 
+            message: `Payment not required for ${registrationType} registration` 
+          });
+        }
+      } else {
+        // Fallback to general amount
+        amountInNaira = parseFloat(event.paymentSettings.amount?.toString() || '5000');
+      }
+
+      if (amountInNaira <= 0) {
         return res.status(400).json({ 
-          message: `Payment not configured for ${registrationType} registration` 
+          message: `Invalid payment amount for ${registrationType} registration` 
         });
       }
 
@@ -589,18 +606,69 @@ export function registerMongoRoutes(app: Express) {
       const organization = await mongoStorage.getOrganization(event.organizationId.toString());
       
       // Calculate amount in kobo (Paystack uses kobo for NGN)
-      const amountInNaira = typeof paymentRule === 'object' ? paymentRule.amount : event.paymentSettings.amount || 5000;
-      const amountInKobo = Math.round(parseFloat(amountInNaira.toString()) * 100);
+      const amountInKobo = Math.round(amountInNaira * 100);
       
-      // Generate payment reference
-      const paymentReference = `REG_${eventId}_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      // Generate unique identifiers for registration
+      const uniqueId = `${registrationType.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const qrCode = nanoid(16);
+      const paymentReference = `REG_${Date.now()}_${nanoid(8)}`;
+
+      // Create pending registration record first (like ticket creation)
+      const registrationRecord = {
+        eventId: new mongoose.Types.ObjectId(eventId),
+        registrationType,
+        uniqueId,
+        qrCode,
+        status: 'pending',
+        paymentStatus: 'pending',
+        paymentReference,
+        paymentAmount: amountInNaira,
+        paymentCurrency: 'NGN',
+        attendanceStatus: 'registered',
+        createdAt: new Date(),
+        // Extract standard fields from custom field data
+        firstName: registrationData.firstName || registrationData.FirstName || '',
+        lastName: registrationData.lastName || registrationData.LastName || '',
+        email: registrationData.email || registrationData.Email || email,
+        phone: registrationData.phone || registrationData.Phone || '',
+        // Store all custom field data
+        customFieldData: {}
+      };
+
+      // Process custom fields
+      if (event.customRegistrationFields) {
+        for (const field of event.customRegistrationFields) {
+          const fieldValue = registrationData[field.name];
+          if (fieldValue !== undefined) {
+            registrationRecord.customFieldData[field.name] = fieldValue;
+            
+            // Also set standard fields if they match
+            if (field.name === 'firstName' || field.name === 'FirstName') {
+              registrationRecord.firstName = fieldValue;
+            } else if (field.name === 'lastName' || field.name === 'LastName') {
+              registrationRecord.lastName = fieldValue;
+            } else if (field.name === 'email' || field.name === 'Email') {
+              registrationRecord.email = fieldValue;
+            } else if (field.name === 'phone' || field.name === 'Phone') {
+              registrationRecord.phone = fieldValue;
+            }
+          }
+        }
+      }
+
+      // Create the pending registration
+      const registration = await mongoStorage.createEventRegistration(registrationRecord);
       
-      // Prepare metadata
+      // Prepare metadata for Paystack
       const metadata = {
+        registrationId: registration._id.toString(),
         eventId,
-        registrationData: JSON.stringify(registrationData),
         registrationType,
         type: 'event_registration',
+        eventName: event.name,
+        userEmail: email,
+        firstName: registrationRecord.firstName,
+        lastName: registrationRecord.lastName,
         custom_fields: [
           {
             display_name: "Event",
@@ -618,7 +686,7 @@ export function registerMongoRoutes(app: Express) {
       // Import paystack module
       const { initializePaystackPayment } = await import('./paystack');
 
-      // Initialize payment with Paystack
+      // Initialize payment with Paystack (same pattern as ticket purchase)
       const paymentResponse = await initializePaystackPayment(
         email,
         amountInKobo,
@@ -636,9 +704,12 @@ export function registerMongoRoutes(app: Express) {
             access_code: paymentResponse.data.access_code,
             reference: paymentReference
           },
+          registrationId: registration._id.toString(),
           message: "Payment initialized successfully"
         });
       } else {
+        // Delete registration if payment initialization failed
+        await mongoStorage.deleteEventRegistration(registration._id.toString());
         console.error("Paystack initialization failed:", paymentResponse);
         res.status(400).json({
           success: false,
@@ -650,7 +721,7 @@ export function registerMongoRoutes(app: Express) {
       console.error("Payment initialization error:", error);
       res.status(500).json({ 
         success: false,
-        message: "Payment initialization failed" 
+        message: "Payment initialization failed: " + error.message 
       });
     }
   });
@@ -1180,8 +1251,60 @@ export function registerMongoRoutes(app: Express) {
             // Redirect to ticket success page
             return res.redirect(`/payment/success?type=ticket&ticketId=${ticketId}`);
           }
-        } else if (metadata.type === 'event_registration') {
+        } else if (metadata.type === 'event_registration' && metadata.registrationId) {
           // Handle event registration payment
+          const registrationId = metadata.registrationId;
+          const eventId = metadata.eventId;
+          
+          // Find the existing pending registration
+          const registration = await mongoStorage.getEventRegistration(registrationId);
+          
+          if (registration) {
+            // Generate QR code for the confirmed registration
+            const qrCodeData = JSON.stringify({
+              registrationId: registration._id.toString(),
+              eventId,
+              uniqueId: registration.uniqueId,
+              timestamp: Date.now()
+            });
+            
+            const QRCode = await import('qrcode');
+            const qrImageBase64 = await QRCode.toDataURL(qrCodeData, {
+              width: 200,
+              margin: 2,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              }
+            });
+
+            // Update registration payment status
+            await mongoStorage.updateEventRegistration(registration._id.toString(), {
+              paymentStatus: 'completed',
+              status: 'confirmed',
+              paymentVerifiedAt: new Date(),
+              paymentReference: paymentReference as string,
+              qrCodeImage: qrImageBase64
+            });
+
+            // Get event details for notification
+            const event = await mongoStorage.getEvent(eventId);
+            if (event) {
+              // Send notification
+              await NotificationService.sendNotification(
+                event.organizationId.toString(),
+                eventId,
+                registration._id.toString(),
+                registration.firstName + ' ' + registration.lastName,
+                registration.registrationType || 'member'
+              );
+            }
+
+            // Redirect to registration success page
+            return res.redirect(`/payment/success?type=registration&registrationId=${registrationId}&eventId=${eventId}`);
+          }
+        } else if (metadata.type === 'event_registration_legacy') {
+          // Handle legacy event registration payment (fallback)
           const eventId = metadata.eventId;
           const userEmail = metadata.userEmail;
           const registrationData = JSON.parse(metadata.registrationData || '{}');
