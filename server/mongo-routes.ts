@@ -65,7 +65,7 @@ export function registerMongoRoutes(app: Express) {
     try {
       const eventId = req.params.id;
       
-      const event = await mongoStorage.getEventById(eventId);
+      const event = await mongoStorage.getEvent(eventId);
       
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
@@ -183,7 +183,7 @@ export function registerMongoRoutes(app: Express) {
     try {
       const eventId = req.params.id;
       
-      const event = await mongoStorage.getEventById(eventId);
+      const event = await mongoStorage.getEvent(eventId);
       
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
@@ -429,7 +429,7 @@ export function registerMongoRoutes(app: Express) {
       }
 
       // Get event details
-      const event = await mongoStorage.getEventById(eventId);
+      const event = await mongoStorage.getEvent(eventId);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
@@ -485,7 +485,7 @@ export function registerMongoRoutes(app: Express) {
         const currency = verificationData.data.currency;
 
         // Get event details
-        const event = await mongoStorage.getEventById(eventId);
+        const event = await mongoStorage.getEvent(eventId);
         if (!event) {
           return res.status(404).json({ message: "Event not found" });
         }

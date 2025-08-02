@@ -290,7 +290,7 @@ export class MongoStorage implements IMongoStorage {
   // Events
   async getEvent(id: string): Promise<IEvent | null> {
     try {
-      return await Event.findById(id).populate('organizationId createdBy');
+      return await Event.findById(id);
     } catch (error) {
       console.error('Error getting event:', error);
       return null;
