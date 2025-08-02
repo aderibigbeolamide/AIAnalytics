@@ -16,6 +16,7 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
   - Added missing `deleteEventRegistration` method to MongoDB storage interface
   - Configured Paystack API keys for production payment processing
   - Enhanced payment verification logging for better debugging
+  - Fixed NotificationService.sendNotification error by correcting method call
 - **Paystack Integration**: Successfully configured API keys and validated payment verification endpoints
 - **MongoDB Integration**: Confirmed unified MongoDB architecture with proper connection and seeding
 - **Client-Server Separation**: Validated proper separation between frontend and backend components

@@ -1,0 +1,106 @@
+10:12:48 PM [express] POST /api/payment/initialize 200 in 559ms :: {"success":true,"data":{"authoriza…
+Verifying payment with Paystack for reference: REG_1754172767595_NIgAp8Ox
+Using secret key: Available
+Paystack API response status: 200
+Paystack API response data: {
+  "status": true,
+  "message": "Verification successful",
+  "data": {
+    "id": 5203580211,
+    "domain": "test",
+    "status": "success",
+    "reference": "REG_1754172767595_NIgAp8Ox",
+    "receipt_number": null,
+    "amount": 500000,
+    "message": null,
+    "gateway_response": "Successful",
+    "paid_at": "2025-08-02T22:12:56.000Z",
+    "created_at": "2025-08-02T22:12:47.000Z",
+    "channel": "card",
+    "currency": "NGN",
+    "ip_address": "102.91.4.31",
+    "metadata": {
+      "registrationId": "688e8d5fe4d8dbf19773dcf3",
+      "eventId": "688e5119c52f7fc80bafe2df",
+      "registrationType": "member",
+      "type": "event_registration",
+      "eventName": "LastTest",
+      "userEmail": "aderibigbeolamide56@gmail.com",
+      "firstName": "Aderibigbe",
+      "lastName": "Olamide",
+      "custom_fields": [
+        {
+          "display_name": "Event",
+          "variable_name": "event_name",
+          "value": "LastTest"
+        },
+        {
+          "display_name": "Registration Type",
+          "variable_name": "registration_type",
+          "value": "member"
+        }
+      ],
+      "referrer": "https://eventvalidateapp.onrender.com/"
+    },
+    "log": {
+      "start_time": 1754172772,
+      "time_spent": 4,
+      "attempts": 1,
+      "errors": 0,
+      "success": false,
+      "mobile": false,
+      "input": [],
+      "history": [
+        {
+          "type": "action",
+          "message": "Attempted to pay with card",
+          "time": 4
+        }
+      ]
+    },
+    "fees": 17500,
+    "fees_split": null,
+    "authorization": {
+      "authorization_code": "AUTH_4w8l8s4dv4",
+      "bin": "408408",
+      "last4": "4081",
+      "exp_month": "12",
+      "exp_year": "2030",
+      "channel": "card",
+      "card_type": "visa ",
+      "bank": "TEST BANK",
+      "country_code": "NG",
+      "brand": "visa",
+      "reusable": true,
+      "signature": "SIG_3Xvc56OXuR7IwIxCN9Bw",
+      "account_name": null,
+      "receiver_bank_account_number": null,
+      "receiver_bank": null
+    },
+    "customer": {
+      "id": 293426059,
+      "first_name": null,
+      "last_name": null,
+      "email": "aderibigbeolamide56@gmail.com",
+      "customer_code": "CUS_x5tfe6mimtv9rze",
+      "phone": null,
+      "metadata": null,
+      "risk_action": "default",
+      "international_format_phone": null
+    },
+    "plan": null,
+    "split": {},
+    "order_id": null,
+    "paidAt": "2025-08-02T22:12:56.000Z",
+    "createdAt": "2025-08-02T22:12:47.000Z",
+    "requested_amount": 500000,
+    "pos_transaction_data": null,
+    "source": null,
+    "fees_breakdown": null,
+    "connect": null,
+    "transaction_date": "2025-08-02T22:12:47.000Z",
+    "plan_object": {},
+    "subaccount": {}
+  }
+}
+Payment callback error: TypeError: NotificationService.sendNotification is not a function

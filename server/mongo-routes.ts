@@ -1401,11 +1401,11 @@ export function registerMongoRoutes(app: Express) {
             // Get event details for notification
             const event = await mongoStorage.getEvent(eventId);
             if (event) {
-              // Send notification
-              await NotificationService.sendNotification(
+              // Send registration notification
+              await NotificationService.createRegistrationNotification(
                 event.organizationId.toString(),
                 eventId,
-                registration._id.toString(),
+                registration._id!.toString(),
                 registration.firstName + ' ' + registration.lastName,
                 registration.registrationType || 'member'
               );
