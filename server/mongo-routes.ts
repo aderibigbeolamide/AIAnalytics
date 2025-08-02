@@ -551,55 +551,111 @@ export function registerMongoRoutes(app: Express) {
   });
 
   // ================ PAYMENT ENDPOINTS ================
-
-  // Initialize payment for event registration
+  
+  // Initialize payment for registration
   app.post("/api/payment/initialize", async (req: Request, res: Response) => {
     try {
-      const { eventId, email, registrationData, amount, currency = "NGN" } = req.body;
-
-      if (!eventId || !email || !amount) {
-        return res.status(400).json({ message: "Event ID, email, and amount are required" });
+      const { eventId, email, registrationData } = req.body;
+      
+      // Validate required fields
+      if (!eventId || !email) {
+        return res.status(400).json({ 
+          message: "Event ID, email are required" 
+        });
       }
 
       // Get event details
-      const event = await mongoStorage.getEvent(eventId);
+      const event = await mongoStorage.getEventById(eventId);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
 
-      // Initialize Paystack payment
-      const { initializePaystackPayment } = await import('./paystack');
-      
-      const reference = `REG_${Date.now()}_${nanoid(8)}`;
-      
-      const paymentData = await initializePaystackPayment({
-        email,
-        amount: amount * 100, // Convert to kobo for NGN
-        reference,
-        currency,
-        metadata: {
-          eventId,
-          eventName: event.name,
-          userEmail: email,
-          registrationData: JSON.stringify(registrationData),
-          type: 'event_registration'
-        }
-      });
+      // Validate payment is required
+      if (!event.paymentSettings?.requiresPayment) {
+        return res.status(400).json({ message: "Payment not required for this event" });
+      }
 
-      if (paymentData.status) {
+      // Get payment rule for registration type
+      const registrationType = registrationData.registrationType || 'member';
+      const paymentRule = event.paymentSettings.paymentRules?.[registrationType];
+      
+      if (!paymentRule) {
+        return res.status(400).json({ 
+          message: `Payment not configured for ${registrationType} registration` 
+        });
+      }
+
+      // Get organization to check for subaccount
+      const organization = await mongoStorage.getOrganization(event.organizationId.toString());
+      
+      // Calculate amount in kobo (Paystack uses kobo for NGN)
+      const amountInNaira = typeof paymentRule === 'object' ? paymentRule.amount : event.paymentSettings.amount || 5000;
+      const amountInKobo = Math.round(parseFloat(amountInNaira.toString()) * 100);
+      
+      // Generate payment reference
+      const paymentReference = `REG_${eventId}_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      // Prepare metadata
+      const metadata = {
+        eventId,
+        registrationData: JSON.stringify(registrationData),
+        registrationType,
+        type: 'event_registration',
+        custom_fields: [
+          {
+            display_name: "Event",
+            variable_name: "event_name",
+            value: event.name
+          },
+          {
+            display_name: "Registration Type", 
+            variable_name: "registration_type",
+            value: registrationType
+          }
+        ]
+      };
+
+      // Import paystack module
+      const { initializePaystackPayment } = await import('./paystack');
+
+      // Initialize payment with Paystack
+      const paymentResponse = await initializePaystackPayment(
+        email,
+        amountInKobo,
+        paymentReference,
+        metadata,
+        organization?.paystackSubaccountCode || undefined,
+        2 // 2% platform fee
+      );
+
+      if (paymentResponse.status) {
         res.json({
           success: true,
-          authorization_url: paymentData.data.authorization_url,
-          reference: paymentData.data.reference
+          data: {
+            authorization_url: paymentResponse.data.authorization_url,
+            access_code: paymentResponse.data.access_code,
+            reference: paymentReference
+          },
+          message: "Payment initialized successfully"
         });
       } else {
-        res.status(400).json({ message: "Payment initialization failed" });
+        console.error("Paystack initialization failed:", paymentResponse);
+        res.status(400).json({
+          success: false,
+          message: paymentResponse.message || "Payment initialization failed"
+        });
       }
+
     } catch (error) {
       console.error("Payment initialization error:", error);
-      res.status(500).json({ message: "Payment initialization failed" });
+      res.status(500).json({ 
+        success: false,
+        message: "Payment initialization failed" 
+      });
     }
   });
+
+
 
   // Verify payment for event registration
   app.get("/api/payment/verify/:reference", async (req: Request, res: Response) => {
