@@ -454,13 +454,9 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
               {/* Only show custom fields configured by admin */}
 
               {/* Admin-configured fields only - filtered by registration type */}
-              {console.log("Event custom fields:", event.customRegistrationFields)}
-              {console.log("Current registration type:", registrationType)}
-              {event.customRegistrationFields?.filter((field: any) => {
-                const shouldShow = shouldShowFieldForRegistrationType(field, registrationType);
-                console.log(`Field ${field.name} should show:`, shouldShow, field);
-                return shouldShow;
-              }).map((field: any) => (
+              {event.customRegistrationFields?.filter((field: any) => 
+                shouldShowFieldForRegistrationType(field, registrationType)
+              ).map((field: any) => (
                 <FormField
                   key={field.name}
                   control={form.control}

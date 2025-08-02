@@ -51,6 +51,8 @@ export function registerMongoRoutes(app: Express) {
         allowInvitees: event.allowInvitees,
         eventType: event.eventType,
         ticketCategories: event.ticketCategories || [],
+        customRegistrationFields: event.customRegistrationFields,
+        paymentSettings: event.paymentSettings,
         organizationId: event.organizationId?.toString()
       }));
 
@@ -89,6 +91,8 @@ export function registerMongoRoutes(app: Express) {
         eventType: event.eventType,
         ticketCategories: event.ticketCategories || [],
         customFields: event.customFields,
+        customRegistrationFields: event.customRegistrationFields,
+        paymentSettings: event.paymentSettings,
         organizationId: event.organizationId?.toString()
       };
 
