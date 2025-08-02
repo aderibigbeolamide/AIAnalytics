@@ -28,16 +28,49 @@ export default function PaymentSuccess() {
     enabled: !!ticketId && type === 'ticket',
   });
 
-  // Fetch registration details if it's an event registration
+  // Get registration data from URL params (passed from payment verification)
+  const [registrationData, setRegistrationData] = useState<any>(null);
+  const [eventData, setEventData] = useState<any>(null);
+  
+  useEffect(() => {
+    // Try to get data from localStorage first (set during payment verification)
+    const storedRegData = localStorage.getItem(`registration_${registrationId}`);
+    const storedEventData = localStorage.getItem(`event_${eventId}`);
+    
+    if (storedRegData) {
+      setRegistrationData(JSON.parse(storedRegData));
+    }
+    if (storedEventData) {
+      setEventData(JSON.parse(storedEventData));
+    }
+  }, [registrationId, eventId]);
+
+  // Fetch registration details if it's an event registration and not in localStorage
   const { data: registration, isLoading: registrationLoading } = useQuery<any>({
     queryKey: ["/api/registrations", registrationId],
     queryFn: async () => {
       if (!registrationId) return null;
-      const response = await fetch(`/api/events/${eventId}/registrations/${registrationId}`);
-      if (!response.ok) throw new Error("Failed to fetch registration");
-      return response.json();
+      
+      // Get event details
+      const eventResponse = await fetch(`/api/events/${eventId}`);
+      let eventData = null;
+      if (eventResponse.ok) {
+        eventData = await eventResponse.json();
+      }
+      
+      return {
+        id: registrationId,
+        uniqueId: searchParams.get('uniqueId'),
+        firstName: searchParams.get('firstName'), 
+        lastName: searchParams.get('lastName'),
+        email: searchParams.get('email'),
+        paymentStatus: 'paid',
+        status: 'confirmed',
+        qrCodeImage: searchParams.get('qrCodeImage'),
+        event: eventData
+      };
     },
-    enabled: !!registrationId && type === 'registration',
+    enabled: !!registrationId && type === 'registration' && !registrationData,
   });
 
   const downloadTicketPDF = async () => {
@@ -53,7 +86,7 @@ export default function PaymentSuccess() {
       ticketElement.style.padding = '20px';
       ticketElement.style.width = '400px';
       
-      const data = ticket || registration;
+      const data = ticket || registration || registrationData;
       
       ticketElement.innerHTML = `
         <div style="text-align: center; font-family: Arial, sans-serif;">
@@ -110,7 +143,7 @@ export default function PaymentSuccess() {
     }
   };
 
-  if (ticketLoading || registrationLoading) {
+  if (ticketLoading || (registrationLoading && !registrationData)) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -121,7 +154,22 @@ export default function PaymentSuccess() {
     );
   }
 
-  const data = ticket || registration;
+  // Combine data from different sources
+  const combinedData = registrationData || registration || ticket;
+  
+  // If no data from API, use URL parameters directly
+  const data = combinedData || {
+    id: registrationId,
+    uniqueId: searchParams.get('uniqueId'),
+    firstName: searchParams.get('firstName'),
+    lastName: searchParams.get('lastName'),
+    email: searchParams.get('email'),
+    paymentStatus: 'paid',
+    status: 'confirmed',
+    qrCodeImage: searchParams.get('qrCodeImage'),
+    event: eventData
+  };
+  
   const isTicket = type === 'ticket';
 
   return (

@@ -1411,8 +1411,9 @@ export function registerMongoRoutes(app: Express) {
               );
             }
 
-            // Redirect to registration success page
-            return res.redirect(`/payment/success?type=registration&registrationId=${registrationId}&eventId=${eventId}`);
+            // Redirect to registration success page with all data
+            const successUrl = `/payment/success?type=registration&registrationId=${registrationId}&eventId=${eventId}&uniqueId=${encodeURIComponent(registration.uniqueId)}&firstName=${encodeURIComponent(registration.firstName)}&lastName=${encodeURIComponent(registration.lastName)}&email=${encodeURIComponent(registration.email)}&qrCodeImage=${encodeURIComponent(qrImageBase64)}`;
+            return res.redirect(successUrl);
           }
         } else if (metadata.type === 'event_registration_legacy') {
           // Handle legacy event registration payment (fallback)
@@ -1483,6 +1484,54 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Get registration details directly by ID (fallback endpoint)
+  app.get("/api/registrations/:registrationId", async (req: Request, res: Response) => {
+    try {
+      const { registrationId } = req.params;
+      
+      const registration = await mongoStorage.getEventRegistration(registrationId);
+      if (!registration) {
+        return res.status(404).json({ message: "Registration not found" });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEvent(registration.eventId.toString());
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      res.json({
+        id: registration._id.toString(),
+        registrationId: registration.registrationId,
+        uniqueId: registration.uniqueId,
+        firstName: registration.firstName,
+        lastName: registration.lastName,
+        email: registration.email,
+        phone: registration.phone,
+        status: registration.status,
+        paymentStatus: registration.paymentStatus,
+        qrCode: registration.qrCode,
+        qrCodeImage: registration.qrCodeImage,
+        registrationType: registration.registrationType,
+        paymentReference: registration.paymentReference,
+        paymentAmount: registration.paymentAmount,
+        event: {
+          id: event._id.toString(),
+          name: event.name,
+          location: event.location,
+          startDate: event.startDate,
+          endDate: event.endDate
+        },
+        createdAt: registration.createdAt,
+        updatedAt: registration.updatedAt,
+        validatedAt: registration.validatedAt
+      });
+    } catch (error) {
+      console.error("Get registration error:", error);
+      res.status(500).json({ message: "Failed to get registration" });
+    }
+  });
+
   // Get registration details (public endpoint for verification)
   app.get("/api/events/:eventId/registrations/:registrationId", async (req: Request, res: Response) => {
     try {
@@ -1492,6 +1541,9 @@ export function registerMongoRoutes(app: Express) {
       if (!registration) {
         return res.status(404).json({ message: "Registration not found" });
       }
+
+      // Debug logging
+      console.log(`Registration eventId: ${registration.eventId.toString()}, URL eventId: ${eventId}`);
 
       // Verify it belongs to the event
       if (registration.eventId.toString() !== eventId) {
