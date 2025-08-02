@@ -271,40 +271,167 @@ export function registerMongoRoutes(app: Express) {
 
   // ================ EVENT REGISTRATION ================
   
-  // Register for event
-  app.post("/api/events/:eventId/register", async (req: Request, res: Response) => {
+  // Register for event with custom fields and validation
+  app.post("/api/events/:eventId/register", upload.single('paymentReceipt'), async (req: Request, res: Response) => {
     try {
       const eventId = req.params.eventId;
+      
+      // Get event details first
+      const event = await mongoStorage.getEventById(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Extract form data (multipart/form-data or JSON)
+      const formData = req.body;
+      console.log("Registration form data:", formData);
+
+      // Validate required base fields
+      if (!formData.registrationType) {
+        return res.status(400).json({ message: "Registration type is required" });
+      }
+
+      // Validate custom fields based on event configuration
+      if (event.customRegistrationFields && Array.isArray(event.customRegistrationFields)) {
+        for (const field of event.customRegistrationFields) {
+          // Check if field should be shown for this registration type
+          const shouldShow = !field.visibleForTypes || field.visibleForTypes.includes(formData.registrationType);
+          if (!shouldShow) continue;
+
+          // Check if field is required for this registration type
+          const isRequired = field.required === true || 
+                           (field.requiredForTypes && field.requiredForTypes.includes(formData.registrationType));
+          
+          if (isRequired) {
+            const fieldValue = formData[field.name];
+            if (!fieldValue || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
+              return res.status(400).json({ 
+                message: `${field.label} is required for ${formData.registrationType} registration` 
+              });
+            }
+          }
+        }
+      }
+
+      // Generate unique identifiers
+      const uniqueId = `${formData.registrationType.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const qrCode = nanoid(16);
+
+      // Prepare registration data
       const registrationData = {
-        ...req.body,
-        eventId,
-        createdAt: new Date(),
+        eventId: new mongoose.Types.ObjectId(eventId),
+        registrationType: formData.registrationType,
+        uniqueId,
+        qrCode,
         status: 'pending',
-        qrCode: nanoid(10), // Generate unique QR code
-        attendanceStatus: 'registered'
+        paymentStatus: 'pending',
+        attendanceStatus: 'registered',
+        createdAt: new Date(),
+        // Extract standard fields from custom field data
+        firstName: formData.firstName || formData.FirstName || '',
+        lastName: formData.lastName || formData.LastName || '',
+        email: formData.email || formData.Email || '',
+        phone: formData.phone || formData.Phone || '',
+        // Store all custom field data
+        customFieldData: {}
       };
 
+      // Process custom fields
+      if (event.customRegistrationFields) {
+        for (const field of event.customRegistrationFields) {
+          const fieldValue = formData[field.name];
+          if (fieldValue !== undefined) {
+            registrationData.customFieldData[field.name] = fieldValue;
+            
+            // Also set standard fields if they match
+            if (field.name === 'firstName' || field.name === 'FirstName') {
+              registrationData.firstName = fieldValue;
+            } else if (field.name === 'lastName' || field.name === 'LastName') {
+              registrationData.lastName = fieldValue;
+            } else if (field.name === 'email' || field.name === 'Email') {
+              registrationData.email = fieldValue;
+            } else if (field.name === 'phone' || field.name === 'Phone') {
+              registrationData.phone = fieldValue;
+            }
+          }
+        }
+      }
+
+      // Handle payment data if applicable
+      if (event.paymentSettings?.requiresPayment && 
+          event.paymentSettings.paymentRules?.[formData.registrationType]) {
+        const paymentRule = event.paymentSettings.paymentRules[formData.registrationType];
+        registrationData.paymentAmount = paymentRule.amount;
+        registrationData.paymentCurrency = paymentRule.currency || 'NGN';
+        registrationData.paymentMethod = formData.paymentMethod || 'pending';
+        
+        // Handle payment receipt upload
+        if (req.file && formData.paymentMethod === 'manual_receipt') {
+          registrationData.paymentReceiptPath = req.file.path;
+          registrationData.paymentReceiptName = req.file.originalname;
+          registrationData.paymentStatus = 'pending_verification';
+        }
+      }
+
+      // Create registration
       const registration = await mongoStorage.createEventRegistration(registrationData);
       
       // Generate QR code image
       const qrCodeData = JSON.stringify({
         registrationId: registration._id.toString(),
         eventId,
+        uniqueId: registration.uniqueId,
         timestamp: Date.now()
       });
       
-      const qrCodeImage = await QRCode.toDataURL(qrCodeData);
-
-      res.status(201).json({
-        id: registration._id.toString(),
-        ...registration.toObject(),
-        qrCodeImage,
-        eventId: registration.eventId?.toString(),
-        memberId: registration.memberId?.toString()
+      const qrImageBase64 = await QRCode.toDataURL(qrCodeData, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
       });
+
+      // Send success response
+      res.status(201).json({
+        success: true,
+        message: "Registration completed successfully",
+        registration: {
+          id: registration._id.toString(),
+          uniqueId: registration.uniqueId,
+          registrationType: registration.registrationType,
+          firstName: registration.firstName,
+          lastName: registration.lastName,
+          email: registration.email,
+          status: registration.status,
+          paymentStatus: registration.paymentStatus,
+          qrCode: registration.qrCode,
+          eventId: registration.eventId.toString(),
+          createdAt: registration.createdAt
+        },
+        qrImageBase64,
+        event: {
+          name: event.name,
+          location: event.location,
+          startDate: event.startDate
+        }
+      });
+
     } catch (error) {
       console.error("Error registering for event:", error);
-      res.status(500).json({ message: "Internal server error" });
+      
+      // More specific error messages
+      if (error.code === 11000) {
+        return res.status(400).json({ message: "Duplicate registration detected" });
+      }
+      
+      if (error.name === 'ValidationError') {
+        const errors = Object.values(error.errors).map((err: any) => err.message);
+        return res.status(400).json({ message: `Validation failed: ${errors.join(', ')}` });
+      }
+      
+      res.status(500).json({ message: "Registration failed. Please try again." });
     }
   });
 
