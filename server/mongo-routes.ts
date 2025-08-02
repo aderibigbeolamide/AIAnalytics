@@ -847,70 +847,66 @@ export function registerMongoRoutes(app: Express) {
       if (verificationData.status && verificationData.data.status === 'success') {
         const metadata = verificationData.data.metadata;
         const eventId = metadata.eventId;
-        const registrationData = JSON.parse(metadata.registrationData);
         const amount = verificationData.data.amount / 100; // Convert from kobo
         const currency = verificationData.data.currency;
 
-        // Get event details
-        const event = await mongoStorage.getEvent(eventId);
-        if (!event) {
-          return res.status(404).json({ message: "Event not found" });
+        // Find the existing registration by payment reference
+        const existingRegistrations = await mongoStorage.getEventRegistrations(eventId);
+        const registration = existingRegistrations.find(reg => reg.paymentReference === reference);
+        
+        if (!registration) {
+          return res.status(404).json({ 
+            success: false,
+            message: "Registration not found for this payment reference" 
+          });
         }
 
-        // Create the registration
-        const registrationId = nanoid(12);
-        const qrData = {
-          registrationId,
-          eventId,
-          timestamp: Date.now(),
-          type: registrationData.registrationType || 'member'
-        };
-
-        // Generate QR code
-        const qrCodeData = JSON.stringify(qrData);
-        const qrCodeImage = await QRCode.toDataURL(qrCodeData);
-
-        // Create registration with payment data
-        const registration = await mongoStorage.createEventRegistration({
-          ...registrationData,
-          eventId,
-          registrationId,
+        // Update the existing registration to mark payment as completed
+        const updatedRegistration = await mongoStorage.updateEventRegistration(registration._id.toString(), {
           paymentStatus: 'paid',
-          paymentReference: reference,
+          status: 'confirmed',
           paymentAmount: amount,
           paymentCurrency: currency,
-          qrCode: qrCodeImage,
-          status: 'confirmed',
           paymentMethod: 'paystack',
-          createdAt: new Date()
         });
 
-        // Send payment notification to organization admin
-        await NotificationService.createPaymentNotification(
-          event.organizationId.toString(),
-          eventId,
-          amount,
-          currency,
-          registrationData.firstName + ' ' + registrationData.lastName,
-          'event_registration'
-        );
+        if (!updatedRegistration) {
+          return res.status(500).json({ 
+            success: false,
+            message: "Failed to update registration" 
+          });
+        }
 
-        // Send registration notification
-        await NotificationService.createRegistrationNotification(
-          event.organizationId.toString(),
-          eventId,
-          registration._id.toString(),
-          registrationData.firstName + ' ' + registrationData.lastName,
-          registrationData.registrationType || 'member'
-        );
+        // Get event details for notifications
+        const event = await mongoStorage.getEvent(eventId);
+        if (event) {
+          // Send payment notification to organization admin
+          await NotificationService.createPaymentNotification(
+            event.organizationId.toString(),
+            eventId,
+            amount,
+            currency,
+            updatedRegistration.firstName + ' ' + updatedRegistration.lastName,
+            'event_registration'
+          );
+
+          // Send registration notification
+          await NotificationService.createRegistrationNotification(
+            event.organizationId.toString(),
+            eventId,
+            updatedRegistration._id.toString(),
+            updatedRegistration.firstName + ' ' + updatedRegistration.lastName,
+            updatedRegistration.registrationType || 'member'
+          );
+        }
 
         res.json({
           success: true,
           message: "Payment verified and registration completed",
           registration: {
-            id: registration._id.toString(),
-            ...registration.toObject(),
-            qrCode: qrCodeImage
+            id: updatedRegistration._id.toString(),
+            ...updatedRegistration.toObject(),
+            qrCode: updatedRegistration.qrCode
           }
         });
       } else {
