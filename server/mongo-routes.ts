@@ -1507,6 +1507,7 @@ export function registerMongoRoutes(app: Express) {
       res.json({
         id: registration._id.toString(),
         registrationId: registration.registrationId,
+        uniqueId: registration.uniqueId,
         firstName: registration.firstName,
         lastName: registration.lastName,
         email: registration.email,
@@ -1514,7 +1515,10 @@ export function registerMongoRoutes(app: Express) {
         status: registration.status,
         paymentStatus: registration.paymentStatus,
         qrCode: registration.qrCode,
+        qrCodeImage: registration.qrCodeImage,
         registrationType: registration.registrationType,
+        paymentReference: registration.paymentReference,
+        paymentAmount: registration.paymentAmount,
         event: {
           id: event._id.toString(),
           name: event.name,
@@ -1523,6 +1527,7 @@ export function registerMongoRoutes(app: Express) {
           endDate: event.endDate
         },
         createdAt: registration.createdAt,
+        updatedAt: registration.updatedAt,
         validatedAt: registration.validatedAt
       });
     } catch (error) {

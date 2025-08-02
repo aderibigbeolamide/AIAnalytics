@@ -174,7 +174,7 @@ export default function PaymentSuccess() {
                   {isTicket ? 'Ticket Number' : 'Registration ID'}
                 </label>
                 <div className="mt-1 font-mono text-lg font-semibold">
-                  {data?.ticketNumber || data?.registrationId || 'N/A'}
+                  {data?.ticketNumber || data?.uniqueId || data?.registrationId || 'N/A'}
                 </div>
               </div>
               <div>
@@ -193,7 +193,7 @@ export default function PaymentSuccess() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-gray-400" />
-                  <span>{data?.ownerName || (data?.firstName + ' ' + data?.lastName) || 'N/A'}</span>
+                  <span>{data?.ownerName || (data?.firstName && data?.lastName ? `${data.firstName} ${data.lastName}` : '') || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-gray-400" />
@@ -209,11 +209,24 @@ export default function PaymentSuccess() {
               )}
             </div>
 
+            {/* Unique ID for Manual Verification */}
+            {data?.uniqueId && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">Manual Verification ID</h4>
+                <div className="font-mono text-lg font-bold text-yellow-800 dark:text-yellow-200">
+                  {data.uniqueId}
+                </div>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
+                  Use this ID for manual verification if QR code scanning is not available
+                </p>
+              </div>
+            )}
+
             {/* QR Code */}
-            {data?.qrCode && (
+            {(data?.qrCode || data?.qrCodeImage) && (
               <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-lg border">
                 <img 
-                  src={data.qrCode} 
+                  src={data?.qrCodeImage || data?.qrCode} 
                   alt="QR Code" 
                   className="w-48 h-48 mx-auto mb-4"
                 />
