@@ -659,10 +659,10 @@ export function registerMongoRoutes(app: Express) {
       }
 
       // Handle new registration payment (original code)
-      const { eventId, email, registrationData } = req.body;
+      const { eventId, email: userEmail, registrationData } = req.body;
       
       // Validate required fields
-      if (!eventId || !email) {
+      if (!eventId || !userEmail) {
         return res.status(400).json({ 
           message: "Event ID, email are required" 
         });
@@ -733,7 +733,7 @@ export function registerMongoRoutes(app: Express) {
         // Extract standard fields from custom field data
         firstName: registrationData.firstName || registrationData.FirstName || '',
         lastName: registrationData.lastName || registrationData.LastName || '',
-        email: registrationData.email || registrationData.Email || email,
+        email: registrationData.email || registrationData.Email || userEmail,
         phone: registrationData.phone || registrationData.Phone || '',
         // Store all custom field data
         customFieldData: {}
@@ -770,7 +770,7 @@ export function registerMongoRoutes(app: Express) {
         registrationType,
         type: 'event_registration',
         eventName: event.name,
-        userEmail: email,
+        userEmail: userEmail,
         firstName: registrationRecord.firstName,
         lastName: registrationRecord.lastName,
         custom_fields: [
@@ -792,7 +792,7 @@ export function registerMongoRoutes(app: Express) {
 
       // Initialize payment with Paystack (same pattern as ticket purchase)
       const paymentResponse = await initializePaystackPayment(
-        email,
+        userEmail,
         amountInKobo,
         paymentReference,
         metadata,
