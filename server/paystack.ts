@@ -63,6 +63,9 @@ export async function initializePaystackPayment(
 // Verify Paystack payment
 export async function verifyPaystackPayment(reference: string) {
   try {
+    console.log(`Verifying payment with Paystack for reference: ${reference}`);
+    console.log(`Using secret key: ${process.env.PAYSTACK_SECRET_KEY ? 'Available' : 'Missing'}`);
+    
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       method: 'GET',
       headers: {
@@ -70,7 +73,10 @@ export async function verifyPaystackPayment(reference: string) {
       },
     });
 
+    console.log(`Paystack API response status: ${response.status}`);
     const data = await response.json();
+    console.log(`Paystack API response data:`, JSON.stringify(data, null, 2));
+    
     return data;
   } catch (error) {
     console.error('Paystack verification error:', error);

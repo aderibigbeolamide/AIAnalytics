@@ -839,10 +839,12 @@ export function registerMongoRoutes(app: Express) {
   app.get("/api/payment/verify/:reference", async (req: Request, res: Response) => {
     try {
       const { reference } = req.params;
+      console.log(`Verifying payment with reference: ${reference}`);
 
       // Verify payment with Paystack
       const { verifyPaystackPayment } = await import('./paystack');
       const verificationData = await verifyPaystackPayment(reference);
+      console.log('Paystack verification response:', JSON.stringify(verificationData, null, 2));
 
       if (verificationData.status && verificationData.data.status === 'success') {
         const metadata = verificationData.data.metadata;
@@ -855,18 +857,20 @@ export function registerMongoRoutes(app: Express) {
         const registration = existingRegistrations.find(reg => reg.paymentReference === reference);
         
         if (!registration) {
+          console.log(`No registration found for payment reference: ${reference}`);
           return res.status(404).json({ 
             success: false,
             message: "Registration not found for this payment reference" 
           });
         }
 
+        console.log(`Found registration:`, registration);
+
         // Update the existing registration to mark payment as completed
-        const updatedRegistration = await mongoStorage.updateEventRegistration(registration._id.toString(), {
+        const updatedRegistration = await mongoStorage.updateEventRegistration(registration._id!.toString(), {
           paymentStatus: 'paid',
           status: 'confirmed',
           paymentAmount: amount,
-          paymentCurrency: currency,
           paymentMethod: 'paystack',
         });
 
@@ -894,7 +898,7 @@ export function registerMongoRoutes(app: Express) {
           await NotificationService.createRegistrationNotification(
             event.organizationId.toString(),
             eventId,
-            updatedRegistration._id.toString(),
+            updatedRegistration._id!.toString(),
             updatedRegistration.firstName + ' ' + updatedRegistration.lastName,
             updatedRegistration.registrationType || 'member'
           );
@@ -904,20 +908,24 @@ export function registerMongoRoutes(app: Express) {
           success: true,
           message: "Payment verified and registration completed",
           registration: {
-            id: updatedRegistration._id.toString(),
-            ...updatedRegistration.toObject(),
-            qrCode: updatedRegistration.qrCode
+            id: updatedRegistration._id!.toString(),
+            ...updatedRegistration.toObject()
           }
         });
       } else {
+        console.log('Payment verification failed:', verificationData);
         res.status(400).json({
           success: false,
-          message: "Payment verification failed"
+          message: "Payment verification failed",
+          details: verificationData
         });
       }
     } catch (error) {
       console.error("Payment verification error:", error);
-      res.status(500).json({ message: "Payment verification failed" });
+      res.status(500).json({ 
+        message: "Payment verification failed",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
