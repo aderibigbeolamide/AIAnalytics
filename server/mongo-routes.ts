@@ -1411,8 +1411,21 @@ export function registerMongoRoutes(app: Express) {
               );
             }
 
+            // Generate a shorter manual verification code (6 digits)
+            const shortCode = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            // Update registration with short verification code
+            await mongoStorage.updateEventRegistration(registration._id.toString(), {
+              manualVerificationCode: shortCode
+            });
+
+            // Use the same event variable for redirect data
+            const eventName = event ? encodeURIComponent(event.name) : '';
+            const eventLocation = event ? encodeURIComponent(event.location || 'TBD') : '';
+            const eventDate = event ? event.startDate?.toISOString() : '';
+
             // Redirect to registration success page with all data
-            const successUrl = `/payment/success?type=registration&registrationId=${registrationId}&eventId=${eventId}&uniqueId=${encodeURIComponent(registration.uniqueId)}&firstName=${encodeURIComponent(registration.firstName)}&lastName=${encodeURIComponent(registration.lastName)}&email=${encodeURIComponent(registration.email)}&qrCodeImage=${encodeURIComponent(qrImageBase64)}`;
+            const successUrl = `/payment/success?type=registration&registrationId=${registrationId}&eventId=${eventId}&uniqueId=${encodeURIComponent(registration.uniqueId)}&firstName=${encodeURIComponent(registration.firstName)}&lastName=${encodeURIComponent(registration.lastName)}&email=${encodeURIComponent(registration.email)}&qrCodeImage=${encodeURIComponent(qrImageBase64)}&shortCode=${shortCode}&eventName=${eventName}&eventLocation=${eventLocation}&eventDate=${encodeURIComponent(eventDate)}`;
             return res.redirect(successUrl);
           }
         } else if (metadata.type === 'event_registration_legacy') {
@@ -1805,6 +1818,51 @@ export function registerMongoRoutes(app: Express) {
     } catch (error) {
       console.error("QR scan validation error:", error);
       res.status(500).json({ message: "QR code validation failed" });
+    }
+  });
+
+  // Get payment history for user's events
+  app.get("/api/payments/my-events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Get all events for this user's organization
+      const userEvents = await mongoStorage.getEventsByOrganization(req.user.organizationId);
+      const eventIds = userEvents.map(event => event._id.toString());
+
+      if (eventIds.length === 0) {
+        return res.json({ payments: [], totalRevenue: 0, eventCount: 0 });
+      }
+
+      // Get all paid registrations for user's events
+      const payments = await mongoStorage.getPaymentHistory(eventIds);
+
+      // Calculate total revenue
+      const totalRevenue = payments.reduce((sum: number, payment: any) => {
+        return sum + (payment.paymentAmount || 0);
+      }, 0);
+
+      res.json({
+        payments: payments.map((payment: any) => ({
+          id: payment._id.toString(),
+          reference: payment.paymentReference,
+          amount: payment.paymentAmount * 100, // Convert to kobo for display consistency
+          status: payment.paymentStatus === 'paid' ? 'success' : payment.paymentStatus,
+          eventName: payment.eventName,
+          registrationData: {
+            guestName: `${payment.firstName} ${payment.lastName}`.trim() || 'Unknown'
+          },
+          createdAt: payment.paymentVerifiedAt || payment.createdAt
+        })),
+        totalRevenue,
+        eventCount: eventIds.length
+      });
+    } catch (error) {
+      console.error("Get payment history error:", error);
+      res.status(500).json({ message: "Failed to fetch payment history" });
     }
   });
 

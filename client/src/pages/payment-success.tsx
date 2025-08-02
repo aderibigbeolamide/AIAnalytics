@@ -92,20 +92,20 @@ export default function PaymentSuccess() {
         <div style="text-align: center; font-family: Arial, sans-serif;">
           <h2 style="color: #333; margin-bottom: 20px;">${type === 'ticket' ? 'Event Ticket' : 'Registration Card'}</h2>
           <div style="border: 2px solid #ddd; padding: 20px; border-radius: 8px;">
-            <h3 style="color: #2563eb; margin-bottom: 15px;">${data?.event?.name || 'Event'}</h3>
+            <h3 style="color: #2563eb; margin-bottom: 15px;">${data?.event?.name || searchParams.get('eventName') || 'Event'}</h3>
             <div style="text-align: left; margin-bottom: 15px;">
-              <p><strong>Location:</strong> ${data?.event?.location || 'TBD'}</p>
-              <p><strong>Date:</strong> ${new Date(data?.event?.startDate || '').toLocaleDateString()}</p>
-              <p><strong>Time:</strong> ${new Date(data?.event?.startDate || '').toLocaleTimeString()}</p>
+              <p><strong>Location:</strong> ${data?.event?.location || searchParams.get('eventLocation') || 'TBD'}</p>
+              <p><strong>Date:</strong> ${data?.event?.startDate ? new Date(data.event.startDate).toLocaleDateString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleDateString() : 'TBD'}</p>
+              <p><strong>Time:</strong> ${data?.event?.startDate ? new Date(data.event.startDate).toLocaleTimeString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleTimeString() : 'TBD'}</p>
             </div>
             <div style="text-align: left; margin-bottom: 15px;">
-              <p><strong>${type === 'ticket' ? 'Ticket Number' : 'Registration ID'}:</strong> ${data?.ticketNumber || data?.registrationId || 'N/A'}</p>
-              <p><strong>Owner:</strong> ${data?.ownerName || data?.firstName + ' ' + data?.lastName || 'N/A'}</p>
-              <p><strong>Email:</strong> ${data?.ownerEmail || data?.email || 'N/A'}</p>
+              <p><strong>${type === 'ticket' ? 'Ticket Number' : 'Manual Verification Code'}:</strong> ${data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId?.slice(-6) || 'N/A'}</p>
+              <p><strong>Owner:</strong> ${data?.ownerName || (data?.firstName + ' ' + data?.lastName) || (searchParams.get('firstName') + ' ' + searchParams.get('lastName')) || 'N/A'}</p>
+              <p><strong>Email:</strong> ${data?.ownerEmail || data?.email || searchParams.get('email') || 'N/A'}</p>
               ${type === 'ticket' ? `<p><strong>Category:</strong> ${data?.category || 'N/A'}</p>` : ''}
             </div>
             <div style="text-align: center; margin-top: 20px;">
-              <img src="${data?.qrCode || ''}" style="width: 150px; height: 150px;" />
+              ${(data?.qrCodeImage || data?.qrCode || searchParams.get('qrCodeImage')) ? `<img src="${data?.qrCodeImage || data?.qrCode || searchParams.get('qrCodeImage')}" style="width: 150px; height: 150px;" />` : '<p style="color: #999;">QR Code not available</p>'}
               <p style="font-size: 12px; color: #666; margin-top: 10px;">Scan this QR code for verification</p>
             </div>
           </div>
@@ -167,7 +167,12 @@ export default function PaymentSuccess() {
     paymentStatus: 'paid',
     status: 'confirmed',
     qrCodeImage: searchParams.get('qrCodeImage'),
-    event: eventData
+    manualVerificationCode: searchParams.get('shortCode'),
+    event: eventData || {
+      name: searchParams.get('eventName'),
+      location: searchParams.get('eventLocation'),
+      startDate: searchParams.get('eventDate')
+    }
   };
   
   const isTicket = type === 'ticket';
@@ -201,16 +206,16 @@ export default function PaymentSuccess() {
             {/* Event Details */}
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
               <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                {data?.event?.name || 'Event Details'}
+                {data?.event?.name || searchParams.get('eventName') || 'Event Details'}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                   <MapPin className="h-4 w-4" />
-                  <span>{data?.event?.location || 'Location TBD'}</span>
+                  <span>{data?.event?.location || searchParams.get('eventLocation') || 'Location TBD'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                   <Calendar className="h-4 w-4" />
-                  <span>{new Date(data?.event?.startDate || '').toLocaleDateString()}</span>
+                  <span>{data?.event?.startDate ? new Date(data.event.startDate).toLocaleDateString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleDateString() : 'Date TBD'}</span>
                 </div>
               </div>
             </div>
@@ -241,11 +246,11 @@ export default function PaymentSuccess() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-gray-400" />
-                  <span>{data?.ownerName || (data?.firstName && data?.lastName ? `${data.firstName} ${data.lastName}` : '') || 'N/A'}</span>
+                  <span>{data?.ownerName || (data?.firstName && data?.lastName ? `${data.firstName} ${data.lastName}` : '') || (searchParams.get('firstName') && searchParams.get('lastName') ? `${searchParams.get('firstName')} ${searchParams.get('lastName')}` : '') || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-gray-400" />
-                  <span>{data?.ownerEmail || data?.email || 'N/A'}</span>
+                  <span>{data?.ownerEmail || data?.email || searchParams.get('email') || 'N/A'}</span>
                 </div>
               </div>
               {isTicket && (
@@ -257,24 +262,24 @@ export default function PaymentSuccess() {
               )}
             </div>
 
-            {/* Unique ID for Manual Verification */}
-            {data?.uniqueId && (
+            {/* Manual Verification Code */}
+            {(data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId) && (
               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">Manual Verification ID</h4>
-                <div className="font-mono text-lg font-bold text-yellow-800 dark:text-yellow-200">
-                  {data.uniqueId}
+                <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">Manual Verification Code</h4>
+                <div className="font-mono text-2xl font-bold text-yellow-800 dark:text-yellow-200">
+                  {data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId?.slice(-6) || 'N/A'}
                 </div>
                 <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
-                  Use this ID for manual verification if QR code scanning is not available
+                  Use this 6-digit code for manual verification if QR code scanning is not available
                 </p>
               </div>
             )}
 
             {/* QR Code */}
-            {(data?.qrCode || data?.qrCodeImage) && (
+            {(data?.qrCode || data?.qrCodeImage || searchParams.get('qrCodeImage')) && (
               <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-lg border">
                 <img 
-                  src={data?.qrCodeImage || data?.qrCode} 
+                  src={data?.qrCodeImage || data?.qrCode || searchParams.get('qrCodeImage')} 
                   alt="QR Code" 
                   className="w-48 h-48 mx-auto mb-4"
                 />

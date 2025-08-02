@@ -38,9 +38,13 @@ export interface IMongoStorage {
   // Events
   getEvent(id: string): Promise<IEvent | null>;
   getEvents(filters?: { status?: string; createdBy?: string; organizationId?: string }): Promise<IEvent[]>;
+  getEventsByOrganization(organizationId: string): Promise<IEvent[]>;
   createEvent(event: InsertEvent): Promise<IEvent>;
   updateEvent(id: string, updates: Partial<InsertEvent>): Promise<IEvent | null>;
   deleteEvent(id: string): Promise<boolean>; // Soft delete
+  
+  // Payment History
+  getPaymentHistory(eventIds: string[]): Promise<any[]>;
 
   // Event Registrations
   getEventRegistration(id: string): Promise<IEventRegistration | null>;
@@ -530,6 +534,66 @@ export class MongoStorage implements IMongoStorage {
     } catch (error) {
       console.error('Error deleting ticket:', error);
       return false;
+    }
+  }
+
+  async getEventsByOrganization(organizationId: string): Promise<IEvent[]> {
+    try {
+      return await Event.find({ 
+        organizationId: new mongoose.Types.ObjectId(organizationId),
+        status: { $ne: 'deleted' }
+      }).sort({ createdAt: -1 });
+    } catch (error) {
+      console.error('Error getting events by organization:', error);
+      return [];
+    }
+  }
+
+  async getPaymentHistory(eventIds: string[]): Promise<any[]> {
+    try {
+      const objectIds = eventIds.map(id => new mongoose.Types.ObjectId(id));
+      
+      // Get all paid registrations for the events with event details
+      const payments = await EventRegistration.aggregate([
+        {
+          $match: {
+            eventId: { $in: objectIds },
+            paymentStatus: 'paid'
+          }
+        },
+        {
+          $lookup: {
+            from: 'events',
+            localField: 'eventId',
+            foreignField: '_id',
+            as: 'event'
+          }
+        },
+        {
+          $unwind: '$event'
+        },
+        {
+          $project: {
+            _id: 1,
+            paymentReference: 1,
+            paymentAmount: 1,
+            paymentStatus: 1,
+            paymentVerifiedAt: 1,
+            firstName: 1,
+            lastName: 1,
+            createdAt: 1,
+            eventName: '$event.name'
+          }
+        },
+        {
+          $sort: { paymentVerifiedAt: -1, createdAt: -1 }
+        }
+      ]);
+
+      return payments;
+    } catch (error) {
+      console.error('Error getting payment history:', error);
+      return [];
     }
   }
 }
