@@ -552,9 +552,113 @@ export function registerMongoRoutes(app: Express) {
 
   // ================ PAYMENT ENDPOINTS ================
   
-  // Initialize payment for registration
+  // Initialize payment for existing registration (PaymentForm component)
   app.post("/api/payment/initialize", async (req: Request, res: Response) => {
     try {
+      const { registrationId, amount, email } = req.body;
+      
+      // Handle existing registration payment
+      if (registrationId) {
+        // Validate required fields
+        if (!registrationId || !email) {
+          return res.status(400).json({ 
+            message: "Registration ID and email are required" 
+          });
+        }
+
+        // Get registration details
+        const registration = await mongoStorage.getEventRegistration(registrationId);
+        if (!registration) {
+          return res.status(404).json({ message: "Registration not found" });
+        }
+
+        // Get event details
+        const event = await mongoStorage.getEvent(registration.eventId.toString());
+        if (!event) {
+          return res.status(404).json({ message: "Event not found" });
+        }
+
+        // Validate payment is required
+        if (!event.paymentSettings?.requiresPayment) {
+          return res.status(400).json({ message: "Payment not required for this event" });
+        }
+
+        // Get payment amount
+        const amountInNaira = amount || parseFloat(event.paymentSettings.amount?.toString() || '5000');
+        const amountInKobo = Math.round(amountInNaira * 100);
+        
+        // Generate payment reference
+        const paymentReference = `REG_${Date.now()}_${nanoid(8)}`;
+
+        // Get organization to check for subaccount
+        const organization = await mongoStorage.getOrganization(event.organizationId.toString());
+        
+        // Prepare metadata for Paystack
+        const metadata = {
+          registrationId: registration._id.toString(),
+          eventId: registration.eventId.toString(),
+          registrationType: registration.registrationType,
+          type: 'existing_registration_payment',
+          eventName: event.name,
+          userEmail: email,
+          firstName: registration.firstName,
+          lastName: registration.lastName,
+          custom_fields: [
+            {
+              display_name: "Event",
+              variable_name: "event_name",
+              value: event.name
+            },
+            {
+              display_name: "Registration Type", 
+              variable_name: "registration_type",
+              value: registration.registrationType
+            }
+          ]
+        };
+
+        // Import paystack module
+        const { initializePaystackPayment } = await import('./paystack');
+
+        // Initialize payment with Paystack
+        const paymentResponse = await initializePaystackPayment(
+          email,
+          amountInKobo,
+          paymentReference,
+          metadata,
+          organization?.paystackSubaccountCode || undefined,
+          2 // 2% platform fee
+        );
+
+        if (paymentResponse.status) {
+          // Update registration with payment reference
+          await mongoStorage.updateEventRegistration(registrationId, {
+            paymentReference,
+            paymentAmount: amountInNaira,
+            paymentCurrency: 'NGN'
+          });
+
+          res.json({
+            success: true,
+            data: {
+              authorization_url: paymentResponse.data.authorization_url,
+              access_code: paymentResponse.data.access_code,
+              reference: paymentReference
+            },
+            registrationId: registration._id.toString(),
+            message: "Payment initialized successfully"
+          });
+        } else {
+          console.error("Paystack initialization failed:", paymentResponse);
+          res.status(400).json({
+            success: false,
+            message: paymentResponse.message || "Payment initialization failed"
+          });
+        }
+        return;
+      }
+
+      // Handle new registration payment (original code)
       const { eventId, email, registrationData } = req.body;
       
       // Validate required fields
