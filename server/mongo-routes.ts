@@ -807,4 +807,143 @@ export function registerMongoRoutes(app: Express) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // Ticket Purchase API (MongoDB-based)
+  app.post("/api/tickets/purchase", async (req: Request, res: Response) => {
+    try {
+      const { eventId, ownerEmail, ownerPhone, ticketCategoryId, paymentMethod } = req.body;
+      
+      if (!eventId || !ownerEmail || !ticketCategoryId || !paymentMethod) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Generate owner name from email if not provided (for privacy)
+      const ownerName = ownerEmail.split('@')[0];
+
+      // Get event details
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      if (event.eventType !== "ticket") {
+        return res.status(400).json({ message: "This is not a ticket-based event" });
+      }
+
+      // Check if ticket sales are open
+      const now = new Date();
+      const registrationStart = new Date(event.registrationStartDate || event.startDate);
+      const registrationEnd = new Date(event.registrationEndDate || event.endDate || event.startDate);
+
+      if (now < registrationStart) {
+        return res.status(400).json({ message: "Ticket sales haven't started yet" });
+      }
+
+      if (now > registrationEnd) {
+        return res.status(400).json({ message: "Ticket sales have ended" });
+      }
+
+      // Find the selected ticket category
+      const ticketCategory = event.ticketCategories?.find(cat => cat.id === ticketCategoryId);
+      if (!ticketCategory) {
+        return res.status(400).json({ message: "Invalid ticket category selected" });
+      }
+
+      if (!ticketCategory.available) {
+        return res.status(400).json({ message: "This ticket category is no longer available" });
+      }
+
+      // Generate ticket data
+      const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      // Generate QR code data
+      const qrData = {
+        eventId,
+        ticketNumber,
+        ownerEmail,
+        issuedAt: new Date().toISOString()
+      };
+
+      const QRCode = await import('qrcode');
+      const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData));
+
+      // Create ticket record
+      const ticketData = {
+        eventId: new mongoose.Types.ObjectId(eventId),
+        organizationId: new mongoose.Types.ObjectId(event.organizationId),
+        ownerEmail,
+        ownerPhone: ownerPhone || '',
+        ownerName,
+        ticketNumber,
+        category: ticketCategory.name,
+        price: ticketCategory.price,
+        currency: ticketCategory.currency,
+        status: "pending",
+        paymentStatus: paymentMethod === "manual" ? "pending" : "pending",
+        paymentMethod,
+        qrCode: qrCodeImage,
+        transferHistory: []
+      };
+
+      const ticket = await mongoStorage.createTicket(ticketData);
+
+      if (paymentMethod === "paystack" && ticketCategory.price > 0) {
+        // Initialize Paystack payment
+        const { initializePaystackPayment } = await import('./paystack');
+        const { nanoid } = await import('nanoid');
+        
+        const reference = `TKT_${Date.now()}_${nanoid(8)}`;
+        const amount = ticketCategory.price * 100; // Convert to kobo
+
+        try {
+          const paymentData = await initializePaystackPayment({
+            email: ownerEmail,
+            amount,
+            reference,
+            currency: ticketCategory.currency,
+            metadata: {
+              ticketId: ticket._id.toString(),
+              eventId,
+              ticketCategoryId,
+              ticketNumber,
+              ownerName,
+              eventName: event.name,
+              type: 'ticket_purchase'
+            }
+          });
+
+          if (paymentData.status) {
+            // Update ticket with payment reference
+            await mongoStorage.updateTicket(ticket._id.toString(), {
+              paymentReference: reference
+            });
+
+            res.json({
+              ticketId: ticket._id.toString(),
+              paymentUrl: paymentData.data.authorization_url,
+              reference,
+            });
+          } else {
+            // Delete ticket if payment initialization failed
+            await mongoStorage.deleteTicket(ticket._id.toString());
+            res.status(400).json({ message: "Payment initialization failed" });
+          }
+        } catch (paymentError) {
+          // Delete ticket if payment initialization failed
+          await mongoStorage.deleteTicket(ticket._id.toString());
+          console.error("Payment initialization error:", paymentError);
+          res.status(500).json({ message: "Payment initialization failed" });
+        }
+      } else {
+        // For manual payment or free tickets
+        res.json({
+          ticketId: ticket._id.toString(),
+          message: paymentMethod === "manual" ? "Ticket reserved. Complete payment to activate." : "Free ticket created successfully.",
+        });
+      }
+    } catch (error) {
+      console.error("Ticket purchase error:", error);
+      res.status(500).json({ message: "Failed to purchase ticket" });
+    }
+  });
 }

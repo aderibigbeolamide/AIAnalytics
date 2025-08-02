@@ -62,7 +62,7 @@ export default function BuyTicket() {
         },
         body: JSON.stringify({
           ...data,
-          eventId: parseInt(eventId!),
+          eventId: eventId!,
         }),
       });
 

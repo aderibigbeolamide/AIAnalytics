@@ -64,6 +64,7 @@ export interface IMongoStorage {
   getTickets(filters?: { eventId?: string; status?: string; paymentStatus?: string }): Promise<ITicket[]>;
   createTicket(ticket: Partial<ITicket>): Promise<ITicket>;
   updateTicket(id: string, updates: Partial<ITicket>): Promise<ITicket | null>;
+  deleteTicket(id: string): Promise<boolean>;
 }
 
 export class MongoStorage implements IMongoStorage {
@@ -508,6 +509,16 @@ export class MongoStorage implements IMongoStorage {
     } catch (error) {
       console.error('Error updating ticket:', error);
       return null;
+    }
+  }
+
+  async deleteTicket(id: string): Promise<boolean> {
+    try {
+      const result = await Ticket.findByIdAndDelete(id);
+      return !!result;
+    } catch (error) {
+      console.error('Error deleting ticket:', error);
+      return false;
     }
   }
 }
