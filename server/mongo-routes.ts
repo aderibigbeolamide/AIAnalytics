@@ -1768,14 +1768,14 @@ export function registerMongoRoutes(app: Express) {
         }
 
         // CRITICAL: Check payment status for paid events
-        if (event.requirePayment && registration.paymentStatus !== 'paid') {
+        if (event.requiresPayment && registration.paymentStatus !== 'paid') {
           return res.json({
             validationStatus: "invalid",
             message: `Payment not completed. Status: ${registration.paymentStatus}`,
             details: {
-              registrationId: registration.registrationId || registration._id.toString(),
+              registrationId: registration._id!.toString(),
               status: registration.paymentStatus,
-              participantName: registration.fullName || registration.FullName,
+              participantName: `${registration.firstName} ${registration.lastName}`,
               eventName: event.name
             }
           });
@@ -1787,8 +1787,8 @@ export function registerMongoRoutes(app: Express) {
             validationStatus: "already_used",
             message: "Registration has already been used for entry",
             details: {
-              registrationId: registration.registrationId || registration._id.toString(),
-              participantName: registration.fullName || registration.FullName,
+              registrationId: registration._id!.toString(),
+              participantName: `${registration.firstName} ${registration.lastName}`,
               eventName: event.name,
               attendedAt: registration.updatedAt
             }
@@ -1796,9 +1796,9 @@ export function registerMongoRoutes(app: Express) {
         }
 
         // Mark registration as attended
-        await mongoStorage.updateEventRegistration(registration._id.toString(), {
+        await mongoStorage.updateEventRegistration(registration._id!.toString(), {
           status: 'attended',
-          attendedAt: new Date()
+          validatedAt: new Date()
         });
 
         validationResult = {
@@ -1806,12 +1806,21 @@ export function registerMongoRoutes(app: Express) {
           message: "Registration validated successfully",
           details: {
             type: 'registration',
-            registrationId: registration.registrationId || registration._id.toString(),
-            participantName: registration.fullName || registration.FullName,
-            email: registration.email || registration.Email,
+            registrationId: registration._id!.toString(),
+            participantName: `${registration.firstName} ${registration.lastName}`,
+            email: registration.email,
             eventName: event.name,
             registrationType: registration.registrationType,
-            auxiliaryBody: registration.auxiliaryBody
+            auxiliaryBody: registration.auxiliaryBody,
+            member: {
+              firstName: registration.firstName,
+              lastName: registration.lastName,
+              email: registration.email
+            },
+            event: {
+              name: event.name,
+              location: event.location
+            }
           }
         };
       }
@@ -2010,20 +2019,27 @@ export function registerMongoRoutes(app: Express) {
         });
       }
 
-      // Try to find registration by ID
-      let registration = await mongoStorage.getEventRegistration(identifier);
+      let registration;
       
-      // If not found by ID, try to find by manual verification code
-      if (!registration) {
+      // First check if it's a 6-digit verification code (don't try as ObjectId)
+      if (/^\d{6}$/.test(identifier)) {
         const allRegistrations = await mongoStorage.getEventRegistrations(eventId);
         registration = allRegistrations.find(reg => 
-          reg.registrationData?.manualVerificationCode === identifier
+          reg.registrationData?.manualVerificationCode === identifier.toString()
         );
-      }
-
-      // If still not found, try by uniqueId
-      if (!registration) {
-        registration = await mongoStorage.getEventRegistrationByUniqueId(identifier);
+      } else {
+        // For longer IDs, try as registration ID or uniqueId
+        try {
+          registration = await mongoStorage.getEventRegistration(identifier);
+        } catch (error) {
+          // If invalid ObjectId, try by uniqueId
+          registration = await mongoStorage.getEventRegistrationByUniqueId(identifier);
+        }
+        
+        // If still not found, try by uniqueId
+        if (!registration) {
+          registration = await mongoStorage.getEventRegistrationByUniqueId(identifier);
+        }
       }
 
       if (registration && registration.eventId.toString() === eventId) {
