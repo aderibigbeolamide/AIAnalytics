@@ -7,6 +7,14 @@ EventValidate is an AI-powered, multi-tenant member validation system. It offers
 Preferred communication style: Simple, everyday language.
 UI/UX preferences: User-friendly design with professional appearance, no demo credentials on login page, direct users to contact admin for login issues.
 
+## Recent Changes (August 2, 2025)
+- **Fixed Ticket Purchase Flow**: Resolved "purchase failed unexpected token" error by implementing MongoDB-based ticket purchase endpoint
+- **Payment Integration**: Added complete Paystack payment callback handling with automatic verification and redirect
+- **Database Consistency**: Migrated from mixed PostgreSQL/MongoDB to unified MongoDB architecture
+- **Payment Success Pages**: Created comprehensive payment success and failure pages with PDF generation
+- **QR Code Generation**: Implemented secure QR code generation for tickets and registrations
+- **Automatic Redirects**: After payment completion, users are automatically redirected to success pages showing their tickets/registration cards
+
 ## System Architecture
 ### Frontend
 - **Framework**: React 18 with TypeScript

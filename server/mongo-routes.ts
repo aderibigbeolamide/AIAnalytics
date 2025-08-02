@@ -896,12 +896,11 @@ export function registerMongoRoutes(app: Express) {
         const amount = ticketCategory.price * 100; // Convert to kobo
 
         try {
-          const paymentData = await initializePaystackPayment({
-            email: ownerEmail,
+          const paymentData = await initializePaystackPayment(
+            ownerEmail,
             amount,
             reference,
-            currency: ticketCategory.currency,
-            metadata: {
+            {
               ticketId: ticket._id.toString(),
               eventId,
               ticketCategoryId,
@@ -910,7 +909,7 @@ export function registerMongoRoutes(app: Express) {
               eventName: event.name,
               type: 'ticket_purchase'
             }
-          });
+          );
 
           if (paymentData.status) {
             // Update ticket with payment reference
@@ -944,6 +943,213 @@ export function registerMongoRoutes(app: Express) {
     } catch (error) {
       console.error("Ticket purchase error:", error);
       res.status(500).json({ message: "Failed to purchase ticket" });
+    }
+  });
+
+  // Payment callback endpoint (Paystack redirects here after payment)
+  app.get("/payment/callback", async (req: Request, res: Response) => {
+    try {
+      const { reference, trxref } = req.query;
+      const paymentReference = reference || trxref;
+
+      if (!paymentReference) {
+        return res.redirect("/payment/failed?error=missing_reference");
+      }
+
+      // Verify payment with Paystack
+      const { verifyPaystackPayment } = await import('./paystack');
+      const verificationData = await verifyPaystackPayment(paymentReference as string);
+
+      if (verificationData.status && verificationData.data.status === 'success') {
+        const metadata = verificationData.data.metadata;
+        const amount = verificationData.data.amount / 100; // Convert from kobo
+
+        if (metadata.type === 'ticket_purchase') {
+          // Handle ticket purchase payment
+          const ticketId = metadata.ticketId;
+          
+          // Update ticket payment status
+          const updatedTicket = await mongoStorage.updateTicket(ticketId, {
+            paymentStatus: 'paid',
+            paymentReference: paymentReference as string,
+            status: 'paid'
+          });
+
+          if (updatedTicket) {
+            // Get event details for notification
+            const event = await mongoStorage.getEvent(updatedTicket.eventId.toString());
+            if (event) {
+              // Send payment notification to organization admin
+              await NotificationService.createPaymentNotification(
+                event.organizationId.toString(),
+                event._id.toString(),
+                amount,
+                updatedTicket.currency,
+                updatedTicket.ownerName,
+                'ticket_purchase'
+              );
+            }
+
+            // Redirect to ticket success page
+            return res.redirect(`/payment/success?type=ticket&ticketId=${ticketId}`);
+          }
+        } else if (metadata.type === 'event_registration') {
+          // Handle event registration payment
+          const eventId = metadata.eventId;
+          const userEmail = metadata.userEmail;
+          const registrationData = JSON.parse(metadata.registrationData || '{}');
+          
+          // Generate registration ID and QR code
+          const registrationId = `REG${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+          
+          const qrData = {
+            eventId,
+            registrationId,
+            userEmail,
+            issuedAt: new Date().toISOString()
+          };
+
+          const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData));
+
+          // Create registration with payment data
+          const registration = await mongoStorage.createEventRegistration({
+            ...registrationData,
+            eventId,
+            registrationId,
+            paymentStatus: 'paid',
+            paymentReference: paymentReference as string,
+            paymentAmount: amount,
+            paymentCurrency: 'NGN',
+            qrCode: qrCodeImage,
+            status: 'confirmed',
+            paymentMethod: 'paystack',
+            createdAt: new Date()
+          });
+
+          // Get event details
+          const event = await mongoStorage.getEvent(eventId);
+          if (event) {
+            // Send payment notification to organization admin
+            await NotificationService.createPaymentNotification(
+              event.organizationId.toString(),
+              eventId,
+              amount,
+              'NGN',
+              registrationData.firstName + ' ' + registrationData.lastName,
+              'event_registration'
+            );
+
+            // Send registration notification
+            await NotificationService.createRegistrationNotification(
+              event.organizationId.toString(),
+              eventId,
+              registration._id.toString(),
+              registrationData.firstName + ' ' + registrationData.lastName,
+              registrationData.registrationType || 'member'
+            );
+          }
+
+          // Redirect to registration success page
+          return res.redirect(`/payment/success?type=registration&registrationId=${registration._id.toString()}&eventId=${eventId}`);
+        }
+      }
+
+      // Payment verification failed
+      res.redirect("/payment/failed?error=verification_failed");
+    } catch (error) {
+      console.error("Payment callback error:", error);
+      res.redirect("/payment/failed?error=system_error");
+    }
+  });
+
+  // Get registration details (public endpoint for verification)
+  app.get("/api/events/:eventId/registrations/:registrationId", async (req: Request, res: Response) => {
+    try {
+      const { eventId, registrationId } = req.params;
+      
+      const registration = await mongoStorage.getEventRegistration(registrationId);
+      if (!registration) {
+        return res.status(404).json({ message: "Registration not found" });
+      }
+
+      // Verify it belongs to the event
+      if (registration.eventId.toString() !== eventId) {
+        return res.status(404).json({ message: "Registration not found for this event" });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      res.json({
+        id: registration._id.toString(),
+        registrationId: registration.registrationId,
+        firstName: registration.firstName,
+        lastName: registration.lastName,
+        email: registration.email,
+        phone: registration.phone,
+        status: registration.status,
+        paymentStatus: registration.paymentStatus,
+        qrCode: registration.qrCode,
+        registrationType: registration.registrationType,
+        event: {
+          id: event._id.toString(),
+          name: event.name,
+          location: event.location,
+          startDate: event.startDate,
+          endDate: event.endDate
+        },
+        createdAt: registration.createdAt,
+        validatedAt: registration.validatedAt
+      });
+    } catch (error) {
+      console.error("Get registration error:", error);
+      res.status(500).json({ message: "Failed to get registration" });
+    }
+  });
+
+  // Get ticket details (public endpoint for verification)
+  app.get("/api/tickets/:ticketId", async (req: Request, res: Response) => {
+    try {
+      const { ticketId } = req.params;
+      
+      const ticket = await mongoStorage.getTicket(ticketId);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEvent(ticket.eventId.toString());
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      res.json({
+        id: ticket._id.toString(),
+        ticketNumber: ticket.ticketNumber,
+        category: ticket.category,
+        price: ticket.price,
+        currency: ticket.currency,
+        status: ticket.status,
+        paymentStatus: ticket.paymentStatus,
+        ownerName: ticket.ownerName,
+        ownerEmail: ticket.ownerEmail,
+        qrCode: ticket.qrCode,
+        event: {
+          id: event._id.toString(),
+          name: event.name,
+          location: event.location,
+          startDate: event.startDate,
+          endDate: event.endDate
+        },
+        createdAt: ticket.createdAt,
+        validatedAt: ticket.validatedAt
+      });
+    } catch (error) {
+      console.error("Get ticket error:", error);
+      res.status(500).json({ message: "Failed to get ticket" });
     }
   });
 }

@@ -27,6 +27,8 @@ import Invitees from "@/pages/invitees";
 import { LandingPage } from "@/pages/landing";
 import { ProtectedRoute } from "@/components/protected-route";
 import PaymentCallback from "@/pages/payment-callback";
+import PaymentSuccess from "@/pages/payment-success";
+import PaymentFailed from "@/pages/payment-failed";
 import BuyTicket from "@/pages/buy-ticket";
 import TicketDetail from "@/pages/ticket-detail";
 import TicketScanner from "@/pages/ticket-scanner";
@@ -83,6 +85,8 @@ function Router() {
       <Route path="/register/:id" component={EventRegistration} />
       <Route path="/report/:eventId" component={Report} />
       <Route path="/payment/callback" component={PaymentCallback} />
+      <Route path="/payment/success" component={PaymentSuccess} />
+      <Route path="/payment/failed" component={PaymentFailed} />
       <Route path="/buy-ticket/:eventId" component={BuyTicket} />
       <Route path="/ticket/:ticketId" component={TicketDetail} />
       <Route path="/login" component={OrganizationLogin} />
