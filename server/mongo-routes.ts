@@ -50,6 +50,7 @@ export function registerMongoRoutes(app: Express) {
         allowGuests: event.allowGuests,
         allowInvitees: event.allowInvitees,
         eventType: event.eventType,
+        ticketCategories: event.ticketCategories || [],
         organizationId: event.organizationId?.toString()
       }));
 
@@ -86,6 +87,7 @@ export function registerMongoRoutes(app: Express) {
         allowGuests: event.allowGuests,
         allowInvitees: event.allowInvitees,
         eventType: event.eventType,
+        ticketCategories: event.ticketCategories || [],
         customFields: event.customFields,
         organizationId: event.organizationId?.toString()
       };

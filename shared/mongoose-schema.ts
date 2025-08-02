@@ -226,6 +226,15 @@ export interface IEvent extends Document {
   registrationStartDate?: Date;
   registrationEndDate?: Date;
   eventType: string; // registration, ticket
+  ticketCategories?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    currency: string;
+    description?: string;
+    maxQuantity?: number;
+    available: boolean;
+  }>;
   maxAttendees?: number;
   eligibleAuxiliaryBodies: string[];
   allowGuests: boolean;
@@ -260,6 +269,7 @@ const EventSchema = new Schema<IEvent>({
   registrationStartDate: { type: Date },
   registrationEndDate: { type: Date },
   eventType: { type: String, required: true, default: "registration" },
+  ticketCategories: [{ type: Schema.Types.Mixed }],
   maxAttendees: { type: Number },
   eligibleAuxiliaryBodies: [{ type: String }],
   allowGuests: { type: Boolean, required: true, default: false },
@@ -473,6 +483,15 @@ export const insertEventSchema = z.object({
   registrationStartDate: z.date().optional(),
   registrationEndDate: z.date().optional(),
   eventType: z.string().default("registration"),
+  ticketCategories: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    price: z.number(),
+    currency: z.string(),
+    description: z.string().optional(),
+    maxQuantity: z.number().optional(),
+    available: z.boolean(),
+  })).default([]),
   maxAttendees: z.number().optional(),
   eligibleAuxiliaryBodies: z.array(z.string()),
   allowGuests: z.boolean().default(false),
