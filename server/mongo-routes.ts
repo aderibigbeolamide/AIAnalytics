@@ -735,6 +735,8 @@ export function registerMongoRoutes(app: Express) {
         lastName: registrationData.lastName || registrationData.LastName || '',
         email: registrationData.email || registrationData.Email || userEmail,
         phone: registrationData.phone || registrationData.Phone || '',
+        // Store the complete registration data as required by schema
+        registrationData: registrationData,
         // Store all custom field data
         customFieldData: {}
       };
