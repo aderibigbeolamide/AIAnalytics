@@ -323,57 +323,60 @@ export function registerMongoRoutes(app: Express) {
       const qrCode = nanoid(16);
 
       // Prepare registration data
-      const registrationData = {
+      const registrationData: any = {
         eventId: new mongoose.Types.ObjectId(eventId),
         registrationType: formData.registrationType,
         uniqueId,
         qrCode,
         status: 'pending',
         paymentStatus: 'pending',
-        attendanceStatus: 'registered',
         createdAt: new Date(),
         // Extract standard fields from custom field data
-        firstName: formData.firstName || formData.FirstName || '',
-        lastName: formData.lastName || formData.LastName || '',
-        email: formData.email || formData.Email || '',
-        phone: formData.phone || formData.Phone || '',
+        firstName: formData.firstName || formData.FirstName || formData.guestName || '',
+        lastName: formData.lastName || formData.LastName || formData.guestLastName || '',
+        email: formData.email || formData.Email || formData.guestEmail || '',
+        phoneNumber: formData.phone || formData.Phone || formData.phoneNumber || '',
+        auxiliaryBody: formData.auxiliaryBody || '',
         // Store all custom field data
-        customFieldData: {}
+        registrationData: formData
       };
 
-      // Process custom fields
+      // Process custom fields and ensure names are captured
       if (event.customRegistrationFields) {
         for (const field of event.customRegistrationFields) {
           const fieldValue = formData[field.name];
           if (fieldValue !== undefined) {
-            registrationData.customFieldData[field.name] = fieldValue;
-            
-            // Also set standard fields if they match
-            if (field.name === 'firstName' || field.name === 'FirstName') {
+            // Map standard fields properly
+            if (field.name === 'firstName' || field.name === 'FirstName' || field.name === 'guestName') {
               registrationData.firstName = fieldValue;
-            } else if (field.name === 'lastName' || field.name === 'LastName') {
+            } else if (field.name === 'lastName' || field.name === 'LastName' || field.name === 'guestLastName') {
               registrationData.lastName = fieldValue;
-            } else if (field.name === 'email' || field.name === 'Email') {
+            } else if (field.name === 'email' || field.name === 'Email' || field.name === 'guestEmail') {
               registrationData.email = fieldValue;
-            } else if (field.name === 'phone' || field.name === 'Phone') {
-              registrationData.phone = fieldValue;
+            } else if (field.name === 'phone' || field.name === 'Phone' || field.name === 'phoneNumber') {
+              registrationData.phoneNumber = fieldValue;
+            } else if (field.name === 'auxiliaryBody') {
+              registrationData.auxiliaryBody = fieldValue;
             }
           }
         }
       }
 
+      // Generate manual verification code (6-digit)
+      const manualVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      registrationData.registrationData = {
+        ...formData,
+        manualVerificationCode
+      };
+
       // Handle payment data if applicable
-      if (event.paymentSettings?.requiresPayment && 
-          event.paymentSettings.paymentRules?.[formData.registrationType]) {
-        const paymentRule = event.paymentSettings.paymentRules[formData.registrationType];
-        registrationData.paymentAmount = paymentRule.amount;
-        registrationData.paymentCurrency = paymentRule.currency || 'NGN';
+      if (event.requiresPayment && event.paymentAmount) {
+        registrationData.paymentAmount = event.paymentAmount;
         registrationData.paymentMethod = formData.paymentMethod || 'pending';
         
         // Handle payment receipt upload
         if (req.file && formData.paymentMethod === 'manual_receipt') {
-          registrationData.paymentReceiptPath = req.file.path;
-          registrationData.paymentReceiptName = req.file.originalname;
+          registrationData.receiptPath = req.file.path;
           registrationData.paymentStatus = 'pending_verification';
         }
       }
@@ -469,7 +472,7 @@ export function registerMongoRoutes(app: Express) {
       let registration;
       
       if (registrationId) {
-        registration = await mongoStorage.getEventRegistrationById(registrationId);
+        registration = await mongoStorage.getEventRegistration(registrationId);
       } else if (qrCode) {
         const registrations = await mongoStorage.getEventRegistrations();
         registration = registrations.find(r => r.qrCode === qrCode);
@@ -482,7 +485,7 @@ export function registerMongoRoutes(app: Express) {
       // Update attendance status
       const updatedRegistration = await mongoStorage.updateEventRegistration(
         registration._id.toString(),
-        { attendanceStatus: 'attended', validatedAt: new Date() }
+        { status: 'attended', validatedAt: new Date() }
       );
 
       res.json({
@@ -510,8 +513,7 @@ export function registerMongoRoutes(app: Express) {
       
       // Update event with CSV file path
       await mongoStorage.updateEvent(eventId, {
-        csvFilePath: req.file.path,
-        csvFileName: req.file.originalname
+        csvData: req.file.path
       });
 
       res.json({ 
@@ -534,10 +536,9 @@ export function registerMongoRoutes(app: Express) {
 
       const eventId = req.params.eventId;
       
-      // Update event with face photo path
+      // Update event with face photo path (store in event's csvData for now)
       await mongoStorage.updateEvent(eventId, {
-        facePhotoPath: req.file.path,
-        facePhotoFileName: req.file.originalname
+        csvData: req.file.path
       });
 
       res.json({ 
