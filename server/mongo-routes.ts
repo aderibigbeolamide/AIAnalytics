@@ -1152,4 +1152,274 @@ export function registerMongoRoutes(app: Express) {
       res.status(500).json({ message: "Failed to get ticket" });
     }
   });
+
+  // QR Code Scanning and Validation Endpoints
+  app.post("/api/scan", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { qrData } = req.body;
+
+      if (!qrData) {
+        return res.status(400).json({ message: "QR data is required" });
+      }
+
+      let parsedQRData;
+      try {
+        parsedQRData = JSON.parse(qrData);
+      } catch (error) {
+        return res.status(400).json({ message: "Invalid QR code format" });
+      }
+
+      const { eventId, ticketNumber, registrationId, ownerEmail } = parsedQRData;
+
+      if (!eventId) {
+        return res.status(400).json({ message: "Invalid QR code: missing event information" });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      let validationResult = {
+        validationStatus: "invalid",
+        message: "Invalid QR code",
+        details: null as any
+      };
+
+      // Check if it's a ticket-based QR code
+      if (ticketNumber && ownerEmail) {
+        const ticket = await mongoStorage.getTicketByNumber(ticketNumber);
+        
+        if (!ticket) {
+          return res.json({
+            validationStatus: "invalid",
+            message: "Ticket not found"
+          });
+        }
+
+        // Verify ticket belongs to the event
+        if (ticket.eventId.toString() !== eventId) {
+          return res.json({
+            validationStatus: "invalid",
+            message: "Ticket does not belong to this event"
+          });
+        }
+
+        // CRITICAL: Check payment status - this was the main issue
+        if (ticket.paymentStatus !== 'paid') {
+          return res.json({
+            validationStatus: "invalid",
+            message: `Payment not completed. Status: ${ticket.paymentStatus}`,
+            details: {
+              ticketNumber: ticket.ticketNumber,
+              status: ticket.paymentStatus,
+              ownerName: ticket.ownerName,
+              eventName: event.name
+            }
+          });
+        }
+
+        // Check if ticket is already used (if using attendance tracking)
+        if (ticket.status === 'used') {
+          return res.json({
+            validationStatus: "already_used",
+            message: "Ticket has already been used for entry",
+            details: {
+              ticketNumber: ticket.ticketNumber,
+              ownerName: ticket.ownerName,
+              eventName: event.name,
+              usedAt: ticket.updatedAt
+            }
+          });
+        }
+
+        // Mark ticket as used and create attendance record
+        await mongoStorage.updateTicket(ticket._id.toString(), {
+          status: 'used',
+          usedAt: new Date()
+        });
+
+        validationResult = {
+          validationStatus: "valid",
+          message: "Ticket validated successfully",
+          details: {
+            type: 'ticket',
+            ticketNumber: ticket.ticketNumber,
+            ownerName: ticket.ownerName,
+            ownerEmail: ticket.ownerEmail,
+            eventName: event.name,
+            category: ticket.category,
+            price: ticket.price,
+            currency: ticket.currency
+          }
+        };
+      }
+      // Check if it's a registration-based QR code
+      else if (registrationId) {
+        const registration = await mongoStorage.getEventRegistration(registrationId);
+        
+        if (!registration) {
+          return res.json({
+            validationStatus: "invalid",
+            message: "Registration not found"
+          });
+        }
+
+        // Verify registration belongs to the event
+        if (registration.eventId.toString() !== eventId) {
+          return res.json({
+            validationStatus: "invalid",
+            message: "Registration does not belong to this event"
+          });
+        }
+
+        // CRITICAL: Check payment status for paid events
+        if (event.requirePayment && registration.paymentStatus !== 'paid') {
+          return res.json({
+            validationStatus: "invalid",
+            message: `Payment not completed. Status: ${registration.paymentStatus}`,
+            details: {
+              registrationId: registration.registrationId || registration._id.toString(),
+              status: registration.paymentStatus,
+              participantName: registration.fullName || registration.FullName,
+              eventName: event.name
+            }
+          });
+        }
+
+        // Check if registration is already used for entry
+        if (registration.status === 'attended') {
+          return res.json({
+            validationStatus: "already_used",
+            message: "Registration has already been used for entry",
+            details: {
+              registrationId: registration.registrationId || registration._id.toString(),
+              participantName: registration.fullName || registration.FullName,
+              eventName: event.name,
+              attendedAt: registration.updatedAt
+            }
+          });
+        }
+
+        // Mark registration as attended
+        await mongoStorage.updateEventRegistration(registration._id.toString(), {
+          status: 'attended',
+          attendedAt: new Date()
+        });
+
+        validationResult = {
+          validationStatus: "valid",
+          message: "Registration validated successfully",
+          details: {
+            type: 'registration',
+            registrationId: registration.registrationId || registration._id.toString(),
+            participantName: registration.fullName || registration.FullName,
+            email: registration.email || registration.Email,
+            eventName: event.name,
+            registrationType: registration.registrationType,
+            auxiliaryBody: registration.auxiliaryBody
+          }
+        };
+      }
+
+      res.json(validationResult);
+    } catch (error) {
+      console.error("QR scan validation error:", error);
+      res.status(500).json({ message: "QR code validation failed" });
+    }
+  });
+
+  // Manual validation endpoint (for backup when QR doesn't work)
+  app.post("/api/validate-manual", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { identifier, eventId } = req.body; // identifier can be ticket number or registration ID
+
+      if (!identifier || !eventId) {
+        return res.status(400).json({ message: "Identifier and event ID are required" });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Try to find as ticket first
+      let ticket = await mongoStorage.getTicketByNumber(identifier);
+      if (ticket && ticket.eventId.toString() === eventId) {
+        // Same validation logic as QR scan
+        if (ticket.paymentStatus !== 'paid') {
+          return res.json({
+            validationStatus: "invalid",
+            message: `Payment not completed. Status: ${ticket.paymentStatus}`
+          });
+        }
+
+        if (ticket.status === 'used') {
+          return res.json({
+            validationStatus: "already_used",
+            message: "Ticket has already been used for entry"
+          });
+        }
+
+        await mongoStorage.updateTicket(ticket._id.toString(), {
+          status: 'used',
+          usedAt: new Date()
+        });
+
+        return res.json({
+          validationStatus: "valid",
+          message: "Ticket validated successfully",
+          details: {
+            type: 'ticket',
+            ticketNumber: ticket.ticketNumber,
+            ownerName: ticket.ownerName,
+            eventName: event.name
+          }
+        });
+      }
+
+      // Try to find as registration
+      const registration = await mongoStorage.getEventRegistration(identifier);
+      if (registration && registration.eventId.toString() === eventId) {
+        if (event.requirePayment && registration.paymentStatus !== 'paid') {
+          return res.json({
+            validationStatus: "invalid",
+            message: `Payment not completed. Status: ${registration.paymentStatus}`
+          });
+        }
+
+        if (registration.status === 'attended') {
+          return res.json({
+            validationStatus: "already_used",
+            message: "Registration has already been used for entry"
+          });
+        }
+
+        await mongoStorage.updateEventRegistration(registration._id.toString(), {
+          status: 'attended',
+          attendedAt: new Date()
+        });
+
+        return res.json({
+          validationStatus: "valid",
+          message: "Registration validated successfully",
+          details: {
+            type: 'registration',
+            participantName: registration.fullName || registration.FullName,
+            eventName: event.name
+          }
+        });
+      }
+
+      res.json({
+        validationStatus: "invalid",
+        message: "No valid ticket or registration found with this identifier"
+      });
+    } catch (error) {
+      console.error("Manual validation error:", error);
+      res.status(500).json({ message: "Manual validation failed" });
+    }
+  });
 }

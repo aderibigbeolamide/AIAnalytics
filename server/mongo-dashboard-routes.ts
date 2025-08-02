@@ -681,8 +681,8 @@ export function registerMongoDashboardRoutes(app: Express) {
     }
   });
 
-  // Get payment history for organization
-  app.get("/api/payments/history", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  // Get payment history for user's events (for bank account setup page)
+  app.get("/api/payments/my-events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id;
       if (!userId) {
@@ -699,15 +699,31 @@ export function registerMongoDashboardRoutes(app: Express) {
         return res.status(400).json({ message: "No organization associated with user" });
       }
 
-      // Get all tickets for this organization
+      // Get all events for this organization
+      const events = await mongoStorage.getEvents({ organizationId: organizationId.toString() });
+      const eventIds = events.map(e => e._id.toString());
+
+      if (eventIds.length === 0) {
+        return res.json({
+          transactions: [],
+          summary: {
+            totalRevenue: 0,
+            totalTransactions: 0,
+            ticketSales: 0,
+            registrationFees: 0
+          }
+        });
+      }
+
+      // Get all tickets for events in this organization
       const tickets = await mongoStorage.getTickets({ 
-        organizationId: organizationId.toString(),
         paymentStatus: 'paid'
       });
-
-      // Get all event registrations for this organization
-      const events = await mongoStorage.getEventsByOrganization(organizationId.toString());
-      const eventIds = events.map(e => e._id.toString());
+      
+      // Filter tickets by organization events
+      const organizationTickets = tickets.filter(ticket => 
+        eventIds.includes(ticket.eventId.toString())
+      );
       
       const registrations = await mongoStorage.getEventRegistrations({ 
         eventIds,
@@ -715,7 +731,7 @@ export function registerMongoDashboardRoutes(app: Express) {
       });
 
       // Format payment history
-      const ticketPayments = tickets.map(ticket => ({
+      const ticketPayments = organizationTickets.map(ticket => ({
         id: ticket._id.toString(),
         type: 'ticket',
         amount: ticket.price,
@@ -758,7 +774,7 @@ export function registerMongoDashboardRoutes(app: Express) {
       const totalTransactions = allPayments.length;
 
       res.json({
-        payments: allPayments,
+        transactions: allPayments,
         summary: {
           totalRevenue,
           totalTransactions,
@@ -771,4 +787,5 @@ export function registerMongoDashboardRoutes(app: Express) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
 }
