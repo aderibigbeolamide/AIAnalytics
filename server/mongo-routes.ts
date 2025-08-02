@@ -5,6 +5,7 @@ import multer from "multer";
 import { nanoid } from "nanoid";
 import QRCode from "qrcode";
 import { NotificationService } from "./notification-service";
+import { FaceRecognitionService } from "./face-recognition";
 import mongoose from "mongoose";
 
 // Configure multer for file uploads
@@ -1956,6 +1957,286 @@ export function registerMongoRoutes(app: Express) {
     } catch (error) {
       console.error("Manual validation error:", error);
       res.status(500).json({ message: "Manual validation failed" });
+    }
+  });
+
+  // Manual validation endpoint (for validation using manual IDs and 6-digit codes)
+  app.post("/api/validate", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { identifier, eventId } = req.body;
+      
+      if (!identifier || !eventId) {
+        return res.status(400).json({ message: "Identifier and event ID are required" });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Try to find as ticket first
+      let ticket = await mongoStorage.getTicketByNumber(identifier);
+      if (ticket && ticket.eventId.toString() === eventId) {
+        // Same validation logic as QR scan
+        if (ticket.paymentStatus !== 'paid') {
+          return res.json({
+            validationStatus: "invalid",
+            message: `Payment not completed. Status: ${ticket.paymentStatus}`
+          });
+        }
+
+        if (ticket.status === 'used') {
+          return res.json({
+            validationStatus: "already_used",
+            message: "Ticket has already been used for entry"
+          });
+        }
+
+        await mongoStorage.updateTicket(ticket._id!.toString(), {
+          status: 'used'
+        });
+
+        return res.json({
+          validationStatus: "valid",
+          message: "Ticket validated successfully",
+          details: {
+            type: 'ticket',
+            ticketNumber: ticket.ticketNumber,
+            ownerName: ticket.ownerName,
+            eventName: event.name
+          }
+        });
+      }
+
+      // Try to find registration by ID
+      let registration = await mongoStorage.getEventRegistration(identifier);
+      
+      // If not found by ID, try to find by manual verification code
+      if (!registration) {
+        const allRegistrations = await mongoStorage.getEventRegistrations(eventId);
+        registration = allRegistrations.find(reg => 
+          reg.registrationData?.manualVerificationCode === identifier
+        );
+      }
+
+      // If still not found, try by uniqueId
+      if (!registration) {
+        registration = await mongoStorage.getEventRegistrationByUniqueId(identifier);
+      }
+
+      if (registration && registration.eventId.toString() === eventId) {
+        if (event.requiresPayment && registration.paymentStatus !== 'paid') {
+          return res.json({
+            validationStatus: "invalid",
+            message: `Payment not completed. Status: ${registration.paymentStatus}`
+          });
+        }
+
+        if (registration.status === 'attended') {
+          return res.json({
+            validationStatus: "already_used",
+            message: "Registration has already been used for entry"
+          });
+        }
+
+        await mongoStorage.updateEventRegistration(registration._id!.toString(), {
+          status: 'attended',
+          validatedAt: new Date()
+        });
+
+        return res.json({
+          validationStatus: "valid",
+          message: "Registration validated successfully",
+          details: {
+            type: 'registration',
+            participantName: `${registration.firstName} ${registration.lastName}`,
+            email: registration.email,
+            eventName: event.name,
+            registrationType: registration.registrationType
+          }
+        });
+      }
+
+      res.json({
+        validationStatus: "invalid",
+        message: "No valid ticket or registration found with this identifier"
+      });
+    } catch (error) {
+      console.error("Manual validation error:", error);
+      res.status(500).json({ message: "Manual validation failed" });
+    }
+  });
+
+  // Face Recognition Validation Endpoint
+  app.post("/api/validate-face", authenticateToken, upload.single('faceImage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { eventId, memberName, email } = req.body;
+      
+      if (!req.file) {
+        return res.status(400).json({ 
+          message: "Face image is required",
+          validationStatus: "invalid" 
+        });
+      }
+
+      if (!eventId || !memberName) {
+        return res.status(400).json({ 
+          message: "Event ID and member name are required",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Convert uploaded image to base64 for comparison
+      const uploadedImageBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+      // Validate image quality first
+      const qualityCheck = FaceRecognitionService.validateImageQuality(uploadedImageBase64);
+      if (!qualityCheck.isValid) {
+        return res.status(400).json({ 
+          message: qualityCheck.message,
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Get event details for reference photos
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ 
+          message: "Event not found",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Find member registrations for this event
+      const registrations = await mongoStorage.getEventRegistrations(eventId, {});
+      const memberRegistrations = registrations.filter(reg => 
+        (reg.firstName + ' ' + reg.lastName).toLowerCase().includes(memberName.toLowerCase()) ||
+        (email && reg.email.toLowerCase() === email.toLowerCase())
+      );
+
+      if (memberRegistrations.length === 0) {
+        return res.status(404).json({ 
+          message: "No registration found for this member in this event",
+          validationStatus: "invalid" 
+        });
+      }
+
+      let bestMatch = null;
+      let highestConfidence = 0;
+
+      // Try to compare with stored face photos
+      for (const registration of memberRegistrations) {
+        if (registration.facePhotoPath) {
+          try {
+            // Read the stored face photo
+            const fs = await import('fs');
+            const storedImageBuffer = fs.readFileSync(registration.facePhotoPath);
+            const storedImageBase64 = `data:image/jpeg;base64,${storedImageBuffer.toString('base64')}`;
+
+            // Perform face comparison
+            const comparisonResult = await FaceRecognitionService.enhancedFaceComparison(
+              storedImageBase64,
+              uploadedImageBase64,
+              memberName
+            );
+
+            if (comparisonResult.confidence > highestConfidence) {
+              highestConfidence = comparisonResult.confidence;
+              bestMatch = {
+                registration,
+                result: comparisonResult
+              };
+            }
+          } catch (error) {
+            console.error(`Error comparing face for registration ${registration._id}:`, error);
+          }
+        }
+      }
+
+      // If no face photos available, try with basic member data validation
+      if (!bestMatch && memberRegistrations.length > 0) {
+        const registration = memberRegistrations[0];
+        
+        // Check if already validated
+        if (registration.status === 'attended') {
+          return res.json({
+            validationStatus: "already_used",
+            message: "Member has already been validated for this event"
+          });
+        }
+
+        // Mark as validated
+        await mongoStorage.updateEventRegistration(registration._id!.toString(), {
+          status: 'attended',
+          validatedAt: new Date(),
+          validatedBy: new mongoose.Types.ObjectId(req.user!.id)
+        });
+
+        return res.json({
+          validationStatus: "valid",
+          message: `${memberName} validated successfully (face recognition not available)`,
+          details: {
+            type: 'registration',
+            participantName: `${registration.firstName} ${registration.lastName}`,
+            email: registration.email,
+            eventName: event.name,
+            confidence: 0,
+            method: 'manual_override'
+          }
+        });
+      }
+
+      // Process best match if available
+      if (bestMatch && bestMatch.result.isMatch) {
+        const registration = bestMatch.registration;
+
+        // Check if already validated
+        if (registration.status === 'attended') {
+          return res.json({
+            validationStatus: "already_used",
+            message: "Member has already been validated for this event"
+          });
+        }
+
+        // Mark as validated
+        await mongoStorage.updateEventRegistration(registration._id!.toString(), {
+          status: 'attended',
+          validatedAt: new Date(),
+          validatedBy: new mongoose.Types.ObjectId(req.user!.id)
+        });
+
+        return res.json({
+          validationStatus: "valid",
+          message: bestMatch.result.message,
+          details: {
+            type: 'registration',
+            participantName: `${registration.firstName} ${registration.lastName}`,
+            email: registration.email,
+            eventName: event.name,
+            confidence: Math.round(bestMatch.result.confidence * 100),
+            method: 'face_recognition'
+          }
+        });
+      }
+
+      // No match found
+      return res.json({
+        validationStatus: "face_mismatch",
+        message: `Face does not match any registered member for this event (${Math.round(highestConfidence * 100)}% confidence)`,
+        details: {
+          confidence: Math.round(highestConfidence * 100),
+          memberName,
+          eventName: event.name
+        }
+      });
+
+    } catch (error) {
+      console.error("Face validation error:", error);
+      res.status(500).json({ 
+        message: "Face validation failed",
+        validationStatus: "error" 
+      });
     }
   });
 }
