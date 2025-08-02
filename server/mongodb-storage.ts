@@ -56,6 +56,7 @@ export interface IMongoStorage {
   getMemberRegistrations(memberId: string): Promise<IEventRegistration[]>;
   createEventRegistration(registration: Partial<IEventRegistration>): Promise<IEventRegistration>;
   updateEventRegistration(id: string, updates: Partial<IEventRegistration>): Promise<IEventRegistration | null>;
+  deleteEventRegistration(id: string): Promise<boolean>;
 
   // Tickets
   getTicket(id: string): Promise<ITicket | null>;
@@ -446,6 +447,16 @@ export class MongoStorage implements IMongoStorage {
     } catch (error) {
       console.error('Error updating event registration:', error);
       return null;
+    }
+  }
+
+  async deleteEventRegistration(id: string): Promise<boolean> {
+    try {
+      const result = await EventRegistration.findByIdAndDelete(id);
+      return !!result;
+    } catch (error) {
+      console.error('Error deleting event registration:', error);
+      return false;
     }
   }
 
