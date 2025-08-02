@@ -231,7 +231,9 @@ export default function EventDetail() {
                     <tr key={reg.id} className="border-b">
                       <td className="p-2">
                         <span className="font-medium">
-                          {reg.guestName || reg.guest_name || (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Guest")}
+                          {reg.firstName && reg.lastName ? `${reg.firstName} ${reg.lastName}` : 
+                           reg.guestName || reg.guest_name || 
+                           (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Guest")}
                         </span>
                         {reg.guestEmail && (
                           <div className="text-sm text-muted-foreground">{reg.guestEmail}</div>
@@ -266,7 +268,11 @@ export default function EventDetail() {
                                 variant="outline"
                                 onClick={() => {
                                   setSelectedReceiptUrl(reg.paymentReceiptUrl);
-                                  setSelectedReceiptUser(reg.guestName || reg.guest_name || `${reg.member?.firstName} ${reg.member?.lastName}` || "Unknown");
+                                  setSelectedReceiptUser(
+                                    reg.firstName && reg.lastName ? `${reg.firstName} ${reg.lastName}` :
+                                    reg.guestName || reg.guest_name || 
+                                    (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Unknown")
+                                  );
                                   setShowPaymentReceipt(true);
                                 }}
                               >
@@ -284,7 +290,11 @@ export default function EventDetail() {
                             size="sm"
                             variant="destructive"
                             onClick={() => {
-                              if (confirm(`Are you sure you want to delete the registration for ${reg.guestName || reg.guest_name || `${reg.member?.firstName} ${reg.member?.lastName}` || "Unknown"}?`)) {
+                              if (confirm(`Are you sure you want to delete the registration for ${
+                                reg.firstName && reg.lastName ? `${reg.firstName} ${reg.lastName}` :
+                                reg.guestName || reg.guest_name || 
+                                (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Unknown")
+                              }?`)) {
                                 deleteRegistrationMutation.mutate(reg.id);
                               }
                             }}

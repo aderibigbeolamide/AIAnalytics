@@ -1760,7 +1760,7 @@ export function registerMongoRoutes(app: Express) {
         }
 
         // Verify registration belongs to the event
-        if (registration.eventId.toString() !== eventId) {
+        if ((registration.eventId._id || registration.eventId).toString() !== eventId) {
           return res.json({
             validationStatus: "invalid",
             message: "Registration does not belong to this event"
@@ -1971,6 +1971,41 @@ export function registerMongoRoutes(app: Express) {
   });
 
   // Manual validation endpoint (for validation using manual IDs and 6-digit codes)
+  // Debug endpoint to add verification codes
+  app.post("/api/debug/add-verification-code", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { uniqueId, verificationCode } = req.body;
+      
+      // Get the registration
+      const registration = await mongoStorage.getEventRegistrationByUniqueId(uniqueId);
+      if (!registration) {
+        return res.status(404).json({ message: "Registration not found" });
+      }
+      
+      // Update with verification code
+      const updatedData = {
+        ...registration.registrationData,
+        manualVerificationCode: verificationCode
+      };
+      
+      await mongoStorage.updateEventRegistration(registration._id!.toString(), {
+        registrationData: updatedData
+      });
+      
+      console.log(`Added verification code ${verificationCode} to registration ${registration.firstName} ${registration.lastName}`);
+      
+      res.json({ 
+        message: "Verification code added successfully",
+        registrationId: registration._id,
+        verificationCode: verificationCode
+      });
+      
+    } catch (error) {
+      console.error("Error adding verification code:", error);
+      res.status(500).json({ message: "Failed to add verification code" });
+    }
+  });
+
   app.post("/api/validate", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { identifier, eventId } = req.body;
@@ -2028,21 +2063,21 @@ export function registerMongoRoutes(app: Express) {
           reg.registrationData?.manualVerificationCode === identifier.toString()
         );
       } else {
-        // For longer IDs, try as registration ID or uniqueId
-        try {
-          registration = await mongoStorage.getEventRegistration(identifier);
-        } catch (error) {
-          // If invalid ObjectId, try by uniqueId
-          registration = await mongoStorage.getEventRegistrationByUniqueId(identifier);
-        }
+        // For longer IDs, first try by uniqueId (most common case)
+        registration = await mongoStorage.getEventRegistrationByUniqueId(identifier);
         
-        // If still not found, try by uniqueId
-        if (!registration) {
-          registration = await mongoStorage.getEventRegistrationByUniqueId(identifier);
+        // If not found and looks like ObjectId, try by registration ID
+        if (!registration && /^[0-9a-fA-F]{24}$/.test(identifier)) {
+          try {
+            registration = await mongoStorage.getEventRegistration(identifier);
+          } catch (error) {
+            // If invalid ObjectId, registration stays null
+          }
         }
       }
 
-      if (registration && registration.eventId.toString() === eventId) {
+
+      if (registration && (registration.eventId._id || registration.eventId).toString() === eventId) {
         if (event.requiresPayment && registration.paymentStatus !== 'paid') {
           return res.json({
             validationStatus: "invalid",
