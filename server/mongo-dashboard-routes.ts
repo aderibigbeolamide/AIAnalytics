@@ -680,4 +680,95 @@ export function registerMongoDashboardRoutes(app: Express) {
       });
     }
   });
+
+  // Get payment history for organization
+  app.get("/api/payments/history", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const user = await mongoStorage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const organizationId = user.organizationId;
+      if (!organizationId) {
+        return res.status(400).json({ message: "No organization associated with user" });
+      }
+
+      // Get all tickets for this organization
+      const tickets = await mongoStorage.getTickets({ 
+        organizationId: organizationId.toString(),
+        paymentStatus: 'paid'
+      });
+
+      // Get all event registrations for this organization
+      const events = await mongoStorage.getEventsByOrganization(organizationId.toString());
+      const eventIds = events.map(e => e._id.toString());
+      
+      const registrations = await mongoStorage.getEventRegistrations({ 
+        eventIds,
+        paymentStatus: 'paid'
+      });
+
+      // Format payment history
+      const ticketPayments = tickets.map(ticket => ({
+        id: ticket._id.toString(),
+        type: 'ticket',
+        amount: ticket.price,
+        currency: ticket.currency,
+        paymentMethod: ticket.paymentMethod,
+        paymentReference: ticket.paymentReference,
+        status: ticket.paymentStatus,
+        customerEmail: ticket.ownerEmail,
+        customerName: ticket.ownerName,
+        eventName: events.find(e => e._id.toString() === ticket.eventId.toString())?.name || 'Unknown Event',
+        ticketCategory: ticket.category,
+        createdAt: ticket.createdAt,
+        updatedAt: ticket.updatedAt
+      }));
+
+      const registrationPayments = registrations
+        .filter(reg => reg.paymentAmount && reg.paymentStatus === 'paid')
+        .map(registration => ({
+          id: registration._id.toString(),
+          type: 'registration',
+          amount: registration.paymentAmount,
+          currency: registration.paymentCurrency || 'NGN',
+          paymentMethod: registration.paymentMethod || 'paystack',
+          paymentReference: registration.paymentReference,
+          status: registration.paymentStatus,
+          customerEmail: registration.email || registration.Email,
+          customerName: registration.fullName || registration.FullName || 'Unknown',
+          eventName: events.find(e => e._id.toString() === registration.eventId.toString())?.name || 'Unknown Event',
+          registrationType: registration.registrationType,
+          createdAt: registration.createdAt,
+          updatedAt: registration.updatedAt
+        }));
+
+      // Combine and sort by date (newest first)
+      const allPayments = [...ticketPayments, ...registrationPayments]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      // Calculate summary stats
+      const totalRevenue = allPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+      const totalTransactions = allPayments.length;
+
+      res.json({
+        payments: allPayments,
+        summary: {
+          totalRevenue,
+          totalTransactions,
+          ticketSales: ticketPayments.length,
+          registrationFees: registrationPayments.length
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching payment history:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 }

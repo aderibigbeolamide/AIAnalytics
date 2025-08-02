@@ -25,8 +25,12 @@ import {
   Lock,
   Save,
   Upload,
-  User
+  User,
+  CreditCard,
+  FileText,
+  Users
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const organizationSchema = z.object({
   businessName: z.string().min(2, "Business name must be at least 2 characters"),
@@ -308,10 +312,11 @@ export default function OrganizationProfile() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="profile" className="text-xs sm:text-sm">Profile Information</TabsTrigger>
           <TabsTrigger value="security" className="text-xs sm:text-sm">Security Settings</TabsTrigger>
           <TabsTrigger value="image" className="text-xs sm:text-sm">Profile Image</TabsTrigger>
+          <TabsTrigger value="payments" className="text-xs sm:text-sm">Payment History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -642,7 +647,182 @@ export default function OrganizationProfile() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="payments">
+          <PaymentHistory />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function PaymentHistory() {
+  const { data: paymentHistory, isLoading } = useQuery({
+    queryKey: ['/api/payments/history'],
+    queryFn: async () => {
+      const response = await fetch('/api/payments/history', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment history');
+      }
+      return response.json();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!paymentHistory || !paymentHistory.payments) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            Payment History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-500">No payment records found.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { payments, summary } = paymentHistory;
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CreditCard className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Revenue</p>
+                <p className="text-xl font-bold">₦{summary.totalRevenue?.toLocaleString() || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Transactions</p>
+                <p className="text-xl font-bold">{summary.totalTransactions || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Users className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Ticket Sales</p>
+                <p className="text-xl font-bold">{summary.ticketSales || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Payment Records */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            Payment Records
+          </CardTitle>
+          <CardDescription>
+            View all payment transactions for your events
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {payments.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No payment records found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3 font-medium">Date</th>
+                    <th className="text-left p-3 font-medium">Customer</th>
+                    <th className="text-left p-3 font-medium">Event</th>
+                    <th className="text-left p-3 font-medium">Type</th>
+                    <th className="text-left p-3 font-medium">Amount</th>
+                    <th className="text-left p-3 font-medium">Method</th>
+                    <th className="text-left p-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((payment: any) => (
+                    <tr key={payment.id} className="border-b hover:bg-gray-50">
+                      <td className="p-3">
+                        {new Date(payment.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="p-3">
+                        <div>
+                          <p className="font-medium text-sm">{payment.customerName}</p>
+                          <p className="text-xs text-gray-500">{payment.customerEmail}</p>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <p className="text-sm">{payment.eventName}</p>
+                        {payment.ticketCategory && (
+                          <p className="text-xs text-gray-500">{payment.ticketCategory}</p>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <Badge variant={payment.type === 'ticket' ? 'default' : 'secondary'}>
+                          {payment.type === 'ticket' ? 'Ticket' : 'Registration'}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <p className="font-medium">
+                          {payment.currency} {payment.amount?.toLocaleString() || 0}
+                        </p>
+                      </td>
+                      <td className="p-3">
+                        <Badge variant="outline">
+                          {payment.paymentMethod || 'N/A'}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <Badge variant={payment.status === 'paid' ? 'default' : 'secondary'}>
+                          {payment.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
