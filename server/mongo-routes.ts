@@ -799,6 +799,7 @@ export function registerMongoRoutes(app: Express) {
         paymentReference,
         metadata,
         organization?.paystackSubaccountCode || undefined,
+        undefined, // splitConfig - not needed for basic payments
         2 // 2% platform fee
       );
 
