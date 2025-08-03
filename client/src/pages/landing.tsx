@@ -383,67 +383,50 @@ export function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900"></div>
-        <div 
-          className="absolute inset-0 opacity-20 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3Ccircle cx='50' cy='10' r='2'/%3E%3Ccircle cx='10' cy='50' r='2'/%3E%3Ccircle cx='50' cy='50' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }}
-        ></div>
-        {/* Event-themed decorative elements */}
-        <div className="absolute top-20 left-10 opacity-10">
-          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 blur-xl"></div>
-        </div>
-        <div className="absolute bottom-20 right-10 opacity-10">
-          <div className="w-40 h-40 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-600 blur-xl"></div>
-        </div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5">
-          <QrCode className="w-96 h-96 text-white" />
-        </div>
+        <div className="absolute inset-0 hero-gradient opacity-5"></div>
         <div className="max-w-7xl mx-auto text-center relative z-10">
-          <Badge className="mb-6 bg-white/10 backdrop-blur-sm text-white border-white/20 px-4 py-2 text-sm font-medium">
+          <Badge className="mb-6 bg-blue-100 text-blue-800 border-blue-200 px-4 py-2 text-sm font-medium">
             <Zap className="h-4 w-4 mr-2" />
             AI-Powered Event Validation Platform
           </Badge>
-          <h1 className="hero-text text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-8 leading-tight">
+          <h1 className="hero-text text-4xl md:text-6xl lg:text-7xl font-bold text-high-contrast mb-8 leading-tight">
             Stop Event Fraud.
-            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 bg-clip-text text-transparent block mt-2">Start Smart Validation.</span>
+            <span className="text-gradient block mt-2">Start Smart Validation.</span>
           </h1>
-          <p className="hero-subtitle text-xl md:text-2xl text-blue-100 mb-12 max-w-4xl mx-auto leading-relaxed">
+          <p className="hero-subtitle text-xl md:text-2xl text-medium-contrast mb-12 max-w-4xl mx-auto leading-relaxed">
             EventValidate eliminates unauthorized event access with AI-powered QR validation, 
             real-time attendance tracking, and comprehensive member verification for organizations.
           </p>
           
           {/* Clear Value Proposition */}
-          <div className="mb-12 bg-white/10 backdrop-blur-md rounded-2xl p-8 max-w-4xl mx-auto border border-white/20">
-            <h2 className="text-2xl font-bold text-white mb-4">Perfect for:</h2>
+          <div className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto border border-gray-200">
+            <h2 className="text-2xl font-bold text-high-contrast mb-4">Perfect for:</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
               <div className="flex items-start space-x-3">
-                <div className="bg-blue-500/20 backdrop-blur-sm rounded-full p-2 mt-1 border border-blue-400/30">
-                  <Users className="h-5 w-5 text-blue-300" />
+                <div className="bg-blue-100 rounded-full p-2 mt-1">
+                  <Users className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Religious Organizations</h3>
-                  <p className="text-blue-100 text-sm">Secure member validation for events and gatherings</p>
+                  <h3 className="font-semibold text-high-contrast">Religious Organizations</h3>
+                  <p className="text-medium-contrast text-sm">Secure member validation for events and gatherings</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-emerald-500/20 backdrop-blur-sm rounded-full p-2 mt-1 border border-emerald-400/30">
-                  <Shield className="h-5 w-5 text-emerald-300" />
+                <div className="bg-green-100 rounded-full p-2 mt-1">
+                  <Shield className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Corporate Events</h3>
-                  <p className="text-blue-100 text-sm">Professional conferences and company meetings</p>
+                  <h3 className="font-semibold text-high-contrast">Corporate Events</h3>
+                  <p className="text-medium-contrast text-sm">Professional conferences and company meetings</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="bg-purple-500/20 backdrop-blur-sm rounded-full p-2 mt-1 border border-purple-400/30">
-                  <BarChart3 className="h-5 w-5 text-purple-300" />
+                <div className="bg-purple-100 rounded-full p-2 mt-1">
+                  <BarChart3 className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Educational Institutions</h3>
-                  <p className="text-blue-100 text-sm">Student events and academic conferences</p>
+                  <h3 className="font-semibold text-high-contrast">Educational Institutions</h3>
+                  <p className="text-medium-contrast text-sm">Student events and academic conferences</p>
                 </div>
               </div>
             </div>
@@ -453,7 +436,7 @@ export function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Button 
               size="lg" 
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-4 text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="btn-primary text-white font-semibold px-8 py-4 text-lg focus-visible:focus"
               onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
             >
               <Target className="h-6 w-6 mr-2" />
@@ -462,7 +445,7 @@ export function LandingPage() {
             <Button 
               variant="outline" 
               size="lg"
-              className="border-2 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm font-semibold px-8 py-4 text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-8 py-4 text-lg focus-visible:focus"
               onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss EventValidate for my organization.', '_blank')}
             >
               <Phone className="h-6 w-6 mr-2" />
@@ -470,7 +453,7 @@ export function LandingPage() {
             </Button>
             <Button 
               size="lg"
-              className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold px-8 py-4 text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold px-8 py-4 text-lg focus-visible:focus"
               onClick={() => window.location.href = '/organization-register'}
             >
               <Building className="h-6 w-6 mr-2" />
@@ -480,9 +463,9 @@ export function LandingPage() {
 
           {/* Quick Access */}
           <div className="mb-12">
-            <p className="text-blue-100 mb-4 text-lg">Already have an event registration? Find your QR code:</p>
+            <p className="text-medium-contrast mb-4 text-lg">Already have an event registration? Find your QR code:</p>
             <Link href="/guest-lookup">
-              <Button variant="outline" size="lg" className="border-2 border-white/20 text-white hover:bg-white/10 backdrop-blur-sm font-semibold px-6 py-3 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+              <Button variant="outline" size="lg" className="btn-secondary text-white font-semibold px-6 py-3 focus-visible:focus">
                 <Search className="h-5 w-5 mr-2" />
                 Find My Registration
               </Button>
@@ -492,38 +475,38 @@ export function LandingPage() {
           {/* Social Proof */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div className="fade-in">
-              <div className="text-4xl font-bold text-blue-400 mb-2">99.9%</div>
-              <div className="text-blue-100 font-medium">Security Rate</div>
+              <div className="text-4xl font-bold text-blue-600 mb-2">99.9%</div>
+              <div className="text-medium-contrast font-medium">Security Rate</div>
             </div>
             <div className="fade-in">
-              <div className="text-4xl font-bold text-emerald-400 mb-2">80%</div>
-              <div className="text-blue-100 font-medium">Faster Check-in</div>
+              <div className="text-4xl font-bold text-green-600 mb-2">80%</div>
+              <div className="text-medium-contrast font-medium">Faster Check-in</div>
             </div>
             <div className="fade-in">
-              <div className="text-4xl font-bold text-purple-400 mb-2">500+</div>
-              <div className="text-blue-100 font-medium">Events Powered</div>
+              <div className="text-4xl font-bold text-purple-600 mb-2">500+</div>
+              <div className="text-medium-contrast font-medium">Events Powered</div>
             </div>
             <div className="fade-in">
-              <div className="text-4xl font-bold text-orange-400 mb-2">50K+</div>
-              <div className="text-blue-100 font-medium">Attendees Validated</div>
+              <div className="text-4xl font-bold text-orange-600 mb-2">50K+</div>
+              <div className="text-medium-contrast font-medium">Attendees Validated</div>
             </div>
           </div>
 
           {/* Trust indicators */}
-          <div className="mt-16 pt-8 border-t border-white/10">
-            <p className="text-blue-100 mb-4 text-lg">Trusted by organizations worldwide</p>
-            <div className="flex flex-wrap justify-center items-center gap-8 opacity-80">
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20">
-                <span className="text-white font-medium">Religious Organizations</span>
+          <div className="mt-16 pt-8 border-t border-gray-200">
+            <p className="text-medium-contrast mb-4 text-lg">Trusted by organizations worldwide</p>
+            <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
+              <div className="bg-gray-100 px-4 py-2 rounded-lg">
+                <span className="text-gray-600 font-medium">Religious Organizations</span>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20">
-                <span className="text-white font-medium">Corporate Events</span>
+              <div className="bg-gray-100 px-4 py-2 rounded-lg">
+                <span className="text-gray-600 font-medium">Corporate Events</span>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20">
-                <span className="text-white font-medium">Educational Institutions</span>
+              <div className="bg-gray-100 px-4 py-2 rounded-lg">
+                <span className="text-gray-600 font-medium">Educational Institutions</span>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20">
-                <span className="text-white font-medium">Non-Profits</span>
+              <div className="bg-gray-100 px-4 py-2 rounded-lg">
+                <span className="text-gray-600 font-medium">Non-Profits</span>
               </div>
             </div>
           </div>
