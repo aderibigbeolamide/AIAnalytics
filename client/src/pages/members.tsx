@@ -274,7 +274,13 @@ export default function Members() {
                       `${item.firstName} ${item.lastName}` : 
                       (item.guestName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'N/A');
                     const displayEmail = item.email || item.guestEmail;
-                    const displayAuxiliaryBody = item.auxiliaryBody || item.guestAuxiliaryBody || 'N/A';
+                    // Get auxiliary body from multiple possible sources
+                    const displayAuxiliaryBody = item.auxiliaryBody || 
+                                                item.guestAuxiliaryBody || 
+                                                item.registrationData?.auxiliaryBody ||
+                                                item.registrationData?.AuxiliaryBody ||
+                                                item.registrationData?.auxiliary_body ||
+                                                'N/A';
                     const displayStatus = item.status || 'registered';
                     const itemId = item.id || item._id;
                     

@@ -326,21 +326,27 @@ export function registerMongoRoutes(app: Express) {
       }
       const qrCode = nanoid(16);
 
+      // Determine initial status based on payment requirements
+      // Check if event requires payment
+      const requiresPayment = event.paymentAmount && event.paymentAmount > 0;
+      const initialStatus = requiresPayment ? 'pending' : 'active';
+      const initialPaymentStatus = requiresPayment ? 'pending' : 'not_required';
+
       // Prepare registration data
       const registrationData: any = {
         eventId: new mongoose.Types.ObjectId(eventId),
         registrationType: formData.registrationType,
         uniqueId,
         qrCode,
-        status: 'pending',
-        paymentStatus: 'pending',
+        status: initialStatus,
+        paymentStatus: initialPaymentStatus,
         createdAt: new Date(),
         // Extract standard fields from custom field data
         firstName: formData.firstName || formData.FirstName || formData.guestName || '',
         lastName: formData.lastName || formData.LastName || formData.guestLastName || '',
         email: formData.email || formData.Email || formData.guestEmail || '',
         phoneNumber: formData.phone || formData.Phone || formData.phoneNumber || '',
-        auxiliaryBody: formData.auxiliaryBody || '',
+        auxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || formData.auxiliary_body || '',
         // Store all custom field data
         registrationData: formData
       };
@@ -359,7 +365,7 @@ export function registerMongoRoutes(app: Express) {
               registrationData.email = fieldValue;
             } else if (field.name === 'phone' || field.name === 'Phone' || field.name === 'phoneNumber') {
               registrationData.phoneNumber = fieldValue;
-            } else if (field.name === 'auxiliaryBody') {
+            } else if (field.name === 'auxiliaryBody' || field.name === 'AuxiliaryBody' || field.name === 'auxiliary_body') {
               registrationData.auxiliaryBody = fieldValue;
             }
           }
@@ -884,7 +890,7 @@ export function registerMongoRoutes(app: Express) {
         // Update the existing registration to mark payment as completed
         const updatedRegistration = await mongoStorage.updateEventRegistration(registration._id!.toString(), {
           paymentStatus: 'paid',
-          status: 'confirmed',
+          status: 'active',
           paymentAmount: amount,
           paymentMethod: 'paystack',
         });
@@ -2042,7 +2048,7 @@ export function registerMongoRoutes(app: Express) {
       }
 
       // Check if already validated
-      if (registration.status === "confirmed" || registration.status === "attended") {
+      if (registration.status === "online" || registration.status === "attended") {
         return res.status(400).json({ 
           message: "This registration has already been validated",
           validationStatus: "duplicate" 
