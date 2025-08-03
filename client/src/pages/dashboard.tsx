@@ -219,23 +219,31 @@ export default function Dashboard() {
         {/* Enhanced Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <EnhancedCard
-            title="Total Members"
-            value={stats?.totalMembers || 0}
-            icon={Users}
-            description={`${stats?.totalRegistrations || 0} total registrations`}
-            color="blue"
-          />
-          
-          <EnhancedCard
-            title="Active Events"
-            value={stats?.activeEvents || 0}
+            title="Total Events"
+            value={stats?.totalEvents || 0}
             icon={Calendar}
-            description="Currently running events"
-            color="green"
+            description={`${stats?.upcomingEvents || 0} upcoming, ${stats?.completedEvents || 0} completed`}
+            color="blue"
+            trend={{
+              value: stats?.eventTrend || 0,
+              isPositive: (stats?.eventTrend || 0) >= 0
+            }}
           />
           
           <EnhancedCard
-            title="QR Scans Today"
+            title="Event Registrations"
+            value={stats?.totalRegistrations || 0}
+            icon={Users}
+            description={`${stats?.validatedRegistrations || 0} validated, ${stats?.pendingValidations || 0} pending`}
+            color="green"
+            trend={{
+              value: stats?.registrationTrend || 0,
+              isPositive: (stats?.registrationTrend || 0) >= 0
+            }}
+          />
+          
+          <EnhancedCard
+            title="QR Validations Today"
             value={stats?.scansToday || 0}
             icon={QrCode}
             description="Real-time validation activity"
@@ -246,7 +254,7 @@ export default function Dashboard() {
             title="Validation Rate"
             value={`${stats?.validationRate?.toFixed(1) || 0}%`}
             icon={TrendingUp}
-            description="Success rate of validations"
+            description="Success rate of event check-ins"
             color="purple"
             trend={{
               value: stats?.validationTrend || 0,
@@ -280,6 +288,18 @@ export default function Dashboard() {
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Total Members:</span>
                         <span className="text-sm font-medium">{bodyStats.totalMembers || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Event Registrations:</span>
+                        <span className="text-sm font-medium">{bodyStats.totalRegistrations || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Validated:</span>
+                        <span className="text-sm font-medium">{bodyStats.validatedRegistrations || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Validation Rate:</span>
+                        <span className="text-sm font-medium">{bodyStats.validationRate?.toFixed(1) || 0}%</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Active Members:</span>
