@@ -62,7 +62,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
       return result;
     },
     onSuccess: (data) => {
-      console.log('QR validation successful:', data);
+      console.log('QR validation response:', data);
       setLastScanResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
@@ -71,10 +71,18 @@ export function QRScanner({ onClose }: QRScannerProps) {
         ? `${data.registration.firstName} ${data.registration.lastName}`
         : data.registration?.guestName || 'Member';
       
-      toast({
-        title: "Validation Successful",
-        description: `${memberName} validated for ${data.event?.name}`,
-      });
+      if (data.validationStatus === "already_validated") {
+        toast({
+          title: "Already Validated",
+          description: `${memberName} was already validated for ${data.event?.name}`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Validation Successful",
+          description: `${memberName} validated for ${data.event?.name}`,
+        });
+      }
     },
     onError: (error: Error) => {
       console.error('QR validation failed:', error);
@@ -96,36 +104,50 @@ export function QRScanner({ onClose }: QRScannerProps) {
     
     if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return;
     
-    // Ultra-fast processing - very small canvas for maximum speed
-    const maxWidth = 160;
-    const maxHeight = 120;
+    // High-resolution canvas for better QR detection
+    const maxWidth = 640;
+    const maxHeight = 480;
     const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
     
     canvas.width = video.videoWidth * scale;
     canvas.height = video.videoHeight * scale;
     
-    // Use faster rendering
-    context.imageSmoothingEnabled = false;
+    // Clear canvas first
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // High-quality rendering for better QR detection
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     
-    // Enhanced QR detection with multiple attempts
+    // Enhanced QR detection with multiple attempts and better parameters
     let code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: "dontInvert",
+      inversionAttempts: "attemptBoth",
+      locateOptions: {
+        finder: {
+          strictMode: false,
+        },
+      },
     });
     
-    // Try with inversion if first attempt fails
-    if (!code) {
-      code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth",
-      });
-    }
-    
-    // Try with different scan options
+    // Try with different parameters if first attempt fails
     if (!code) {
       code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "invertFirst",
+        locateOptions: {
+          finder: {
+            strictMode: true,
+          },
+        },
+      });
+    }
+    
+    // Try with no inversion as last resort
+    if (!code) {
+      code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert",
       });
     }
     
@@ -135,9 +157,9 @@ export function QRScanner({ onClose }: QRScannerProps) {
       validateQRMutation.mutate(code.data);
       stopCamera(); // Stop scanning after successful scan
     } else {
-      // Debug output every 50 scans
-      if (Math.random() < 0.02) {
-        console.log('QR scan attempt - no code found. Video dimensions:', video.videoWidth, 'x', video.videoHeight, 'Canvas:', canvas.width, 'x', canvas.height);
+      // Debug output every 30 scans with more detail
+      if (Math.random() < 0.033) {
+        console.log('QR scan attempt - no code detected. Video:', video.videoWidth + 'x' + video.videoHeight, 'Canvas:', canvas.width + 'x' + canvas.height, 'Brightness:', Math.round(imageData.data.reduce((sum, val, i) => i % 4 < 3 ? sum + val : sum, 0) / (imageData.data.length * 0.75)));
       }
     }
   };
@@ -217,8 +239,8 @@ export function QRScanner({ onClose }: QRScannerProps) {
           setCameraStatus('ready');
           video.play().then(() => {
             console.log("Video started playing successfully");
-            // Ultra-fast scanning every 100ms for immediate capture
-            scanIntervalRef.current = window.setInterval(scanQRCode, 100);
+            // Balanced scanning every 150ms for good performance and accuracy
+            scanIntervalRef.current = window.setInterval(scanQRCode, 150);
           }).catch(playError => {
             console.error("Video play error:", playError);
             setCameraError("Unable to start video playback");
