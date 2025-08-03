@@ -1304,7 +1304,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const registration = await storage.getEventRegistration(qrData.registrationId);
+      // Get registration by ID first, then find by QR code if not found
+      let registration = await storage.getEventRegistration(qrData.registrationId.toString());
+      if (!registration) {
+        // Try finding by QR code as fallback
+        registration = await storage.getEventRegistrationByQR(encryptedData);
+      }
       if (!registration) {
         return res.status(404).json({ 
           message: "Registration not found",
@@ -1312,11 +1317,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const event = await storage.getEvent(qrData.eventId);
+      // Check if already attended
+      if (registration.status === "online" || registration.status === "attended") {
+        return res.status(400).json({ 
+          message: "This registration has already been validated",
+          validationStatus: "duplicate" 
+        });
+      }
+
+      const event = await storage.getEvent(qrData.eventId.toString());
       if (!event) {
         return res.status(404).json({ 
           message: "Event not found",
           validationStatus: "invalid" 
+        });
+      }
+
+      // Check payment status for events that require payment
+      if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== "completed") {
+        return res.status(403).json({ 
+          message: "Payment required. Please complete payment before validation.",
+          validationStatus: "payment_required" 
         });
       }
 
@@ -1419,21 +1440,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendanceRecord = await storage.createAttendance(attendanceData);
       
       // Update registration status to "online"
-      await storage.updateEventRegistration(registration.id, { 
+      await storage.updateEventRegistration(registration.id.toString(), { 
         status: "online",
         validationMethod: "qr_scan"
       });
       
       // Update member status to "online" if they exist
       if (member) {
-        await storage.updateMember(member.id, { status: "online" });
+        await storage.updateMember(member.id.toString(), { status: "online" });
       }
       
       // Also update member status if registration has member data but no member record
       if (!member && registration.memberId) {
-        const regMember = await storage.getMember(registration.memberId);
+        const regMember = await storage.getMember(registration.memberId.toString());
         if (regMember) {
-          await storage.updateMember(registration.memberId, { status: "online" });
+          await storage.updateMember(registration.memberId.toString(), { status: "online" });
         }
       }
 
@@ -1940,11 +1961,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const event = await storage.getEvent(registration.eventId);
+      const event = await storage.getEvent(registration.eventId.toString());
       if (!event) {
         return res.status(404).json({ 
           message: "Event not found",
           validationStatus: "invalid" 
+        });
+      }
+
+      // Check payment status for events that require payment
+      if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== "completed") {
+        return res.status(403).json({ 
+          message: "Payment required. Please complete payment before validation.",
+          validationStatus: "payment_required" 
         });
       }
 
@@ -1998,8 +2027,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Compare chanda number
             
             console.log(`CSV Validation Check:
-              CSV Member: ${csvName} | ${csvEmail} | ${csvChanda}
-              Registration: ${registration.guestName} | ${registration.guestEmail} | 
+              CSV Member: ${csvName} | ${csvEmail}
+              Registration: ${registration.guestName} | ${registration.guestEmail}
               Matches: name=${nameMatch}, email=${emailMatch}`);
             
             return nameMatch || emailMatch;
@@ -2036,14 +2065,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendanceRecord = await storage.createAttendance(attendanceData);
       
       // Update registration status to "online"
-      await storage.updateEventRegistration(registration.id, { 
+      await storage.updateEventRegistration(registration.id.toString(), { 
         status: "online",
         validationMethod: "manual_validation"
       });
 
       // Update member status to "online" if member exists
       if (member) {
-        await storage.updateMember(member.id, { status: "online" });
+        await storage.updateMember(member.id.toString(), { status: "online" });
       }
 
       res.json({

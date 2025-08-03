@@ -82,40 +82,60 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
           max-width: 600px; 
           margin: 0 auto; 
           background: white; 
-          border-radius: 12px; 
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+          border-radius: 15px; 
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12); 
           overflow: hidden;
+          border: 1px solid #e0e0e0;
         }
         .header { 
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
           color: white; 
-          padding: 30px; 
+          padding: 40px 30px; 
           text-align: center; 
+          position: relative;
+        }
+        .header::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
         }
         .header h1 { 
           margin: 0; 
-          font-size: 28px; 
-          font-weight: bold; 
+          font-size: 32px; 
+          font-weight: 700; 
+          position: relative;
+          z-index: 1;
         }
         .header p { 
-          margin: 10px 0 0 0; 
+          margin: 15px 0 0 0; 
           opacity: 0.9; 
-          font-size: 16px; 
+          font-size: 18px; 
+          position: relative;
+          z-index: 1;
         }
         .content { 
-          padding: 30px; 
+          padding: 40px; 
         }
         .info-grid { 
           display: grid; 
           grid-template-columns: 1fr 1fr; 
-          gap: 20px; 
-          margin-bottom: 30px; 
+          gap: 25px; 
+          margin-bottom: 35px; 
         }
         .info-item { 
-          padding: 15px; 
-          background: #f8f9fa; 
-          border-radius: 8px; 
-          border-left: 4px solid #667eea; 
+          padding: 20px; 
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+          border-radius: 12px; 
+          border-left: 5px solid #667eea; 
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          transition: transform 0.2s ease;
+        }
+        .info-item:hover {
+          transform: translateY(-2px);
         }
         .info-label { 
           font-size: 12px; 
@@ -131,28 +151,32 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
         }
         .qr-section { 
           text-align: center; 
-          padding: 20px; 
-          background: #f8f9fa; 
-          border-radius: 8px; 
-          margin-top: 20px; 
+          padding: 30px; 
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+          border-radius: 15px; 
+          margin-top: 30px; 
+          border: 1px solid #dee2e6;
         }
         .qr-code { 
-          width: 200px; 
-          height: 200px; 
-          margin: 0 auto 15px; 
-          border: 2px solid #ddd; 
-          border-radius: 8px; 
+          width: 220px; 
+          height: 220px; 
+          margin: 0 auto 20px; 
+          border: 3px solid #667eea; 
+          border-radius: 15px; 
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
         }
         .unique-id { 
           font-family: 'Courier New', monospace; 
-          font-size: 18px; 
+          font-size: 24px; 
           font-weight: bold; 
           color: #667eea; 
-          margin-top: 10px; 
-          padding: 10px; 
+          margin-top: 15px; 
+          padding: 15px 25px; 
           background: white; 
-          border-radius: 6px; 
-          border: 2px dashed #667eea; 
+          border-radius: 8px; 
+          border: 3px dashed #667eea; 
+          letter-spacing: 3px;
+          box-shadow: 0 2px 10px rgba(102, 126, 234, 0.1);
         }
         .instructions { 
           margin-top: 30px; 

@@ -46,3 +46,15 @@ export function getQRUrl(registrationId: number, req?: Request): string {
   const baseUrl = getBaseUrl(req);
   return `${baseUrl}/qr/${registrationId}`;
 }
+
+/**
+ * Generate a unique 6-character ID using only letters (A-Z)
+ */
+export function generateUniqueId(): string {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  return result;
+}

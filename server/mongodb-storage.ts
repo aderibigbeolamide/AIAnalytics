@@ -70,6 +70,14 @@ export interface IMongoStorage {
   createTicket(ticket: Partial<ITicket>): Promise<ITicket>;
   updateTicket(id: string, updates: Partial<ITicket>): Promise<ITicket | null>;
   deleteTicket(id: string): Promise<boolean>;
+
+  // Attendance
+  createAttendance(attendance: any): Promise<any>;
+  getAttendance(eventId: string): Promise<any[]>;
+  
+  // CSV Validation
+  getMemberValidationCsv(eventId: string): Promise<any[]>;
+  createMemberValidationCsv(csv: any): Promise<any>;
 }
 
 export class MongoStorage implements IMongoStorage {
@@ -594,6 +602,64 @@ export class MongoStorage implements IMongoStorage {
     } catch (error) {
       console.error('Error getting payment history:', error);
       return [];
+    }
+  }
+
+  // Attendance methods
+  async createAttendance(attendance: any): Promise<any> {
+    try {
+      // Create a simple attendance record in MongoDB
+      const attendanceData = {
+        ...attendance,
+        scannedAt: new Date(),
+        id: new mongoose.Types.ObjectId().toString()
+      };
+      
+      // Since we don't have a specific Attendance model, store in a collection
+      const collection = mongoose.connection.db.collection('attendance');
+      const result = await collection.insertOne(attendanceData);
+      return { ...attendanceData, _id: result.insertedId };
+    } catch (error) {
+      console.error('Error creating attendance:', error);
+      throw error;
+    }
+  }
+
+  async getAttendance(eventId: string): Promise<any[]> {
+    try {
+      const collection = mongoose.connection.db.collection('attendance');
+      return await collection.find({ eventId }).toArray();
+    } catch (error) {
+      console.error('Error getting attendance:', error);
+      return [];
+    }
+  }
+
+  // CSV Validation methods
+  async getMemberValidationCsv(eventId: string): Promise<any[]> {
+    try {
+      const collection = mongoose.connection.db.collection('member_validation_csv');
+      return await collection.find({ eventId }).sort({ createdAt: -1 }).toArray();
+    } catch (error) {
+      console.error('Error getting member validation CSV:', error);
+      return [];
+    }
+  }
+
+  async createMemberValidationCsv(csv: any): Promise<any> {
+    try {
+      const csvData = {
+        ...csv,
+        createdAt: new Date(),
+        id: new mongoose.Types.ObjectId().toString()
+      };
+      
+      const collection = mongoose.connection.db.collection('member_validation_csv');
+      const result = await collection.insertOne(csvData);
+      return { ...csvData, _id: result.insertedId };
+    } catch (error) {
+      console.error('Error creating member validation CSV:', error);
+      throw error;
     }
   }
 }

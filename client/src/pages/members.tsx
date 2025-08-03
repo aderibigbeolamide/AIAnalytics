@@ -270,8 +270,8 @@ export default function Members() {
                     // Handle both member and registration display
                     const displayName = eventFilter === "all" ? 
                       `${item.firstName} ${item.lastName}` : 
-                      `${item.firstName} ${item.lastName}`;
-                    const displayEmail = item.email;
+                      (item.guestName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'N/A');
+                    const displayEmail = item.email || item.guestEmail;
                     const displayAuxiliaryBody = item.auxiliaryBody || item.guestAuxiliaryBody || 'N/A';
                     const displayStatus = item.status || 'registered';
                     const itemId = item.id || item._id;
