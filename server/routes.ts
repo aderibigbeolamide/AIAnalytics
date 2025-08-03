@@ -1168,6 +1168,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const qrImageData = await generateQRImage(encryptQRData(qrData));
       
+      // Store QR image data with the registration
+      await storage.updateEventRegistration(registration.id, {
+        qrImage: qrImageData,
+        qrImageBase64: qrImageData.replace('data:image/png;base64,', '')
+      });
+      
       // Get the full registration with member data if available
       const fullRegistration = await storage.getEventRegistration(registration.id);
       
@@ -1192,6 +1198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
       
       res.status(201).json({ 
+        success: true,
         registration: fullRegistration || registration, 
         qrImage: qrImageData,
         qrImageBase64: qrImageBase64,

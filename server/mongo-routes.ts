@@ -405,6 +405,12 @@ export function registerMongoRoutes(app: Express) {
         }
       });
 
+      // Update registration with QR code image
+      await mongoStorage.updateEventRegistration(registration._id.toString(), {
+        qrImage: qrImageBase64,
+        qrImageBase64: qrImageBase64.replace('data:image/png;base64,', '')
+      });
+
       // Send success response
       res.status(201).json({
         success: true,
@@ -419,10 +425,13 @@ export function registerMongoRoutes(app: Express) {
           status: registration.status,
           paymentStatus: registration.paymentStatus,
           qrCode: registration.qrCode,
+          qrImage: qrImageBase64,
+          qrImageBase64: qrImageBase64.replace('data:image/png;base64,', ''),
           eventId: registration.eventId.toString(),
           createdAt: registration.createdAt
         },
-        qrImageBase64,
+        qrImage: qrImageBase64,
+        qrImageBase64: qrImageBase64.replace('data:image/png;base64,', ''),
         event: {
           name: event.name,
           location: event.location,
@@ -2011,6 +2020,65 @@ export function registerMongoRoutes(app: Express) {
     } catch (error) {
       console.error("Error adding verification code:", error);
       res.status(500).json({ message: "Failed to add verification code" });
+    }
+  });
+
+  // Manual ID validation endpoint - matches frontend call to /api/validate-id
+  app.post("/api/validate-id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { uniqueId } = req.body;
+      
+      if (!uniqueId) {
+        return res.status(400).json({ message: "Unique ID is required" });
+      }
+
+      // Find registration by unique ID
+      const registration = await mongoStorage.getEventRegistrationByUniqueId(uniqueId);
+      if (!registration) {
+        return res.status(404).json({ 
+          message: "Registration not found",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Check if already validated
+      if (registration.status === "confirmed" || registration.status === "attended") {
+        return res.status(400).json({ 
+          message: "This registration has already been validated",
+          validationStatus: "duplicate" 
+        });
+      }
+
+      const event = await mongoStorage.getEvent(registration.eventId.toString());
+      if (!event) {
+        return res.status(404).json({ 
+          message: "Event not found",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Update registration status
+      await mongoStorage.updateEventRegistration(registration._id.toString(), { 
+        status: "confirmed",
+        validationMethod: "manual_validation",
+        validatedAt: new Date(),
+        validatedBy: req.user!.id
+      });
+
+      res.json({
+        success: true,
+        message: "Validation successful",
+        validationStatus: "valid",
+        registration,
+        event
+      });
+
+    } catch (error) {
+      console.error("Manual validation error:", error);
+      res.status(500).json({ 
+        message: "Validation failed",
+        validationStatus: "invalid" 
+      });
     }
   });
 
