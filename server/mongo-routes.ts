@@ -2051,14 +2051,25 @@ export function registerMongoRoutes(app: Express) {
         return res.status(400).json({ message: "Unique ID is required" });
       }
 
+      console.log(`Validating unique ID: ${uniqueId}`);
+
       // Find registration by unique ID
       const registration = await mongoStorage.getEventRegistrationByUniqueId(uniqueId);
       if (!registration) {
+        console.log(`Registration not found for ID: ${uniqueId}`);
         return res.status(404).json({ 
           message: "Registration not found",
           validationStatus: "invalid" 
         });
       }
+
+      console.log(`Found registration:`, {
+        id: registration._id?.toString(),
+        firstName: registration.firstName,
+        lastName: registration.lastName,
+        status: registration.status,
+        eventId: registration.eventId
+      });
 
       // Check if already validated
       if (registration.status === "online" || registration.status === "attended") {
@@ -2069,29 +2080,62 @@ export function registerMongoRoutes(app: Express) {
       }
 
       // Handle both populated and non-populated eventId
-      const eventId = registration.eventId._id || registration.eventId;
-      const event = await mongoStorage.getEvent(eventId.toString());
+      let eventId: string;
+      if (typeof registration.eventId === 'object' && registration.eventId._id) {
+        eventId = registration.eventId._id.toString();
+      } else {
+        eventId = registration.eventId.toString();
+      }
+
+      const event = await mongoStorage.getEvent(eventId);
       if (!event) {
+        console.log(`Event not found for ID: ${eventId}`);
         return res.status(404).json({ 
           message: "Event not found",
           validationStatus: "invalid" 
         });
       }
 
+      console.log(`Found event: ${event.name} (${event._id})`);
+
+      // Check payment status for paid events
+      if (event.paymentSettings?.isPaymentRequired && registration.paymentStatus !== 'paid') {
+        return res.status(400).json({
+          message: "Payment required but not completed",
+          validationStatus: "payment_required"
+        });
+      }
+
       // Update registration status to "online" to indicate presence
-      await mongoStorage.updateEventRegistration(registration._id.toString(), { 
+      await mongoStorage.updateEventRegistration(registration._id!.toString(), { 
         status: "online",
-        validationMethod: "manual_validation",
+        attendanceStatus: "attended",
         validatedAt: new Date(),
-        validatedBy: req.user!.id
+        validatedBy: new mongoose.Types.ObjectId(req.user!.id)
       });
+
+      console.log(`Successfully validated registration for ${registration.firstName} ${registration.lastName}`);
 
       res.json({
         success: true,
         message: "Validation successful",
         validationStatus: "valid",
-        registration,
-        event
+        registration: {
+          id: registration._id?.toString(),
+          uniqueId: registration.uniqueId,
+          firstName: registration.firstName,
+          lastName: registration.lastName,
+          email: registration.email,
+          auxiliaryBody: registration.auxiliaryBody,
+          registrationType: registration.registrationType,
+          status: "online"
+        },
+        event: {
+          id: event._id?.toString(),
+          name: event.name,
+          location: event.location,
+          startDate: event.startDate
+        }
       });
 
     } catch (error) {
@@ -2542,94 +2586,5 @@ export function registerMongoRoutes(app: Express) {
   });
 
   // ================ QR CODE VALIDATION API ================
-  
-  // Validate QR code/Unique ID for events
-  app.post("/api/validate-id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { uniqueId } = req.body;
-      
-      if (!uniqueId) {
-        return res.status(400).json({ 
-          message: "Unique ID is required",
-          validationStatus: "invalid" 
-        });
-      }
-      
-      // Get all registrations to find matching unique ID
-      const registrations = await mongoStorage.getEventRegistrations();
-      const registration = registrations.find(reg => 
-        reg.uniqueId === uniqueId || reg.qrCode === uniqueId
-      );
-      
-      if (!registration) {
-        return res.status(404).json({ 
-          message: "Registration not found with this ID",
-          validationStatus: "invalid" 
-        });
-      }
-      
-      // Get event details
-      const event = await mongoStorage.getEvent(registration.eventId.toString());
-      if (!event) {
-        return res.status(404).json({ 
-          message: "Event not found",
-          validationStatus: "invalid" 
-        });
-      }
-      
-      // Get member details if exists
-      let member = null;
-      if (registration.memberId) {
-        const members = await mongoStorage.getMembers();
-        member = members.find(m => m._id?.toString() === registration.memberId.toString());
-      }
-      
-      // Update attendance status
-      await mongoStorage.updateEventRegistration(
-        registration._id.toString(),
-        { 
-          attendanceStatus: 'attended',
-          validatedAt: new Date(),
-          validatedBy: req.user?.id
-        }
-      );
-      
-      res.json({
-        validationStatus: "valid",
-        message: "Successfully validated",
-        registration: {
-          id: registration._id.toString(),
-          uniqueId: registration.uniqueId,
-          firstName: registration.firstName,
-          lastName: registration.lastName,
-          guestName: registration.guestName,
-          email: registration.email || registration.guestEmail,
-          auxiliaryBody: registration.auxiliaryBody || registration.guestAuxiliaryBody,
-          registrationType: registration.registrationType,
-          attendanceStatus: 'attended'
-        },
-        event: {
-          id: event._id.toString(),
-          name: event.name,
-          location: event.location,
-          startDate: event.startDate
-        },
-        member: member ? {
-          id: member._id?.toString(),
-          firstName: member.firstName,
-          lastName: member.lastName,
-          auxiliaryBody: member.auxiliaryBody
-        } : null,
-        validatedAt: new Date(),
-        validatedBy: req.user?.id
-      });
-      
-    } catch (error) {
-      console.error("Error validating ID:", error);
-      res.status(500).json({ 
-        message: "Internal server error during validation",
-        validationStatus: "error" 
-      });
-    }
-  });
+  // Note: Main /api/validate-id endpoint is defined above to handle all validation methods
 }

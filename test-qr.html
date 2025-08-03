@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test QR Code for Validation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+</head>
+<body>
+    <h1>Test QR Codes for EventValidate</h1>
+    <div id="qr-codes"></div>
+    
+    <script>
+        // Test unique IDs that should exist in the database
+        const testIds = ['ABCDEF', 'GHIJKL', 'MNOPQR', 'STUVWX', 'YZABCD'];
+        
+        const container = document.getElementById('qr-codes');
+        
+        testIds.forEach(id => {
+            const div = document.createElement('div');
+            div.style.margin = '20px';
+            div.style.textAlign = 'center';
+            
+            const title = document.createElement('h3');
+            title.textContent = `Unique ID: ${id}`;
+            div.appendChild(title);
+            
+            const canvas = document.createElement('canvas');
+            canvas.id = `qr-${id}`;
+            div.appendChild(canvas);
+            
+            container.appendChild(div);
+            
+            // Generate QR code
+            QRCode.toCanvas(canvas, id, { width: 200 }, function (error) {
+                if (error) console.error(error);
+                console.log(`QR code generated for ${id}`);
+            });
+        });
+    </script>
+</body>
+</html>
