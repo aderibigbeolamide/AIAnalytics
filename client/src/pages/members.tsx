@@ -78,12 +78,29 @@ export default function Members() {
     },
   });
 
-  // Filter members by event participation if event filter is selected
-  const filteredMembers = eventFilter === "all" ? members : 
-    members.filter((member: any) => {
-      // This would need to be enhanced with actual registration data
-      return true; // Placeholder logic
-    });
+  // Query to get event registrations when specific event is selected
+  const { data: eventRegistrations = [] } = useQuery({
+    queryKey: ["/api/event-registrations", eventFilter],
+    queryFn: async () => {
+      if (eventFilter === "all") return [];
+      
+      const authHeaders = getAuthHeaders();
+      const headers: Record<string, string> = {};
+      if (authHeaders.Authorization) {
+        headers.Authorization = authHeaders.Authorization;
+      }
+      
+      const response = await fetch(`/api/events/${eventFilter}/registrations`, {
+        headers,
+      });
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: eventFilter !== "all",
+  });
+
+  // Display either general members or event registrations based on filter
+  const displayItems = eventFilter === "all" ? members : eventRegistrations;
 
   const getAuxiliaryBodyBadge = (auxiliaryBody: string) => {
     // Generate consistent colors based on auxiliary body name
@@ -249,42 +266,60 @@ export default function Members() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredMembers.map((member: any) => (
-                    <tr key={member.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-sm font-medium text-gray-600">
-                              {member.firstName?.[0]}{member.lastName?.[0]}
-                            </span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {member.firstName} {member.lastName}
+                  {displayItems.map((item: any) => {
+                    // Handle both member and registration display
+                    const displayName = eventFilter === "all" ? 
+                      `${item.firstName} ${item.lastName}` : 
+                      `${item.firstName} ${item.lastName}`;
+                    const displayEmail = item.email;
+                    const displayAuxiliaryBody = item.auxiliaryBody || item.guestAuxiliaryBody || 'N/A';
+                    const displayStatus = item.status || 'registered';
+                    const itemId = item.id || item._id;
+                    
+                    return (
+                      <tr key={itemId}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-sm font-medium text-gray-600">
+                                {item.firstName?.[0]}{item.lastName?.[0]}
+                              </span>
                             </div>
-                            <div className="text-sm text-gray-500">{member.email}</div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {displayName}
+                              </div>
+                              <div className="text-sm text-gray-500">{displayEmail}</div>
+                              {eventFilter !== "all" && (
+                                <div className="text-xs text-blue-600">
+                                  ID: {item.uniqueId || 'N/A'}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={getAuxiliaryBodyBadge(member.auxiliaryBody)}>
-                          {member.auxiliaryBody}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={getStatusBadge(member.status)}>
-                          {member.status}
-                        </Badge>
-                      </td>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge className={getAuxiliaryBodyBadge(displayAuxiliaryBody)}>
+                            {displayAuxiliaryBody}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge className={getStatusBadge(displayStatus)}>
+                            {displayStatus === 'online' ? 'Present' : displayStatus}
+                          </Badge>
+                        </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           <Button 
                             variant="ghost" 
                             size="sm"
                             onClick={() => {
-                              setEditingMember(member);
-                              setIsMemberModalOpen(true);
+                              if (eventFilter === "all") {
+                                setEditingMember(item);
+                                setIsMemberModalOpen(true);
+                              }
                             }}
+                            disabled={eventFilter !== "all"}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -305,16 +340,16 @@ export default function Members() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Remove Member</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to temporarily remove <strong>{member.firstName} {member.lastName}</strong> from the system? 
+                                  Are you sure you want to temporarily remove <strong>{displayName}</strong> from the system? 
                                   This action will hide the member from the active list, but their data will be preserved and can be restored later.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => deleteMemberMutation.mutate(member.id)}
+                                  onClick={() => eventFilter === "all" && deleteMemberMutation.mutate(itemId)}
+                                  disabled={eventFilter !== "all" || deleteMemberMutation.isPending}
                                   className="bg-red-600 hover:bg-red-700"
-                                  disabled={deleteMemberMutation.isPending}
                                 >
                                   {deleteMemberMutation.isPending ? "Removing..." : "Remove Member"}
                                 </AlertDialogAction>
@@ -323,14 +358,20 @@ export default function Members() {
                           </AlertDialog>
                         </div>
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               
-              {filteredMembers.length === 0 && (
+              {displayItems.length === 0 && (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">No members found matching your criteria.</p>
+                  <p className="text-gray-500">
+                    {eventFilter === "all" ? 
+                      "No members found matching your criteria." : 
+                      "No registrations found for this event."
+                    }
+                  </p>
                 </div>
               )}
             </div>

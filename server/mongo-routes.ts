@@ -1768,7 +1768,7 @@ export function registerMongoRoutes(app: Express) {
         }
 
         // CRITICAL: Check payment status for paid events
-        if (event.requiresPayment && registration.paymentStatus !== 'paid') {
+        if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid') {
           return res.json({
             validationStatus: "invalid",
             message: `Payment not completed. Status: ${registration.paymentStatus}`,
@@ -1782,10 +1782,10 @@ export function registerMongoRoutes(app: Express) {
         }
 
         // Check if registration is already used for entry
-        if (registration.status === 'attended') {
+        if (registration.status === 'online' || registration.status === 'attended') {
           return res.json({
             validationStatus: "already_used",
-            message: "Registration has already been used for entry",
+            message: "Registration has already been validated for entry",
             details: {
               registrationId: registration._id!.toString(),
               participantName: `${registration.firstName} ${registration.lastName}`,
@@ -1795,10 +1795,11 @@ export function registerMongoRoutes(app: Express) {
           });
         }
 
-        // Mark registration as attended
+        // Mark registration as attended (online = present at event)
         await mongoStorage.updateEventRegistration(registration._id!.toString(), {
-          status: 'attended',
-          validatedAt: new Date()
+          status: 'online',
+          validatedAt: new Date(),
+          validatedBy: new mongoose.Types.ObjectId(req.user!.id)
         });
 
         validationResult = {
@@ -1930,23 +1931,25 @@ export function registerMongoRoutes(app: Express) {
       // Try to find as registration
       const registration = await mongoStorage.getEventRegistration(identifier);
       if (registration && registration.eventId.toString() === eventId) {
-        if (event.requirePayment && registration.paymentStatus !== 'paid') {
+        if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid') {
           return res.json({
             validationStatus: "invalid",
             message: `Payment not completed. Status: ${registration.paymentStatus}`
           });
         }
 
-        if (registration.status === 'attended') {
+        if (registration.status === 'online' || registration.status === 'attended') {
           return res.json({
             validationStatus: "already_used",
-            message: "Registration has already been used for entry"
+            message: "Registration has already been validated for entry"
           });
         }
 
         await mongoStorage.updateEventRegistration(registration._id.toString(), {
-          status: 'attended',
-          attendedAt: new Date()
+          status: 'online',
+          attendedAt: new Date(),
+          validatedBy: new mongoose.Types.ObjectId(req.user!.id),
+          validationMethod: 'manual_unique_id'
         });
 
         return res.json({
@@ -1954,8 +1957,9 @@ export function registerMongoRoutes(app: Express) {
           message: "Registration validated successfully",
           details: {
             type: 'registration',
-            participantName: registration.fullName || registration.FullName,
-            eventName: event.name
+            participantName: `${registration.firstName} ${registration.lastName}` || registration.fullName || registration.FullName,
+            eventName: event.name,
+            validationMethod: 'manual_unique_id'
           }
         });
       }
@@ -2056,8 +2060,14 @@ export function registerMongoRoutes(app: Express) {
 
       let registration;
       
-      // First check if it's a 6-digit verification code (don't try as ObjectId)
-      if (/^\d{6}$/.test(identifier)) {
+      // First check if it's a 6-character letter code (new format)
+      if (/^[A-Z]{6}$/.test(identifier)) {
+        const allRegistrations = await mongoStorage.getEventRegistrations(eventId);
+        registration = allRegistrations.find(reg => 
+          reg.registrationData?.manualVerificationCode === identifier
+        );
+      } else if (/^\d{6}$/.test(identifier)) {
+        // Support legacy 6-digit numeric codes
         const allRegistrations = await mongoStorage.getEventRegistrations(eventId);
         registration = allRegistrations.find(reg => 
           reg.registrationData?.manualVerificationCode === identifier.toString()
@@ -2078,23 +2088,25 @@ export function registerMongoRoutes(app: Express) {
 
 
       if (registration && (registration.eventId._id || registration.eventId).toString() === eventId) {
-        if (event.requiresPayment && registration.paymentStatus !== 'paid') {
+        if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid') {
           return res.json({
             validationStatus: "invalid",
             message: `Payment not completed. Status: ${registration.paymentStatus}`
           });
         }
 
-        if (registration.status === 'attended') {
+        if (registration.status === 'online' || registration.status === 'attended') {
           return res.json({
             validationStatus: "already_used",
-            message: "Registration has already been used for entry"
+            message: "Registration has already been validated for entry"
           });
         }
 
         await mongoStorage.updateEventRegistration(registration._id!.toString(), {
-          status: 'attended',
-          validatedAt: new Date()
+          status: 'online',
+          validatedAt: new Date(),
+          validatedBy: new mongoose.Types.ObjectId(req.user!.id),
+          validationMethod: registration.registrationData?.manualVerificationCode === identifier ? 'manual_verification_code' : 'manual_unique_id'
         });
 
         return res.json({
@@ -2105,7 +2117,8 @@ export function registerMongoRoutes(app: Express) {
             participantName: `${registration.firstName} ${registration.lastName}`,
             email: registration.email,
             eventName: event.name,
-            registrationType: registration.registrationType
+            registrationType: registration.registrationType,
+            validationMethod: registration.registrationData?.manualVerificationCode === identifier ? 'manual_verification_code' : 'manual_unique_id'
           }
         });
       }
@@ -2289,6 +2302,50 @@ export function registerMongoRoutes(app: Express) {
         message: "Face validation failed",
         validationStatus: "error" 
       });
+    }
+  });
+
+  // ================ AUXILIARY BODIES API ================
+  
+  // Get auxiliary bodies dynamically based on events
+  app.get("/api/auxiliary-bodies", async (req: Request, res: Response) => {
+    try {
+      // Get all events to extract unique auxiliary bodies
+      const events = await mongoStorage.getEvents();
+      const auxiliaryBodiesSet = new Set<string>();
+      
+      // Extract all auxiliary bodies from events
+      events.forEach(event => {
+        if (event.eligibleAuxiliaryBodies && Array.isArray(event.eligibleAuxiliaryBodies)) {
+          event.eligibleAuxiliaryBodies.forEach(body => {
+            if (body && body.trim()) {
+              auxiliaryBodiesSet.add(body.trim());
+            }
+          });
+        }
+      });
+      
+      // Also add auxiliary bodies from existing members
+      const members = await mongoStorage.getMembers();
+      members.forEach(member => {
+        if (member.auxiliaryBody && member.auxiliaryBody.trim()) {
+          auxiliaryBodiesSet.add(member.auxiliaryBody.trim());
+        }
+      });
+      
+      // Convert to array and sort
+      const auxiliaryBodies = Array.from(auxiliaryBodiesSet).sort();
+      
+      // If no auxiliary bodies found, provide default ones
+      if (auxiliaryBodies.length === 0) {
+        res.json(['Atfal', 'Khuddam', 'Lajna', 'Ansarullah', 'Nasra']);
+      } else {
+        res.json(auxiliaryBodies);
+      }
+    } catch (error) {
+      console.error("Error getting auxiliary bodies:", error);
+      // Fallback to default auxiliary bodies
+      res.json(['Atfal', 'Khuddam', 'Lajna', 'Ansarullah', 'Nasra']);
     }
   });
 }

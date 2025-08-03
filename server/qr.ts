@@ -14,8 +14,8 @@ export function generateQRCode(): string {
 }
 
 export function generateShortUniqueId(): string {
-  // Generate a 6-character alphanumeric ID for easier manual input
-  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  // Generate a 6-character letter-based ID for easier manual input
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let result = '';
   for (let i = 0; i < 6; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
