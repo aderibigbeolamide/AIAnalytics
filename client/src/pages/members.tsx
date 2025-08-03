@@ -151,8 +151,10 @@ export default function Members() {
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-blue-600 mr-3" />
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Members</p>
-                  <p className="text-2xl font-bold text-gray-900">{members.length}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    {eventFilter === "all" ? "Total Members" : "Total Registrations"}
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">{displayItems.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -161,9 +163,11 @@ export default function Members() {
           <Card>
             <CardContent className="p-6">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Members</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {eventFilter === "all" ? "Active Members" : "Pending Validation"}
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {members.filter((m: any) => m.status === 'active').length}
+                  {displayItems.filter((m: any) => m.status === 'active').length}
                 </p>
               </div>
             </CardContent>
@@ -172,9 +176,11 @@ export default function Members() {
           <Card>
             <CardContent className="p-6">
               <div>
-                <p className="text-sm font-medium text-gray-600">Online Members</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {eventFilter === "all" ? "Online Members" : "Validated/Present"}
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {members.filter((m: any) => m.status === 'online').length}
+                  {displayItems.filter((m: any) => m.status === 'online').length}
                 </p>
               </div>
             </CardContent>
@@ -185,7 +191,7 @@ export default function Members() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Auxiliary Bodies</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {new Set(members.map((m: any) => m.auxiliaryBody)).size}
+                  {new Set(displayItems.map((m: any) => m.auxiliaryBody).filter(Boolean)).size}
                 </p>
               </div>
             </CardContent>
@@ -197,7 +203,7 @@ export default function Members() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center">
                 <Users className="h-5 w-5 mr-2" />
-                All Members
+                {eventFilter === "all" ? "All Members" : `${events.find(e => e.id === eventFilter)?.name || "Event"} Registrations`}
               </CardTitle>
               <Dialog open={isMemberModalOpen} onOpenChange={setIsMemberModalOpen}>
                 <DialogTrigger asChild>
