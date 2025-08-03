@@ -30,6 +30,7 @@ import {
   Building
 } from "lucide-react";
 import ChatbotComponent from "@/components/chatbot";
+import { EventImage } from "@/lib/event-utils";
 // Logo image placed in public folder for proper asset handling
 
 export function LandingPage() {
@@ -40,12 +41,35 @@ export function LandingPage() {
   const [foundEvent, setFoundEvent] = useState<any>(null);
   const [ticketSearchLoading, setTicketSearchLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [publicEvents, setPublicEvents] = useState<any[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
   const { isAuthenticated, checkAuth } = useAuthStore();
   const { toast } = useToast();
 
   useEffect(() => {
     checkAuth();
+    fetchPublicEvents();
   }, [checkAuth]);
+
+  const fetchPublicEvents = async () => {
+    setEventsLoading(true);
+    try {
+      const response = await fetch('/api/events/public');
+      if (response.ok) {
+        const events = await response.json();
+        // Filter to show only upcoming events
+        const upcomingEvents = events
+          .filter((event: any) => new Date(event.startDate) > new Date())
+          .sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+          .slice(0, 6); // Show max 6 events
+        setPublicEvents(upcomingEvents);
+      }
+    } catch (error) {
+      console.error('Error fetching public events:', error);
+    } finally {
+      setEventsLoading(false);
+    }
+  };
 
   const handleFindTicket = async () => {
     if (!ticketId.trim()) {
@@ -263,6 +287,7 @@ export function LandingPage() {
               </div>
             </Link>
             <div className="hidden md:flex items-center space-x-8">
+              <a href="#events" className="text-gray-600 hover:text-gray-900 transition-colors">Events</a>
               <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
               <a href="#benefits" className="text-gray-600 hover:text-gray-900 transition-colors">Benefits</a>
               <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
@@ -295,6 +320,13 @@ export function LandingPage() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-sm">
             <div className="px-4 py-3 space-y-3">
+              <a 
+                href="#events" 
+                className="block text-gray-600 hover:text-gray-900 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Events
+              </a>
               <a 
                 href="#features" 
                 className="block text-gray-600 hover:text-gray-900 transition-colors"
@@ -472,6 +504,123 @@ export function LandingPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Public Events Section */}
+      <section id="events" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-emerald-100 text-emerald-800 border-emerald-200">
+              <Ticket className="h-4 w-4 mr-2" />
+              Upcoming Events
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-high-contrast mb-6">
+              Join Exciting
+              <span className="text-gradient block mt-2">Upcoming Events</span>
+            </h2>
+            <p className="text-xl text-medium-contrast max-w-3xl mx-auto leading-relaxed">
+              Discover and register for upcoming events powered by EventValidate. 
+              Experience secure, seamless event registration and validation.
+            </p>
+          </div>
+
+          {eventsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[...Array(6)].map((_, index) => (
+                <Card key={index} className="animate-pulse">
+                  <div className="h-48 bg-gray-200 rounded-t-lg"></div>
+                  <CardContent className="p-6">
+                    <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-4 w-2/3"></div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : publicEvents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {publicEvents.map((event) => (
+                <Card key={event.id} className="group hover:shadow-xl transition-all duration-500 border-0 shadow-lg bg-white overflow-hidden">
+                  <div className="relative h-48 overflow-hidden">
+                    <EventImage 
+                      event={event} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-4 right-4">
+                      <Badge className="bg-white/90 text-gray-800 border-0">
+                        {event.eventType === 'ticket' ? 'Ticketed Event' : 'Registration Event'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-bold text-high-contrast mb-3 group-hover:text-blue-600 transition-colors">
+                      {event.name}
+                    </h3>
+                    {event.description && (
+                      <p className="text-medium-contrast text-sm mb-4 line-clamp-2">
+                        {event.description}
+                      </p>
+                    )}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                        {event.location}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Clock className="h-4 w-4 mr-2 text-gray-400" />
+                        {new Date(event.startDate).toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold"
+                      onClick={() => window.location.href = `/event/${event.id}`}
+                    >
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      View Details & Register
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="bg-gray-100 rounded-full p-8 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                <Ticket className="h-12 w-12 text-gray-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-600 mb-2">No Upcoming Events</h3>
+              <p className="text-gray-500 mb-6">Check back soon for exciting new events!</p>
+              <Button 
+                variant="outline" 
+                onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Event Inquiry&body=Hello,%0D%0A%0D%0AI would like to inquire about upcoming events on EventValidate.%0D%0A%0D%0AThank you!`, '_blank')}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Get Notified of New Events
+              </Button>
+            </div>
+          )}
+
+          {publicEvents.length > 0 && (
+            <div className="text-center mt-12">
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-8 py-3"
+                onClick={() => window.location.href = '/events'}
+              >
+                View All Events
+                <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 
