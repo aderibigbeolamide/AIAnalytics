@@ -712,12 +712,12 @@ export default function ChatbotComponent() {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
         <Button
           onClick={() => setIsOpen(true)}
-          className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+          className="h-16 w-16 sm:h-14 sm:w-14 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
         >
-          <MessageCircle className="h-6 w-6" />
+          <MessageCircle className="h-7 w-7 sm:h-6 sm:w-6" />
         </Button>
       </div>
     );
@@ -727,18 +727,21 @@ export default function ChatbotComponent() {
     <div 
       ref={chatRef}
       className={cn(
-        "fixed bottom-6 right-6 z-50 bg-white rounded-lg shadow-2xl border",
-        isMinimized ? "w-80 h-16" : "w-80 h-[450px] max-h-[75vh] flex flex-col"
+        "fixed z-50 bg-white rounded-lg shadow-2xl border",
+        // Mobile-first responsive design
+        isMinimized 
+          ? "bottom-4 right-4 w-80 h-16 sm:bottom-6 sm:right-6" 
+          : "bottom-4 right-4 left-4 top-20 sm:bottom-6 sm:right-6 sm:left-auto sm:top-auto sm:w-96 sm:h-[500px] md:w-[420px] md:h-[550px] max-h-[80vh] flex flex-col"
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b bg-blue-600 text-white rounded-t-lg flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5" />
+      <div className="flex items-center justify-between p-4 sm:p-3 border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg flex-shrink-0">
+        <div className="flex items-center gap-3 sm:gap-2">
+          <Bot className="h-6 w-6 sm:h-5 sm:w-5" />
           <div>
-            <div className="font-semibold">EventValidate Support</div>
+            <div className="font-semibold text-base sm:text-sm">EventValidate Support</div>
             {isEscalated && (
-              <div className="text-xs flex items-center gap-1">
+              <div className="text-sm sm:text-xs flex items-center gap-1">
                 <div className={cn(
                   "w-2 h-2 rounded-full",
                   adminOnlineStatus ? "bg-green-400" : "bg-yellow-400"
@@ -771,7 +774,7 @@ export default function ChatbotComponent() {
       {!isMinimized && (
         <>
           {/* Messages */}
-          <div className="flex-1 p-3 overflow-y-auto space-y-3 min-h-0">
+          <div className="flex-1 p-4 sm:p-3 overflow-y-auto space-y-4 sm:space-y-3 min-h-0 bg-gray-50">
             {messages.map((message) => (
               <div key={message.id}>
                 {message.type === 'quick_actions' ? (
@@ -783,12 +786,12 @@ export default function ChatbotComponent() {
                     <div className="max-w-[85%]">
                       <div className="bg-gray-100 p-2 rounded-lg text-sm">
                         <div className="text-xs font-medium mb-2 text-gray-600">Choose what you need help with:</div>
-                        <div className="grid grid-cols-1 gap-1">
+                        <div className="grid grid-cols-1 gap-2 sm:gap-1">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleQuickAction('organization_register')}
-                            className="text-xs h-7 justify-start text-left w-full"
+                            className="text-sm sm:text-xs h-9 sm:h-7 justify-start text-left w-full hover:bg-blue-50 transition-colors"
                           >
                             🏢 How to register my organization?
                           </Button>

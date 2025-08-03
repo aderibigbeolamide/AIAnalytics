@@ -18,26 +18,34 @@
   }
 }
 
-/* Enhanced mobile components */
+/* Enhanced responsive components */
 @layer components {
   .mobile-container {
     @apply px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto;
   }
   
   .mobile-card {
-    @apply rounded-lg border bg-card text-card-foreground shadow-sm p-3 sm:p-6;
+    @apply rounded-xl border bg-card text-card-foreground shadow-lg hover:shadow-xl transition-all duration-300 p-4 sm:p-6 backdrop-blur-sm;
+  }
+  
+  .desktop-card {
+    @apply rounded-2xl border bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50 text-card-foreground shadow-xl hover:shadow-2xl transition-all duration-500 p-6 lg:p-8 backdrop-blur-md border-gray-200/50 dark:border-gray-700/50;
   }
   
   .mobile-button {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background min-h-10 px-4 py-2;
+    @apply inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background min-h-11 px-6 py-3 shadow-lg hover:shadow-xl transform hover:scale-105;
+  }
+  
+  .desktop-button {
+    @apply inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background min-h-12 px-8 py-4 shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-r hover:from-blue-600 hover:to-indigo-600;
   }
   
   .mobile-input {
-    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-12 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm focus:shadow-md transition-all duration-300;
   }
   
   .touch-target {
-    @apply min-h-11 min-w-11 flex items-center justify-center;
+    @apply min-h-12 min-w-12 flex items-center justify-center;
   }
 
   /* Profile image proper fitting */
@@ -55,17 +63,38 @@
     @apply grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6;
   }
 
-  /* Mobile-optimized text sizes */
+  /* Responsive text sizes with improved desktop scaling */
   .mobile-heading {
-    @apply text-xl sm:text-2xl lg:text-3xl font-bold;
+    @apply text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-200 bg-clip-text text-transparent;
+  }
+
+  .desktop-heading {
+    @apply text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent;
   }
 
   .mobile-subheading {
-    @apply text-lg sm:text-xl font-semibold;
+    @apply text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700 dark:text-gray-300;
+  }
+
+  .desktop-subheading {
+    @apply text-xl sm:text-2xl lg:text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent;
   }
 
   .mobile-text {
-    @apply text-sm sm:text-base;
+    @apply text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 leading-relaxed;
+  }
+
+  .desktop-text {
+    @apply text-base sm:text-lg lg:text-xl text-gray-700 dark:text-gray-300 leading-relaxed;
+  }
+
+  /* Enhanced gradient backgrounds */
+  .gradient-bg {
+    @apply bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20;
+  }
+
+  .gradient-card {
+    @apply bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 dark:from-gray-800 dark:via-blue-900/10 dark:to-indigo-900/10 backdrop-blur-md border border-white/20 dark:border-gray-700/30;
   }
 }
 

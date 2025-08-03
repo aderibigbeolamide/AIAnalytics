@@ -56,7 +56,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+    <nav className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50 transition-all duration-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo - Mobile Optimized */}
@@ -68,7 +68,7 @@ export function Navbar() {
                   alt="EventValidate Logo" 
                   className="h-8 md:h-12 w-auto" 
                 />
-                <span className="ml-2 md:ml-3 text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent truncate">
+                <span className="ml-2 md:ml-3 text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent truncate">
                   EventValidate
                 </span>
               </div>
@@ -81,10 +81,10 @@ export function Navbar() {
               {navItems.map((item) => (
                 <Link key={item.href} href={item.href}>
                   <span
-                    className={`px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+                    className={`px-3 lg:px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer ${
                       isActive(item.href)
-                        ? "text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md"
-                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+                        ? "text-white bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 shadow-lg transform scale-105"
+                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-800 dark:hover:to-gray-700 hover:shadow-md"
                     }`}
                   >
                     {item.label}
@@ -95,23 +95,23 @@ export function Navbar() {
           </div>
 
           {/* Desktop Right Side */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
             <ThemeToggle />
             {user && <NotificationBell />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-2">
-                  <Avatar className="h-8 w-8">
+                <Button variant="ghost" className="flex items-center space-x-3 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-800 dark:hover:to-gray-700 rounded-xl transition-all duration-300 px-3 py-2">
+                  <Avatar className="h-9 w-9 ring-2 ring-blue-100 dark:ring-blue-900">
                     <AvatarImage 
                       src={profile?.profileImage || undefined} 
                       alt="Profile"
                       className="object-cover object-center w-full h-full"
                     />
-                    <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-blue-600 dark:text-blue-300">
                       <User className="w-4 h-4" />
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-32">
                     {member ? `${member.firstName} ${member.lastName}` : user?.username}
                   </span>
                 </Button>
