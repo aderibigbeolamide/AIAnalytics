@@ -14,6 +14,7 @@ import { getAuthHeaders } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Calendar, Edit, QrCode, Users, Download, BarChart3, Eye, UserCheck, Ticket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { EventImage } from "@/lib/event-utils";
 import QRCode from "qrcode";
 
 export default function Events() {
@@ -234,11 +235,19 @@ export default function Events() {
             {/* Events Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredEvents.map((event: any) => (
-                <Card key={event.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
+                <Card key={event.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+                  {/* Event Image */}
+                  <div className="h-48 overflow-hidden">
+                    <EventImage 
+                      event={event} 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  
+                  <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{event.name}</CardTitle>
-                      <div className="flex space-x-2">
+                      <CardTitle className="text-lg truncate">{event.name}</CardTitle>
+                      <div className="flex space-x-2 ml-2">
                         {event.eventType === "ticket" && (
                           <Badge variant="secondary" className="bg-purple-100 text-purple-800">
                             Ticket Event
@@ -250,7 +259,7 @@ export default function Events() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-0">
                     <div className="space-y-4">
                       <p className="text-gray-600 text-sm line-clamp-2">{event.description}</p>
                       

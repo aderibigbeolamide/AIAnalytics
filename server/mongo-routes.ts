@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 import QRCode from "qrcode";
 import { NotificationService } from "./notification-service";
 import { FaceRecognitionService } from "./face-recognition";
+import { FileStorageHandler } from "./storage-handler";
 import mongoose from "mongoose";
 
 // Configure multer for file uploads
@@ -2736,6 +2737,35 @@ export function registerMongoRoutes(app: Express) {
       console.error("Error getting auxiliary bodies:", error);
       // Return empty array on error (no hardcoded fallback)
       res.json([]);
+    }
+  });
+
+  // ================ FILE UPLOAD API ================
+  
+  // Initialize file storage handler
+  const fileStorage = new FileStorageHandler();
+  
+  // Image upload endpoint
+  app.post("/api/upload/image", authenticateToken, upload.single('image'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      // Get folder from request body (optional)
+      const folder = req.body.folder || 'images';
+
+      // Save file using storage handler
+      const uploadedFile = await fileStorage.saveFile(req.file, folder);
+
+      res.json({ 
+        message: "Image uploaded successfully",
+        url: uploadedFile.url,
+        filename: uploadedFile.filename
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      res.status(500).json({ message: "Failed to upload image" });
     }
   });
 

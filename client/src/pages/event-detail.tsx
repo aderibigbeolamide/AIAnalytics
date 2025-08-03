@@ -15,6 +15,7 @@ import { CsvValidation } from "@/components/csv-validation";
 import { FaceRecognition } from "@/components/face-recognition";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { Navbar } from "@/components/navbar";
+import { EventImage } from "@/lib/event-utils";
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -110,6 +111,14 @@ export default function EventDetail() {
       <Navbar />
       <div className="max-w-4xl mx-auto p-6 space-y-6">
       <Card>
+        {/* Event Image */}
+        <div className="h-64 overflow-hidden rounded-t-lg">
+          <EventImage 
+            event={event} 
+            className="w-full h-full object-cover"
+          />
+        </div>
+        
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>

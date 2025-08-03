@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
 import { FormFieldBuilder } from "@/components/form-field-builder";
-import { Plus, X, CreditCard, Receipt } from "lucide-react";
+import { Plus, X, CreditCard, Receipt, Upload, Image as ImageIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -30,6 +30,7 @@ const eventSchema = z.object({
   allowGuests: z.boolean().default(false),
   requiresPayment: z.boolean().default(false),
   paymentAmount: z.string().optional(),
+  eventImage: z.string().optional(),
   paymentSettings: z.object({
     requiresPayment: z.boolean().default(false),
     amount: z.string().optional(),
@@ -70,6 +71,8 @@ interface EventFormProps {
 export function EventForm({ onClose, event }: EventFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [imagePreview, setImagePreview] = useState<string | null>(event?.eventImage || null);
+  const [isImageUploading, setIsImageUploading] = useState(false);
 
   const form = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
@@ -86,6 +89,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
       allowGuests: event?.allowGuests || false,
       requiresPayment: event?.requiresPayment || false,
       paymentAmount: event?.paymentAmount || "",
+      eventImage: event?.eventImage || "",
       paymentSettings: event?.paymentSettings || {
         requiresPayment: false,
         amount: "",
@@ -220,6 +224,68 @@ export function EventForm({ onClose, event }: EventFormProps) {
     }
   };
 
+  const handleImageUpload = async (file: File) => {
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsImageUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('folder', 'event-images');
+
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders(),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const { url } = await response.json();
+      setImagePreview(url);
+      form.setValue('eventImage', url);
+
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully",
+      });
+    } catch (error) {
+      console.error('Image upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImageUploading(false);
+    }
+  };
+
   const removeAuxiliaryBody = (bodyToRemove: string) => {
     setAuxiliaryBodies(auxiliaryBodies.filter((body: string) => body !== bodyToRemove));
     // Remove from form if it was selected
@@ -292,6 +358,88 @@ export function EventForm({ onClose, event }: EventFormProps) {
               <FormLabel>Description (Optional)</FormLabel>
               <FormControl>
                 <Textarea placeholder="Event description" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Event Image Upload */}
+        <FormField
+          control={form.control}
+          name="eventImage"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Event Image (Optional)</FormLabel>
+              <FormControl>
+                <div className="space-y-4">
+                  {imagePreview ? (
+                    <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
+                      <img 
+                        src={imagePreview} 
+                        alt="Event preview" 
+                        className="w-full h-full object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => {
+                          setImagePreview(null);
+                          form.setValue('eventImage', '');
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="w-full h-48 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center">
+                      <ImageIcon className="h-12 w-12 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-500 mb-2">Upload an event image</p>
+                      <p className="text-xs text-gray-400">JPG, PNG up to 5MB</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleImageUpload(file);
+                        }
+                      }}
+                      disabled={isImageUploading}
+                      className="hidden"
+                      id="event-image-upload"
+                    />
+                    <label htmlFor="event-image-upload">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="cursor-pointer"
+                        disabled={isImageUploading}
+                        asChild
+                      >
+                        <span>
+                          {isImageUploading ? (
+                            <>
+                              <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Choose Image
+                            </>
+                          )}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>

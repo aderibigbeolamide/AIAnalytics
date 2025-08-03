@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users, Clock, QrCode, Ticket } from "lucide-react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { Link } from "wouter";
+import { EventImage } from "@/lib/event-utils";
 
 export default function PublicEventDetail() {
   const { id } = useParams();
@@ -78,8 +79,16 @@ export default function PublicEventDetail() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
+        {/* Header with Event Image */}
         <div className="text-center mb-8">
+          {/* Event Image */}
+          <div className="mx-auto mb-6 h-64 w-full max-w-2xl overflow-hidden rounded-lg shadow-lg">
+            <EventImage 
+              event={event} 
+              className="w-full h-full object-cover"
+            />
+          </div>
+          
           <h1 className="text-4xl font-bold text-gray-900 mb-2">{event.name}</h1>
           <p className="text-xl text-gray-600">{event.description}</p>
         </div>
