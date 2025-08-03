@@ -8,6 +8,15 @@ Preferred communication style: Simple, everyday language.
 UI/UX preferences: User-friendly design with professional appearance, no demo credentials on login page, direct users to contact admin for login issues.
 
 ## Recent Changes (August 3, 2025)
+- **✅ PUBLIC EVENTS LANDING PAGE SECTION CREATED**: 
+  - **Events Display Section**: Added comprehensive public events section on landing page showing ongoing and upcoming events
+  - **Smart Event Filtering**: Shows events that are currently live (ongoing) and upcoming events, excludes only past events
+  - **Event Status Indicators**: Live events show animated "Live Now" badge, upcoming events show "Upcoming" badge
+  - **Image Integration**: Uses new EventImage component with default avatars for events without custom images
+  - **Navigation Enhancement**: Added "Events" link to main navigation (desktop and mobile)
+  - **Responsive Design**: Beautiful grid layout with hover effects, loading states, and empty state handling
+  - **Event Details Display**: Shows event name, description, location, date/time, and event type
+  - **Call-to-Action**: Direct links to event detail pages for registration
 - **✅ FIND MY EVENT FUNCTIONALITY FIXED**: 
   - **API Method Fixed**: Changed `getAllEventRegistrations` to correct `getEventRegistrations` method in MongoDB storage
   - **Error Handling Enhanced**: Added proper error handling and empty array returns for when no registrations found

@@ -57,12 +57,18 @@ export function LandingPage() {
       const response = await fetch('/api/events/public');
       if (response.ok) {
         const events = await response.json();
-        // Filter to show only upcoming events
-        const upcomingEvents = events
-          .filter((event: any) => new Date(event.startDate) > new Date())
+        // Filter to show ongoing and upcoming events (exclude only past events)
+        const currentDate = new Date();
+        const activeEvents = events
+          .filter((event: any) => {
+            const startDate = new Date(event.startDate);
+            const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + (24 * 60 * 60 * 1000)); // Default to 1 day if no end date
+            // Show if event is ongoing (started but not ended) or upcoming
+            return endDate > currentDate;
+          })
           .sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
           .slice(0, 6); // Show max 6 events
-        setPublicEvents(upcomingEvents);
+        setPublicEvents(activeEvents);
       }
     } catch (error) {
       console.error('Error fetching public events:', error);
@@ -513,14 +519,14 @@ export function LandingPage() {
           <div className="text-center mb-16">
             <Badge className="mb-4 bg-emerald-100 text-emerald-800 border-emerald-200">
               <Ticket className="h-4 w-4 mr-2" />
-              Upcoming Events
+              Active & Upcoming Events
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold text-high-contrast mb-6">
-              Join Exciting
-              <span className="text-gradient block mt-2">Upcoming Events</span>
+              Join Live & Upcoming
+              <span className="text-gradient block mt-2">Events</span>
             </h2>
             <p className="text-xl text-medium-contrast max-w-3xl mx-auto leading-relaxed">
-              Discover and register for upcoming events powered by EventValidate. 
+              Discover ongoing and upcoming events powered by EventValidate. 
               Experience secure, seamless event registration and validation.
             </p>
           </div>
@@ -548,9 +554,28 @@ export function LandingPage() {
                       event={event} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute top-4 right-4">
-                      <Badge className="bg-white/90 text-gray-800 border-0">
-                        {event.eventType === 'ticket' ? 'Ticketed Event' : 'Registration Event'}
+                    <div className="absolute top-4 right-4 space-y-2">
+                      {(() => {
+                        const now = new Date();
+                        const startDate = new Date(event.startDate);
+                        const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + (24 * 60 * 60 * 1000));
+                        
+                        if (now >= startDate && now <= endDate) {
+                          return (
+                            <Badge className="bg-green-500/90 text-white border-0 animate-pulse">
+                              Live Now
+                            </Badge>
+                          );
+                        } else {
+                          return (
+                            <Badge className="bg-blue-500/90 text-white border-0">
+                              Upcoming
+                            </Badge>
+                          );
+                        }
+                      })()}
+                      <Badge className="bg-white/90 text-gray-800 border-0 block">
+                        {event.eventType === 'ticket' ? 'Ticketed' : 'Registration'}
                       </Badge>
                     </div>
                   </div>
