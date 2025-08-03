@@ -280,7 +280,7 @@ export default function Members() {
                                                 item.registrationData?.auxiliaryBody ||
                                                 item.registrationData?.AuxiliaryBody ||
                                                 item.registrationData?.auxiliary_body ||
-                                                'N/A';
+                                                (item.auxiliaryBody === "" ? "Not Specified" : item.auxiliaryBody);
                     const displayStatus = item.status || 'registered';
                     const itemId = item.id || item._id;
                     
