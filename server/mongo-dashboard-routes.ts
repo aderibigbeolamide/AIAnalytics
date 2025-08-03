@@ -833,13 +833,18 @@ export function registerMongoDashboardRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const organizationId = user.organizationId;
-      if (!organizationId) {
+      // Extract the actual organization ID string from the user object
+      let organizationId: string;
+      if (typeof user.organizationId === 'string') {
+        organizationId = user.organizationId;
+      } else if (user.organizationId && typeof user.organizationId === 'object') {
+        organizationId = user.organizationId._id?.toString() || user.organizationId.toString();
+      } else {
         return res.status(400).json({ message: "No organization associated with user" });
       }
 
       // Get all events for this organization
-      const events = await mongoStorage.getEvents({ organizationId: organizationId.toString() });
+      const events = await mongoStorage.getEvents({ organizationId });
       const eventIds = events.map(e => e._id.toString());
 
       if (eventIds.length === 0) {
@@ -864,7 +869,7 @@ export function registerMongoDashboardRoutes(app: Express) {
         eventIds.includes(ticket.eventId.toString())
       );
       
-      const registrations = await mongoStorage.getEventRegistrations({ 
+      const registrations = await mongoStorage.getEventRegistrations(undefined, { 
         eventIds,
         paymentStatus: 'paid'
       });

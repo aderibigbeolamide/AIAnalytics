@@ -333,7 +333,8 @@ export class MongoStorage implements IMongoStorage {
       }
       
       if (filters?.organizationId) {
-        query.organizationId = filters.organizationId;
+        // Handle both string IDs and ObjectId strings properly
+        query.organizationId = new mongoose.Types.ObjectId(filters.organizationId);
       }
       
       return await Event.find(query).sort({ createdAt: -1 });
@@ -406,12 +407,19 @@ export class MongoStorage implements IMongoStorage {
     startDate?: Date; 
     endDate?: Date;
     status?: string;
+    eventIds?: string[];
+    paymentStatus?: string;
   }): Promise<IEventRegistration[]> {
     try {
       const query: any = {};
       
       if (eventId) {
         query.eventId = eventId;
+      }
+      
+      // Handle multiple event IDs for payment history queries
+      if (filters?.eventIds && filters.eventIds.length > 0) {
+        query.eventId = { $in: filters.eventIds.map(id => new mongoose.Types.ObjectId(id)) };
       }
       
       if (filters?.auxiliaryBody) {
@@ -424,6 +432,10 @@ export class MongoStorage implements IMongoStorage {
       
       if (filters?.status) {
         query.status = filters.status;
+      }
+      
+      if (filters?.paymentStatus) {
+        query.paymentStatus = filters.paymentStatus;
       }
       
       if (filters?.startDate || filters?.endDate) {
@@ -504,13 +516,18 @@ export class MongoStorage implements IMongoStorage {
     }
   }
 
-  async getTickets(filters?: { eventId?: string; status?: string; paymentStatus?: string }): Promise<ITicket[]> {
+  async getTickets(filters?: { eventId?: string; status?: string; paymentStatus?: string; eventIds?: string[] }): Promise<ITicket[]> {
     try {
       const query: any = {};
       
       if (filters?.eventId) {
         query.eventId = new mongoose.Types.ObjectId(filters.eventId);
       }
+      
+      if (filters?.eventIds && filters.eventIds.length > 0) {
+        query.eventId = { $in: filters.eventIds.map(id => new mongoose.Types.ObjectId(id)) };
+      }
+      
       if (filters?.status) {
         query.status = filters.status;
       }
