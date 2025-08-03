@@ -101,6 +101,11 @@ export default function Members() {
 
   // Display either general members or event registrations based on filter
   const displayItems = eventFilter === "all" ? members : eventRegistrations;
+  
+  // Debug logging
+  console.log("Events data:", events);
+  console.log("Event filter:", eventFilter);
+  console.log("Display items:", displayItems);
 
   const getAuxiliaryBodyBadge = (auxiliaryBody: string) => {
     // Generate consistent colors based on auxiliary body name
@@ -238,19 +243,21 @@ export default function Members() {
                   value={memberFilter} 
                   onValueChange={setMemberFilter} 
                 />
-                <Select value={eventFilter} onValueChange={setEventFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select event to view registrations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Members (Traditional)</SelectItem>
-                    {events.map((event: any) => (
-                      <SelectItem key={event.id} value={event.id.toString()}>
-                        {event.name} Registrations
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="w-[200px]">
+                  <Select value={eventFilter} onValueChange={setEventFilter}>
+                    <SelectTrigger className="w-full border-2 border-blue-500">
+                      <SelectValue placeholder="Select event to view registrations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Members (Traditional)</SelectItem>
+                      {events.map((event: any) => (
+                        <SelectItem key={event.id} value={event.id.toString()}>
+                          {event.name} Registrations
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
