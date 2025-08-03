@@ -355,6 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      console.log(`Found ${userRegistrations.length} registrations for ${uniqueId ? 'uniqueId: ' + uniqueId : 'email: ' + email}`);
       res.json(userRegistrations);
     } catch (error) {
       console.error("Error fetching user registrations:", error);
@@ -420,7 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: event.name,
           description: event.description,
           location: event.location,
-          eventType: event.event_type, // Add the missing eventType field
+          eventType: event.event_type || 'registration', // Add the missing eventType field with fallback
           startDate: event.start_date,
           endDate: event.end_date,
           registrationStartDate: event.registration_start_date,

@@ -153,81 +153,50 @@ export default function Dashboard() {
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12">
-        {/* Enhanced Header - Mobile Optimized */}
-        <div className="desktop-card mb-6 sm:mb-8 lg:mb-12">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
+        {/* Streamlined Header */}
+        <div className="desktop-card mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2 sm:mb-3">
-                Event Management Dashboard
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                Dashboard
               </h1>
-              <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-gray-700 dark:text-gray-300 leading-relaxed">
-                Manage members, events, and track attendance with AI-powered validation
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
+                Manage events and track attendance
               </p>
             </div>
             
-            {/* Desktop Actions */}
-            <div className="hidden lg:flex flex-col xl:flex-row items-center gap-3 xl:gap-4">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
               <Button 
                 onClick={() => setIsEventModalOpen(true)} 
-                className="w-full xl:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
               >
-                <Plus className="h-5 w-5 mr-2" />
-                Create Event
+                <Plus className="h-4 w-4 mr-1" />
+                Event
               </Button>
               <Button 
                 onClick={() => setIsMemberModalOpen(true)} 
                 variant="outline" 
-                className="w-full xl:w-auto px-6 py-3 border-2 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="px-4 py-2"
               >
-                <UserPlus className="h-5 w-5 mr-2" />
-                Add Member
+                <UserPlus className="h-4 w-4 mr-1" />
+                Member
               </Button>
               <Button 
                 onClick={() => setIsScannerOpen(true)} 
                 variant="outline" 
-                className="w-full xl:w-auto px-6 py-3 border-2 border-green-200 text-green-700 hover:bg-green-50 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="px-4 py-2"
               >
-                <Camera className="h-5 w-5 mr-2" />
-                QR Scanner
-              </Button>
-            </div>
-            
-            {/* Mobile Actions */}
-            <div className="flex lg:hidden flex-col sm:flex-row gap-3 w-full">
-              <Button 
-                onClick={() => setIsEventModalOpen(true)} 
-                className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              >
-                <Plus className="h-5 w-5" />
-                <span className="text-sm font-medium">Create Event</span>
-              </Button>
-              <Button 
-                onClick={() => setIsMemberModalOpen(true)} 
-                variant="outline" 
-                className="flex-1 flex items-center justify-center gap-2 border-2 border-blue-200 text-blue-700 hover:bg-blue-50 py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              >
-                <UserPlus className="h-5 w-5" />
-                <span className="text-sm font-medium">Add Member</span>
-              </Button>
-            </div>
-            
-            {/* Third Mobile Button Row */}
-            <div className="flex lg:hidden w-full">
-              <Button 
-                onClick={() => setIsScannerOpen(true)} 
-                variant="outline" 
-                className="w-full flex items-center justify-center gap-2 border-2 border-green-200 text-green-700 hover:bg-green-50 py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              >
-                <Camera className="h-5 w-5" />
-                <span className="text-sm font-medium">QR Scanner</span>
+                <Camera className="h-4 w-4 mr-1" />
+                Scan
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Enhanced Quick Navigation Tabs */}
-        <div className="gradient-card p-3 sm:p-4 mb-6 sm:mb-8 shadow-xl">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        {/* Navigation Tabs */}
+        <div className="bg-white rounded-lg shadow-sm border p-2 mb-6">
+          <div className="flex gap-1">
             {[
               { id: "overview", label: "Overview", icon: BarChart },
               { id: "events", label: "Events", icon: Calendar },
@@ -237,15 +206,14 @@ export default function Dashboard() {
                 key={id}
                 variant={currentView === id ? "default" : "ghost"}
                 onClick={() => setCurrentView(id as any)}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-medium rounded-xl transition-all duration-300 ${
+                className={`flex items-center gap-2 px-4 py-2 text-sm ${
                   currentView === id 
-                    ? "bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white shadow-lg transform scale-105" 
-                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-700 dark:hover:to-gray-600 hover:shadow-md"
+                    ? "bg-blue-600 text-white" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="hidden sm:inline">{label}</span>
-                <span className="sm:hidden text-xs">{label}</span>
+                <Icon className="h-4 w-4" />
+                {label}
               </Button>
             ))}
           </div>

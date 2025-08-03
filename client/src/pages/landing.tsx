@@ -26,7 +26,8 @@ import {
   X,
   Search,
   CreditCard,
-  Ticket
+  Ticket,
+  Building
 } from "lucide-react";
 import ChatbotComponent from "@/components/chatbot";
 // Logo image placed in public folder for proper asset handling
@@ -411,6 +412,14 @@ export function LandingPage() {
             >
               <Phone className="h-6 w-6 mr-2" />
               Schedule Call
+            </Button>
+            <Button 
+              size="lg"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold px-8 py-4 text-lg focus-visible:focus"
+              onClick={() => window.location.href = '/organization-register'}
+            >
+              <Building className="h-6 w-6 mr-2" />
+              Register Organization
             </Button>
           </div>
 

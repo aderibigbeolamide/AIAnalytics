@@ -37,11 +37,22 @@ export default function GuestLookup() {
       const params = new URLSearchParams();
       params.append(searchType, searchValue.trim());
       
-      const response = await fetch(`/api/my-registrations?${params.toString()}`);
+      const response = await fetch(`/api/my-registrations?${params.toString()}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
       if (!response.ok) {
         throw new Error('Failed to find registrations');
       }
-      return response.json();
+      const data = await response.text();
+      try {
+        return JSON.parse(data);
+      } catch {
+        console.error('Received HTML instead of JSON:', data.substring(0, 200));
+        throw new Error('Invalid response format');
+      }
     },
     enabled: shouldSearch && !!searchValue.trim(),
   });
@@ -297,7 +308,20 @@ export default function GuestLookup() {
                     {/* Registration Details */}
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-lg">{registration.event.name}</CardTitle>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          {registration.event.name}
+                          {registration.event.eventType === 'ticket' ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              <Ticket className="h-3 w-3 mr-1" />
+                              Ticket Event
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Users className="h-3 w-3 mr-1" />
+                              Registration Event
+                            </Badge>
+                          )}
+                        </CardTitle>
                         <p className="text-sm text-gray-600">{registration.event.description}</p>
                       </CardHeader>
                       <CardContent className="space-y-3">
