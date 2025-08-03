@@ -7,6 +7,12 @@ EventValidate is an AI-powered, multi-tenant member validation system designed t
 Preferred communication style: Simple, everyday language.
 UI/UX preferences: User-friendly design with professional appearance, no demo credentials on login page, direct users to contact admin for login issues.
 
+## Recent Changes (August 2025)
+- Successfully migrated from Replit Agent to standard Replit environment
+- Fixed landing page event card navigation issue: corrected `/event/${id}` to `/event-view/${id}` route
+- All workflows and dependencies confirmed working properly
+- MongoDB connection and auto-seeding functioning correctly
+
 ## System Architecture
 ### Frontend
 - **Framework**: React 18 with TypeScript

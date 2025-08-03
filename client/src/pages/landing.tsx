@@ -612,7 +612,7 @@ export function LandingPage() {
                     </div>
                     <Button 
                       className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold transform group-hover:scale-105 group-hover:shadow-lg transition-all duration-300"
-                      onClick={() => window.location.href = `/event/${event.id}`}
+                      onClick={() => window.location.href = `/event-view/${event.id}`}
                     >
                       <ArrowRight className="h-4 w-4 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
                       View Details & Register
