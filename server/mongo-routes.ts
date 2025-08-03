@@ -290,7 +290,7 @@ export function registerMongoRoutes(app: Express) {
           const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
           
           // Get all registrations for this user's organization
-          const registrations = await mongoStorage.getAllEventRegistrations();
+          const registrations = await mongoStorage.getEventRegistrations();
           userRegistrations = [];
           
           for (const reg of registrations) {
@@ -326,15 +326,22 @@ export function registerMongoRoutes(app: Express) {
       
       // Unauthenticated lookup by uniqueId or email
       if (userRegistrations.length === 0 && (uniqueId || email)) {
-        const registrations = await mongoStorage.getAllEventRegistrations();
+        const registrations = await mongoStorage.getEventRegistrations();
         
         if (uniqueId) {
           const foundRegistrations = registrations.filter(reg => reg.uniqueId === uniqueId);
           for (const reg of foundRegistrations) {
-            const event = await mongoStorage.getEvent(reg.eventId?.toString() || '');
+            let eventId = reg.eventId;
+            if (typeof eventId === 'object' && eventId?._id) {
+              eventId = eventId._id.toString();
+            } else if (eventId) {
+              eventId = eventId.toString();
+            }
+            
+            const event = await mongoStorage.getEvent(eventId || '');
             userRegistrations.push({
               id: reg._id?.toString(),
-              eventId: reg.eventId?.toString(),
+              eventId: eventId,
               registrationType: reg.registrationType,
               firstName: reg.firstName,
               lastName: reg.lastName,
@@ -359,10 +366,17 @@ export function registerMongoRoutes(app: Express) {
         if (email) {
           const foundRegistrations = registrations.filter(reg => reg.email === email);
           for (const reg of foundRegistrations) {
-            const event = await mongoStorage.getEvent(reg.eventId?.toString() || '');
+            let eventId = reg.eventId;
+            if (typeof eventId === 'object' && eventId?._id) {
+              eventId = eventId._id.toString();
+            } else if (eventId) {
+              eventId = eventId.toString();
+            }
+            
+            const event = await mongoStorage.getEvent(eventId || '');
             userRegistrations.push({
               id: reg._id?.toString(),
-              eventId: reg.eventId?.toString(),
+              eventId: eventId,
               registrationType: reg.registrationType,
               firstName: reg.firstName,
               lastName: reg.lastName,
@@ -385,11 +399,16 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
+      // Return empty array if no registrations found
+      if (userRegistrations.length === 0) {
+        return res.json([]);
+      }
+
       res.json(userRegistrations);
 
     } catch (error) {
       console.error("Error fetching registrations:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Internal server error", error: error.message });
     }
   });
 
