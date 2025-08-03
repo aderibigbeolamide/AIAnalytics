@@ -160,6 +160,7 @@ export function registerMongoDashboardRoutes(app: Express) {
         paymentAmount: event.paymentAmount,
         paymentCurrency: event.paymentCurrency,
         eventType: event.eventType,
+        eventImage: event.eventImage,
         createdAt: event.createdAt,
         organizationId: event.organizationId?.toString(),
         createdBy: event.createdBy?.toString()
