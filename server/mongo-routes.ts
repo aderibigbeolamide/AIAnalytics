@@ -2059,9 +2059,9 @@ export function registerMongoRoutes(app: Express) {
         });
       }
 
-      // Update registration status
+      // Update registration status to "online" to indicate presence
       await mongoStorage.updateEventRegistration(registration._id.toString(), { 
-        status: "confirmed",
+        status: "online",
         validationMethod: "manual_validation",
         validatedAt: new Date(),
         validatedBy: req.user!.id

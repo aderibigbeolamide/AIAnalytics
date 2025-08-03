@@ -138,7 +138,7 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
       const qrImg = new Image();
       qrImg.onload = () => {
         const qrSize = 200;
-        const qrX = (canvas.width - qrSize) / 2;
+        const qrX = (800 - qrSize) / 2; // Use actual canvas dimensions
         const qrY = y + 30;
         
         ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
@@ -146,7 +146,7 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
         ctx.font = 'bold 18px Arial';
         ctx.fillStyle = '#333333';
         ctx.textAlign = 'center';
-        ctx.fillText('Scan for Event Check-in', canvas.width / 2, qrY + qrSize + 30);
+        ctx.fillText('Scan for Event Check-in', 800 / 2, qrY + qrSize + 30);
         
         // Download with high quality settings
         const link = document.createElement('a');
@@ -284,29 +284,54 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
           <Button 
             variant="outline" 
             onClick={() => {
-              // Add print-specific styling for better print quality
+              // Add comprehensive print-specific styling for high quality printing
               const printStyle = document.createElement('style');
               printStyle.textContent = `
+                @page {
+                  size: A4;
+                  margin: 1cm;
+                }
                 @media print {
+                  * { 
+                    -webkit-print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                  }
                   body * { visibility: hidden; }
-                  .registration-card, .registration-card * { visibility: visible; }
+                  .registration-card, .registration-card * { visibility: visible !important; }
                   .registration-card { 
-                    position: absolute; 
-                    left: 0; 
-                    top: 0; 
-                    width: 100%; 
+                    position: absolute !important; 
+                    left: 0 !important; 
+                    top: 0 !important; 
+                    width: 100% !important;
+                    max-width: none !important;
                     box-shadow: none !important;
-                    border: none !important;
+                    border: 2px solid #4F46E5 !important;
                     margin: 0 !important;
-                    padding: 20px !important;
+                    padding: 30px !important;
                     background: white !important;
                     color: black !important;
+                    font-size: 16px !important;
+                    line-height: 1.6 !important;
+                    page-break-inside: avoid !important;
                   }
                   .print-hide { display: none !important; }
-                  .bg-gradient-to-r { background: #4F46E5 !important; }
-                  .bg-gradient-to-br { background: #EBF8FF !important; }
-                  .bg-gray-50 { background: #F9FAFB !important; }
-                  .bg-blue-50 { background: #EBF8FF !important; }
+                  .bg-gradient-to-r { 
+                    background: linear-gradient(to right, #4F46E5, #7C3AED) !important;
+                    color: white !important;
+                  }
+                  .bg-gradient-to-br { 
+                    background: #EBF8FF !important;
+                    border: 2px solid #93C5FD !important;
+                  }
+                  .bg-gray-50 { 
+                    background: #F9FAFB !important; 
+                    border: 1px solid #E5E7EB !important;
+                  }
+                  .bg-blue-50 { 
+                    background: #EBF8FF !important;
+                    border: 1px solid #DBEAFE !important;
+                  }
                   .text-white { color: white !important; }
                   .text-blue-600 { color: #2563EB !important; }
                   .text-blue-700 { color: #1D4ED8 !important; }
@@ -314,7 +339,39 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
                   .border-blue-200 { border-color: #DBEAFE !important; }
                   .border-blue-300 { border-color: #93C5FD !important; }
                   .border-blue-400 { border-color: #60A5FA !important; }
-                  img { max-width: 200px !important; height: auto !important; }
+                  .border-l-4 { border-left: 4px solid #60A5FA !important; }
+                  img { 
+                    max-width: 180px !important; 
+                    height: auto !important;
+                    border: 2px solid #E5E7EB !important;
+                  }
+                  h1, h2, h3 { 
+                    font-weight: bold !important;
+                    margin-bottom: 10px !important;
+                  }
+                  .text-3xl { font-size: 32px !important; }
+                  .text-2xl { font-size: 24px !important; }
+                  .text-xl { font-size: 20px !important; }
+                  .text-lg { font-size: 18px !important; }
+                  .text-base { font-size: 16px !important; }
+                  .text-sm { font-size: 14px !important; }
+                  .text-xs { font-size: 12px !important; }
+                  .font-mono { font-family: 'Courier New', monospace !important; }
+                  .font-bold { font-weight: bold !important; }
+                  .tracking-widest { letter-spacing: 0.2em !important; }
+                  .mb-3 { margin-bottom: 12px !important; }
+                  .mt-3 { margin-top: 12px !important; }
+                  .p-3 { padding: 12px !important; }
+                  .p-4 { padding: 16px !important; }
+                  .p-6 { padding: 24px !important; }
+                  .rounded-lg { border-radius: 8px !important; }
+                  .rounded-xl { border-radius: 12px !important; }
+                  .grid { display: block !important; }
+                  .flex { display: block !important; }
+                  .space-y-1 > * + * { margin-top: 4px !important; }
+                  .space-y-6 > * + * { margin-top: 24px !important; }
+                  .gap-3 { margin-bottom: 12px !important; }
+                  .gap-4 { margin-bottom: 16px !important; }
                 }
               `;
               document.head.appendChild(printStyle);
