@@ -91,6 +91,7 @@ function Router() {
       <Route path="/ticket/:ticketId" component={TicketDetail} />
       <Route path="/login" component={OrganizationLogin} />
       <Route path="/register" component={OrganizationRegister} />
+      <Route path="/organization-register" component={OrganizationRegister} />
       <Route path="/super-admin-login" component={SuperAdminLogin} />
       <Route path="/register-organization" component={OrganizationRegistration} />
       

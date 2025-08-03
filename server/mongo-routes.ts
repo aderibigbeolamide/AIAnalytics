@@ -291,28 +291,34 @@ export function registerMongoRoutes(app: Express) {
           
           // Get all registrations for this user's organization
           const registrations = await mongoStorage.getAllEventRegistrations();
-          userRegistrations = registrations
-            .filter(reg => reg.email === decoded.email || reg.organizationId?.toString() === decoded.organizationId)
-            .map(reg => ({
-              id: reg._id?.toString(),
-              eventId: reg.eventId?.toString(),
-              registrationType: reg.registrationType,
-              firstName: reg.firstName,
-              lastName: reg.lastName,
-              email: reg.email,
-              uniqueId: reg.uniqueId,
-              status: reg.status,
-              qrCode: reg.qrCode,
-              createdAt: reg.createdAt,
-              event: {
-                id: reg.eventId?.toString(),
-                name: reg.eventId?.name || 'Event',
-                description: reg.eventId?.description || '',
-                location: reg.eventId?.location || '',
-                startDate: reg.eventId?.startDate,
-                endDate: reg.eventId?.endDate
-              }
-            }));
+          userRegistrations = [];
+          
+          for (const reg of registrations) {
+            if (reg.email === decoded.email || reg.organizationId?.toString() === decoded.organizationId) {
+              const event = await mongoStorage.getEvent(reg.eventId?.toString() || '');
+              userRegistrations.push({
+                id: reg._id?.toString(),
+                eventId: reg.eventId?.toString(),
+                registrationType: reg.registrationType,
+                firstName: reg.firstName,
+                lastName: reg.lastName,
+                email: reg.email,
+                uniqueId: reg.uniqueId,
+                status: reg.status,
+                qrCode: reg.qrCode,
+                createdAt: reg.createdAt,
+                event: {
+                  id: event?._id?.toString(),
+                  name: event?.name || 'Event',
+                  description: event?.description || '',
+                  location: event?.location || '',
+                  startDate: event?.startDate,
+                  endDate: event?.endDate,
+                  status: event?.status
+                }
+              });
+            }
+          }
         } catch (err) {
           console.error("Token verification failed:", err);
         }
