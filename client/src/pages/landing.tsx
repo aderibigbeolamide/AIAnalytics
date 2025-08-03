@@ -547,13 +547,18 @@ export function LandingPage() {
             </div>
           ) : publicEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {publicEvents.map((event) => (
-                <Card key={event.id} className="group hover:shadow-xl transition-all duration-500 border-0 shadow-lg bg-white overflow-hidden">
+              {publicEvents.map((event, index) => (
+                <Card 
+                  key={event.id} 
+                  className="group event-card-hover hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-0 shadow-lg bg-white overflow-hidden cursor-pointer transform hover:scale-[1.02] hover:border-blue-200 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                  style={{ animationDelay: `${index * 150}ms` }}
+                >
                   <div className="relative h-48 overflow-hidden">
                     <EventImage 
                       event={event} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-110 group-hover:brightness-110 transition-all duration-500"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div className="absolute top-4 right-4 space-y-2">
                       {(() => {
                         const now = new Date();
@@ -579,8 +584,8 @@ export function LandingPage() {
                       </Badge>
                     </div>
                   </div>
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-high-contrast mb-3 group-hover:text-blue-600 transition-colors">
+                  <CardContent className="p-6 group-hover:bg-gradient-to-br group-hover:from-blue-50 group-hover:to-purple-50 transition-all duration-300">
+                    <h3 className="text-xl font-bold text-high-contrast mb-3 group-hover:text-blue-600 group-hover:scale-105 transform transition-all duration-300">
                       {event.name}
                     </h3>
                     {event.description && (
@@ -589,12 +594,12 @@ export function LandingPage() {
                       </p>
                     )}
                     <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                      <div className="flex items-center text-sm text-gray-600 group-hover:text-blue-700 transition-colors duration-300">
+                        <MapPin className="h-4 w-4 mr-2 text-gray-400 group-hover:text-blue-500 group-hover:scale-110 transition-all duration-300" />
                         {event.location}
                       </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Clock className="h-4 w-4 mr-2 text-gray-400" />
+                      <div className="flex items-center text-sm text-gray-600 group-hover:text-blue-700 transition-colors duration-300">
+                        <Clock className="h-4 w-4 mr-2 text-gray-400 group-hover:text-blue-500 group-hover:scale-110 transition-all duration-300" />
                         {new Date(event.startDate).toLocaleDateString('en-US', {
                           weekday: 'short',
                           year: 'numeric',
@@ -606,10 +611,10 @@ export function LandingPage() {
                       </div>
                     </div>
                     <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold"
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold transform group-hover:scale-105 group-hover:shadow-lg transition-all duration-300"
                       onClick={() => window.location.href = `/event/${event.id}`}
                     >
-                      <ArrowRight className="h-4 w-4 mr-2" />
+                      <ArrowRight className="h-4 w-4 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
                       View Details & Register
                     </Button>
                   </CardContent>
