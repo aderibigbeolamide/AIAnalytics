@@ -47,11 +47,23 @@ export default function PaymentSuccess() {
 
   // Fetch registration details if it's an event registration and not in localStorage
   const { data: registration, isLoading: registrationLoading } = useQuery<any>({
-    queryKey: ["/api/registrations", registrationId],
+    queryKey: ["/api/registrations", registrationId, "qr"],
     queryFn: async () => {
       if (!registrationId) return null;
       
-      // Get event details
+      // Try to get QR code data from registration endpoint
+      const qrResponse = await fetch(`/api/registrations/${registrationId}/qr`);
+      if (qrResponse.ok) {
+        const qrData = await qrResponse.json();
+        return {
+          ...qrData.registration,
+          qrImage: qrData.qrImage,
+          qrImageBase64: qrData.qrImageBase64,
+          event: qrData.event
+        };
+      }
+      
+      // Fallback to basic data from URL params
       const eventResponse = await fetch(`/api/events/${eventId}`);
       let eventData = null;
       if (eventResponse.ok) {
@@ -105,7 +117,7 @@ export default function PaymentSuccess() {
               ${type === 'ticket' ? `<p><strong>Category:</strong> ${data?.category || 'N/A'}</p>` : ''}
             </div>
             <div style="text-align: center; margin-top: 20px;">
-              ${(data?.qrCodeImage || data?.qrCode || searchParams.get('qrCodeImage')) ? `<img src="${data?.qrCodeImage || data?.qrCode || searchParams.get('qrCodeImage')}" style="width: 150px; height: 150px;" />` : '<p style="color: #999;">QR Code not available</p>'}
+              ${(data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')) ? `<img src="${data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')}" style="width: 150px; height: 150px;" />` : '<p style="color: #999;">QR Code not available</p>'}
               <p style="font-size: 12px; color: #666; margin-top: 10px;">Scan this QR code for verification</p>
             </div>
           </div>
@@ -276,18 +288,30 @@ export default function PaymentSuccess() {
             )}
 
             {/* QR Code */}
-            {(data?.qrCode || data?.qrCodeImage || searchParams.get('qrCodeImage')) && (
-              <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-lg border">
+            <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-lg border">
+              <h4 className="font-medium mb-4">Your Registration QR Code</h4>
+              {(data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')) ? (
                 <img 
-                  src={data?.qrCodeImage || data?.qrCode || searchParams.get('qrCodeImage')} 
+                  src={data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')} 
                   alt="QR Code" 
                   className="w-48 h-48 mx-auto mb-4"
+                  onError={(e) => {
+                    console.error('QR Code image failed to load');
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Show this QR code at the event for verification
-                </p>
-              </div>
-            )}
+              ) : (
+                <div className="w-48 h-48 mx-auto mb-4 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded">
+                  <div className="text-center">
+                    <QrCode className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">Loading QR Code...</p>
+                  </div>
+                </div>
+              )}
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Show this QR code at the event for verification
+              </p>
+            </div>
           </CardContent>
         </Card>
 

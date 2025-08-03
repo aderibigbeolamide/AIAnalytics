@@ -43,7 +43,7 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
     
     // Add other custom fields from the form data
     if (event.customRegistrationFields && customFormData) {
-      event.customRegistrationFields.forEach(field => {
+      event.customRegistrationFields.forEach((field: any) => {
         const value = customFormData[field.name];
         if (value && value !== '' && 
             field.label !== 'FirstName' && field.label !== 'LastName' && // Skip name components as we show combined name
@@ -253,7 +253,40 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
           </Button>
           <Button 
             variant="outline" 
-            onClick={() => window.print()} 
+            onClick={() => {
+              // Add print-specific styling
+              const printStyle = document.createElement('style');
+              printStyle.textContent = `
+                @media print {
+                  body * { visibility: hidden; }
+                  .registration-card, .registration-card * { visibility: visible; }
+                  .registration-card { position: absolute; left: 0; top: 0; width: 100%; }
+                  .print-hide { display: none !important; }
+                }
+              `;
+              document.head.appendChild(printStyle);
+              
+              // Mark the card for printing
+              const card = document.querySelector('.max-w-2xl');
+              if (card) {
+                card.classList.add('registration-card');
+              }
+              
+              // Hide buttons during print
+              const buttons = document.querySelectorAll('button');
+              buttons.forEach(btn => btn.classList.add('print-hide'));
+              
+              window.print();
+              
+              // Clean up after print
+              setTimeout(() => {
+                document.head.removeChild(printStyle);
+                if (card) {
+                  card.classList.remove('registration-card');
+                }
+                buttons.forEach(btn => btn.classList.remove('print-hide'));
+              }, 1000);
+            }}
             className="flex-1 flex items-center justify-center gap-2"
           >
             <div className="h-4 w-4">🖨️</div>

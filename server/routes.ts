@@ -1280,6 +1280,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get QR code for existing registration
+  app.get("/api/registrations/:registrationId/qr", async (req: Request, res: Response) => {
+    try {
+      const registrationId = parseInt(req.params.registrationId);
+      
+      const registration = await storage.getEventRegistration(registrationId);
+      if (!registration) {
+        return res.status(404).json({ message: "Registration not found" });
+      }
+
+      const event = await storage.getEvent(registration.eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Generate QR data for validation
+      const qrData: QRData = {
+        registrationId: registration.id,
+        eventId: registration.eventId,
+        memberId: registration.memberId,
+        type: registration.registrationType as "member" | "guest" | "invitee",
+        timestamp: Date.now(),
+      };
+      
+      const qrImageData = await generateQRImage(encryptQRData(qrData));
+      const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
+
+      res.json({ 
+        qrImage: qrImageData,
+        qrImageBase64: qrImageBase64,
+        registration,
+        event
+      });
+    } catch (error) {
+      console.error("QR generation error:", error);
+      res.status(500).json({ message: "Failed to generate QR code" });
+    }
+  });
+
   // QR Scanning and validation
   app.post("/api/scan", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
@@ -1748,12 +1787,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const registration = await storage.createEventRegistration(insertData);
 
+        // Generate QR data for validation
+        const qrData: QRData = {
+          registrationId: registration.id,
+          eventId,
+          memberId: null,
+          type: registrationData.registrationType as "member" | "guest" | "invitee",
+          timestamp: Date.now(),
+        };
+        
+        const qrImageData = await generateQRImage(encryptQRData(qrData));
+        const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
+
         res.json({
           status: "success",
           message: "Payment verified and registration completed",
           data: {
             ...verificationData.data,
             registration,
+            qrImage: qrImageData,
+            qrImageBase64: qrImageBase64,
           },
         });
       } else {
@@ -1839,12 +1892,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const registration = await storage.createEventRegistration(insertData);
 
+        // Generate QR data for validation
+        const qrData: QRData = {
+          registrationId: registration.id,
+          eventId,
+          memberId: null,
+          type: registrationData.registrationType as "member" | "guest" | "invitee",
+          timestamp: Date.now(),
+        };
+        
+        const qrImageData = await generateQRImage(encryptQRData(qrData));
+        const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
+
         res.json({
           success: true,
           message: "Payment verified and registration completed",
           data: {
             ...verificationData.data,
             registration,
+            qrImage: qrImageData,
+            qrImageBase64: qrImageBase64,
           },
         });
       } else {
@@ -1961,7 +2028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const event = await storage.getEvent(registration.eventId.toString());
+      const event = await storage.getEvent(registration.eventId);
       if (!event) {
         return res.status(404).json({ 
           message: "Event not found",
@@ -2065,14 +2132,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendanceRecord = await storage.createAttendance(attendanceData);
       
       // Update registration status to "online"
-      await storage.updateEventRegistration(registration.id.toString(), { 
+      await storage.updateEventRegistration(registration.id, { 
         status: "online",
         validationMethod: "manual_validation"
       });
 
       // Update member status to "online" if member exists
       if (member) {
-        await storage.updateMember(member.id.toString(), { status: "online" });
+        await storage.updateMember(member.id, { status: "online" });
       }
 
       res.json({
