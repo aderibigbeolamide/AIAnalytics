@@ -240,13 +240,13 @@ export default function Members() {
                 />
                 <Select value={eventFilter} onValueChange={setEventFilter}>
                   <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Filter by event" />
+                    <SelectValue placeholder="Select event to view registrations" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Events</SelectItem>
+                    <SelectItem value="all">All Members (Traditional)</SelectItem>
                     {events.map((event: any) => (
                       <SelectItem key={event.id} value={event.id.toString()}>
-                        {event.name}
+                        {event.name} Registrations
                       </SelectItem>
                     ))}
                   </SelectContent>
