@@ -38,13 +38,14 @@ export function QRScanner({ onClose }: QRScannerProps) {
       let uniqueId: string;
       try {
         const parsed = JSON.parse(qrData);
-        uniqueId = parsed.uniqueId || qrData;
+        uniqueId = parsed.uniqueId || parsed.id || qrData;
       } catch {
         // If not JSON, treat as plain uniqueId
-        uniqueId = qrData;
+        uniqueId = qrData.trim();
       }
       
-      console.log('Validating QR code with uniqueId:', uniqueId);
+      console.log('QR code scanned - Raw data:', qrData);
+      console.log('Extracted uniqueId for validation:', uniqueId);
       
       const response = await fetch("/api/validate-id", {
         method: "POST",
@@ -61,14 +62,22 @@ export function QRScanner({ onClose }: QRScannerProps) {
       return result;
     },
     onSuccess: (data) => {
+      console.log('QR validation successful:', data);
       setLastScanResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      
+      const memberName = data.registration?.firstName && data.registration?.lastName 
+        ? `${data.registration.firstName} ${data.registration.lastName}`
+        : data.registration?.guestName || 'Member';
+      
       toast({
         title: "Validation Successful",
-        description: `${data.registration?.guestName || (data.registration?.firstName + ' ' + data.registration?.lastName)} validated for ${data.event?.name}`,
+        description: `${memberName} validated for ${data.event?.name}`,
       });
     },
     onError: (error: Error) => {
+      console.error('QR validation failed:', error);
       setLastScanResult({ validationStatus: "invalid", message: error.message });
       toast({
         title: "Validation Failed",
