@@ -346,7 +346,10 @@ export function registerMongoRoutes(app: Express) {
         lastName: formData.lastName || formData.LastName || formData.guestLastName || '',
         email: formData.email || formData.Email || formData.guestEmail || '',
         phoneNumber: formData.phone || formData.Phone || formData.phoneNumber || '',
-        auxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || formData.auxiliary_body || formData.Gender || '',
+        auxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || formData.auxiliary_body || 
+                       formData.Gender || formData.gender || formData.Student || formData.student || 
+                       (Array.isArray(formData.Gender) ? formData.Gender[0] : '') || 
+                       (Array.isArray(formData.Student) ? formData.Student[0] : '') || '',
         // Store all custom field data
         registrationData: formData
       };
@@ -365,8 +368,18 @@ export function registerMongoRoutes(app: Express) {
               registrationData.email = fieldValue;
             } else if (field.name === 'phone' || field.name === 'Phone' || field.name === 'phoneNumber') {
               registrationData.phoneNumber = fieldValue;
-            } else if (field.name === 'auxiliaryBody' || field.name === 'AuxiliaryBody' || field.name === 'auxiliary_body' || field.name === 'Gender') {
-              registrationData.auxiliaryBody = fieldValue;
+            } else if (field.name === 'auxiliaryBody' || field.name === 'AuxiliaryBody' || field.name === 'auxiliary_body' || 
+                       field.name === 'Gender' || field.name === 'gender' || field.name === 'Student' || field.name === 'student' ||
+                       (field.type === 'select' && field.options && (field.options.includes('Male') || field.options.includes('Female'))) ||
+                       (field.type === 'radio' && field.options && (field.options.includes('Male') || field.options.includes('Female'))) ||
+                       (field.type === 'checkbox' && field.options && (field.options.includes('Male') || field.options.includes('Female')))) {
+              // Map any gender/selection field to auxiliaryBody
+              if (field.type === 'checkbox' && Array.isArray(fieldValue)) {
+                // For checkbox, take the first selected value
+                registrationData.auxiliaryBody = fieldValue[0] || '';
+              } else {
+                registrationData.auxiliaryBody = fieldValue;
+              }
             }
           }
         }

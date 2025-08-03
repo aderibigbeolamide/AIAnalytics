@@ -101,15 +101,35 @@ export function QRScanner({ onClose }: QRScannerProps) {
     
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     
-    // Ultra-fast QR detection
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+    // Enhanced QR detection with multiple attempts
+    let code = jsQR(imageData.data, imageData.width, imageData.height, {
       inversionAttempts: "dontInvert",
     });
     
+    // Try with inversion if first attempt fails
+    if (!code) {
+      code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "attemptBoth",
+      });
+    }
+    
+    // Try with different scan options
+    if (!code) {
+      code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "invertFirst",
+      });
+    }
+    
     if (code) {
       console.log('QR Code detected:', code.data);
+      console.log('QR Code location:', code.location);
       validateQRMutation.mutate(code.data);
       stopCamera(); // Stop scanning after successful scan
+    } else {
+      // Debug output every 50 scans
+      if (Math.random() < 0.02) {
+        console.log('QR scan attempt - no code found. Video dimensions:', video.videoWidth, 'x', video.videoHeight, 'Canvas:', canvas.width, 'x', canvas.height);
+      }
     }
   };
 
