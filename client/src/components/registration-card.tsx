@@ -122,7 +122,11 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
     });
     
     // QR Code section
-    if (qrImageBase64) {
+    const qrDataUrl = qrImageBase64 ? `data:image/png;base64,${qrImageBase64}` : 
+                      registration.qrImage || 
+                      (registration.qrImageBase64 ? `data:image/png;base64,${registration.qrImageBase64}` : null);
+    
+    if (qrDataUrl) {
       const qrImg = new Image();
       qrImg.onload = () => {
         const qrSize = 200;
@@ -142,7 +146,15 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
         link.href = canvas.toDataURL('image/png');
         link.click();
       };
-      qrImg.src = `data:image/png;base64,${qrImageBase64}`;
+      qrImg.onerror = () => {
+        console.error('Failed to load QR image for download');
+        // Download without QR code
+        const link = document.createElement('a');
+        link.download = `registration-card-${registration.uniqueId}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      };
+      qrImg.src = qrDataUrl;
     } else {
       // Download without QR code
       const link = document.createElement('a');
@@ -206,15 +218,22 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
             <QrCode className="h-5 w-5" />
             Your Registration QR Code
           </h3>
-          {qrImageBase64 ? (
+          {(qrImageBase64 || registration.qrImage || registration.qrImageBase64) ? (
             <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
               <img 
-                src={`data:image/png;base64,${qrImageBase64}`} 
+                src={qrImageBase64 ? `data:image/png;base64,${qrImageBase64}` : 
+                     registration.qrImage || 
+                     (registration.qrImageBase64 ? `data:image/png;base64,${registration.qrImageBase64}` : '')} 
                 alt="Registration QR Code" 
                 className="w-48 h-48 mx-auto"
                 onError={(e) => {
                   console.error('QR Image failed to load:', e);
                   e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.parentElement?.nextElementSibling;
+                  if (fallback) {
+                    fallback.style.display = 'block';
+                    e.currentTarget.parentElement.style.display = 'none';
+                  }
                 }}
               />
             </div>

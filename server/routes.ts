@@ -2143,6 +2143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
+        success: true,
         message: "Validation successful",
         validationStatus: "valid",
         member,
@@ -2152,6 +2153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
+      console.error("Manual validation error:", error);
       res.status(500).json({ 
         message: "Validation failed",
         validationStatus: "invalid" 

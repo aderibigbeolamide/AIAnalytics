@@ -235,9 +235,18 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
       return await response.json();
     },
     onSuccess: (response) => {
+      console.log("Registration response:", response);
+      console.log("QR data in response:", {
+        qrImage: response.qrImage,
+        qrImageBase64: response.qrImageBase64
+      });
+      
       // Normal registration completion (payment already verified)
       setRegistrationData(response.registration);
-      setQrImageBase64(response.qrImageBase64);
+      // Try multiple QR data sources
+      const qrData = response.qrImageBase64 || response.qrImage || response.registration?.qrImageBase64 || response.registration?.qrImage;
+      console.log("Setting QR data:", qrData);
+      setQrImageBase64(qrData);
       setShowRegistrationCard(true);
       queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/registration-counts`] });
       
