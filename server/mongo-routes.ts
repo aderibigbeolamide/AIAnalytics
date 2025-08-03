@@ -318,8 +318,12 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
-      // Generate unique identifiers
-      const uniqueId = `${formData.registrationType.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      // Generate unique identifiers  
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let uniqueId = '';
+      for (let i = 0; i < 6; i++) {
+        uniqueId += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
       const qrCode = nanoid(16);
 
       // Prepare registration data
