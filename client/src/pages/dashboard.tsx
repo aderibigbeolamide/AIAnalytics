@@ -219,562 +219,590 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <EnhancedCard
-            title="Total Events"
-            value={stats?.totalEvents || 0}
-            icon={Calendar}
-            description={`${stats?.upcomingEvents || 0} upcoming, ${stats?.completedEvents || 0} completed`}
-            color="blue"
-            trend={{
-              value: stats?.eventTrend || 0,
-              isPositive: (stats?.eventTrend || 0) >= 0
-            }}
-          />
+        {/* Condensed Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Events</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats?.totalEvents || 0}</p>
+                </div>
+                <Calendar className="h-8 w-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
           
-          <EnhancedCard
-            title="Event Registrations"
-            value={stats?.totalRegistrations || 0}
-            icon={Users}
-            description={`${stats?.validatedRegistrations || 0} validated, ${stats?.pendingValidations || 0} pending`}
-            color="green"
-            trend={{
-              value: stats?.registrationTrend || 0,
-              isPositive: (stats?.registrationTrend || 0) >= 0
-            }}
-          />
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Registrations</p>
+                  <p className="text-2xl font-bold text-green-600">{stats?.totalRegistrations || 0}</p>
+                </div>
+                <Users className="h-8 w-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
           
-          <EnhancedCard
-            title="QR Validations Today"
-            value={stats?.scansToday || 0}
-            icon={QrCode}
-            description="Real-time validation activity"
-            color="orange"
-          />
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">QR Scans</p>
+                  <p className="text-2xl font-bold text-orange-600">{stats?.scansToday || 0}</p>
+                </div>
+                <QrCode className="h-8 w-8 text-orange-600" />
+              </div>
+            </CardContent>
+          </Card>
           
-          <EnhancedCard
-            title="Validation Rate"
-            value={`${stats?.validationRate?.toFixed(1) || 0}%`}
-            icon={TrendingUp}
-            description="Success rate of event check-ins"
-            color="purple"
-            trend={{
-              value: stats?.validationTrend || 0,
-              isPositive: (stats?.validationTrend || 0) >= 0
-            }}
-          />
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Validation Rate</p>
+                  <p className="text-2xl font-bold text-purple-600">{stats?.validationRate?.toFixed(1) || 0}%</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Auxiliary Body Statistics */}
-        {stats?.auxiliaryBodyStats && Object.keys(stats.auxiliaryBodyStats).length > 0 && (
-          <div className="mb-6 sm:mb-8">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Auxiliary Body Statistics</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              {Object.entries(stats.auxiliaryBodyStats).map(([auxBody, bodyStats]: [string, any]) => (
-                <Card key={auxBody} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                          <UsersRound className="h-8 w-8 text-blue-600" />
+        {/* Conditional Content Based on Current View */}
+        {currentView === "overview" && (
+          <>
+            {/* Quick Stats Row */}
+            {stats?.auxiliaryBodyStats && Object.keys(stats.auxiliaryBodyStats).length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Auxiliary Body Overview</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {Object.entries(stats.auxiliaryBodyStats).slice(0, 4).map(([auxBody, bodyStats]: [string, any]) => (
+                    <Card key={auxBody} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-3">
+                        <div className="text-center">
+                          <p className="text-sm font-medium text-gray-900">{auxBody}</p>
+                          <p className="text-lg font-bold text-blue-600">{bodyStats.totalMembers || 0}</p>
+                          <p className="text-xs text-gray-500">{bodyStats.validationRate?.toFixed(1) || 0}% rate</p>
                         </div>
-                        <div className="ml-3">
-                          <p className="text-lg font-semibold text-gray-900">{auxBody}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {currentView === "overview" && (
+          <>
+            {/* Registration Distribution */}
+            {stats?.registrationTypeStats && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Registration Types</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <Card className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 text-center">
+                      <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                      <p className="text-lg font-bold">{stats.registrationTypeStats.members || 0}</p>
+                      <p className="text-sm text-gray-600">Members</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 text-center">
+                      <UserPlus className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                      <p className="text-lg font-bold">{stats.registrationTypeStats.guests || 0}</p>
+                      <p className="text-sm text-gray-600">Guests</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 text-center">
+                      <Bot className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                      <p className="text-lg font-bold">{stats.registrationTypeStats.invitees || 0}</p>
+                      <p className="text-sm text-gray-600">Invitees</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {currentView === "overview" && (
+          <>
+            {/* Upcoming Events - Condensed */}
+            {Array.isArray(events) && events.filter((event: any) => 
+              event.status === 'upcoming' && new Date(event.startDate) > new Date()
+            ).length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Upcoming Events</h3>
+                <div className="space-y-3">
+                  {Array.isArray(events) && events
+                    .filter((event: any) => 
+                      event.status === 'upcoming' && new Date(event.startDate) > new Date()
+                    )
+                    .slice(0, 2)
+                    .map((event: any) => (
+                      <Card key={event.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-semibold text-gray-900">{event.name}</h4>
+                              <p className="text-sm text-gray-600">{event.location}</p>
+                              <p className="text-sm text-blue-600">{new Date(event.startDate).toLocaleDateString()}</p>
+                            </div>
+                            <CountdownTimer
+                              event={event}
+                              showEventDetails={false}
+                              size="compact"
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Live Events - Condensed */}
+            {Array.isArray(events) && events.filter((event: any) => {
+              const now = new Date();
+              const start = new Date(event.startDate);
+              const end = new Date(event.endDate);
+              return now >= start && now < end;
+            }).length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  Live Events
+                </h3>
+                <div className="space-y-3">
+                  {Array.isArray(events) && events
+                    .filter((event: any) => {
+                      const now = new Date();
+                      const start = new Date(event.startDate);
+                      const end = new Date(event.endDate);
+                      return now >= start && now < end;
+                    })
+                    .slice(0, 2)
+                    .map((event: any) => (
+                      <Card key={event.id} className="border-green-200 bg-green-50 hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-semibold text-gray-900">{event.name}</h4>
+                              <p className="text-sm text-gray-600">{event.location}</p>
+                              <Badge className="bg-green-100 text-green-800">Live Now</Badge>
+                            </div>
+                            <Button
+                              onClick={() => setIsScannerOpen(true)}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Camera className="h-4 w-4 mr-1" />
+                              Scan
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Conditional Content Based on Current View */}
+        {currentView === "events" && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Event Management</CardTitle>
+                <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Event
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingEvent ? "Edit Event" : "Create New Event"}</DialogTitle>
+                    </DialogHeader>
+                    <EventForm 
+                      event={editingEvent}
+                      onClose={() => {
+                        setIsEventModalOpen(false);
+                        setEditingEvent(null);
+                      }} 
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {events.map((event: any) => (
+                  <div key={event.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium text-gray-900">{event.name}</h3>
+                        <p className="text-sm text-gray-600">
+                          Eligible: {event.eligibleAuxiliaryBodies?.join(", ")} • {new Date(event.startDate).toLocaleDateString()}
+                        </p>
+                        <div className="flex items-center mt-2 space-x-4">
+                          <Badge className={getStatusBadge(event.status)}>
+                            {event.status}
+                          </Badge>
+                          <span className="text-sm text-gray-600">Location: {event.location}</span>
+                        </div>
+                        <div className="flex items-center mt-2 space-x-4 text-sm text-gray-600">
+                          <span>📊 {event.totalRegistrations || 0} total</span>
+                          <span>👥 {event.memberRegistrations || 0} members</span>
+                          <span>🎫 {event.guestRegistrations || 0} guests</span>
+                          {event.inviteeRegistrations > 0 && (
+                            <span>📧 {event.inviteeRegistrations} invitees</span>
+                          )}
                         </div>
                       </div>
-                      <Badge className={getAuxiliaryBodyBadge(auxBody)}>
-                        {auxBody}
-                      </Badge>
+                      <div className="flex space-x-2">
+                        <Link href={`/events/${event.id}`}>
+                          <Button variant="outline" size="sm">
+                            View Event
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            if (event.qrCode) {
+                              const newWindow = window.open('', '_blank');
+                              if (newWindow) {
+                                newWindow.document.write(`
+                                  <html>
+                                    <head><title>Event QR Code - ${event.name}</title></head>
+                                    <body style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
+                                      <h2>${event.name}</h2>
+                                      <p>Scan this QR code to register for the event</p>
+                                      <img src="${event.qrCode}" alt="Event QR Code" style="max-width: 400px; max-height: 400px;"/>
+                                      <p><strong>Registration Link:</strong><br/>
+                                      ${window.location.origin}/register/${event.id}</p>
+                                    </body>
+                                  </html>
+                                `);
+                              }
+                            } else {
+                              toast({
+                                title: "QR Code Not Available",
+                                description: "QR code is being generated. Please try again in a moment.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          <QrCode className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setEditingEvent(event);
+                            setIsEventModalOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete "${event.name}"?`)) {
+                              deleteEvent(event.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Total Members:</span>
-                        <span className="text-sm font-medium">{bodyStats.totalMembers || 0}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Member Management View */}
+        {currentView === "members" && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Member Management</CardTitle>
+                <Dialog open={isMemberModalOpen} onOpenChange={setIsMemberModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-green-600 hover:bg-green-700">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Member
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Add New Member</DialogTitle>
+                    </DialogHeader>
+                    <MemberForm onClose={() => setIsMemberModalOpen(false)} />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Search members..."
+                      value={memberSearch}
+                      onChange={(e) => setMemberSearch(e.target.value)}
+                    />
+                  </div>
+                  <AuxiliaryBodyFilter value={memberFilter} onValueChange={setMemberFilter} />
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Member</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Auxiliary Body</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-card divide-y divide-border">
+                    {members.map((member: any) => (
+                      <tr key={member.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {member.firstName?.[0]}{member.lastName?.[0]}
+                              </span>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-foreground">
+                                {member.firstName} {member.lastName}
+                              </div>
+                              <div className="text-sm text-muted-foreground">{member.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge className={getAuxiliaryBodyBadge(member.auxiliaryBody)}>
+                            {member.auxiliaryBody}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge className={getStatusBadge(member.status)}>
+                            {member.status}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <Button variant="ghost" size="sm" className="mr-2">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Analytics View */}
+        {currentView === "analytics" && (
+          <div className="space-y-6">
+            {/* AI-Powered Features */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <EventRecommendations limit={3} />
+              </div>
+              {events && events.length > 0 && (
+                <div>
+                  <SeatHeatmap 
+                    eventId={events[0].id} 
+                    refreshInterval={10000}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Detailed Auxiliary Body Stats */}
+            {stats?.auxiliaryBodyStats && Object.keys(stats.auxiliaryBodyStats).length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Detailed Auxiliary Body Analytics</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Object.entries(stats.auxiliaryBodyStats).map(([auxBody, bodyStats]: [string, any]) => (
+                    <Card key={auxBody} className="hover:shadow-lg transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900">{auxBody}</h4>
+                          <Badge className={getAuxiliaryBodyBadge(auxBody)}>
+                            {auxBody}
+                          </Badge>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Total Members:</span>
+                            <span className="text-sm font-medium">{bodyStats.totalMembers || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Event Registrations:</span>
+                            <span className="text-sm font-medium">{bodyStats.totalRegistrations || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Validated:</span>
+                            <span className="text-sm font-medium">{bodyStats.validatedRegistrations || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Validation Rate:</span>
+                            <span className="text-sm font-medium">{bodyStats.validationRate?.toFixed(1) || 0}%</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sidebar (moved to be conditionally shown) */}
+        {(currentView === "overview" || currentView === "validation") && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              {/* QR Scanner and Quick Actions for overview/validation */}
+              {currentView === "validation" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Validation Tools</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="text-center">
+                        <div className="bg-muted rounded-lg p-8 mb-4">
+                          <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-sm text-muted-foreground">Camera will activate when scanning</p>
+                        </div>
+                        <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+                          <DialogTrigger asChild>
+                            <Button className="w-full">
+                              <Camera className="h-4 w-4 mr-2" />
+                              Start QR Scanning
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[500px]">
+                            <DialogHeader>
+                              <DialogTitle>QR Code Scanner</DialogTitle>
+                            </DialogHeader>
+                            <QRScanner onClose={() => setIsScannerOpen(false)} />
+                          </DialogContent>
+                        </Dialog>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Event Registrations:</span>
-                        <span className="text-sm font-medium">{bodyStats.totalRegistrations || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Validated:</span>
-                        <span className="text-sm font-medium">{bodyStats.validatedRegistrations || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Validation Rate:</span>
-                        <span className="text-sm font-medium">{bodyStats.validationRate?.toFixed(1) || 0}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Active Members:</span>
-                        <span className="text-sm font-medium">{bodyStats.activeMembers || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Registrations:</span>
-                        <span className="text-sm font-medium">{bodyStats.registrations || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Attended:</span>
-                        <span className="text-sm font-medium">{bodyStats.attendedEvents || 0}</span>
+                      
+                      <div className="space-y-4">
+                        <h4 className="font-semibold">AI Validation Status</h4>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Face Recognition</span>
+                            <Badge className="bg-green-100 text-green-800">
+                              <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                              Online
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Member Lookup</span>
+                            <Badge className="bg-green-100 text-green-800">
+                              <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                              Active
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Enhanced Registration Type Statistics */}
-        {stats?.registrationTypeStats && (
-          <div className="mb-8">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                <Activity className="h-6 w-6 text-blue-600" />
-                Registration Type Distribution
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <EnhancedCard
-                  title="Members"
-                  value={stats.registrationTypeStats.members || 0}
-                  icon={Users}
-                  description="Registered community members"
-                  color="blue"
-                />
-                
-                <EnhancedCard
-                  title="Guests"
-                  value={stats.registrationTypeStats.guests || 0}
-                  icon={UserPlus}
-                  description="Visiting guests"
-                  color="green"
-                />
-                
-                <EnhancedCard
-                  title="Invitees"
-                  value={stats.registrationTypeStats.invitees || 0}
-                  icon={Bot}
-                  description="Special invitations"
-                  color="purple"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Upcoming Events with Countdown */}
-        {Array.isArray(events) && events.filter((event: any) => 
-          event.status === 'upcoming' && new Date(event.startDate) > new Date()
-        ).length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Upcoming Events</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.isArray(events) && events
-                .filter((event: any) => 
-                  event.status === 'upcoming' && new Date(event.startDate) > new Date()
-                )
-                .slice(0, 3)
-                .map((event: any) => (
-                  <CountdownTimer
-                    key={event.id}
-                    event={event}
-                    showEventDetails={true}
-                    size="normal"
-                  />
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* Live Events */}
-        {Array.isArray(events) && events.filter((event: any) => {
-          const now = new Date();
-          const start = new Date(event.startDate);
-          const end = new Date(event.endDate);
-          return now >= start && now < end;
-        }).length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Live Events</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.isArray(events) && events
-                .filter((event: any) => {
-                  const now = new Date();
-                  const start = new Date(event.startDate);
-                  const end = new Date(event.endDate);
-                  return now >= start && now < end;
-                })
-                .map((event: any) => (
-                  <CountdownTimer
-                    key={event.id}
-                    event={event}
-                    showEventDetails={true}
-                    size="normal"
-                  />
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* AI-Powered Features Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-            <Bot className="h-6 w-6 text-purple-600" />
-            AI-Powered Features
-          </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Event Recommendations */}
-            <div>
-              <EventRecommendations limit={3} />
+              )}
             </div>
             
-            {/* Seat Heatmap Demo */}
-            {events && events.length > 0 && (
-              <div>
-                <SeatHeatmap 
-                  eventId={events[0].id} 
-                  refreshInterval={10000}
-                />
-              </div>
-            )}
+            {/* Quick Actions Sidebar */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => {
+                      const activeEvent = events.find((event: any) => event.status === 'active');
+                      if (activeEvent) {
+                        window.open(`/api/events/${activeEvent.id}/export-attendance`, '_blank');
+                      } else {
+                        toast({
+                          title: "No Active Event",
+                          description: "Please select an event to export attendance.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-3" />
+                    Export Attendance
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setCurrentView("events")}
+                  >
+                    <Calendar className="h-4 w-4 mr-3" />
+                    Manage Events
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setCurrentView("members")}
+                  >
+                    <Users className="h-4 w-4 mr-3" />
+                    Manage Members
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Recent Events */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Recent Events</CardTitle>
-                  <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Event
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>{editingEvent ? "Edit Event" : "Create New Event"}</DialogTitle>
-                      </DialogHeader>
-                      <EventForm 
-                        event={editingEvent}
-                        onClose={() => {
-                          setIsEventModalOpen(false);
-                          setEditingEvent(null);
-                        }} 
-                      />
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {events.map((event: any) => (
-                    <div key={event.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-medium text-gray-900">{event.name}</h3>
-                          <p className="text-sm text-gray-600">
-                            Eligible: {event.eligibleAuxiliaryBodies?.join(", ")} • {new Date(event.startDate).toLocaleDateString()}
-                          </p>
-                          <div className="flex items-center mt-2 space-x-4">
-                            <Badge className={getStatusBadge(event.status)}>
-                              {event.status}
-                            </Badge>
-                            <span className="text-sm text-gray-600">Location: {event.location}</span>
-                          </div>
-                          <div className="flex items-center mt-2 space-x-4 text-sm text-gray-600">
-                            <span>📊 {event.totalRegistrations || 0} total</span>
-                            <span>👥 {event.memberRegistrations || 0} members</span>
-                            <span>🎫 {event.guestRegistrations || 0} guests</span>
-                            {event.inviteeRegistrations > 0 && (
-                              <span>📧 {event.inviteeRegistrations} invitees</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Link href={`/events/${event.id}`}>
-                            <Button variant="outline" size="sm">
-                              View Event
-                            </Button>
-                          </Link>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              if (event.qrCode) {
-                                // Show QR code in a modal or new window
-                                const newWindow = window.open('', '_blank');
-                                if (newWindow) {
-                                  newWindow.document.write(`
-                                    <html>
-                                      <head><title>Event QR Code - ${event.name}</title></head>
-                                      <body style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
-                                        <h2>${event.name}</h2>
-                                        <p>Scan this QR code to register for the event</p>
-                                        <img src="${event.qrCode}" alt="Event QR Code" style="max-width: 400px; max-height: 400px;"/>
-                                        <p><strong>Registration Link:</strong><br/>
-                                        ${window.location.origin}/register/${event.id}</p>
-                                      </body>
-                                    </html>
-                                  `);
-                                }
-                              } else {
-                                toast({
-                                  title: "QR Code Not Available",
-                                  description: "QR code is being generated. Please try again in a moment.",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                          >
-                            <QrCode className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              setEditingEvent(event);
-                              setIsEventModalOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              if (window.confirm(`Are you sure you want to delete "${event.name}"?`)) {
-                                deleteEvent(event.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Member Management */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Member Management</CardTitle>
-                  <Dialog open={isMemberModalOpen} onOpenChange={setIsMemberModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="bg-green-600 hover:bg-green-700">
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Add Member
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Add New Member</DialogTitle>
-                      </DialogHeader>
-                      <MemberForm onClose={() => setIsMemberModalOpen(false)} />
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Search members..."
-                        value={memberSearch}
-                        onChange={(e) => setMemberSearch(e.target.value)}
-                      />
-                    </div>
-                    <AuxiliaryBodyFilter value={memberFilter} onValueChange={setMemberFilter} />
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-border">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Member</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Auxiliary Body</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-card divide-y divide-border">
-                      {members.map((member: any) => (
-                        <tr key={member.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                                <span className="text-sm font-medium text-muted-foreground">
-                                  {member.firstName?.[0]}{member.lastName?.[0]}
-                                </span>
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-foreground">
-                                  {member.firstName} {member.lastName}
-                                </div>
-                                <div className="text-sm text-muted-foreground">{member.email}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge className={getAuxiliaryBodyBadge(member.auxiliaryBody)}>
-                              {member.auxiliaryBody}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge className={getStatusBadge(member.status)}>
-                              {member.status}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Button variant="ghost" size="sm" className="mr-2">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <QrCode className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-8">
-            {/* QR Scanner */}
-            <Card>
-              <CardHeader>
-                <CardTitle>QR Code Scanner</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center">
-                  <div className="bg-muted rounded-lg p-8 mb-4">
-                    <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-sm text-muted-foreground">Camera will activate when scanning</p>
-                  </div>
-                  <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="w-full">
-                        <Camera className="h-4 w-4 mr-2" />
-                        Start Scanning
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                      <DialogHeader>
-                        <DialogTitle>QR Code Scanner</DialogTitle>
-                      </DialogHeader>
-                      <QRScanner onClose={() => setIsScannerOpen(false)} />
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* AI Validation Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Validation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Face Recognition</span>
-                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                      <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-                      Online
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Member Lookup</span>
-                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                      <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-                      Active
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Eligibility Check</span>
-                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                      <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-                      Running
-                    </Badge>
-                  </div>
-                </div>
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center">
-                    <Bot className="h-5 w-5 text-blue-500 dark:text-blue-400 mr-3" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800 dark:text-blue-200">AI Status</p>
-                      <p className="text-xs text-blue-600 dark:text-blue-300">Processing validation in real-time</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => {
-                    // Export attendance functionality
-                    const activeEvent = events.find((event: any) => event.status === 'active');
-                    if (activeEvent) {
-                      window.open(`/api/events/${activeEvent.id}/export-attendance`, '_blank');
-                    } else {
-                      toast({
-                        title: "No Active Event",
-                        description: "Please select an event to export attendance.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                >
-                  <Download className="h-4 w-4 mr-3" />
-                  Export Attendance
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => setLocation("/analytics")}
-                >
-                  <BarChart className="h-4 w-4 mr-3" />
-                  View Analytics
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => setLocation("/invitees")}
-                >
-                  <UsersRound className="h-4 w-4 mr-3" />
-                  Manage Invitees
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => setLocation("/settings")}
-                >
-                  <Settings className="h-4 w-4 mr-3" />
-                  System Settings
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        {/* Manual Validation Modal */}
+        <Dialog open={manualValidationOpen} onOpenChange={setManualValidationOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Manual Validation</DialogTitle>
+            </DialogHeader>
+            <ManualValidation 
+              onClose={() => setManualValidationOpen(false)}
+              onValidationComplete={() => {
+                queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

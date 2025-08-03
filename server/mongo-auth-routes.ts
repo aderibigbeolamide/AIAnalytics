@@ -164,6 +164,89 @@ export function registerMongoAuthRoutes(app: Express) {
     }
   });
 
+  // Organization registration route
+  app.post("/api/organizations/register", async (req: Request, res: Response) => {
+    try {
+      const {
+        organizationName,
+        description,
+        contactEmail,
+        contactPhone,
+        address,
+        website,
+        adminUsername,
+        adminEmail,
+        adminPassword,
+        adminFirstName,
+        adminLastName
+      } = req.body;
+
+      // Validate required fields
+      if (!organizationName || !contactEmail || !adminUsername || !adminEmail || !adminPassword || !adminFirstName || !adminLastName) {
+        return res.status(400).json({
+          message: "All required fields must be provided"
+        });
+      }
+
+      // Check if admin username already exists
+      const existingUser = await mongoStorage.getUserByUsername(adminUsername);
+      if (existingUser) {
+        return res.status(409).json({
+          message: "Username already taken"
+        });
+      }
+
+      // Check if admin email already exists
+      const existingEmailUser = await mongoStorage.getUserByEmail(adminEmail);
+      if (existingEmailUser) {
+        return res.status(409).json({
+          message: "Email already registered"
+        });
+      }
+
+      // Hash admin password
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+      // Create organization first
+      const organization = await mongoStorage.createOrganization({
+        name: organizationName,
+        description: description || '',
+        contactEmail,
+        contactPhone: contactPhone || '',
+        address: address || '',
+        website: website || '',
+        status: 'pending_approval',
+        createdAt: new Date()
+      });
+
+      // Create admin user
+      const adminUser = await mongoStorage.createUser({
+        username: adminUsername,
+        email: adminEmail,
+        password: hashedPassword,
+        firstName: adminFirstName,
+        lastName: adminLastName,
+        role: 'admin',
+        organizationId: organization._id,
+        status: 'pending_approval'
+      });
+
+      res.status(201).json({
+        message: 'Organization registered successfully. Awaiting approval.',
+        organization: {
+          name: organization.name,
+          status: organization.status
+        }
+      });
+
+    } catch (error) {
+      console.error('Organization registration error:', error);
+      res.status(500).json({
+        message: 'Internal server error during registration'
+      });
+    }
+  });
+
   // Update username
   app.put("/api/organization/username", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {

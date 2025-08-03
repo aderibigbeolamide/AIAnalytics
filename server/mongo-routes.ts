@@ -274,6 +274,119 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Get user's registrations (both authenticated and unauthenticated lookup)
+  app.get("/api/my-registrations", async (req: Request, res: Response) => {
+    try {
+      const { uniqueId, email } = req.query;
+      const authHeader = req.headers.authorization;
+      
+      let userRegistrations: any[] = [];
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // Authenticated user - get their registrations
+        const token = authHeader.split(' ')[1];
+        try {
+          const jwt = await import('jsonwebtoken');
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+          
+          // Get all registrations for this user's organization
+          const registrations = await mongoStorage.getAllEventRegistrations();
+          userRegistrations = registrations
+            .filter(reg => reg.email === decoded.email || reg.organizationId?.toString() === decoded.organizationId)
+            .map(reg => ({
+              id: reg._id?.toString(),
+              eventId: reg.eventId?.toString(),
+              registrationType: reg.registrationType,
+              firstName: reg.firstName,
+              lastName: reg.lastName,
+              email: reg.email,
+              uniqueId: reg.uniqueId,
+              status: reg.status,
+              qrCode: reg.qrCode,
+              createdAt: reg.createdAt,
+              event: {
+                id: reg.eventId?.toString(),
+                name: reg.eventId?.name || 'Event',
+                description: reg.eventId?.description || '',
+                location: reg.eventId?.location || '',
+                startDate: reg.eventId?.startDate,
+                endDate: reg.eventId?.endDate
+              }
+            }));
+        } catch (err) {
+          console.error("Token verification failed:", err);
+        }
+      }
+      
+      // Unauthenticated lookup by uniqueId or email
+      if (userRegistrations.length === 0 && (uniqueId || email)) {
+        const registrations = await mongoStorage.getAllEventRegistrations();
+        
+        if (uniqueId) {
+          const foundRegistrations = registrations.filter(reg => reg.uniqueId === uniqueId);
+          for (const reg of foundRegistrations) {
+            const event = await mongoStorage.getEvent(reg.eventId?.toString() || '');
+            userRegistrations.push({
+              id: reg._id?.toString(),
+              eventId: reg.eventId?.toString(),
+              registrationType: reg.registrationType,
+              firstName: reg.firstName,
+              lastName: reg.lastName,
+              email: reg.email,
+              uniqueId: reg.uniqueId,
+              status: reg.status,
+              qrCode: reg.qrCode,
+              createdAt: reg.createdAt,
+              event: {
+                id: event?._id?.toString(),
+                name: event?.name || 'Event',
+                description: event?.description || '',
+                location: event?.location || '',
+                startDate: event?.startDate,
+                endDate: event?.endDate,
+                status: event?.status
+              }
+            });
+          }
+        }
+        
+        if (email) {
+          const foundRegistrations = registrations.filter(reg => reg.email === email);
+          for (const reg of foundRegistrations) {
+            const event = await mongoStorage.getEvent(reg.eventId?.toString() || '');
+            userRegistrations.push({
+              id: reg._id?.toString(),
+              eventId: reg.eventId?.toString(),
+              registrationType: reg.registrationType,
+              firstName: reg.firstName,
+              lastName: reg.lastName,
+              email: reg.email,
+              uniqueId: reg.uniqueId,
+              status: reg.status,
+              qrCode: reg.qrCode,
+              createdAt: reg.createdAt,
+              event: {
+                id: event?._id?.toString(),
+                name: event?.name || 'Event',
+                description: event?.description || '',
+                location: event?.location || '',
+                startDate: event?.startDate,
+                endDate: event?.endDate,
+                status: event?.status
+              }
+            });
+          }
+        }
+      }
+
+      res.json(userRegistrations);
+
+    } catch (error) {
+      console.error("Error fetching registrations:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // ================ EVENT REGISTRATION ================
   
   // Register for event with custom fields and validation
