@@ -2386,6 +2386,108 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // ================ MEMBERS API ================
+  
+  // Get all members
+  app.get("/api/members", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      
+      // Get members for the organization
+      const members = await mongoStorage.getMembers(organizationId ? { organizationId } : {});
+      
+      // Format members for frontend
+      const formattedMembers = members.map(member => ({
+        id: member._id?.toString(),
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+        auxiliaryBody: member.auxiliaryBody,
+        status: member.status || 'active',
+        organizationId: member.organizationId?.toString(),
+        createdAt: member.createdAt
+      }));
+
+      res.json(formattedMembers);
+    } catch (error) {
+      console.error("Error getting members:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create member
+  app.post("/api/members", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      
+      const memberData = {
+        ...req.body,
+        organizationId: organizationId || undefined,
+        status: req.body.status || 'active',
+        createdAt: new Date()
+      };
+      
+      const member = await mongoStorage.createMember(memberData);
+      
+      res.status(201).json({
+        id: member._id?.toString(),
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+        auxiliaryBody: member.auxiliaryBody,
+        status: member.status,
+        organizationId: member.organizationId?.toString(),
+        createdAt: member.createdAt
+      });
+    } catch (error) {
+      console.error("Error creating member:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update member
+  app.put("/api/members/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const memberId = req.params.id;
+      const updatedMember = await mongoStorage.updateMember(memberId, req.body);
+      
+      if (!updatedMember) {
+        return res.status(404).json({ message: "Member not found" });
+      }
+      
+      res.json({
+        id: updatedMember._id?.toString(),
+        firstName: updatedMember.firstName,
+        lastName: updatedMember.lastName,
+        email: updatedMember.email,
+        auxiliaryBody: updatedMember.auxiliaryBody,
+        status: updatedMember.status,
+        organizationId: updatedMember.organizationId?.toString(),
+        createdAt: updatedMember.createdAt
+      });
+    } catch (error) {
+      console.error("Error updating member:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete member
+  app.delete("/api/members/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const memberId = req.params.id;
+      const deleted = await mongoStorage.deleteMember(memberId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Member not found" });
+      }
+      
+      res.json({ message: "Member deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // ================ AUXILIARY BODIES API ================
   
   // Get auxiliary bodies dynamically based on events
@@ -2423,6 +2525,98 @@ export function registerMongoRoutes(app: Express) {
       console.error("Error getting auxiliary bodies:", error);
       // Return empty array on error (no hardcoded fallback)
       res.json([]);
+    }
+  });
+
+  // ================ QR CODE VALIDATION API ================
+  
+  // Validate QR code/Unique ID for events
+  app.post("/api/validate-id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { uniqueId } = req.body;
+      
+      if (!uniqueId) {
+        return res.status(400).json({ 
+          message: "Unique ID is required",
+          validationStatus: "invalid" 
+        });
+      }
+      
+      // Get all registrations to find matching unique ID
+      const registrations = await mongoStorage.getEventRegistrations();
+      const registration = registrations.find(reg => 
+        reg.uniqueId === uniqueId || reg.qrCode === uniqueId
+      );
+      
+      if (!registration) {
+        return res.status(404).json({ 
+          message: "Registration not found with this ID",
+          validationStatus: "invalid" 
+        });
+      }
+      
+      // Get event details
+      const event = await mongoStorage.getEvent(registration.eventId.toString());
+      if (!event) {
+        return res.status(404).json({ 
+          message: "Event not found",
+          validationStatus: "invalid" 
+        });
+      }
+      
+      // Get member details if exists
+      let member = null;
+      if (registration.memberId) {
+        const members = await mongoStorage.getMembers();
+        member = members.find(m => m._id?.toString() === registration.memberId.toString());
+      }
+      
+      // Update attendance status
+      await mongoStorage.updateEventRegistration(
+        registration._id.toString(),
+        { 
+          attendanceStatus: 'attended',
+          validatedAt: new Date(),
+          validatedBy: req.user?.id
+        }
+      );
+      
+      res.json({
+        validationStatus: "valid",
+        message: "Successfully validated",
+        registration: {
+          id: registration._id.toString(),
+          uniqueId: registration.uniqueId,
+          firstName: registration.firstName,
+          lastName: registration.lastName,
+          guestName: registration.guestName,
+          email: registration.email || registration.guestEmail,
+          auxiliaryBody: registration.auxiliaryBody || registration.guestAuxiliaryBody,
+          registrationType: registration.registrationType,
+          attendanceStatus: 'attended'
+        },
+        event: {
+          id: event._id.toString(),
+          name: event.name,
+          location: event.location,
+          startDate: event.startDate
+        },
+        member: member ? {
+          id: member._id?.toString(),
+          firstName: member.firstName,
+          lastName: member.lastName,
+          auxiliaryBody: member.auxiliaryBody
+        } : null,
+        validatedAt: new Date(),
+        validatedBy: req.user?.id
+      });
+      
+    } catch (error) {
+      console.error("Error validating ID:", error);
+      res.status(500).json({ 
+        message: "Internal server error during validation",
+        validationStatus: "error" 
+      });
     }
   });
 }
