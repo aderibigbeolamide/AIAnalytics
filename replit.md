@@ -20,6 +20,11 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
   - **Status Change**: Manual validation now correctly updates registration status from "active" to "online" indicating presence
   - **Populated EventId Handling**: Fixed both `/api/validate-id` and `/api/validate` endpoints to handle populated eventId fields correctly
   - **Proper Error Handling**: Enhanced error handling for eventId lookup with fallback support for both populated and string formats
+- **✅ MEMBER MANAGEMENT EVENT FILTER ADDED**: 
+  - **Event Dropdown Filter**: Added missing event filter dropdown to Member Management page
+  - **Event Registration View**: Users can now select specific events to view all registered participants
+  - **Status Display**: Shows "Present" for users with "online" status indicating successful validation
+  - **Dual View Mode**: Traditional members when "All Members" selected, event registrations when specific event selected
 - **✅ REGISTRATION CARD CUSTOMIZATION COMPLETED**: 
   - **Removed Registration ID**: Only displays unique letter-based ID (6-character A-Z format)
   - **Enhanced Visual Design**: Improved layout with gradient backgrounds, better spacing, and professional styling

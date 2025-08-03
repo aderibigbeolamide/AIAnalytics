@@ -101,11 +101,6 @@ export default function Members() {
 
   // Display either general members or event registrations based on filter
   const displayItems = eventFilter === "all" ? members : eventRegistrations;
-  
-  // Debug logging
-  console.log("Events data:", events);
-  console.log("Event filter:", eventFilter);
-  console.log("Display items:", displayItems);
 
   const getAuxiliaryBodyBadge = (auxiliaryBody: string) => {
     // Generate consistent colors based on auxiliary body name
@@ -245,7 +240,7 @@ export default function Members() {
                 />
                 <div className="w-[200px]">
                   <Select value={eventFilter} onValueChange={setEventFilter}>
-                    <SelectTrigger className="w-full border-2 border-blue-500">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select event to view registrations" />
                     </SelectTrigger>
                     <SelectContent>
