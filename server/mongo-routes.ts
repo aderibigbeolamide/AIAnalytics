@@ -2748,15 +2748,32 @@ export function registerMongoRoutes(app: Express) {
   // Image upload endpoint
   app.post("/api/upload/image", authenticateToken, upload.single('image'), async (req: AuthenticatedRequest, res: Response) => {
     try {
+      console.log("Image upload request received");
+      console.log("File info:", req.file ? {
+        fieldname: req.file.fieldname,
+        originalname: req.file.originalname,
+        encoding: req.file.encoding,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        hasBuffer: !!req.file.buffer,
+        bufferLength: req.file.buffer?.length
+      } : "No file");
+      
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
       }
 
+      if (!req.file.buffer) {
+        return res.status(400).json({ message: "Invalid file data - no buffer" });
+      }
+
       // Get folder from request body (optional)
       const folder = req.body.folder || 'images';
+      console.log("Uploading to folder:", folder);
 
       // Save file using storage handler
       const uploadedFile = await fileStorage.saveFile(req.file, folder);
+      console.log("File uploaded successfully:", uploadedFile);
 
       res.json({ 
         message: "Image uploaded successfully",
@@ -2765,7 +2782,10 @@ export function registerMongoRoutes(app: Express) {
       });
     } catch (error) {
       console.error("Error uploading image:", error);
-      res.status(500).json({ message: "Failed to upload image" });
+      res.status(500).json({ 
+        message: "Failed to upload image",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
