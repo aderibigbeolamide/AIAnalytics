@@ -182,7 +182,8 @@ export function SimpleRegistrationForm({ eventId, event }: SimpleRegistrationFor
     registerMutation.mutate({ ...data, registrationType });
   };
 
-  const auxiliaryBodies = event?.eligibleAuxiliaryBodies || ["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"];
+  // Get auxiliary bodies from event eligibility - no hardcoded fallback
+  const auxiliaryBodies = event?.eligibleAuxiliaryBodies || [];
 
   return (
     <>

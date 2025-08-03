@@ -1595,7 +1595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         emailEnabled: !!process.env.SMTP_USER,
         qrValidationTime: 24, // hours
-        auxiliaryBodies: ['Atfal', 'Khuddam', 'Lajna', 'Ansarullah', 'Nasra'],
+        auxiliaryBodies: [], // Dynamically fetched from events
         systemVersion: '1.0.0',
         databaseConnected: true
       });

@@ -28,12 +28,29 @@ export default function Analytics() {
     );
   }
 
-  const auxiliaryBodyColors: Record<string, string> = {
-    "Atfal": "bg-blue-500",
-    "Khuddam": "bg-green-500",
-    "Lajna": "bg-purple-500",
-    "Ansarullah": "bg-orange-500",
-    "Nasra": "bg-pink-500",
+  // Get auxiliary bodies dynamically from the API
+  const { data: auxiliaryBodies = [] } = useQuery({
+    queryKey: ["/api/auxiliary-bodies"],
+    queryFn: async () => {
+      const authHeaders = getAuthHeaders();
+      const response = await fetch("/api/auxiliary-bodies", {
+        headers: authHeaders
+      });
+      return response.json();
+    },
+  });
+
+  // Generate dynamic colors for auxiliary bodies
+  const getAuxiliaryBodyColor = (body: string) => {
+    const colors = [
+      "bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500",
+      "bg-pink-500", "bg-indigo-500", "bg-yellow-500", "bg-red-500"
+    ];
+    let hash = 0;
+    for (let i = 0; i < body.length; i++) {
+      hash = body.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
   };
 
   return (

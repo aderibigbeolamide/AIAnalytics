@@ -273,18 +273,7 @@
   color: hsl(0, 84%, 60%);
 }
 
-.auxiliary-badge.atfal {
-  @apply bg-green-100 text-green-800;
-}
-
-.auxiliary-badge.khuddam {
-  @apply bg-blue-100 text-blue-800;
-}
-
-.auxiliary-badge.lajna {
-  @apply bg-pink-100 text-pink-800;
-}
-
-.auxiliary-badge.ansarullah {
-  @apply bg-purple-100 text-purple-800;
+/* Dynamic auxiliary badge styling handled via component logic */
+.auxiliary-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
 }

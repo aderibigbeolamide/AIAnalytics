@@ -114,18 +114,55 @@ export function registerMongoDashboardRoutes(app: Express) {
     }
   });
 
-  // Get auxiliary bodies (public endpoint)
+  // Get auxiliary bodies dynamically from events and existing data
   app.get("/api/auxiliary-bodies", async (req: Request, res: Response) => {
     try {
-      // Return default auxiliary bodies for now
-      const auxiliaryBodies = [
-        "Atfal",
-        "Khuddam",
-        "Lajna", 
-        "Ansarullah",
-        "Nasra"
-      ];
+      // Get all events from organization (or all events if no user context)
+      const organizationId = req.user?.organizationId;
+      const events = organizationId ? 
+        await mongoStorage.getEventsByOrganization(organizationId) : 
+        await mongoStorage.getEvents();
+      
+      const auxiliaryBodiesSet = new Set<string>();
 
+      for (const event of events) {
+        // Add eligibility criteria
+        if (event.eligibility) {
+          Object.keys(event.eligibility).forEach(key => {
+            if (key !== 'invitee' && key !== 'guest' && event.eligibility[key]) {
+              auxiliaryBodiesSet.add(key);
+            }
+          });
+        }
+
+        // Add options from custom form fields (radio, select, checkbox)
+        if (event.customRegistrationFields) {
+          event.customRegistrationFields.forEach(field => {
+            if (field.type === 'radio' || field.type === 'select' || field.type === 'checkbox') {
+              if (field.options) {
+                field.options.forEach(option => {
+                  if (option.trim()) {
+                    auxiliaryBodiesSet.add(option.trim());
+                  }
+                });
+              }
+            }
+          });
+        }
+      }
+
+      // Also get auxiliary bodies from existing members and registrations
+      const members = organizationId ? 
+        await mongoStorage.getMembers({ organizationId }) : 
+        await mongoStorage.getMembers();
+      
+      members.forEach(member => {
+        if (member.auxiliaryBody && member.auxiliaryBody.trim()) {
+          auxiliaryBodiesSet.add(member.auxiliaryBody.trim());
+        }
+      });
+
+      const auxiliaryBodies = Array.from(auxiliaryBodiesSet).sort();
       res.json(auxiliaryBodies);
     } catch (error) {
       console.error("Error getting auxiliary bodies:", error);
@@ -137,8 +174,25 @@ export function registerMongoDashboardRoutes(app: Express) {
   app.get("/api/users/preferences/public", async (req: Request, res: Response) => {
     try {
       // Return default preferences
+      // Get dynamic auxiliary bodies from events instead of hardcoded
+      const organizationId = req.user?.organizationId;
+      const events = organizationId ? 
+        await mongoStorage.getEventsByOrganization(organizationId) : 
+        await mongoStorage.getEvents();
+      
+      const auxiliaryBodiesSet = new Set<string>();
+      for (const event of events) {
+        if (event.eligibility) {
+          Object.keys(event.eligibility).forEach(key => {
+            if (key !== 'invitee' && key !== 'guest' && event.eligibility[key]) {
+              auxiliaryBodiesSet.add(key);
+            }
+          });
+        }
+      }
+
       const preferences = {
-        auxiliaryBodies: ["Atfal", "Khuddam", "Lajna", "Ansarullah", "Nasra"],
+        auxiliaryBodies: Array.from(auxiliaryBodiesSet).sort(),
         jamaats: ["Central", "Regional", "Local"],
         circuits: ["A", "B", "C", "D"]
       };

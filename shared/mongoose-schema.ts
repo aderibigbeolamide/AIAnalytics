@@ -191,7 +191,7 @@ export interface IMember extends Document {
   phoneNumber?: string;
   email?: string;
   dateOfBirth?: Date;
-  auxiliaryBody: string; // Atfal, Khuddam, Lajna, Ansarullah, Nasra
+  auxiliaryBody: string; // Dynamic based on event eligibility and custom form fields
   postHolding?: string;
   status: string; // active, inactive
   deletedAt?: Date; // Soft delete field

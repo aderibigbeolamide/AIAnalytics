@@ -2336,16 +2336,12 @@ export function registerMongoRoutes(app: Express) {
       // Convert to array and sort
       const auxiliaryBodies = Array.from(auxiliaryBodiesSet).sort();
       
-      // If no auxiliary bodies found, provide default ones
-      if (auxiliaryBodies.length === 0) {
-        res.json(['Atfal', 'Khuddam', 'Lajna', 'Ansarullah', 'Nasra']);
-      } else {
-        res.json(auxiliaryBodies);
-      }
+      // Return empty array if no auxiliary bodies found (no hardcoded fallback)
+      res.json(auxiliaryBodies);
     } catch (error) {
       console.error("Error getting auxiliary bodies:", error);
-      // Fallback to default auxiliary bodies
-      res.json(['Atfal', 'Khuddam', 'Lajna', 'Ansarullah', 'Nasra']);
+      // Return empty array on error (no hardcoded fallback)
+      res.json([]);
     }
   });
 }
