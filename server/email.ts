@@ -167,16 +167,18 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
         }
         .unique-id { 
           font-family: 'Courier New', monospace; 
-          font-size: 24px; 
+          font-size: 28px; 
           font-weight: bold; 
           color: #667eea; 
-          margin-top: 15px; 
-          padding: 15px 25px; 
-          background: white; 
-          border-radius: 8px; 
-          border: 3px dashed #667eea; 
-          letter-spacing: 3px;
-          box-shadow: 0 2px 10px rgba(102, 126, 234, 0.1);
+          padding: 18px 30px; 
+          background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%); 
+          border-radius: 12px; 
+          border: 3px solid #667eea; 
+          letter-spacing: 4px;
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
+          text-align: center;
+          display: inline-block;
+          min-width: 200px;
         }
         .instructions { 
           margin-top: 30px; 
@@ -236,20 +238,20 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
               </div>
             </div>
             <div class="info-item">
-              <div class="info-label">Auxiliary Body</div>
-              <div class="info-value">${auxiliaryBody}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Chanda Number</div>
-              <div class="info-value">${chandaNumber}</div>
-            </div>
-            <div class="info-item">
               <div class="info-label">Email</div>
               <div class="info-value">${email}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Event Date</div>
               <div class="info-value">${new Date(event.startDate).toLocaleDateString()}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Event Time</div>
+              <div class="info-value">${event.startTime || 'TBA'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Location</div>
+              <div class="info-value">${event.location}</div>
             </div>
           </div>
 
@@ -261,20 +263,43 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
           ` : ''}
           
           <div class="qr-section">
-            <h3 style="margin: 0 0 15px 0; color: #333;">Your Registration QR Code</h3>
-            <img src="data:image/png;base64,${qrImageBase64}" alt="QR Code" class="qr-code">
-            <div style="margin: 15px 0; color: #666;">
-              <strong>Unique ID for Manual Entry:</strong>
+            <h3 style="margin: 0 0 20px 0; color: #333; font-size: 20px;">Event Access</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 30px;">
+              <div style="flex: 1;">
+                <img src="data:image/png;base64,${qrImageBase64}" alt="QR Code" class="qr-code">
+                <div style="margin-top: 15px; color: #666; font-size: 14px;">
+                  <strong>Scan QR Code at Event</strong>
+                </div>
+              </div>
+              <div style="flex: 1; text-align: center;">
+                <div style="margin-bottom: 15px; color: #666; font-size: 16px;">
+                  <strong>Manual Verification ID</strong>
+                </div>
+                <div class="unique-id">${registration.uniqueId}</div>
+                <div style="margin-top: 15px; color: #888; font-size: 12px; line-height: 1.4;">
+                  Present this ID if QR scanning<br>is not available
+                </div>
+              </div>
             </div>
-            <div class="unique-id">${registration.uniqueId}</div>
           </div>
           
           <div class="instructions">
-            <h3>Event Check-in Instructions</h3>
-            <p>• Present this QR code at the event entrance for quick check-in</p>
-            <p>• Alternatively, provide your Unique ID: <strong>${registration.uniqueId}</strong></p>
-            <p>• Keep this card accessible on your mobile device or print it out</p>
-            <p>• Contact event organizers if you have any issues</p>
+            <h3 style="color: #333; margin-bottom: 20px; font-size: 18px;">Check-in Instructions</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div style="padding: 15px; background: #f0f4ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                <h4 style="margin: 0 0 10px 0; color: #667eea; font-size: 16px;">QR Code Method</h4>
+                <p style="margin: 0; font-size: 14px; color: #555;">Show your QR code at the event entrance for instant verification</p>
+              </div>
+              <div style="padding: 15px; background: #f0f4ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                <h4 style="margin: 0 0 10px 0; color: #667eea; font-size: 16px;">Manual Method</h4>
+                <p style="margin: 0; font-size: 14px; color: #555;">Provide your Unique ID: <strong>${registration.uniqueId}</strong> to event staff</p>
+              </div>
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border: 1px solid #ffeaa7;">
+              <p style="margin: 0; font-size: 14px; color: #856404; text-align: center;">
+                <strong>Important:</strong> Keep this card accessible on your device or print it. Contact organizers if you need assistance.
+              </p>
+            </div>
           </div>
         </div>
         
