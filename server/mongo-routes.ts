@@ -2049,7 +2049,9 @@ export function registerMongoRoutes(app: Express) {
         });
       }
 
-      const event = await mongoStorage.getEvent(registration.eventId.toString());
+      // Handle both populated and non-populated eventId
+      const eventId = registration.eventId._id || registration.eventId;
+      const event = await mongoStorage.getEvent(eventId.toString());
       if (!event) {
         return res.status(404).json({ 
           message: "Event not found",
@@ -2159,7 +2161,8 @@ export function registerMongoRoutes(app: Express) {
       }
 
 
-      if (registration && (registration.eventId._id || registration.eventId).toString() === eventId) {
+      const registrationEventId = registration?.eventId?._id || registration?.eventId;
+      if (registration && registrationEventId && registrationEventId.toString() === eventId) {
         if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid') {
           return res.json({
             validationStatus: "invalid",

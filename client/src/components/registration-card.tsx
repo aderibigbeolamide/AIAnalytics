@@ -70,13 +70,21 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
     
     if (!ctx) return;
     
-    // Create a larger canvas for better quality
-    canvas.width = 800;
-    canvas.height = 1000;
+    // Create a high-resolution canvas for better print quality
+    const scale = 3; // 3x resolution for crisp printing
+    canvas.width = 800 * scale;
+    canvas.height = 1000 * scale;
+    
+    // Scale the context for high-DPI rendering
+    ctx.scale(scale, scale);
+    
+    // Set rendering properties for crisp text and images
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     
     // White background
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, 800, 1000);
     
     // Add gradient header
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, 100);
@@ -140,26 +148,26 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
         ctx.textAlign = 'center';
         ctx.fillText('Scan for Event Check-in', canvas.width / 2, qrY + qrSize + 30);
         
-        // Download
+        // Download with high quality settings
         const link = document.createElement('a');
         link.download = `registration-card-${registration.uniqueId}.png`;
-        link.href = canvas.toDataURL('image/png');
+        link.href = canvas.toDataURL('image/png', 1.0); // Maximum quality
         link.click();
       };
       qrImg.onerror = () => {
         console.error('Failed to load QR image for download');
-        // Download without QR code
+        // Download without QR code with high quality
         const link = document.createElement('a');
         link.download = `registration-card-${registration.uniqueId}.png`;
-        link.href = canvas.toDataURL('image/png');
+        link.href = canvas.toDataURL('image/png', 1.0); // Maximum quality
         link.click();
       };
       qrImg.src = qrDataUrl;
     } else {
-      // Download without QR code
+      // Download without QR code with high quality
       const link = document.createElement('a');
       link.download = `registration-card-${registration.uniqueId}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = canvas.toDataURL('image/png', 1.0); // Maximum quality
       link.click();
     }
   };
@@ -228,11 +236,14 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
                 className="w-48 h-48 mx-auto"
                 onError={(e) => {
                   console.error('QR Image failed to load:', e);
-                  e.currentTarget.style.display = 'none';
-                  const fallback = e.currentTarget.parentElement?.nextElementSibling;
+                  const target = e.currentTarget as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.parentElement?.nextElementSibling as HTMLElement;
                   if (fallback) {
                     fallback.style.display = 'block';
-                    e.currentTarget.parentElement.style.display = 'none';
+                    if (target.parentElement) {
+                      target.parentElement.style.display = 'none';
+                    }
                   }
                 }}
               />
@@ -273,14 +284,37 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
           <Button 
             variant="outline" 
             onClick={() => {
-              // Add print-specific styling
+              // Add print-specific styling for better print quality
               const printStyle = document.createElement('style');
               printStyle.textContent = `
                 @media print {
                   body * { visibility: hidden; }
                   .registration-card, .registration-card * { visibility: visible; }
-                  .registration-card { position: absolute; left: 0; top: 0; width: 100%; }
+                  .registration-card { 
+                    position: absolute; 
+                    left: 0; 
+                    top: 0; 
+                    width: 100%; 
+                    box-shadow: none !important;
+                    border: none !important;
+                    margin: 0 !important;
+                    padding: 20px !important;
+                    background: white !important;
+                    color: black !important;
+                  }
                   .print-hide { display: none !important; }
+                  .bg-gradient-to-r { background: #4F46E5 !important; }
+                  .bg-gradient-to-br { background: #EBF8FF !important; }
+                  .bg-gray-50 { background: #F9FAFB !important; }
+                  .bg-blue-50 { background: #EBF8FF !important; }
+                  .text-white { color: white !important; }
+                  .text-blue-600 { color: #2563EB !important; }
+                  .text-blue-700 { color: #1D4ED8 !important; }
+                  .text-blue-800 { color: #1E40AF !important; }
+                  .border-blue-200 { border-color: #DBEAFE !important; }
+                  .border-blue-300 { border-color: #93C5FD !important; }
+                  .border-blue-400 { border-color: #60A5FA !important; }
+                  img { max-width: 200px !important; height: auto !important; }
                 }
               `;
               document.head.appendChild(printStyle);
