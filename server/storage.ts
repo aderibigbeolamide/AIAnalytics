@@ -42,6 +42,7 @@ export interface IStorage {
 
   // Events
   getEvent(id: number): Promise<Event | undefined>;
+  getEventById(id: string): Promise<Event | undefined>;
   getEvents(filters?: { status?: string; createdBy?: number }): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event | undefined>;
@@ -300,6 +301,13 @@ export class MemStorage implements IStorage {
     }
     
     return event;
+  }
+
+  async getEventById(id: string): Promise<Event | undefined> {
+    // For in-memory storage, we need to convert string to number
+    const numId = parseInt(id, 10);
+    if (isNaN(numId)) return undefined;
+    return this.getEvent(numId);
   }
 
   async getEvents(filters?: { status?: string; createdBy?: number }): Promise<Event[]> {

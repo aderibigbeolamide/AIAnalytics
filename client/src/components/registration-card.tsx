@@ -105,7 +105,7 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
     // Create dynamic details from the display fields
     const details = [
       ...displayFields.map(field => ({ label: `${field.label}:`, value: field.value })),
-      { label: 'Unique ID:', value: registration.uniqueId },
+      { label: 'Verification ID:', value: registration.uniqueId },
       { label: 'Event Date:', value: new Date(event.startDate).toLocaleDateString() },
     ];
     
@@ -192,10 +192,12 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
         </div>
         
         {/* Unique ID */}
-        <div className="text-center p-4 bg-blue-50 rounded-lg border-2 border-dashed border-blue-300">
-          <p className="text-sm text-gray-600 font-medium mb-2">Your Unique Registration ID</p>
-          <p className="text-2xl font-mono font-bold text-blue-600">{registration.uniqueId}</p>
-          <p className="text-xs text-gray-500 mt-1">Present this ID for manual check-in if QR code fails</p>
+        <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
+          <p className="text-base font-semibold text-blue-700 mb-3">Manual Verification ID</p>
+          <div className="inline-block px-6 py-4 bg-white rounded-lg border-2 border-blue-300 shadow-sm">
+            <p className="text-3xl font-mono font-bold text-blue-600 tracking-widest">{registration.uniqueId}</p>
+          </div>
+          <p className="text-sm text-blue-600 mt-3 font-medium">Present this ID for manual check-in if QR code scanning is unavailable</p>
         </div>
         
         {/* QR Code Section */}
@@ -237,7 +239,7 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
           <h3 className="font-semibold text-blue-800 mb-2">Check-in Instructions</h3>
           <ul className="text-sm text-blue-700 space-y-1">
             <li>• Present the QR code above at the event entrance</li>
-            <li>• Alternatively, provide your Unique ID: <strong>{registration.uniqueId}</strong></li>
+            <li>• Alternatively, provide your Verification ID: <strong>{registration.uniqueId}</strong></li>
             <li>• Keep this information accessible on your mobile device</li>
             <li>• Contact event organizers if you have any issues</li>
           </ul>

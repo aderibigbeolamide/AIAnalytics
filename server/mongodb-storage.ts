@@ -311,6 +311,15 @@ export class MongoStorage implements IMongoStorage {
     }
   }
 
+  async getEventById(id: string): Promise<IEvent | null> {
+    try {
+      return await Event.findById(id);
+    } catch (error) {
+      console.error('Error getting event by ID:', error);
+      return null;
+    }
+  }
+
   async getEvents(filters?: { status?: string; createdBy?: string; organizationId?: string }): Promise<IEvent[]> {
     try {
       const query: any = { deletedAt: { $exists: false } };
