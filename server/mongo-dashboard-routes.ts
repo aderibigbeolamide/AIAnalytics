@@ -17,29 +17,114 @@ export function registerMongoDashboardRoutes(app: Express) {
       const members = await mongoStorage.getMembers(organizationId ? { organizationId } : {});
       const registrations = await mongoStorage.getEventRegistrations();
       
-      // Calculate statistics
+      // Filter registrations by organization events
+      const orgEventIds = events.map(e => e._id.toString());
+      const orgRegistrations = registrations.filter(r => 
+        orgEventIds.includes(r.eventId.toString())
+      );
+      
+      // Basic statistics
       const totalEvents = events.length;
       const totalMembers = members.length;
-      const totalRegistrations = registrations.length;
-      const totalScans = registrations.filter(r => r.attendanceStatus === 'attended').length;
-      const validationRate = totalRegistrations > 0 ? Math.round((totalScans / totalRegistrations) * 100) : 100;
+      const totalRegistrations = orgRegistrations.length;
       
-      // Recent activity (last 7 days)
+      // Event status breakdown
+      const activeEvents = events.filter(e => e.status === 'active' || e.status === 'upcoming').length;
+      const completedEvents = events.filter(e => e.status === 'completed').length;
+      const upcomingEvents = events.filter(e => e.status === 'upcoming').length;
+      
+      // Validation and attendance statistics
+      const validatedRegistrations = orgRegistrations.filter(r => r.status === 'online').length;
+      const pendingValidations = orgRegistrations.filter(r => r.status === 'active').length;
+      const validationRate = totalRegistrations > 0 ? (validatedRegistrations / totalRegistrations) * 100 : 0;
+      
+      // Today's activity
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const scansToday = orgRegistrations.filter(r => 
+        r.validatedAt && r.validatedAt >= today && r.validatedAt < tomorrow
+      ).length;
+      
+      // Auxiliary body statistics
+      const auxiliaryBodyStats: { [key: string]: any } = {};
+      
+      // Get auxiliary bodies from members and registrations
+      const allAuxiliaryBodies = new Set<string>();
+      members.forEach(m => m.auxiliaryBody && allAuxiliaryBodies.add(m.auxiliaryBody));
+      orgRegistrations.forEach(r => r.auxiliaryBody && allAuxiliaryBodies.add(r.auxiliaryBody));
+      
+      allAuxiliaryBodies.forEach(auxBody => {
+        const auxMembers = members.filter(m => m.auxiliaryBody === auxBody);
+        const auxRegistrations = orgRegistrations.filter(r => r.auxiliaryBody === auxBody);
+        const auxValidated = auxRegistrations.filter(r => r.status === 'online');
+        
+        auxiliaryBodyStats[auxBody] = {
+          totalMembers: auxMembers.length,
+          activeMembers: auxMembers.filter(m => m.status === 'active').length,
+          totalRegistrations: auxRegistrations.length,
+          validatedRegistrations: auxValidated.length,
+          validationRate: auxRegistrations.length > 0 ? (auxValidated.length / auxRegistrations.length) * 100 : 0
+        };
+      });
+      
+      // Recent activity trends (last 7 days vs previous 7 days)
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const twoWeeksAgo = new Date();
+      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
       
-      const recentEvents = events.filter(e => e.createdAt >= oneWeekAgo).length;
-      const recentRegistrations = registrations.filter(r => r.createdAt >= oneWeekAgo).length;
+      const recentEvents = events.filter(e => e.createdAt && e.createdAt >= oneWeekAgo).length;
+      const previousEvents = events.filter(e => e.createdAt && e.createdAt >= twoWeeksAgo && e.createdAt < oneWeekAgo).length;
+      const eventTrend = previousEvents > 0 ? ((recentEvents - previousEvents) / previousEvents) * 100 : 0;
+      
+      const recentRegistrations = orgRegistrations.filter(r => r.createdAt && r.createdAt >= oneWeekAgo).length;
+      const previousRegistrations = orgRegistrations.filter(r => r.createdAt && r.createdAt >= twoWeeksAgo && r.createdAt < oneWeekAgo).length;
+      const registrationTrend = previousRegistrations > 0 ? ((recentRegistrations - previousRegistrations) / previousRegistrations) * 100 : 0;
+      
+      const recentValidations = orgRegistrations.filter(r => r.validatedAt && r.validatedAt >= oneWeekAgo).length;
+      const previousValidations = orgRegistrations.filter(r => r.validatedAt && r.validatedAt >= twoWeeksAgo && r.validatedAt < oneWeekAgo).length;
+      const validationTrend = previousValidations > 0 ? ((recentValidations - previousValidations) / previousValidations) * 100 : 0;
+      
+      // Event type breakdown
+      const eventTypeStats: { [key: string]: number } = {};
+      events.forEach(e => {
+        eventTypeStats[e.eventType || 'other'] = (eventTypeStats[e.eventType || 'other'] || 0) + 1;
+      });
       
       const stats = {
+        // Core metrics
         totalEvents: totalEvents.toString(),
         totalMembers: totalMembers.toString(),
         totalRegistrations: totalRegistrations.toString(),
-        totalScans: totalScans.toString(),
-        validationRate,
+        
+        // Event metrics
+        activeEvents: activeEvents.toString(),
+        upcomingEvents: upcomingEvents.toString(),
+        completedEvents: completedEvents.toString(),
+        
+        // Validation metrics
+        validatedRegistrations: validatedRegistrations.toString(),
+        pendingValidations: pendingValidations.toString(),
+        validationRate: Math.round(validationRate * 10) / 10, // Round to 1 decimal
+        scansToday: scansToday.toString(),
+        
+        // Trends
+        validationTrend: Math.round(validationTrend * 10) / 10,
+        eventTrend: Math.round(eventTrend * 10) / 10,
+        registrationTrend: Math.round(registrationTrend * 10) / 10,
+        
+        // Breakdown statistics
+        auxiliaryBodyStats,
+        eventTypeStats,
+        
+        // Recent activity summary
         recentActivity: {
           newEvents: recentEvents,
-          newRegistrations: recentRegistrations
+          newRegistrations: recentRegistrations,
+          newValidations: recentValidations
         }
       };
 
