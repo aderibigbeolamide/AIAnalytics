@@ -2071,11 +2071,27 @@ export function registerMongoRoutes(app: Express) {
         eventId: registration.eventId
       });
 
-      // Check if already validated
+      // Check if already validated - provide better feedback
       if (registration.status === "online" || registration.status === "attended") {
-        return res.status(400).json({ 
-          message: "This registration has already been validated",
-          validationStatus: "duplicate" 
+        return res.status(200).json({ 
+          success: false,
+          message: `${registration.firstName} ${registration.lastName} has already been validated for this event`,
+          validationStatus: "already_validated",
+          registration: {
+            id: registration._id?.toString(),
+            uniqueId: registration.uniqueId,
+            firstName: registration.firstName,
+            lastName: registration.lastName,
+            email: registration.email,
+            auxiliaryBody: registration.auxiliaryBody,
+            status: registration.status
+          },
+          event: {
+            id: eventId,
+            name: event.name,
+            location: event.location,
+            startDate: event.startDate
+          }
         });
       }
 
