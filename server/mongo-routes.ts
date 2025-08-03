@@ -11,7 +11,7 @@ import mongoose from "mongoose";
 
 // Configure multer for file uploads
 const upload = multer({
-  dest: 'uploads/',
+  storage: multer.memoryStorage(), // Use memory storage to get file.buffer
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
