@@ -34,10 +34,22 @@ export function QRScanner({ onClose }: QRScannerProps) {
         headers.Authorization = authHeaders.Authorization;
       }
       
-      const response = await fetch("/api/scan", {
+      // Extract uniqueId from QR data (handle both JSON format and plain text)
+      let uniqueId: string;
+      try {
+        const parsed = JSON.parse(qrData);
+        uniqueId = parsed.uniqueId || qrData;
+      } catch {
+        // If not JSON, treat as plain uniqueId
+        uniqueId = qrData;
+      }
+      
+      console.log('Validating QR code with uniqueId:', uniqueId);
+      
+      const response = await fetch("/api/validate-id", {
         method: "POST",
         headers,
-        body: JSON.stringify({ qrData }),
+        body: JSON.stringify({ uniqueId }),
       });
       
       const result = await response.json();
@@ -53,7 +65,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Validation Successful",
-        description: `${data.member?.firstName} ${data.member?.lastName} - ${data.event?.name}`,
+        description: `${data.registration?.guestName || (data.registration?.firstName + ' ' + data.registration?.lastName)} validated for ${data.event?.name}`,
       });
     },
     onError: (error: Error) => {
@@ -95,6 +107,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
     });
     
     if (code) {
+      console.log('QR Code detected:', code.data);
       validateQRMutation.mutate(code.data);
       stopCamera(); // Stop scanning after successful scan
     }
