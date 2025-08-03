@@ -346,7 +346,7 @@ export function registerMongoRoutes(app: Express) {
         lastName: formData.lastName || formData.LastName || formData.guestLastName || '',
         email: formData.email || formData.Email || formData.guestEmail || '',
         phoneNumber: formData.phone || formData.Phone || formData.phoneNumber || '',
-        auxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || formData.auxiliary_body || '',
+        auxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || formData.auxiliary_body || formData.Gender || '',
         // Store all custom field data
         registrationData: formData
       };
@@ -365,7 +365,7 @@ export function registerMongoRoutes(app: Express) {
               registrationData.email = fieldValue;
             } else if (field.name === 'phone' || field.name === 'Phone' || field.name === 'phoneNumber') {
               registrationData.phoneNumber = fieldValue;
-            } else if (field.name === 'auxiliaryBody' || field.name === 'AuxiliaryBody' || field.name === 'auxiliary_body') {
+            } else if (field.name === 'auxiliaryBody' || field.name === 'AuxiliaryBody' || field.name === 'auxiliary_body' || field.name === 'Gender') {
               registrationData.auxiliaryBody = fieldValue;
             }
           }
