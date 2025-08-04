@@ -286,21 +286,15 @@ export default function Events() {
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <div className="text-center">
                             <div className="font-medium text-green-600">{event.memberRegistrations || 0}</div>
-                            <div className="text-gray-500">
-                              {event.eventType === 'ticket' ? 'Paid' : 'Members'}
-                            </div>
+                            <div className="text-gray-500">Members</div>
                           </div>
                           <div className="text-center">
                             <div className="font-medium text-blue-600">{event.guestRegistrations || 0}</div>
-                            <div className="text-gray-500">
-                              {event.eventType === 'ticket' ? 'Pending' : 'Guests'}
-                            </div>
+                            <div className="text-gray-500">Guests</div>
                           </div>
                           <div className="text-center">
                             <div className="font-medium text-purple-600">{event.inviteeRegistrations || 0}</div>
-                            <div className="text-gray-500">
-                              {event.eventType === 'ticket' ? 'Failed' : 'Invitees'}
-                            </div>
+                            <div className="text-gray-500">Invitees</div>
                           </div>
                         </div>
 

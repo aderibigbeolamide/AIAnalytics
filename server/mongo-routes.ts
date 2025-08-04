@@ -161,15 +161,15 @@ export function registerMongoRoutes(app: Express) {
             
           const memberRegistrations = event.eventType === 'ticket' 
             ? tickets.filter(ticket => ticket.paymentStatus === 'completed').length // Paid tickets
-            : registrations.filter(reg => reg.registrationType === 'member').length;
+            : registrations.filter(reg => (reg.registrationType === 'member' || reg.registration_type === 'member')).length;
             
           const guestRegistrations = event.eventType === 'ticket' 
             ? tickets.filter(ticket => ticket.paymentStatus === 'pending').length // Pending payment tickets
-            : registrations.filter(reg => reg.registrationType === 'guest').length;
+            : registrations.filter(reg => (reg.registrationType === 'guest' || reg.registration_type === 'guest')).length;
             
           const inviteeRegistrations = event.eventType === 'ticket' 
             ? tickets.filter(ticket => ticket.paymentStatus === 'failed').length // Failed payment tickets
-            : registrations.filter(reg => reg.registrationType === 'invitee').length;
+            : registrations.filter(reg => (reg.registrationType === 'invitee' || reg.registration_type === 'invitee')).length;
           
           // Calculate attendance rate
           const attendedCount = event.eventType === 'ticket'
@@ -182,17 +182,36 @@ export function registerMongoRoutes(app: Express) {
           
           console.log(`Stats for ${event.name}: total=${totalRegistrations}, members=${memberRegistrations}, guests=${guestRegistrations}, invitees=${inviteeRegistrations}`);
           
-          eventsWithStats.push({
+          // Create base event object and remove existing statistics fields
+          const baseEvent = (event as any).toObject();
+          delete baseEvent.totalRegistrations;
+          delete baseEvent.memberRegistrations;
+          delete baseEvent.guestRegistrations;
+          delete baseEvent.inviteeRegistrations;
+          delete baseEvent.attendanceRate;
+          
+          // Override with calculated statistics (important: do this AFTER the spread)
+          const eventData = {
+            ...baseEvent,
             id: (event as any)._id?.toString(),
-            ...(event as any).toObject(),
             organizationId: event.organizationId?.toString(),
             createdBy: event.createdBy?.toString(),
-            totalRegistrations,
-            memberRegistrations,
-            guestRegistrations,
-            inviteeRegistrations,
+            // Add calculated statistics
+            totalRegistrations: totalRegistrations || 0,
+            memberRegistrations: memberRegistrations || 0,
+            guestRegistrations: guestRegistrations || 0,
+            inviteeRegistrations: inviteeRegistrations || 0,
             attendanceRate: Math.round(attendanceRate * 10) / 10 // Round to 1 decimal
+          };
+          
+          console.log(`Event data for ${event.name}:`, {
+            totalRegistrations: eventData.totalRegistrations,
+            memberRegistrations: eventData.memberRegistrations,
+            guestRegistrations: eventData.guestRegistrations,
+            inviteeRegistrations: eventData.inviteeRegistrations
           });
+          
+          eventsWithStats.push(eventData);
         } catch (error) {
           console.error(`Error processing event ${event.name}:`, error);
           // Add event without stats if there's an error
