@@ -451,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get event registration counts
   app.get("/api/events/:eventId/registration-counts", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
-      const eventId = parseInt(req.params.eventId);
+      const eventId = req.params.eventId; // Keep as string for MongoDB ObjectId compatibility
       const registrations = await storage.getEventRegistrations(eventId);
       
       const counts = {
@@ -751,7 +751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Event registration routes
   app.get("/api/events/:id/registrations", authenticateToken, async (req, res) => {
     try {
-      const eventId = parseInt(req.params.id);
+      const eventId = req.params.id; // Keep as string for MongoDB ObjectId compatibility
       const { auxiliaryBody, uniqueId, startDate, endDate, status } = req.query;
       
       const filters = {
