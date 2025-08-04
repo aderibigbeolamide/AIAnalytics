@@ -111,12 +111,13 @@ export function registerMongoRoutes(app: Express) {
   
   // Get events for organization (admin dashboard)
   app.get("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-    console.log('*** DEBUG: GET /api/events route called with updated stats logic ***', new Date().toISOString());
+    console.log('*** DEBUG: GET /api/events route called with FRESH stats logic ***', new Date().toISOString());
     
-    // Disable caching for this endpoint
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    // Force no caching for this endpoint
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
+    res.set('Last-Modified', new Date().toUTCString());
     
     try {
       const organizationId = req.user?.organizationId;
@@ -129,6 +130,7 @@ export function registerMongoRoutes(app: Express) {
         event.organizationId?.toString() === organizationId
       );
       console.log('Organization events found:', organizationEvents.length);
+      console.log('*** EXECUTING STATS CALCULATION FOR', organizationEvents.length, 'EVENTS ***');
       
       // Calculate registration statistics for each event
       const eventsWithStats = [];
@@ -229,6 +231,13 @@ export function registerMongoRoutes(app: Express) {
         }
       }
       
+      console.log('*** FINAL EVENTS WITH STATS COUNT:', eventsWithStats.length);
+      console.log('*** SAMPLE EVENT WITH STATS:', eventsWithStats[0] ? {
+        name: eventsWithStats[0].name,
+        totalRegistrations: eventsWithStats[0].totalRegistrations,
+        memberRegistrations: eventsWithStats[0].memberRegistrations
+      } : 'No events');
+      
       res.json(eventsWithStats);
     } catch (error) {
       console.error("Error getting events:", error);
@@ -322,9 +331,17 @@ export function registerMongoRoutes(app: Express) {
       if (!name || !reportType || !message) {
         return res.status(400).json({ message: "Name, report type, and message are required" });
       }
+
+      // Get event to find organization ID
+      const event = await mongoStorage.getEventById(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
       
       const report = await mongoStorage.createEventReport({
         eventId,
+        organizationId: event.organizationId?.toString(), // Add organization ID for filtering
+        eventName: event.name, // Add event name for display
         reporterName: name,
         reporterEmail: email,
         reporterPhone: phone,

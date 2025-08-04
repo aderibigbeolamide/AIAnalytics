@@ -137,36 +137,155 @@ export function registerMongoDashboardRoutes(app: Express) {
 
   // Get events for dashboard
   app.get("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    console.log('*** DASHBOARD ROUTE: GET /api/events with COMPREHENSIVE STATS ***', new Date().toISOString());
+    
+    // Force no caching for this endpoint
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.set('Last-Modified', new Date().toUTCString());
+    
     try {
       const organizationId = req.user?.organizationId;
+      console.log('Dashboard GET /api/events - Organization ID:', organizationId);
       
       const events = await mongoStorage.getEvents(organizationId ? { organizationId } : {});
+      console.log('Total events found:', events.length);
+      console.log('*** EXECUTING COMPREHENSIVE STATS CALCULATION FOR', events.length, 'EVENTS ***');
       
-      const formattedEvents = events.map(event => ({
-        id: event._id.toString(),
-        name: event.name,
-        description: event.description,
-        location: event.location,
-        startDate: event.startDate,
-        endDate: event.endDate,
-        registrationStartDate: event.registrationStartDate,
-        registrationEndDate: event.registrationEndDate,
-        status: event.status,
-        maxAttendees: event.maxAttendees,
-        eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
-        allowGuests: event.allowGuests,
-        allowInvitees: event.allowInvitees,
-        requirePayment: event.requirePayment,
-        paymentAmount: event.paymentAmount,
-        paymentCurrency: event.paymentCurrency,
-        eventType: event.eventType,
-        eventImage: event.eventImage,
-        createdAt: event.createdAt,
-        organizationId: event.organizationId?.toString(),
-        createdBy: event.createdBy?.toString()
-      }));
-
-      res.json(formattedEvents);
+      // Calculate registration statistics for each event
+      const eventsWithStats = [];
+      
+      for (const event of events) {
+        try {
+          const eventId = event._id?.toString();
+          console.log(`Processing event: ${event.name} (${eventId})`);
+          
+          // Get registrations for this event
+          const registrations = await mongoStorage.getEventRegistrations(eventId || '');
+          console.log(`Found ${registrations.length} registrations for ${event.name}`);
+          
+          // Get tickets for this event (if ticket-based)
+          let tickets: any[] = [];
+          if (event.eventType === 'ticket') {
+            try {
+              tickets = await mongoStorage.getTickets({ eventId: eventId || '' });
+              console.log(`Event ${event.name} (${eventId}): Found ${tickets.length} tickets`);
+            } catch (error) {
+              console.error(`Error getting tickets for event ${eventId}:`, error);
+              tickets = [];
+            }
+          }
+          
+          // Calculate registration statistics
+          const totalRegistrations = event.eventType === 'ticket' 
+            ? tickets.length 
+            : registrations.length;
+            
+          const memberRegistrations = event.eventType === 'ticket' 
+            ? tickets.filter(ticket => ticket.paymentStatus === 'completed').length // Paid tickets
+            : registrations.filter(reg => (reg.registrationType === 'member' || reg.registration_type === 'member')).length;
+            
+          const guestRegistrations = event.eventType === 'ticket' 
+            ? tickets.filter(ticket => ticket.paymentStatus === 'pending').length // Pending payment tickets
+            : registrations.filter(reg => (reg.registrationType === 'guest' || reg.registration_type === 'guest')).length;
+            
+          const inviteeRegistrations = event.eventType === 'ticket' 
+            ? tickets.filter(ticket => ticket.paymentStatus === 'failed').length // Failed payment tickets
+            : registrations.filter(reg => (reg.registrationType === 'invitee' || reg.registration_type === 'invitee')).length;
+          
+          // Calculate attendance rate
+          const attendedCount = event.eventType === 'ticket'
+            ? tickets.filter(ticket => ticket.status === 'used').length
+            : registrations.filter(reg => reg.status === 'attended').length;
+            
+          const attendanceRate = totalRegistrations > 0 
+            ? (attendedCount / totalRegistrations) * 100 
+            : 0;
+          
+          console.log(`Stats for ${event.name}: total=${totalRegistrations}, members=${memberRegistrations}, guests=${guestRegistrations}, invitees=${inviteeRegistrations}`);
+          
+          // Create event with comprehensive statistics
+          const eventData = {
+            id: event._id.toString(),
+            name: event.name,
+            description: event.description,
+            location: event.location,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            registrationStartDate: event.registrationStartDate,
+            registrationEndDate: event.registrationEndDate,
+            status: event.status,
+            maxAttendees: event.maxAttendees,
+            eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
+            allowGuests: event.allowGuests,
+            allowInvitees: event.allowInvitees,
+            requirePayment: event.requirePayment,
+            paymentAmount: event.paymentAmount,
+            paymentCurrency: event.paymentCurrency,
+            eventType: event.eventType,
+            eventImage: event.eventImage,
+            createdAt: event.createdAt,
+            organizationId: event.organizationId?.toString(),
+            createdBy: event.createdBy?.toString(),
+            // Add calculated statistics
+            totalRegistrations: totalRegistrations || 0,
+            memberRegistrations: memberRegistrations || 0,
+            guestRegistrations: guestRegistrations || 0,
+            inviteeRegistrations: inviteeRegistrations || 0,
+            attendanceRate: Math.round(attendanceRate * 10) / 10 // Round to 1 decimal
+          };
+          
+          console.log(`Event data for ${event.name}:`, {
+            totalRegistrations: eventData.totalRegistrations,
+            memberRegistrations: eventData.memberRegistrations,
+            guestRegistrations: eventData.guestRegistrations,
+            inviteeRegistrations: eventData.inviteeRegistrations
+          });
+          
+          eventsWithStats.push(eventData);
+        } catch (error) {
+          console.error(`Error processing event ${event.name}:`, error);
+          // Add event without stats if there's an error
+          eventsWithStats.push({
+            id: event._id.toString(),
+            name: event.name,
+            description: event.description,
+            location: event.location,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            registrationStartDate: event.registrationStartDate,
+            registrationEndDate: event.registrationEndDate,
+            status: event.status,
+            maxAttendees: event.maxAttendees,
+            eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
+            allowGuests: event.allowGuests,
+            allowInvitees: event.allowInvitees,
+            requirePayment: event.requirePayment,
+            paymentAmount: event.paymentAmount,
+            paymentCurrency: event.paymentCurrency,
+            eventType: event.eventType,
+            eventImage: event.eventImage,
+            createdAt: event.createdAt,
+            organizationId: event.organizationId?.toString(),
+            createdBy: event.createdBy?.toString(),
+            totalRegistrations: 0,
+            memberRegistrations: 0,
+            guestRegistrations: 0,
+            inviteeRegistrations: 0,
+            attendanceRate: 0
+          });
+        }
+      }
+      
+      console.log('*** FINAL EVENTS WITH COMPREHENSIVE STATS COUNT:', eventsWithStats.length);
+      console.log('*** SAMPLE EVENT WITH STATS:', eventsWithStats[0] ? {
+        name: eventsWithStats[0].name,
+        totalRegistrations: eventsWithStats[0].totalRegistrations,
+        memberRegistrations: eventsWithStats[0].memberRegistrations
+      } : 'No events');
+      
+      res.json(eventsWithStats);
     } catch (error) {
       console.error("Error getting events:", error);
       res.status(500).json({ message: "Internal server error" });
