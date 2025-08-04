@@ -75,12 +75,17 @@ export default function EventTickets() {
 
   // Group tickets by category
   const ticketsByCategory = filteredTickets.reduce((acc, ticket) => {
-    if (!acc[ticket.category]) {
-      acc[ticket.category] = [];
+    const category = ticket.category || 'General';
+    if (!acc[category]) {
+      acc[category] = [];
     }
-    acc[ticket.category].push(ticket);
+    acc[category].push(ticket);
     return acc;
   }, {} as Record<string, TicketData[]>);
+  
+  console.log('Tickets data:', tickets);
+  console.log('Filtered tickets:', filteredTickets);
+  console.log('Tickets by category:', ticketsByCategory);
 
   const getStatusBadge = (status: string) => {
     switch (status) {

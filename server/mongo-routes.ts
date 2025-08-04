@@ -111,25 +111,39 @@ export function registerMongoRoutes(app: Express) {
   
   // Get events for organization (admin dashboard)
   app.get("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    console.log('*** DEBUG: GET /api/events route called with updated stats logic ***', new Date().toISOString());
+    
+    // Disable caching for this endpoint
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       const organizationId = req.user?.organizationId;
+      console.log('GET /api/events - Organization ID:', organizationId);
       
       // Get all events for this organization
       const events = await mongoStorage.getEvents();
+      console.log('Total events found:', events.length);
       const organizationEvents = events.filter(event => 
         event.organizationId?.toString() === organizationId
       );
+      console.log('Organization events found:', organizationEvents.length);
       
       // Calculate registration statistics for each event
-      const eventsWithStats = await Promise.all(
-        organizationEvents.map(async (event) => {
-          const eventId = event._id?.toString();
+      const eventsWithStats = [];
+      
+      for (const event of organizationEvents) {
+        try {
+          const eventId = (event as any)._id?.toString();
+          console.log(`Processing event: ${event.name} (${eventId})`);
           
           // Get registrations for this event
           const registrations = await mongoStorage.getEventRegistrations(eventId || '');
+          console.log(`Found ${registrations.length} registrations for ${event.name}`);
           
           // Get tickets for this event (if ticket-based)
-          let tickets = [];
+          let tickets: any[] = [];
           if (event.eventType === 'ticket') {
             try {
               tickets = await mongoStorage.getTickets({ eventId: eventId || '' });
@@ -166,9 +180,11 @@ export function registerMongoRoutes(app: Express) {
             ? (attendedCount / totalRegistrations) * 100 
             : 0;
           
-          return {
-            id: event._id?.toString(),
-            ...event.toObject(),
+          console.log(`Stats for ${event.name}: total=${totalRegistrations}, members=${memberRegistrations}, guests=${guestRegistrations}, invitees=${inviteeRegistrations}`);
+          
+          eventsWithStats.push({
+            id: (event as any)._id?.toString(),
+            ...(event as any).toObject(),
             organizationId: event.organizationId?.toString(),
             createdBy: event.createdBy?.toString(),
             totalRegistrations,
@@ -176,9 +192,23 @@ export function registerMongoRoutes(app: Express) {
             guestRegistrations,
             inviteeRegistrations,
             attendanceRate: Math.round(attendanceRate * 10) / 10 // Round to 1 decimal
-          };
-        })
-      );
+          });
+        } catch (error) {
+          console.error(`Error processing event ${event.name}:`, error);
+          // Add event without stats if there's an error
+          eventsWithStats.push({
+            id: (event as any)._id?.toString(),
+            ...(event as any).toObject(),
+            organizationId: event.organizationId?.toString(),
+            createdBy: event.createdBy?.toString(),
+            totalRegistrations: 0,
+            memberRegistrations: 0,
+            guestRegistrations: 0,
+            inviteeRegistrations: 0,
+            attendanceRate: 0
+          });
+        }
+      }
       
       res.json(eventsWithStats);
     } catch (error) {
