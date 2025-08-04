@@ -281,6 +281,26 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Global reports endpoint
+  app.get("/api/reports", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      console.log('GET /api/reports - Organization ID:', organizationId);
+      
+      // Get all reports for this organization
+      const allReports = await mongoStorage.getAllEventReports();
+      const organizationReports = allReports.filter(report => 
+        report.organizationId?.toString() === organizationId
+      );
+      
+      console.log(`Found ${organizationReports.length} reports for organization ${organizationId}`);
+      res.json(organizationReports);
+    } catch (error) {
+      console.error('Error fetching all reports:', error);
+      res.status(500).json({ message: "Failed to fetch reports" });
+    }
+  });
+
   // Event reports endpoints
   app.get("/api/events/:eventId/reports", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
