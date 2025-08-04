@@ -2818,6 +2818,119 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // ================ TICKET RETRIEVAL API ================
+  
+  // Get ticket by ID
+  app.get("/api/tickets/:ticketId", async (req: Request, res: Response) => {
+    try {
+      const { ticketId } = req.params;
+      
+      if (!ticketId) {
+        return res.status(400).json({ message: "Ticket ID is required" });
+      }
+
+      // Try to get ticket by ID first
+      let ticket = await mongoStorage.getTicketById(ticketId);
+      
+      // If not found by ID, try by ticket number
+      if (!ticket) {
+        ticket = await mongoStorage.getTicketByNumber(ticketId);
+      }
+      
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEvent(ticket.eventId.toString());
+      
+      // Return ticket with event details
+      res.json({
+        id: ticket._id?.toString(),
+        ticketNumber: ticket.ticketNumber,
+        eventId: ticket.eventId?.toString(),
+        organizationId: ticket.organizationId?.toString(),
+        ownerEmail: ticket.ownerEmail,
+        ownerPhone: ticket.ownerPhone,
+        ownerName: ticket.ownerName,
+        category: ticket.category,
+        price: ticket.price,
+        currency: ticket.currency,
+        status: ticket.status,
+        paymentStatus: ticket.paymentStatus,
+        paymentReference: ticket.paymentReference,
+        paymentMethod: ticket.paymentMethod,
+        qrCode: ticket.qrCode,
+        qrCodeImage: ticket.qrCodeImage,
+        validatedAt: ticket.validatedAt,
+        validatedBy: ticket.validatedBy?.toString(),
+        transferHistory: ticket.transferHistory || [],
+        createdAt: ticket.createdAt,
+        updatedAt: ticket.updatedAt,
+        event: event ? {
+          id: event._id?.toString(),
+          name: event.name,
+          description: event.description,
+          location: event.location,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          status: event.status
+        } : null
+      });
+    } catch (error) {
+      console.error("Error getting ticket:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get tickets for a specific event (for admin dashboard)
+  app.get("/api/events/:eventId/tickets", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { eventId } = req.params;
+      const organizationId = req.user?.organizationId;
+      
+      if (!eventId) {
+        return res.status(400).json({ message: "Event ID is required" });
+      }
+
+      // Verify event belongs to organization
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      if (event.organizationId.toString() !== organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get all tickets for this event
+      const tickets = await mongoStorage.getTickets({ eventId });
+      
+      // Format tickets for frontend
+      const formattedTickets = tickets.map(ticket => ({
+        id: ticket._id?.toString(),
+        ticketNumber: ticket.ticketNumber,
+        ownerEmail: ticket.ownerEmail,
+        ownerPhone: ticket.ownerPhone,
+        ownerName: ticket.ownerName,
+        category: ticket.category,
+        price: ticket.price,
+        currency: ticket.currency,
+        status: ticket.status,
+        paymentStatus: ticket.paymentStatus,
+        paymentMethod: ticket.paymentMethod,
+        validatedAt: ticket.validatedAt,
+        createdAt: ticket.createdAt,
+        transferHistory: ticket.transferHistory || []
+      }));
+
+      res.json(formattedTickets);
+    } catch (error) {
+      console.error("Error getting event tickets:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // ================ QR CODE VALIDATION API ================
   // Note: Main /api/validate-id endpoint is defined above to handle all validation methods
 }
