@@ -1373,33 +1373,47 @@ export function registerMongoRoutes(app: Express) {
         return res.status(404).json({ message: "Event not found" });
       }
 
+      // Check if ticket is already paid
+      if (ticket.paymentStatus === 'paid') {
+        return res.status(400).json({ message: "Ticket is already paid" });
+      }
+
       // Initialize Paystack payment
       const { initializePaystackPayment } = await import('./paystack');
+      const { nanoid } = await import('nanoid');
       
       const reference = `TKT_${Date.now()}_${nanoid(8)}`;
+      const amount = ticket.price * 100; // Convert to kobo
       
-      const paymentData = await initializePaystackPayment({
-        email: ticket.ownerEmail,
-        amount: ticket.price * 100, // Convert to kobo
+      const paymentData = await initializePaystackPayment(
+        ticket.ownerEmail,
+        amount,
         reference,
-        currency: ticket.currency,
-        metadata: {
+        {
           ticketId: ticket._id.toString(),
           eventId: ticket.eventId.toString(),
           eventName: event.name,
           ticketNumber: ticket.ticketNumber,
           type: 'ticket_purchase'
         }
-      });
+      );
 
       if (paymentData.status) {
+        // Update ticket with payment reference
+        await mongoStorage.updateTicket(ticket._id.toString(), {
+          paymentReference: reference
+        });
+
         res.json({
           success: true,
           authorization_url: paymentData.data.authorization_url,
           reference: paymentData.data.reference
         });
       } else {
-        res.status(400).json({ message: "Payment initialization failed" });
+        console.error("Payment initialization failed:", paymentData);
+        res.status(400).json({ 
+          message: paymentData.message || "Payment initialization failed" 
+        });
       }
     } catch (error) {
       console.error("Ticket payment initialization error:", error);
@@ -1510,6 +1524,84 @@ export function registerMongoRoutes(app: Express) {
     } catch (error) {
       console.error('Manual payment verification error:', error);
       res.status(500).json({ message: "Payment verification failed" });
+    }
+  });
+
+  // Manual payment verification for tickets
+  app.post("/api/tickets/verify-manual", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { ticketId, status = 'paid' } = req.body;
+
+      if (!ticketId) {
+        return res.status(400).json({ message: "Ticket ID is required" });
+      }
+
+      // Get ticket details first
+      const ticket = await mongoStorage.getTicketById(ticketId);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      // Generate QR code data and image for manual payments when status is paid
+      let updateData: any = {
+        paymentStatus: status,
+        paymentMethod: 'manual',
+        status: status === 'paid' ? 'paid' : 'pending'
+      };
+
+      if (status === 'paid') {
+        // Generate QR code data for the paid ticket
+        const qrData = {
+          ticketId: ticket._id.toString(),
+          ticketNumber: ticket.ticketNumber,
+          eventId: ticket.eventId.toString(),
+          timestamp: Date.now()
+        };
+
+        const QRCode = await import('qrcode');
+        const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData), {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
+
+        updateData.qrCodeImage = qrCodeImage;
+      }
+
+      // Update ticket payment status
+      const updatedTicket = await mongoStorage.updateTicket(ticketId, updateData);
+
+      if (!updatedTicket) {
+        return res.status(404).json({ message: "Failed to update ticket" });
+      }
+
+      // Get event details for notification
+      const event = await mongoStorage.getEventById(updatedTicket.eventId.toString());
+      if (event && status === 'paid') {
+        // Send payment notification
+        await NotificationService.createPaymentNotification(
+          event.organizationId.toString(),
+          event._id.toString(),
+          updatedTicket.price || 0,
+          updatedTicket.currency || 'NGN',
+          updatedTicket.ownerName,
+          'ticket_purchase'
+        );
+      }
+
+      res.json({ 
+        message: `Ticket payment ${status} successfully`,
+        ticket: {
+          id: updatedTicket._id.toString(),
+          ...updatedTicket.toObject()
+        }
+      });
+    } catch (error) {
+      console.error('Manual ticket payment verification error:', error);
+      res.status(500).json({ message: "Ticket payment verification failed" });
     }
   });
 
@@ -1674,6 +1766,7 @@ export function registerMongoRoutes(app: Express) {
         paymentStatus: paymentMethod === "manual" ? "pending" : "pending",
         paymentMethod,
         qrCode: qrCodeImage,
+        qrCodeImage: paymentMethod === "manual" ? qrCodeImage : undefined, // Provide QR image for manual payments immediately
         transferHistory: []
       };
 

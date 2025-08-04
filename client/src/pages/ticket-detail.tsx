@@ -72,7 +72,10 @@ export default function TicketDetail() {
 
   // Generate QR code when ticket data is available
   useEffect(() => {
-    if (ticket?.qrCode) {
+    // Check if we have a pre-generated QR code image first
+    if (ticket?.qrCodeImage) {
+      setQrCodeDataUrl(ticket.qrCodeImage);
+    } else if (ticket?.qrCode) {
       QRCode.toDataURL(ticket.qrCode, {
         width: 300,
         margin: 2,
@@ -84,7 +87,7 @@ export default function TicketDetail() {
         .then((url) => setQrCodeDataUrl(url))
         .catch((err) => console.error("Error generating QR code:", err));
     }
-  }, [ticket?.qrCode]);
+  }, [ticket?.qrCode, ticket?.qrCodeImage]);
 
   const transferTicketMutation = useMutation({
     mutationFn: async (data: TransferTicketData) => {
@@ -152,7 +155,9 @@ export default function TicketDetail() {
     try {
       // Generate QR code for the download
       let qrDataUrl = qrCodeDataUrl;
-      if (!qrDataUrl && ticket.qrCode) {
+      if (!qrDataUrl && ticket.qrCodeImage) {
+        qrDataUrl = ticket.qrCodeImage;
+      } else if (!qrDataUrl && ticket.qrCode) {
         qrDataUrl = await QRCode.toDataURL(ticket.qrCode, {
           width: 300,
           margin: 2,
@@ -161,6 +166,15 @@ export default function TicketDetail() {
             light: "#FFFFFF",
           },
         });
+      }
+
+      if (!qrDataUrl) {
+        toast({
+          title: "QR Code Missing",
+          description: "Cannot generate PDF without QR code. Please contact support.",
+          variant: "destructive",
+        });
+        return;
       }
 
       // Create a temporary container for the ticket
@@ -177,7 +191,7 @@ export default function TicketDetail() {
           <div style="font-size: 32px; font-weight: bold; color: #1f2937; margin-bottom: 15px;">🎫 Digital Ticket</div>
           <div style="font-size: 24px; color: #374151; margin-bottom: 10px;">${event.name}</div>
           <div style="font-size: 18px; background: #f3f4f6; padding: 8px 16px; border-radius: 20px; display: inline-block;">
-            ${ticket.ticketType} Ticket
+            ${ticket.category} Ticket
           </div>
         </div>
         

@@ -149,9 +149,9 @@ export function LandingPage() {
 
       const data = await response.json();
       
-      if (data.authorizationUrl) {
+      if (data.authorization_url) {
         // Redirect to Paystack
-        window.location.href = data.authorizationUrl;
+        window.location.href = data.authorization_url;
       } else {
         throw new Error('Payment initialization failed');
       }
