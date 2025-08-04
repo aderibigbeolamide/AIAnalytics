@@ -1512,11 +1512,36 @@ export function registerMongoRoutes(app: Express) {
           // Handle ticket purchase payment
           const ticketId = metadata.ticketId;
           
-          // Update ticket payment status
+          // Get the ticket first to access its data
+          const ticket = await mongoStorage.getTicketById(ticketId);
+          if (!ticket) {
+            return res.redirect("/payment/failed?error=ticket_not_found");
+          }
+
+          // Generate QR code image for the ticket
+          const qrCodeData = JSON.stringify({
+            ticketId: ticket._id.toString(),
+            ticketNumber: ticket.ticketNumber,
+            eventId: ticket.eventId.toString(),
+            timestamp: Date.now()
+          });
+          
+          const QRCode = await import('qrcode');
+          const qrImageBase64 = await QRCode.toDataURL(qrCodeData, {
+            width: 200,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          });
+
+          // Update ticket payment status and add QR code image
           const updatedTicket = await mongoStorage.updateTicket(ticketId, {
             paymentStatus: 'paid',
             paymentReference: paymentReference as string,
-            status: 'paid'
+            status: 'paid',
+            qrCodeImage: qrImageBase64
           });
 
           if (updatedTicket) {
@@ -1534,8 +1559,9 @@ export function registerMongoRoutes(app: Express) {
               );
             }
 
-            // Redirect to ticket success page
-            return res.redirect(`/payment/success?type=ticket&ticketId=${ticketId}`);
+            // Redirect to ticket success page with QR code
+            const encodedQRCode = encodeURIComponent(qrImageBase64);
+            return res.redirect(`/payment/success?type=ticket&ticketId=${ticketId}&ticketNumber=${encodeURIComponent(updatedTicket.ticketNumber)}&qrCode=${encodedQRCode}&eventName=${encodeURIComponent(event?.name || 'Event')}&ownerName=${encodeURIComponent(updatedTicket.ownerName)}`);
           }
         } else if (metadata.type === 'event_registration' && metadata.registrationId) {
           // Handle event registration payment
@@ -1803,6 +1829,7 @@ export function registerMongoRoutes(app: Express) {
         ownerName: ticket.ownerName,
         ownerEmail: ticket.ownerEmail,
         qrCode: ticket.qrCode,
+        qrCodeImage: ticket.qrCodeImage,
         event: {
           id: event._id.toString(),
           name: event.name,

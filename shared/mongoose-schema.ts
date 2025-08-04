@@ -402,6 +402,7 @@ export interface ITicket extends Document {
   paymentReference?: string;
   paymentMethod?: string;
   qrCode: string;
+  qrCodeImage?: string; // Base64 encoded QR code image
   validatedAt?: Date;
   validatedBy?: mongoose.Types.ObjectId;
   transferHistory: Array<{
@@ -429,6 +430,7 @@ const TicketSchema = new Schema<ITicket>({
   paymentReference: { type: String },
   paymentMethod: { type: String },
   qrCode: { type: String, required: true },
+  qrCodeImage: { type: String }, // Base64 encoded QR code image
   validatedAt: { type: Date },
   validatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   transferHistory: [{ type: Schema.Types.Mixed }],
