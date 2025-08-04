@@ -236,6 +236,90 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Get event registration counts (separate endpoint for compatibility)
+  app.get("/api/events/:eventId/registration-counts", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const eventId = req.params.eventId;
+      console.log('Getting registration counts for event:', eventId);
+      
+      // Get registrations for this event
+      const registrations = await mongoStorage.getEventRegistrations(eventId);
+      console.log(`Found ${registrations.length} registrations for event ${eventId}`);
+      
+      // Get event to check if it's ticket-based
+      const event = await mongoStorage.getEventById(eventId);
+      
+      let counts;
+      if (event?.eventType === 'ticket') {
+        // For ticket events, get tickets and calculate stats
+        const tickets = await mongoStorage.getTickets({ eventId });
+        counts = {
+          totalRegistrations: tickets.length,
+          memberCount: tickets.filter(ticket => ticket.paymentStatus === 'completed').length, // Paid tickets
+          guestCount: tickets.filter(ticket => ticket.paymentStatus === 'pending').length, // Pending payment tickets  
+          inviteeCount: tickets.filter(ticket => ticket.paymentStatus === 'failed').length, // Failed payment tickets
+          attendedCount: tickets.filter(ticket => ticket.status === 'used').length,
+          registeredCount: tickets.filter(ticket => ticket.status === 'active').length,
+        };
+      } else {
+        // For registration events, count registrations by type
+        counts = {
+          totalRegistrations: registrations.length,
+          memberCount: registrations.filter(r => r.registrationType === 'member').length,
+          guestCount: registrations.filter(r => r.registrationType === 'guest').length,
+          inviteeCount: registrations.filter(r => r.registrationType === 'invitee').length,
+          attendedCount: registrations.filter(r => r.status === 'attended').length,
+          registeredCount: registrations.filter(r => r.status === 'registered').length,
+        };
+      }
+      
+      console.log('Registration counts:', counts);
+      res.json(counts);
+    } catch (error) {
+      console.error('Error fetching event registration counts:', error);
+      res.status(500).json({ message: "Failed to fetch registration counts" });
+    }
+  });
+
+  // Event reports endpoints
+  app.get("/api/events/:eventId/reports", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const eventId = req.params.eventId;
+      const reports = await mongoStorage.getEventReports(eventId);
+      res.json(reports);
+    } catch (error) {
+      console.error('Error fetching event reports:', error);
+      res.status(500).json({ message: "Failed to fetch reports" });
+    }
+  });
+
+  app.post("/api/events/:eventId/reports", async (req: Request, res: Response) => {
+    try {
+      const eventId = req.params.eventId;
+      const { name, email, phone, reportType, message } = req.body;
+      
+      // Validate required fields
+      if (!name || !reportType || !message) {
+        return res.status(400).json({ message: "Name, report type, and message are required" });
+      }
+      
+      const report = await mongoStorage.createEventReport({
+        eventId,
+        reporterName: name,
+        reporterEmail: email,
+        reporterPhone: phone,
+        reportType,
+        message,
+        status: 'pending'
+      });
+      
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Failed to submit report:", error);
+      res.status(400).json({ message: "Failed to submit report" });
+    }
+  });
+
   // Create event
   app.post("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
