@@ -2050,49 +2050,7 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
-  // Get ticket details (public endpoint for verification)
-  app.get("/api/tickets/:ticketId", async (req: Request, res: Response) => {
-    try {
-      const { ticketId } = req.params;
-      
-      const ticket = await mongoStorage.getTicket(ticketId);
-      if (!ticket) {
-        return res.status(404).json({ message: "Ticket not found" });
-      }
-
-      // Get event details
-      const event = await mongoStorage.getEvent(ticket.eventId.toString());
-      if (!event) {
-        return res.status(404).json({ message: "Event not found" });
-      }
-
-      res.json({
-        id: ticket._id.toString(),
-        ticketNumber: ticket.ticketNumber,
-        category: ticket.category,
-        price: ticket.price,
-        currency: ticket.currency,
-        status: ticket.status,
-        paymentStatus: ticket.paymentStatus,
-        ownerName: ticket.ownerName,
-        ownerEmail: ticket.ownerEmail,
-        qrCode: ticket.qrCode,
-        qrCodeImage: ticket.qrCodeImage,
-        event: {
-          id: event._id.toString(),
-          name: event.name,
-          location: event.location,
-          startDate: event.startDate,
-          endDate: event.endDate
-        },
-        createdAt: ticket.createdAt,
-        validatedAt: ticket.validatedAt
-      });
-    } catch (error) {
-      console.error("Get ticket error:", error);
-      res.status(500).json({ message: "Failed to get ticket" });
-    }
-  });
+  // Duplicate route removed - using the improved version below at line 3072
 
   // QR Code Scanning and Validation Endpoints
   app.post("/api/scan", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
@@ -3077,8 +3035,17 @@ export function registerMongoRoutes(app: Express) {
         return res.status(400).json({ message: "Ticket ID is required" });
       }
 
-      // Try to get ticket by ID first
-      let ticket = await mongoStorage.getTicketById(ticketId);
+      // Try to get ticket by ID first (only if it looks like an ObjectId)
+      let ticket = null;
+      
+      // Check if ticketId looks like a valid ObjectId (24 hex characters)
+      if (/^[a-f\d]{24}$/i.test(ticketId)) {
+        try {
+          ticket = await mongoStorage.getTicketById(ticketId);
+        } catch (error) {
+          console.log('Failed to get ticket by ID, trying by number...');
+        }
+      }
       
       // If not found by ID, try by ticket number
       if (!ticket) {

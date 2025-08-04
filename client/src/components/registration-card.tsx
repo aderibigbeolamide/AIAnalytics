@@ -226,10 +226,11 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
             <QrCode className="h-5 w-5" />
             Your Registration QR Code
           </h3>
-          {(qrImageBase64 || registration.qrImage || registration.qrImageBase64) ? (
+          {(qrImageBase64 || registration.qrCode || registration.qrImage || registration.qrImageBase64) ? (
             <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
               <img 
                 src={qrImageBase64 ? `data:image/png;base64,${qrImageBase64}` : 
+                     registration.qrCode || 
                      registration.qrImage || 
                      (registration.qrImageBase64 ? `data:image/png;base64,${registration.qrImageBase64}` : '')} 
                 alt="Registration QR Code" 

@@ -117,7 +117,7 @@ export default function PaymentSuccess() {
               ${type === 'ticket' ? `<p><strong>Category:</strong> ${data?.category || 'N/A'}</p>` : ''}
             </div>
             <div style="text-align: center; margin-top: 20px;">
-              ${(data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')) ? `<img src="${data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')}" style="width: 150px; height: 150px;" />` : '<p style="color: #999;">QR Code not available</p>'}
+              ${(data?.qrCode || data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')) ? `<img src="${data?.qrCode || data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')}" style="width: 150px; height: 150px;" />` : '<p style="color: #999;">QR Code not available</p>'}
               <p style="font-size: 12px; color: #666; margin-top: 10px;">Scan this QR code for verification</p>
             </div>
           </div>
@@ -290,13 +290,13 @@ export default function PaymentSuccess() {
             {/* QR Code */}
             <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-lg border">
               <h4 className="font-medium mb-4">Your Registration QR Code</h4>
-              {(data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')) ? (
+              {(data?.qrCode || data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')) ? (
                 <img 
-                  src={data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')} 
+                  src={data?.qrCode || data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')} 
                   alt="QR Code" 
                   className="w-48 h-48 mx-auto mb-4"
                   onError={(e) => {
-                    console.error('QR Code image failed to load');
+                    console.error('QR Code image failed to load:', e);
                     e.currentTarget.style.display = 'none';
                   }}
                 />
