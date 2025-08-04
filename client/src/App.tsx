@@ -90,7 +90,7 @@ function Router() {
       <Route path="/payment/failed" component={PaymentFailed} />
       <Route path="/buy-ticket/:eventId" component={BuyTicket} />
       <Route path="/ticket/:ticketId" component={TicketDetail} />
-      <Route path="/my-payments" component={lazy(() => import("./pages/my-payments"))} />
+
       <Route path="/login" component={OrganizationLogin} />
       <Route path="/register" component={OrganizationRegister} />
       <Route path="/organization-register" component={OrganizationRegister} />
