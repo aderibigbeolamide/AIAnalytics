@@ -60,11 +60,13 @@ export default function EventTickets() {
 
   // Filter tickets based on search and status
   const filteredTickets = tickets.filter((ticket) => {
+    if (!ticket) return false;
+    
     const matchesSearch = 
-      ticket.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.category.toLowerCase().includes(searchTerm.toLowerCase());
+      (ticket.ticketNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ticket.ownerEmail || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ticket.ownerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ticket.category || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
 

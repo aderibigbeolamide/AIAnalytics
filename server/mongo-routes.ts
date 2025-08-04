@@ -109,6 +109,84 @@ export function registerMongoRoutes(app: Express) {
 
   // ================ EVENT MANAGEMENT ================
   
+  // Get events for organization (admin dashboard)
+  app.get("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      
+      // Get all events for this organization
+      const events = await mongoStorage.getEvents();
+      const organizationEvents = events.filter(event => 
+        event.organizationId?.toString() === organizationId
+      );
+      
+      // Calculate registration statistics for each event
+      const eventsWithStats = await Promise.all(
+        organizationEvents.map(async (event) => {
+          const eventId = event._id?.toString();
+          
+          // Get registrations for this event
+          const registrations = await mongoStorage.getEventRegistrations(eventId || '');
+          
+          // Get tickets for this event (if ticket-based)
+          let tickets = [];
+          if (event.eventType === 'ticket') {
+            try {
+              tickets = await mongoStorage.getTickets({ eventId: eventId || '' });
+              console.log(`Event ${event.name} (${eventId}): Found ${tickets.length} tickets`);
+            } catch (error) {
+              console.error(`Error getting tickets for event ${eventId}:`, error);
+              tickets = [];
+            }
+          }
+          
+          // Calculate registration statistics
+          const totalRegistrations = event.eventType === 'ticket' 
+            ? tickets.length 
+            : registrations.length;
+            
+          const memberRegistrations = event.eventType === 'ticket' 
+            ? 0 // Tickets don't have member/guest distinction
+            : registrations.filter(reg => reg.registrationType === 'member').length;
+            
+          const guestRegistrations = event.eventType === 'ticket' 
+            ? 0 
+            : registrations.filter(reg => reg.registrationType === 'guest').length;
+            
+          const inviteeRegistrations = event.eventType === 'ticket' 
+            ? 0 
+            : registrations.filter(reg => reg.registrationType === 'invitee').length;
+          
+          // Calculate attendance rate
+          const attendedCount = event.eventType === 'ticket'
+            ? tickets.filter(ticket => ticket.status === 'used').length
+            : registrations.filter(reg => reg.status === 'attended').length;
+            
+          const attendanceRate = totalRegistrations > 0 
+            ? (attendedCount / totalRegistrations) * 100 
+            : 0;
+          
+          return {
+            id: event._id?.toString(),
+            ...event.toObject(),
+            organizationId: event.organizationId?.toString(),
+            createdBy: event.createdBy?.toString(),
+            totalRegistrations,
+            memberRegistrations,
+            guestRegistrations,
+            inviteeRegistrations,
+            attendanceRate: Math.round(attendanceRate * 10) / 10 // Round to 1 decimal
+          };
+        })
+      );
+      
+      res.json(eventsWithStats);
+    } catch (error) {
+      console.error("Error getting events:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Create event
   app.post("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
