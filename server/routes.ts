@@ -446,90 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard stats route
-  app.get("/api/dashboard/stats", authenticateToken, async (req: AuthenticatedRequest, res) => {
-    try {
-      const attendanceStats = await storage.getAttendanceStats();
-      const events = await storage.getEvents();
-      const members = await storage.getMembers();
-      const allRegistrations = await storage.getEventRegistrations();
-      
-      // Count unique members from registrations (both members and guests)
-      const uniqueRegisteredMembers = new Set();
-      allRegistrations.forEach(reg => {
-        if (reg.memberId) {
-          uniqueRegisteredMembers.add(reg.memberId);
-        } else {
-          // For guests/invitees, use email as unique identifier
-          uniqueRegisteredMembers.add(reg.guestEmail);
-        }
-      });
-      
-      // Calculate auxiliary body statistics
-      const auxiliaryBodyStats: Record<string, any> = {};
-      
-      // Count members by auxiliary body
-      members.forEach(member => {
-        if (member.auxiliaryBody) {
-          if (!auxiliaryBodyStats[member.auxiliaryBody]) {
-            auxiliaryBodyStats[member.auxiliaryBody] = {
-              totalMembers: 0,
-              registrations: 0,
-              attendedEvents: 0,
-              activeMembers: 0
-            };
-          }
-          auxiliaryBodyStats[member.auxiliaryBody].totalMembers++;
-          if (member.status === 'active') {
-            auxiliaryBodyStats[member.auxiliaryBody].activeMembers++;
-          }
-        }
-      });
-      
-      // Count registrations by auxiliary body
-      allRegistrations.forEach(reg => {
-        const auxBody = reg.guestAuxiliaryBody;
-        if (auxBody) {
-          if (!auxiliaryBodyStats[auxBody]) {
-            auxiliaryBodyStats[auxBody] = {
-              totalMembers: 0,
-              registrations: 0,
-              attendedEvents: 0,
-              activeMembers: 0
-            };
-          }
-          auxiliaryBodyStats[auxBody].registrations++;
-          if (reg.status === 'attended') {
-            auxiliaryBodyStats[auxBody].attendedEvents++;
-          }
-        }
-      });
-      
-      // Calculate registration type distribution
-      const registrationTypeStats = {
-        members: allRegistrations.filter(r => r.registrationType === 'member').length,
-        guests: allRegistrations.filter(r => r.registrationType === 'guest').length,
-        invitees: allRegistrations.filter(r => r.registrationType === 'invitee').length,
-      };
-      
-      const stats = {
-        ...attendanceStats,
-        totalMembers: members.length,
-        totalRegistrations: allRegistrations.length,
-        uniqueRegisteredMembers: uniqueRegisteredMembers.size,
-        activeEvents: events.filter(e => e.status === 'active').length,
-        totalEvents: events.length,
-        activeMembers: members.filter(m => m.status === 'active').length,
-        auxiliaryBodyStats,
-        registrationTypeStats,
-      };
-      
-      res.json(stats);
-    } catch (error) {
-      console.error('Dashboard stats error:', error);
-      res.status(500).json({ message: "Failed to fetch stats" });
-    }
-  });
+
 
   // Get event registration counts
   app.get("/api/events/:eventId/registration-counts", authenticateToken, async (req: AuthenticatedRequest, res) => {
@@ -2175,21 +2092,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard stats
+  // Dashboard stats (simplified for MongoDB)
   app.get("/api/dashboard/stats", authenticateToken, async (req, res) => {
     try {
       const attendanceStats = await storage.getAttendanceStats();
-      const totalMembers = (await storage.getMembers()).length;
-      const activeEvents = (await storage.getEvents({ status: "active" })).length;
-      const totalRegistrations = (await storage.getEventRegistrations()).length;
-
-      res.json({
-        totalMembers,
-        activeEvents,
-        totalRegistrations,
+      const events = await storage.getEvents();
+      const members = await storage.getMembers();
+      const allRegistrations = await storage.getEventRegistrations();
+      
+      // Calculate registration type distribution
+      const registrationTypeStats = {
+        members: allRegistrations.filter(r => r.registrationType === 'member').length,
+        guests: allRegistrations.filter(r => r.registrationType === 'guest').length,
+        invitees: allRegistrations.filter(r => r.registrationType === 'invitee').length,
+      };
+      
+      const stats = {
         ...attendanceStats,
-      });
+        totalMembers: members.length.toString(),
+        totalRegistrations: allRegistrations.length.toString(),
+        activeEvents: events.filter(e => e.status === 'active').length.toString(),
+        totalEvents: events.length.toString(),
+        activeMembers: members.filter(m => m.status === 'active').length.toString(),
+        registrationTypeStats,
+      };
+      
+      res.json(stats);
     } catch (error) {
+      console.error('Dashboard stats error:', error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });

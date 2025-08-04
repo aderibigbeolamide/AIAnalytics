@@ -742,6 +742,37 @@ export class MongoStorage implements IMongoStorage {
       return null;
     }
   }
+
+  // Attendance Stats method
+  async getAttendanceStats(): Promise<{ totalScans: number; validationRate: number; scansToday: number }> {
+    try {
+      const collection = mongoose.connection.db.collection('attendance');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const totalScans = await collection.countDocuments({});
+      const scansToday = await collection.countDocuments({
+        scannedAt: { $gte: today }
+      });
+      
+      // Calculate validation rate based on successful scans vs total registrations
+      const totalRegistrations = await EventRegistration.countDocuments({});
+      const validationRate = totalRegistrations > 0 ? Math.round((totalScans / totalRegistrations) * 100) : 0;
+      
+      return {
+        totalScans,
+        validationRate,
+        scansToday
+      };
+    } catch (error) {
+      console.error('Error getting attendance stats:', error);
+      return {
+        totalScans: 0,
+        validationRate: 0,
+        scansToday: 0
+      };
+    }
+  }
 }
 
 export const mongoStorage = new MongoStorage();
