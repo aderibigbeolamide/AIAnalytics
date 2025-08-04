@@ -688,6 +688,60 @@ export class MongoStorage implements IMongoStorage {
       throw error;
     }
   }
+
+  // Event Reports methods
+  async createEventReport(report: any): Promise<any> {
+    try {
+      const reportData = {
+        ...report,
+        createdAt: new Date(),
+        id: new mongoose.Types.ObjectId().toString()
+      };
+      
+      const collection = mongoose.connection.db.collection('event_reports');
+      const result = await collection.insertOne(reportData);
+      return { ...reportData, _id: result.insertedId };
+    } catch (error) {
+      console.error('Error creating event report:', error);
+      throw error;
+    }
+  }
+
+  async getEventReports(eventId?: string): Promise<any[]> {
+    try {
+      const collection = mongoose.connection.db.collection('event_reports');
+      const query = eventId ? { eventId } : {};
+      return await collection.find(query).sort({ createdAt: -1 }).toArray();
+    } catch (error) {
+      console.error('Error getting event reports:', error);
+      return [];
+    }
+  }
+
+  async getAllEventReports(): Promise<any[]> {
+    try {
+      const collection = mongoose.connection.db.collection('event_reports');
+      return await collection.find({}).sort({ createdAt: -1 }).toArray();
+    } catch (error) {
+      console.error('Error getting all event reports:', error);
+      return [];
+    }
+  }
+
+  async updateEventReport(id: string, updates: any): Promise<any | null> {
+    try {
+      const collection = mongoose.connection.db.collection('event_reports');
+      const result = await collection.findOneAndUpdate(
+        { _id: new mongoose.Types.ObjectId(id) },
+        { $set: { ...updates, updatedAt: new Date() } },
+        { returnDocument: 'after' }
+      );
+      return result.value;
+    } catch (error) {
+      console.error('Error updating event report:', error);
+      return null;
+    }
+  }
 }
 
 export const mongoStorage = new MongoStorage();

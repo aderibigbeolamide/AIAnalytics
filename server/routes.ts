@@ -1951,7 +1951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/events/:eventId/reports", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
-      const eventId = parseInt(req.params.eventId);
+      const eventId = req.params.eventId; // Keep as string for MongoDB ObjectId
       const reports = await storage.getEventReports(eventId);
       res.json(reports);
     } catch (error) {
@@ -1961,8 +1961,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/events/:eventId/reports", async (req: Request, res) => {
     try {
-      const eventId = parseInt(req.params.eventId);
+      const eventId = req.params.eventId; // Keep as string for MongoDB ObjectId
       const { name, email, phone, reportType, message } = req.body;
+      
+      // Validate required fields
+      if (!name || !reportType || !message) {
+        return res.status(400).json({ message: "Name, report type, and message are required" });
+      }
       
       const report = await storage.createEventReport({
         eventId,
@@ -1976,6 +1981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(report);
     } catch (error) {
+      console.error("Failed to submit report:", error);
       res.status(400).json({ message: "Failed to submit report" });
     }
   });

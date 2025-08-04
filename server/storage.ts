@@ -1325,5 +1325,11 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Switch to DatabaseStorage for PostgreSQL or MemStorage for in-memory fallback
-export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();
+// Switch storage based on environment
+import { mongoStorage } from "./mongodb-storage";
+
+export const storage = process.env.DATABASE_URL 
+  ? new DatabaseStorage() 
+  : process.env.MONGO_URI || process.env.MONGODB_URI
+    ? mongoStorage 
+    : new MemStorage();
