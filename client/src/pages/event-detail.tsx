@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar, MapPin, Users, QrCode, User, Share, Copy, FileText, Camera, Upload, Eye, Trash2 } from "lucide-react";
+import { Calendar, MapPin, Users, QrCode, User, Share, Copy, FileText, Camera, Upload, Eye, Trash2, Ticket } from "lucide-react";
 import { useAuthStore, getAuthHeaders } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -43,7 +43,17 @@ export default function EventDetail() {
       const response = await apiRequest("GET", `/api/events/${id}/registrations`);
       return response.json();
     },
-    enabled: !!id,
+    enabled: !!id && event?.eventType !== "ticket",
+  });
+
+  // Fetch tickets for ticket-based events
+  const { data: tickets = [] } = useQuery<any[]>({
+    queryKey: ["/api/events", id, "tickets"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/events/${id}/tickets`);
+      return response.json();
+    },
+    enabled: !!id && event?.eventType === "ticket",
   });
 
   const deleteRegistrationMutation = useMutation({
@@ -214,7 +224,96 @@ export default function EventDetail() {
         size="large"
       />
 
-      {registrations && registrations.length > 0 && (
+      {/* Registration/Ticket Data Display */}
+      {event?.eventType === "ticket" && tickets && tickets.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ticket className="h-5 w-5" />
+                Ticket Purchasers ({tickets.length})
+              </div>
+              <div className="flex gap-4 text-sm">
+                <span className="text-green-600">
+                  Paid: {tickets.filter(t => t.paymentStatus === 'completed').length}
+                </span>
+                <span className="text-yellow-600">
+                  Pending: {tickets.filter(t => t.paymentStatus === 'pending').length}
+                </span>
+                <span className="text-red-600">
+                  Failed: {tickets.filter(t => t.paymentStatus === 'failed').length}
+                </span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 font-medium">Ticket #</th>
+                    <th className="text-left p-2 font-medium">Name</th>
+                    <th className="text-left p-2 font-medium">Category</th>
+                    <th className="text-left p-2 font-medium">Payment Status</th>
+                    <th className="text-left p-2 font-medium">Price</th>
+                    <th className="text-left p-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tickets.map((ticket: any) => (
+                    <tr key={ticket.id} className="border-b">
+                      <td className="p-2">
+                        <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                          {ticket.ticketNumber}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        <div>
+                          <span className="font-medium">{ticket.ownerName}</span>
+                          <div className="text-sm text-muted-foreground">{ticket.ownerEmail}</div>
+                        </div>
+                      </td>
+                      <td className="p-2">
+                        <Badge variant="outline">
+                          {ticket.category || 'General'}
+                        </Badge>
+                      </td>
+                      <td className="p-2">
+                        <Badge 
+                          variant={
+                            ticket.paymentStatus === 'completed' ? 'default' : 
+                            ticket.paymentStatus === 'pending' ? 'secondary' : 'destructive'
+                          }
+                          className={
+                            ticket.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                            ticket.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }
+                        >
+                          {ticket.paymentStatus}
+                        </Badge>
+                      </td>
+                      <td className="p-2">
+                        <span className="text-sm">
+                          {ticket.currency} {ticket.price}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        <Badge variant={ticket.status === "used" ? "default" : "secondary"}>
+                          {ticket.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Traditional Registration Events */}
+      {event?.eventType !== "ticket" && registrations && registrations.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
