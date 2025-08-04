@@ -1858,10 +1858,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reports endpoints
   app.get("/api/reports", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
-      // Get all reports with event information
-      const reports = await storage.getAllEventReports();
+      // Import mongoStorage to use MongoDB operations
+      const { mongoStorage } = await import("./mongodb-storage");
+      const reports = await mongoStorage.getAllEventReports();
       res.json(reports);
     } catch (error) {
+      console.error("Failed to fetch reports:", error);
       res.status(500).json({ message: "Failed to fetch reports" });
     }
   });
@@ -1869,9 +1871,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/events/:eventId/reports", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
       const eventId = req.params.eventId; // Keep as string for MongoDB ObjectId
-      const reports = await storage.getEventReports(eventId);
+      const { mongoStorage } = await import("./mongodb-storage");
+      const reports = await mongoStorage.getEventReports(eventId);
       res.json(reports);
     } catch (error) {
+      console.error("Failed to fetch reports:", error);
       res.status(500).json({ message: "Failed to fetch reports" });
     }
   });
@@ -1886,7 +1890,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Name, report type, and message are required" });
       }
       
-      const report = await storage.createEventReport({
+      const { mongoStorage } = await import("./mongodb-storage");
+      const report = await mongoStorage.createEventReport({
         eventId,
         reporterName: name,
         reporterEmail: email,
@@ -1905,7 +1910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/reports/:id", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
     try {
-      const reportId = parseInt(req.params.id);
+      const reportId = req.params.id; // Keep as string for MongoDB ObjectId
       const { status, reviewNotes } = req.body;
       
       if (!status) {
@@ -1922,7 +1927,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updates.reviewNotes = reviewNotes;
       }
       
-      const updatedReport = await storage.updateEventReport(reportId, updates);
+      const { mongoStorage } = await import("./mongodb-storage");
+      const updatedReport = await mongoStorage.updateEventReport(reportId, updates);
       
       if (!updatedReport) {
         return res.status(404).json({ message: "Report not found" });
@@ -1930,6 +1936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedReport);
     } catch (error) {
+      console.error("Failed to update report:", error);
       res.status(500).json({ message: "Failed to update report" });
     }
   });

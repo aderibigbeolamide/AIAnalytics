@@ -698,7 +698,11 @@ export class MongoStorage implements IMongoStorage {
         id: new mongoose.Types.ObjectId().toString()
       };
       
-      const collection = mongoose.connection.db.collection('event_reports');
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Database connection not established');
+      }
+      const collection = db.collection('event_reports');
       const result = await collection.insertOne(reportData);
       return { ...reportData, _id: result.insertedId };
     } catch (error) {
@@ -709,7 +713,11 @@ export class MongoStorage implements IMongoStorage {
 
   async getEventReports(eventId?: string): Promise<any[]> {
     try {
-      const collection = mongoose.connection.db.collection('event_reports');
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Database connection not established');
+      }
+      const collection = db.collection('event_reports');
       const query = eventId ? { eventId } : {};
       return await collection.find(query).sort({ createdAt: -1 }).toArray();
     } catch (error) {
@@ -720,7 +728,11 @@ export class MongoStorage implements IMongoStorage {
 
   async getAllEventReports(): Promise<any[]> {
     try {
-      const collection = mongoose.connection.db.collection('event_reports');
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Database connection not established');
+      }
+      const collection = db.collection('event_reports');
       return await collection.find({}).sort({ createdAt: -1 }).toArray();
     } catch (error) {
       console.error('Error getting all event reports:', error);
@@ -730,13 +742,17 @@ export class MongoStorage implements IMongoStorage {
 
   async updateEventReport(id: string, updates: any): Promise<any | null> {
     try {
-      const collection = mongoose.connection.db.collection('event_reports');
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Database connection not established');
+      }
+      const collection = db.collection('event_reports');
       const result = await collection.findOneAndUpdate(
         { _id: new mongoose.Types.ObjectId(id) },
         { $set: { ...updates, updatedAt: new Date() } },
         { returnDocument: 'after' }
       );
-      return result.value;
+      return result ? result.value : null;
     } catch (error) {
       console.error('Error updating event report:', error);
       return null;
