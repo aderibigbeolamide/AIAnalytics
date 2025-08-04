@@ -339,6 +339,16 @@ export default function Events() {
                                 Scan Tickets
                               </Button>
                             </Link>
+                            <Link href={`/events/${event.id}/tickets`}>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700"
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                            </Link>
                             <Button 
                               variant="outline" 
                               size="sm"

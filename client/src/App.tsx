@@ -41,6 +41,7 @@ import SuperAdminLogin from "@/pages/super-admin-login";
 import OrganizationLogin from "@/pages/organization-login";
 import OrganizationProfile from "@/pages/organization-profile";
 import SuperAdminChat from "@/pages/super-admin-chat";
+import EventTickets from "@/pages/event-tickets";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage, initializeSessionManagement } = useAuthStore();
@@ -167,6 +168,11 @@ function Router() {
             </ProtectedRoute>
           );
         }}
+      </Route>
+      <Route path="/events/:eventId/tickets">
+        <ProtectedRoute>
+          <EventTickets />
+        </ProtectedRoute>
       </Route>
       <Route path="/super-admin-chat/:sessionId">
         <ProtectedRoute>
