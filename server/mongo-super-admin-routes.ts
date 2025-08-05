@@ -212,15 +212,28 @@ export function registerMongoSuperAdminRoutes(app: Express) {
     try {
       const organizationId = req.params.id;
       
+      // Update organization status
       const updatedOrg = await mongoStorage.updateOrganization(organizationId, {
-        status: 'approved',
-        approvedBy: req.user!.id,
-        approvedAt: new Date()
+        status: 'approved'
       });
 
       if (!updatedOrg) {
         return res.status(404).json({ message: "Organization not found" });
       }
+
+      // Also update all users belonging to this organization to have 'active' status
+      const allUsers = await mongoStorage.getAllUsers();
+      const orgUsers = allUsers.filter(user => user.organizationId?.toString() === organizationId);
+      const updatedUsers = [];
+      
+      for (const user of orgUsers) {
+        const updatedUser = await mongoStorage.updateUser((user._id as any).toString(), { status: 'active' });
+        if (updatedUser) {
+          updatedUsers.push(updatedUser);
+        }
+      }
+
+      console.log(`Organization ${updatedOrg.name} approved. Updated ${updatedUsers.length} user(s) to active status.`);
 
       res.json({ 
         message: "Organization approved successfully",
@@ -229,7 +242,8 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           name: updatedOrg.name,
           status: updatedOrg.status,
           approvedAt: updatedOrg.approvedAt
-        }
+        },
+        usersUpdated: updatedUsers.length
       });
     } catch (error) {
       console.error("Error approving organization:", error);
@@ -243,14 +257,28 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       const organizationId = req.params.id;
       const { reason } = req.body;
       
+      // Update organization status
       const updatedOrg = await mongoStorage.updateOrganization(organizationId, {
-        status: 'rejected',
-        rejectionReason: reason || 'No reason provided'
+        status: 'rejected'
       });
 
       if (!updatedOrg) {
         return res.status(404).json({ message: "Organization not found" });
       }
+
+      // Also update all users belonging to this organization to have 'suspended' status
+      const allUsers = await mongoStorage.getAllUsers();
+      const orgUsers = allUsers.filter(user => user.organizationId?.toString() === organizationId);
+      const updatedUsers = [];
+      
+      for (const user of orgUsers) {
+        const updatedUser = await mongoStorage.updateUser((user._id as any).toString(), { status: 'suspended' });
+        if (updatedUser) {
+          updatedUsers.push(updatedUser);
+        }
+      }
+
+      console.log(`Organization ${updatedOrg.name} rejected. Updated ${updatedUsers.length} user(s) to suspended status.`);
 
       res.json({ 
         message: "Organization rejected successfully",
@@ -259,10 +287,93 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           name: updatedOrg.name,
           status: updatedOrg.status,
           rejectionReason: updatedOrg.rejectionReason
-        }
+        },
+        usersUpdated: updatedUsers.length
       });
     } catch (error) {
       console.error("Error rejecting organization:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update user status
+  app.patch("/api/super-admin/users/:id/status", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.params.id;
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      const updatedUser = await mongoStorage.updateUser(userId, { status });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ 
+        message: "User status updated successfully",
+        user: {
+          id: (updatedUser._id as any).toString(),
+          username: updatedUser.username,
+          status: updatedUser.status
+        }
+      });
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Sync user statuses with organization statuses
+  app.post("/api/super-admin/sync-user-statuses", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const allUsers = await mongoStorage.getAllUsers();
+      const allOrganizations = await mongoStorage.getOrganizations();
+      
+      let updatedCount = 0;
+      const updateResults = [];
+      
+      for (const user of allUsers) {
+        if (user.organizationId && user.status === 'pending_approval') {
+          const orgId = (user.organizationId as any).toString();
+          const organization = allOrganizations.find(org => (org._id as any).toString() === orgId);
+          
+          if (organization) {
+            let newStatus = user.status;
+            
+            if (organization.status === 'approved') {
+              newStatus = 'active';
+            } else if (organization.status === 'rejected') {
+              newStatus = 'suspended';
+            }
+            
+            if (newStatus !== user.status) {
+              const updatedUser = await mongoStorage.updateUser((user._id as any).toString(), { status: newStatus });
+              if (updatedUser) {
+                updatedCount++;
+                updateResults.push({
+                  username: user.username,
+                  oldStatus: user.status,
+                  newStatus: newStatus,
+                  organizationName: organization.name,
+                  organizationStatus: organization.status
+                });
+                console.log(`Synced user ${user.username} from ${user.status} to ${newStatus} based on org ${organization.name} status: ${organization.status}`);
+              }
+            }
+          }
+        }
+      }
+      
+      res.json({ 
+        message: `Successfully synchronized ${updatedCount} user statuses`,
+        updatedCount,
+        updates: updateResults
+      });
+    } catch (error) {
+      console.error("Error syncing user statuses:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
