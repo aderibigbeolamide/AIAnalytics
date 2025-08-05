@@ -362,6 +362,8 @@ export function registerMongoRoutes(app: Express) {
     try {
       console.log('Creating event with user:', req.user);
       console.log('User ID:', req.user!.id, 'Org ID:', req.user?.organizationId);
+      console.log('DEBUG: Event creation request body:', JSON.stringify(req.body, null, 2));
+      console.log('DEBUG: eventImage from request:', req.body.eventImage);
       
       // Validate ObjectId strings before conversion
       if (!req.user!.id || !mongoose.Types.ObjectId.isValid(req.user!.id)) {
@@ -379,8 +381,13 @@ export function registerMongoRoutes(app: Express) {
         createdAt: new Date(),
         status: req.body.status || 'upcoming'
       };
+      
+      console.log('DEBUG: eventData before saving:', JSON.stringify(eventData, null, 2));
+      console.log('DEBUG: eventData.eventImage:', eventData.eventImage);
 
       const event = await mongoStorage.createEvent(eventData);
+      console.log('DEBUG: Event created in database:', JSON.stringify(event.toObject(), null, 2));
+      console.log('DEBUG: Created event eventImage field:', event.eventImage);
       
       res.status(201).json({
         id: event._id?.toString(),
