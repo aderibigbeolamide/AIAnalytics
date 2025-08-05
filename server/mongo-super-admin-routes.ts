@@ -206,6 +206,20 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           console.error(`Error getting registrations for event ${event.name}:`, error);
         }
         
+        // Calculate dynamic status based on current date
+        const now = new Date();
+        const startDate = new Date(event.startDate);
+        const endDate = new Date(event.endDate);
+        let dynamicStatus = 'upcoming';
+        
+        if (now > endDate) {
+          dynamicStatus = 'completed';
+        } else if (now >= startDate && now <= endDate) {
+          dynamicStatus = 'active';
+        } else if (event.status === 'cancelled') {
+          dynamicStatus = 'cancelled';
+        }
+
         return {
           id: event._id.toString(),
           name: event.name,
@@ -213,7 +227,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           location: event.location,
           startDate: event.startDate,
           endDate: event.endDate,
-          status: event.status,
+          status: dynamicStatus,
           organizationId: event.organizationId.toString(),
           organizationName: organization?.name || 'Unknown Organization',
           createdBy: event.createdBy.toString(),
