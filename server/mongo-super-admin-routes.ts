@@ -162,47 +162,89 @@ export function registerMongoSuperAdminRoutes(app: Express) {
     }
   });
 
-  // Get all events
+  // Get all events with comprehensive oversight data
   app.get("/api/super-admin/events", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       
       const allEvents = await mongoStorage.getEvents();
+      const allOrganizations = await mongoStorage.getOrganizations();
+      const allUsers = await mongoStorage.getAllUsers();
       
-      const events = allEvents.map(event => ({
-        id: event._id.toString(),
-        name: event.name,
-        description: event.description,
-        location: event.location,
-        startDate: event.startDate,
-        endDate: event.endDate,
-        status: event.status,
-        organizationId: event.organizationId.toString(),
-        createdBy: event.createdBy.toString(),
-        maxAttendees: event.maxAttendees,
-        eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
-        allowGuests: event.allowGuests,
-        allowInvitees: event.allowInvitees,
-        createdAt: event.createdAt
+      // Build comprehensive events data with organizer and stats
+      const eventsWithData = await Promise.all(allEvents.map(async event => {
+        // Find organization for this event
+        const organization = allOrganizations.find(org => 
+          (org._id as any).toString() === (event.organizationId as any).toString()
+        );
+        
+        // Find creator user
+        const creator = allUsers.find(user => 
+          (user._id as any).toString() === (event.createdBy as any).toString()
+        );
+        
+        // Get registration statistics
+        let registrationCount = 0;
+        let attendanceCount = 0;
+        
+        try {
+          // Get registrations for this event
+          const registrations = await mongoStorage.getEventRegistrations({ eventId: (event._id as any).toString() });
+          registrationCount = registrations.length;
+          attendanceCount = registrations.filter(reg => reg.status === 'attended').length;
+          
+          // For ticket-based events, also count tickets
+          if (event.isTicketBased) {
+            const tickets = await mongoStorage.getTickets({ eventId: (event._id as any).toString() });
+            const paidTickets = tickets.filter(ticket => ticket.paymentStatus === 'paid');
+            registrationCount += paidTickets.length;
+            // Assume paid tickets are attended for now (could be enhanced with actual attendance tracking)
+            attendanceCount += paidTickets.length;
+          }
+        } catch (error) {
+          console.error(`Error getting registrations for event ${event.name}:`, error);
+        }
+        
+        return {
+          id: event._id.toString(),
+          name: event.name,
+          description: event.description,
+          location: event.location,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          status: event.status,
+          organizationId: event.organizationId.toString(),
+          organizationName: organization?.name || 'Unknown Organization',
+          createdBy: event.createdBy.toString(),
+          creatorName: creator ? `${creator.firstName || ''} ${creator.lastName || ''}`.trim() || creator.username : 'Unknown User',
+          maxAttendees: event.maxAttendees,
+          registrationCount,
+          attendanceCount,
+          isTicketBased: event.isTicketBased || false,
+          eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
+          allowGuests: event.allowGuests,
+          allowInvitees: event.allowInvitees,
+          createdAt: event.createdAt
+        };
       }));
 
       // Simple pagination
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;
-      const paginatedEvents = events.slice(startIndex, endIndex);
+      const paginatedEvents = eventsWithData.slice(startIndex, endIndex);
 
       res.json({
         events: paginatedEvents,
         pagination: {
           page,
           limit,
-          total: events.length,
-          totalPages: Math.ceil(events.length / limit)
+          total: eventsWithData.length,
+          totalPages: Math.ceil(eventsWithData.length / limit)
         }
       });
     } catch (error) {
-      console.error("Error getting events:", error);
+      console.error("Error getting events with oversight data:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

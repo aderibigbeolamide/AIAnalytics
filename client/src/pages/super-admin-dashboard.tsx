@@ -695,19 +695,15 @@ export default function SuperAdminDashboard() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {event.creator ? (
-                          <div>
-                            <div className="font-medium">
-                              {event.creator.firstName} {event.creator.lastName}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {event.creator.businessName || `@${event.creator.username}`}
-                            </div>
+                      <TableCell className="hidden md:table-cell">
+                        <div>
+                          <div className="font-medium">
+                            {event.organizationName || 'Unknown Organization'}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">Unknown</span>
-                        )}
+                          <div className="text-sm text-muted-foreground">
+                            {event.creatorName || 'Unknown User'}
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge 
@@ -721,16 +717,13 @@ export default function SuperAdminDashboard() {
                           {event.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{event.registrationCount}</TableCell>
-                      <TableCell>
-                        {event.attendedCount} / {event.registrationCount}
-                        {event.registrationCount > 0 && (
-                          <div className="text-sm text-muted-foreground">
-                            {Math.round((event.attendedCount / event.registrationCount) * 100)}%
-                          </div>
-                        )}
+                      <TableCell className="hidden sm:table-cell">
+                        {event.registrationCount || 0}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {event.attendanceCount || 0}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         {new Date(event.createdAt).toLocaleDateString()}
                       </TableCell>
                     </TableRow>
