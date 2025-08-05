@@ -23,6 +23,24 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       const allOrganizations = await mongoStorage.getOrganizations();
       const allEvents = await mongoStorage.getEvents();
       const allMembers = await mongoStorage.getMembers();
+      
+      // Calculate total registrations and tickets across all events
+      let totalRegistrations = 0;
+      for (const event of allEvents) {
+        try {
+          // Get registrations for registration-based events
+          const registrations = await mongoStorage.getEventRegistrations((event._id as any).toString());
+          totalRegistrations += registrations.length;
+          
+          // Get tickets for ticket-based events
+          if (event.eventType === 'ticket') {
+            const tickets = await mongoStorage.getTickets({ eventId: (event._id as any).toString() });
+            totalRegistrations += tickets.length;
+          }
+        } catch (error) {
+          console.error(`Error counting registrations for event ${event.name}:`, error);
+        }
+      }
 
       // Calculate recent activity (last 30 days)
       const thirtyDaysAgo = new Date();
@@ -40,7 +58,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           totalEvents: allEvents.length,
           totalMembers: allMembers.length,
           totalAdmins: allUsers.filter(u => u.role === 'admin').length,
-          totalRegistrations: 0, // No registrations in current schema
+          totalRegistrations: totalRegistrations,
           activeUsers: allUsers.filter(u => u.status === 'active').length,
           approvedOrganizations: allOrganizations.filter(o => o.status === 'approved').length,
           upcomingEvents: allEvents.filter(e => e.status === 'upcoming').length,
@@ -53,9 +71,23 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           newMembers: recentMembers
         },
         events: {
-          active: allEvents.filter(e => e.status === 'active').length,
-          upcoming: allEvents.filter(e => e.status === 'upcoming').length,
-          completed: allEvents.filter(e => e.status === 'completed').length,
+          // Calculate dynamic status counts based on current date
+          active: allEvents.filter(e => {
+            const now = new Date();
+            const startDate = new Date(e.startDate);
+            const endDate = new Date(e.endDate);
+            return now >= startDate && now <= endDate && e.status !== 'cancelled';
+          }).length,
+          upcoming: allEvents.filter(e => {
+            const now = new Date();
+            const startDate = new Date(e.startDate);
+            return now < startDate && e.status !== 'cancelled';
+          }).length,
+          completed: allEvents.filter(e => {
+            const now = new Date();
+            const endDate = new Date(e.endDate);
+            return now > endDate && e.status !== 'cancelled';
+          }).length,
           cancelled: allEvents.filter(e => e.status === 'cancelled').length,
           draft: allEvents.filter(e => e.status === 'draft').length
         },
