@@ -285,8 +285,11 @@ export function EventForm({ onClose, event }: EventFormProps) {
       }
 
       const { url } = await response.json();
+      console.log('DEBUG: Image upload response URL:', url);
       setImagePreview(url);
       form.setValue('eventImage', url);
+      console.log('DEBUG: Updated imagePreview state to:', url);
+      console.log('DEBUG: Form eventImage value:', form.getValues('eventImage'));
 
       toast({
         title: "Success",
@@ -391,12 +394,15 @@ export function EventForm({ onClose, event }: EventFormProps) {
               <FormLabel>Event Image (Optional)</FormLabel>
               <FormControl>
                 <div className="space-y-4">
+                  {console.log('DEBUG: Rendering with imagePreview:', imagePreview)}
                   {imagePreview ? (
                     <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
                       <img 
                         src={imagePreview} 
                         alt="Event preview" 
                         className="w-full h-full object-cover"
+                        onLoad={() => console.log('DEBUG: Image loaded successfully:', imagePreview)}
+                        onError={(e) => console.error('DEBUG: Image failed to load:', imagePreview, e)}
                       />
                       <Button
                         type="button"
