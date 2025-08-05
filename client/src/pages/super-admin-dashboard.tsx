@@ -98,17 +98,14 @@ interface Event {
 }
 
 interface PendingOrganization {
-  id: number;
-  organizationName: string;
+  id: string;
+  name: string;
   contactEmail: string;
   contactPhone?: string;
-  adminUser: {
-    id: number;
-    username: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-  };
+  description?: string;
+  website?: string;
+  address?: string;
+  status: string;
   createdAt: string;
 }
 
@@ -313,23 +310,56 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleOrganizationApproval = async (userId: number) => {
-    try {
-      const response = await fetch(`/api/super-admin/organizations/${userId}/approve`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
-        },
+  // Organization approval mutation
+  const approveOrgMutation = useMutation({
+    mutationFn: async (orgId: string) => {
+      return apiRequest('POST', `/api/super-admin/organizations/${orgId}/approve`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Organization approved successfully"
       });
-
-      if (response.ok) {
-        refetchPendingOrgs();
-        refetchUsers();
-      }
-    } catch (error) {
-      console.error("Error approving organization:", error);
+      refetchPendingOrgs();
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve organization",
+        variant: "destructive"
+      });
     }
+  });
+
+  // Organization rejection mutation
+  const rejectOrgMutation = useMutation({
+    mutationFn: async ({ orgId, reason }: { orgId: string; reason: string }) => {
+      return apiRequest('POST', `/api/super-admin/organizations/${orgId}/reject`, { reason });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Organization rejected successfully"
+      });
+      refetchPendingOrgs();
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject organization",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleOrganizationApproval = (orgId: string) => {
+    approveOrgMutation.mutate(orgId);
+  };
+
+  const handleOrganizationRejection = (orgId: string, reason: string) => {
+    rejectOrgMutation.mutate({ orgId, reason });
   };
 
   if (!statistics) {
@@ -710,7 +740,7 @@ export default function SuperAdminDashboard() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="min-w-[150px]">Organization</TableHead>
-                        <TableHead className="hidden md:table-cell">Admin User</TableHead>
+                        <TableHead className="hidden md:table-cell">Details</TableHead>
                         <TableHead className="hidden sm:table-cell">Contact</TableHead>
                         <TableHead className="hidden lg:table-cell">Registered</TableHead>
                         <TableHead>Actions</TableHead>
@@ -720,16 +750,23 @@ export default function SuperAdminDashboard() {
                     {pendingOrganizations.organizations.map((org) => (
                       <TableRow key={org.id}>
                         <TableCell>
-                          <div className="font-medium">{org.organizationName}</div>
+                          <div className="font-medium">{org.name}</div>
+                          <Badge variant="outline" className="mt-1">
+                            {org.status}
+                          </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <div>
-                            <div className="font-medium text-sm">
-                              {org.adminUser.firstName} {org.adminUser.lastName}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              @{org.adminUser.username}
-                            </div>
+                            {org.description && (
+                              <div className="text-sm text-muted-foreground mb-1">
+                                {org.description.substring(0, 100)}...
+                              </div>
+                            )}
+                            {org.website && (
+                              <div className="text-xs text-blue-600">
+                                {org.website}
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
@@ -749,21 +786,27 @@ export default function SuperAdminDashboard() {
                           <div className="flex flex-col sm:flex-row gap-2">
                             <Button
                               size="sm"
-                              onClick={() => handleOrganizationApproval(org.adminUser.id)}
+                              onClick={() => handleOrganizationApproval(org.id)}
+                              disabled={approveOrgMutation.isPending}
                               className="w-full sm:w-auto"
                             >
                               <CheckCircle className="w-4 h-4 mr-2" />
-                              <span className="hidden sm:inline">Approve</span>
+                              <span className="hidden sm:inline">
+                                {approveOrgMutation.isPending ? 'Approving...' : 'Approve'}
+                              </span>
                               <span className="sm:hidden">✓</span>
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleUserStatusUpdate(org.adminUser.id, 'suspended')}
+                              onClick={() => handleOrganizationRejection(org.id, 'Rejected by super admin')}
+                              disabled={rejectOrgMutation.isPending}
                               className="w-full sm:w-auto"
                             >
                               <XCircle className="w-4 h-4 mr-2" />
-                              <span className="hidden sm:inline">Reject</span>
+                              <span className="hidden sm:inline">
+                                {rejectOrgMutation.isPending ? 'Rejecting...' : 'Reject'}
+                              </span>
                               <span className="sm:hidden">✗</span>
                             </Button>
                           </div>

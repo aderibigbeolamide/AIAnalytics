@@ -64,6 +64,7 @@ export default function OrganizationRegister() {
         website: formData.website || "",
         description: formData.description || "",
         adminUsername: formData.adminUsername,
+        adminEmail: formData.contactEmail, // Use contact email as admin email
         adminPassword: formData.adminPassword,
         adminFirstName: formData.adminFirstName,
         adminLastName: formData.adminLastName

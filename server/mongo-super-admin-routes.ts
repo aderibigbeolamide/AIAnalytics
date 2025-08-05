@@ -123,6 +123,11 @@ export function registerMongoSuperAdminRoutes(app: Express) {
         maxEvents: org.maxEvents,
         maxMembers: org.maxMembers,
         createdAt: org.createdAt,
+        updatedAt: org.updatedAt,
+        description: org.description,
+        contactPhone: org.contactPhone,
+        address: org.address,
+        website: org.website,
         approvedAt: org.approvedAt
       }));
 
@@ -136,7 +141,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
   // Get pending organizations
   app.get("/api/super-admin/pending-organizations", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const pendingOrganizations = await mongoStorage.getOrganizations({ status: 'pending' });
+      const pendingOrganizations = await mongoStorage.getOrganizations({ status: 'pending_approval' });
       
       const organizations = pendingOrganizations.map(org => ({
         id: org._id.toString(),
