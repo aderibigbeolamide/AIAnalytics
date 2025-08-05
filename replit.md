@@ -20,6 +20,7 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
 - **Added Manual Payment Verification**: Created endpoint for admin verification of manual ticket payments with automatic QR code generation
 - **Fixed Payment Display Issues**: Resolved frontend/backend authorization URL mismatch, QR code display issues, and PDF generation problems
 - **Confirmed Admin Payment Tracking**: Verified that admin dashboard properly tracks all user payments through event tickets and registration systems
+- **Implemented Event Reminder Notifications**: Created comprehensive reminder system with automatic email/in-app notifications sent 7 days, 3 days, 1 day, 24 hours, and 2 hours before events. Includes manual reminder controls for admins and statistics dashboard.
 
 ## System Architecture
 ### Frontend
@@ -46,6 +47,7 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
 - **Robust Authentication**: Implements JWT-based, role-based access control with secure password hashing.
 - **AI-Powered Features**: Includes AI-driven solutions such as a seat availability heatmap for real-time capacity visualization and an event recommendation engine for personalized suggestions.
 - **Notification System**: Provides real-time in-app notifications with broadcasting and targeted messaging.
+- **Event Reminder System**: Automated email and in-app reminders sent to event participants at configurable intervals (7 days, 3 days, 1 day, 24 hours, 2 hours before events).
 - **QR Code Management**: Handles secure generation, encryption, and validation of QR codes for event access.
 - **UI/UX Design**: Prioritizes a clean, professional, and accessible user interface with responsive design principles.
 - **Payment System**: Integrates with Paystack to support flexible payment rules, direct organizer payments via subaccounts, and platform revenue sharing.

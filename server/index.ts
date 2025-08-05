@@ -65,6 +65,10 @@ app.use((req, res, next) => {
   setupNotificationRoutes(app);
   setupChatbotRoutes(app);
   
+  // Register event reminder routes
+  const { registerEventReminderRoutes } = await import("./event-reminder-routes.js");
+  registerEventReminderRoutes(app);
+  
   // Create HTTP server directly since legacy routes disabled
   const server = createServer(app);
 
