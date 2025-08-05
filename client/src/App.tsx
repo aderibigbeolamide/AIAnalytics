@@ -43,6 +43,7 @@ import OrganizationProfile from "@/pages/organization-profile";
 import SuperAdminChat from "@/pages/super-admin-chat";
 import EventTickets from "@/pages/event-tickets";
 import EventRemindersPage from "@/pages/event-reminders";
+import { FacialRecognitionDemo } from "@/pages/FacialRecognitionDemo";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage, initializeSessionManagement } = useAuthStore();
@@ -101,6 +102,9 @@ function Router() {
       {/* Root and landing route always go to landing page */}
       <Route path="/" component={LandingPage} />
       <Route path="/landing" component={LandingPage} />
+      
+      {/* Demo routes - accessible to everyone */}
+      <Route path="/facial-recognition-demo" component={FacialRecognitionDemo} />
       
       {/* Protected routes - only accessible to authenticated users */}
       <Route path="/dashboard">

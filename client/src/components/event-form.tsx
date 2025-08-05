@@ -59,6 +59,15 @@ const eventSchema = z.object({
     email: z.string().email("Valid email is required"),
     post: z.string().optional(),
   })).optional(),
+  reminderSettings: z.object({
+    enabled: z.boolean().default(true),
+    days: z.array(z.number()).default([7, 3, 1]),
+    hours: z.array(z.number()).default([24, 2]),
+    customMessage: z.string().optional(),
+    emailEnabled: z.boolean().default(true),
+    inAppEnabled: z.boolean().default(true),
+    reminderTitle: z.string().optional(),
+  }).optional(),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -102,6 +111,15 @@ export function EventForm({ onClose, event }: EventFormProps) {
       customRegistrationFields: event?.customRegistrationFields || [],
       ticketCategories: event?.ticketCategories || [],
       invitations: event?.invitations || [],
+      reminderSettings: event?.reminderSettings || {
+        enabled: true,
+        days: [7, 3, 1],
+        hours: [24, 2],
+        customMessage: "",
+        emailEnabled: true,
+        inAppEnabled: true,
+        reminderTitle: "",
+      },
     },
   });
 
@@ -1050,6 +1068,200 @@ export function EventForm({ onClose, event }: EventFormProps) {
             </CardContent>
           </Card>
         )}
+
+        {/* Event Reminder Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Event Reminders</CardTitle>
+            <CardDescription>
+              Configure automatic reminders to be sent to event participants
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="reminderSettings.enabled"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Enable automatic reminders
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Send reminders to participants before the event starts
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            {form.watch("reminderSettings.enabled") && (
+              <div className="space-y-4 pl-6 border-l-2 border-gray-200">
+                <FormField
+                  control={form.control}
+                  name="reminderSettings.reminderTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reminder Title (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Don't forget about our event!" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="reminderSettings.customMessage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custom Reminder Message (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="e.g., We're excited to see you at our event! Please arrive 15 minutes early for check-in. Don't forget to bring your ID and any required documents."
+                          rows={4}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        This message will be included in all reminder notifications. Leave empty to use the default message.
+                      </p>
+                      {field.value && (
+                        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Preview:</p>
+                          <p className="text-sm text-gray-800 dark:text-gray-200">
+                            {field.value}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            + Event details (name, time, location) will be automatically added
+                          </p>
+                        </div>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <FormLabel className="text-sm font-medium">Notification Methods</FormLabel>
+                    
+                    <FormField
+                      control={form.control}
+                      name="reminderSettings.emailEnabled"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Email reminders</FormLabel>
+                            <p className="text-xs text-muted-foreground">
+                              Send reminder emails to participants
+                            </p>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="reminderSettings.inAppEnabled"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>In-app notifications</FormLabel>
+                            <p className="text-xs text-muted-foreground">
+                              Notify admins about upcoming events
+                            </p>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <FormLabel className="text-sm font-medium">Reminder Schedule</FormLabel>
+                    
+                    <div className="space-y-3">
+                      <FormField
+                        control={form.control}
+                        name="reminderSettings.days"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Days before event (separate with commas)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., 7, 3, 1" 
+                                value={field.value?.join(', ') || '7, 3, 1'}
+                                onChange={(e) => {
+                                  const days = e.target.value
+                                    .split(',')
+                                    .map(d => parseInt(d.trim()))
+                                    .filter(d => !isNaN(d) && d > 0)
+                                    .sort((a, b) => b - a); // Sort descending
+                                  field.onChange(days);
+                                }}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-muted-foreground">
+                              Enter days when reminders should be sent (e.g., 7, 3, 1 for 7 days, 3 days, and 1 day before)
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="reminderSettings.hours"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Hours before event (separate with commas)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., 24, 6, 2" 
+                                value={field.value?.join(', ') || '24, 2'}
+                                onChange={(e) => {
+                                  const hours = e.target.value
+                                    .split(',')
+                                    .map(h => parseInt(h.trim()))
+                                    .filter(h => !isNaN(h) && h > 0 && h <= 72)
+                                    .sort((a, b) => b - a); // Sort descending
+                                  field.onChange(hours);
+                                }}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-muted-foreground">
+                              Enter hours when final reminders should be sent (max 72 hours, e.g., 24, 6, 2)
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Invitations Section */}
         <div className="space-y-4">

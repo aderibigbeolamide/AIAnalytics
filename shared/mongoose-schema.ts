@@ -254,6 +254,16 @@ export interface IEvent extends Document {
   isPrivate: boolean;
   qrCodeData?: string;
   csvData?: string;
+  // Event reminder settings
+  reminderSettings?: {
+    enabled: boolean;
+    days: number[]; // Days before event (e.g., [7, 3, 1])
+    hours: number[]; // Hours before event (e.g., [24, 2])
+    customMessage?: string;
+    emailEnabled: boolean;
+    inAppEnabled: boolean;
+    reminderTitle?: string;
+  };
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -289,6 +299,16 @@ const EventSchema = new Schema<IEvent>({
   isPrivate: { type: Boolean, required: true, default: false },
   qrCodeData: { type: String },
   csvData: { type: String },
+  // Event reminder settings
+  reminderSettings: {
+    enabled: { type: Boolean, default: true },
+    days: { type: [Number], default: [7, 3, 1] },
+    hours: { type: [Number], default: [24, 2] },
+    customMessage: { type: String },
+    emailEnabled: { type: Boolean, default: true },
+    inAppEnabled: { type: Boolean, default: true },
+    reminderTitle: { type: String },
+  },
   deletedAt: { type: Date },
 }, { timestamps: true });
 
