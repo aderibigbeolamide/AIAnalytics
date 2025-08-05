@@ -52,12 +52,20 @@ export class EventReminderService {
 
       console.log(`Processing reminders for event: ${event.name}, Days until event: ${daysDiff}, Hours until event: ${hoursDiff}`);
 
-      // Default reminder settings (can be customized per organization in the future)
+      // Use event-specific reminder settings or defaults
+      const eventReminderSettings = event.reminderSettings || {};
+      
+      // Skip processing if reminders are disabled for this event
+      if (eventReminderSettings.enabled === false) {
+        console.log(`Reminders disabled for event: ${event.name}`);
+        return;
+      }
+
       const reminderSettings: ReminderSettings = {
-        emailEnabled: true,
-        inAppEnabled: true,
-        beforeEventDays: [7, 3, 1], // 7 days, 3 days, 1 day before
-        beforeEventHours: [24, 2] // 24 hours, 2 hours before
+        emailEnabled: eventReminderSettings.emailEnabled !== false, // Default to true
+        inAppEnabled: eventReminderSettings.inAppEnabled !== false, // Default to true
+        beforeEventDays: eventReminderSettings.days || [7, 3, 1], // Use custom or default days
+        beforeEventHours: eventReminderSettings.hours || [24, 2] // Use custom or default hours
       };
 
       // Check if we should send day-based reminders
@@ -184,8 +192,17 @@ export class EventReminderService {
    */
   static async createReminderNotification(event: any, participant: any, timeRemaining: string, adminId: string) {
     try {
-      const title = `Event Reminder: ${event.name}`;
-      const message = `Reminder: ${event.name} starts in ${timeRemaining}. Location: ${event.location}`;
+      // Use custom reminder title if available
+      const customTitle = event.reminderSettings?.reminderTitle;
+      const defaultTitle = `Event Reminder: ${event.name}`;
+      const title = customTitle || defaultTitle;
+      
+      // Use custom message if available, otherwise default
+      const customMessage = event.reminderSettings?.customMessage;
+      const defaultMessage = `Reminder: ${event.name} starts in ${timeRemaining}. Location: ${event.location}`;
+      const message = customMessage 
+        ? `${customMessage}\n\nEvent: ${event.name}\nStarts in: ${timeRemaining}\nLocation: ${event.location}`
+        : defaultMessage;
 
       await NotificationService.createNotification({
         organizationId: event.organizationId._id.toString(),
@@ -200,7 +217,8 @@ export class EventReminderService {
           participantName: participant.name,
           timeRemaining,
           eventLocation: event.location,
-          eventStartDate: event.startDate
+          eventStartDate: event.startDate,
+          customReminderMessage: customMessage
         },
         priority: timeRemaining.includes('hour') ? 'high' : 'medium',
         category: 'events',
@@ -226,10 +244,15 @@ export class EventReminderService {
       
       const htmlContent = this.generateReminderEmailHTML(event, participant, timeRemaining, eventDate, eventTime);
       
+      // Use custom message if available
+      const customMessage = event.reminderSettings?.customMessage;
+      
       const textContent = `
 Hi ${participant.name},
 
 This is a friendly reminder that ${event.name} is starting in ${timeRemaining}.
+
+${customMessage ? `${customMessage}\n` : ''}
 
 Event Details:
 - Event: ${event.name}
