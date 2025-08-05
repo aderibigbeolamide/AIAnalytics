@@ -485,9 +485,9 @@ export default function SuperAdminDashboard() {
           <TabsTrigger value="organizations" className="relative text-xs md:text-sm">
             <span className="hidden sm:inline">Organization Approvals</span>
             <span className="sm:hidden">Orgs</span>
-            {pendingOrganizations && pendingOrganizations.total > 0 && (
+            {pendingOrganizations && pendingOrganizations.organizations && pendingOrganizations.organizations.length > 0 && (
               <Badge variant="destructive" className="ml-1 md:ml-2 px-1 md:px-1.5 py-0.5 text-xs">
-                {pendingOrganizations.total}
+                {pendingOrganizations.organizations.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -723,9 +723,9 @@ export default function SuperAdminDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 Organization Approvals
-                {pendingOrganizations && pendingOrganizations.total > 0 && (
+                {pendingOrganizations && pendingOrganizations.organizations && pendingOrganizations.organizations.length > 0 && (
                   <Badge variant="destructive">
-                    {pendingOrganizations.total} pending
+                    {pendingOrganizations.organizations.length} pending
                   </Badge>
                 )}
               </CardTitle>
