@@ -190,12 +190,12 @@ export function registerMongoSuperAdminRoutes(app: Express) {
         
         try {
           // Get registrations for this event
-          const registrations = await mongoStorage.getEventRegistrations({ eventId: (event._id as any).toString() });
+          const registrations = await mongoStorage.getEventRegistrations((event._id as any).toString());
           registrationCount = registrations.length;
           attendanceCount = registrations.filter(reg => reg.status === 'attended').length;
           
           // For ticket-based events, also count tickets
-          if (event.isTicketBased) {
+          if (event.eventType === 'ticket') {
             const tickets = await mongoStorage.getTickets({ eventId: (event._id as any).toString() });
             const paidTickets = tickets.filter(ticket => ticket.paymentStatus === 'paid');
             registrationCount += paidTickets.length;
@@ -221,7 +221,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           maxAttendees: event.maxAttendees,
           registrationCount,
           attendanceCount,
-          isTicketBased: event.isTicketBased || false,
+          isTicketBased: event.eventType === 'ticket',
           eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
           allowGuests: event.allowGuests,
           allowInvitees: event.allowInvitees,

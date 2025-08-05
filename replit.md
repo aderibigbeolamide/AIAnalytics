@@ -12,6 +12,7 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
 - Fixed landing page event card navigation issue: corrected `/event/${id}` to `/event-view/${id}` route
 - All workflows and dependencies confirmed working properly
 - MongoDB connection and auto-seeding functioning correctly
+- **Fixed Super Admin Event Oversight**: Resolved ObjectId casting errors and corrected function parameter calls for event registration counting
 - **Enhanced Event Statistics Display**: Updated event cards to show meaningful statistics for ticket-based events (Paid/Pending/Failed instead of Members/Guests/Invitees)
 - **Improved Ticket-Based Event Details**: Added comprehensive ticket purchaser view showing payment status, categories, and breakdown for ticket-based events
 - **Fixed Event Details API**: Updated backend to properly calculate and display ticket sales statistics on event cards
