@@ -32,7 +32,8 @@ import {
   Send,
   Bell,
   MessageSquare,
-  Megaphone
+  Megaphone,
+  FileText
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -174,6 +175,8 @@ export default function SuperAdminDashboard() {
   const [eventStatus, setEventStatus] = useState<string>("");
   const [broadcastDialogOpen, setBroadcastDialogOpen] = useState(false);
   const [orgMessageDialogOpen, setOrgMessageDialogOpen] = useState(false);
+  const [reviewOrgDialogOpen, setReviewOrgDialogOpen] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<PendingOrganization | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -360,6 +363,27 @@ export default function SuperAdminDashboard() {
 
   const handleOrganizationRejection = (orgId: string, reason: string) => {
     rejectOrgMutation.mutate({ orgId, reason });
+  };
+
+  const handleReviewOrganization = (org: PendingOrganization) => {
+    setSelectedOrg(org);
+    setReviewOrgDialogOpen(true);
+  };
+
+  const handleApproveFromReview = () => {
+    if (selectedOrg) {
+      handleOrganizationApproval(selectedOrg.id);
+      setReviewOrgDialogOpen(false);
+      setSelectedOrg(null);
+    }
+  };
+
+  const handleRejectFromReview = () => {
+    if (selectedOrg) {
+      handleOrganizationRejection(selectedOrg.id, 'Rejected after review');
+      setReviewOrgDialogOpen(false);
+      setSelectedOrg(null);
+    }
   };
 
   if (!statistics) {
@@ -750,7 +774,15 @@ export default function SuperAdminDashboard() {
                     {pendingOrganizations.organizations.map((org) => (
                       <TableRow key={org.id}>
                         <TableCell>
-                          <div className="font-medium">{org.name}</div>
+                          <div className="font-medium">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => handleReviewOrganization(org)}
+                            >
+                              {org.name}
+                            </Button>
+                          </div>
                           <Badge variant="outline" className="mt-1">
                             {org.status}
                           </Badge>
@@ -784,6 +816,16 @@ export default function SuperAdminDashboard() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleReviewOrganization(org)}
+                              className="w-full sm:w-auto"
+                            >
+                              <FileText className="w-4 h-4 mr-2" />
+                              <span className="hidden sm:inline">Review</span>
+                              <span className="sm:hidden">👁</span>
+                            </Button>
                             <Button
                               size="sm"
                               onClick={() => handleOrganizationApproval(org.id)}
@@ -827,6 +869,108 @@ export default function SuperAdminDashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Organization Review Dialog */}
+          <Dialog open={reviewOrgDialogOpen} onOpenChange={setReviewOrgDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Review Organization Application</DialogTitle>
+                <DialogDescription>
+                  Review the organization details before making an approval decision
+                </DialogDescription>
+              </DialogHeader>
+              
+              {selectedOrg && (
+                <div className="space-y-6">
+                  {/* Organization Basic Info */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">{selectedOrg.name}</h3>
+                      <div className="space-y-2 text-sm">
+                        <div>
+                          <span className="font-medium">Status: </span>
+                          <Badge variant="outline">{selectedOrg.status}</Badge>
+                        </div>
+                        <div>
+                          <span className="font-medium">Registered: </span>
+                          {new Date(selectedOrg.createdAt).toLocaleDateString()} at {new Date(selectedOrg.createdAt).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <span className="font-medium">Contact Email: </span>
+                        <span className="text-blue-600">{selectedOrg.contactEmail}</span>
+                      </div>
+                      {selectedOrg.contactPhone && (
+                        <div>
+                          <span className="font-medium">Phone: </span>
+                          {selectedOrg.contactPhone}
+                        </div>
+                      )}
+                      {selectedOrg.website && (
+                        <div>
+                          <span className="font-medium">Website: </span>
+                          <a href={selectedOrg.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                            {selectedOrg.website}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  {selectedOrg.description && (
+                    <div>
+                      <h4 className="font-medium mb-2">Description</h4>
+                      <p className="text-sm text-muted-foreground bg-gray-50 p-3 rounded">
+                        {selectedOrg.description || "No description provided"}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Address */}
+                  {selectedOrg.address && (
+                    <div>
+                      <h4 className="font-medium mb-2">Address</h4>
+                      <p className="text-sm text-muted-foreground bg-gray-50 p-3 rounded">
+                        {selectedOrg.address}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                    <Button
+                      onClick={handleApproveFromReview}
+                      disabled={approveOrgMutation.isPending}
+                      className="flex-1"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      {approveOrgMutation.isPending ? 'Approving...' : 'Approve Organization'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleRejectFromReview}
+                      disabled={rejectOrgMutation.isPending}
+                      className="flex-1"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      {rejectOrgMutation.isPending ? 'Rejecting...' : 'Reject Organization'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setReviewOrgDialogOpen(false)}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-4">
