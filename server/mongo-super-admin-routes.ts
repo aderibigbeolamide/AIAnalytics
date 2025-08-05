@@ -223,7 +223,10 @@ export function registerMongoSuperAdminRoutes(app: Express) {
 
       // Also update all users belonging to this organization to have 'active' status
       const allUsers = await mongoStorage.getAllUsers();
-      const orgUsers = allUsers.filter(user => user.organizationId?.toString() === organizationId);
+      const orgUsers = allUsers.filter(user => {
+        const userOrgId = user.organizationId ? (user.organizationId as any).toString() : null;
+        return userOrgId === organizationId;
+      });
       const updatedUsers = [];
       
       for (const user of orgUsers) {
@@ -268,7 +271,10 @@ export function registerMongoSuperAdminRoutes(app: Express) {
 
       // Also update all users belonging to this organization to have 'suspended' status
       const allUsers = await mongoStorage.getAllUsers();
-      const orgUsers = allUsers.filter(user => user.organizationId?.toString() === organizationId);
+      const orgUsers = allUsers.filter(user => {
+        const userOrgId = user.organizationId ? (user.organizationId as any).toString() : null;
+        return userOrgId === organizationId;
+      });
       const updatedUsers = [];
       
       for (const user of orgUsers) {
