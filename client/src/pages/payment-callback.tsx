@@ -148,10 +148,7 @@ export default function PaymentCallback() {
                 <p className="text-sm"><strong>Status:</strong> {paymentData?.status}</p>
                 {registrationData && (
                   <>
-                    {/* Only show Registration ID for non-secured events */}
-                    {(!registrationData.event || (registrationData.event.validationMethod !== 'secured' && registrationData.event.validationMethod !== 'qr_only')) && (
-                      <p className="text-sm"><strong>Registration ID:</strong> {registrationData.uniqueId || registrationData.id}</p>
-                    )}
+                    {/* Registration ID completely removed as it serves no purpose */}
                     <p className="text-sm"><strong>Name:</strong> {registrationData.guestName}</p>
                   </>
                 )}

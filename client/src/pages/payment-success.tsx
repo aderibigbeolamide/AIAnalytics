@@ -234,17 +234,7 @@ export default function PaymentSuccess() {
 
             {/* Ticket/Registration Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Only show Registration ID for ticket-based events, hide for secured registration events */}
-              {(isTicket || (data?.event?.validationMethod !== 'secured' && data?.event?.validationMethod !== 'qr_only')) && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {isTicket ? 'Ticket Number' : 'Registration ID'}
-                  </label>
-                  <div className="mt-1 font-mono text-lg font-semibold">
-                    {data?.ticketNumber || data?.uniqueId || data?.registrationId || 'N/A'}
-                  </div>
-                </div>
-              )}
+              {/* Registration ID completely removed as it serves no purpose */}
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
                 <div className="mt-1">
