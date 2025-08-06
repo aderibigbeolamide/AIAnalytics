@@ -1261,6 +1261,32 @@ export function registerMongoRoutes(app: Express) {
       const qrCode = nanoid(16);
       const paymentReference = `REG_${Date.now()}_${nanoid(8)}`;
 
+      // Helper function to split FullName into firstName and lastName  
+      const splitFullName = (fullName: string) => {
+        if (!fullName || typeof fullName !== 'string') return { firstName: '', lastName: '' };
+        const parts = fullName.trim().split(' ');
+        return {
+          firstName: parts[0] || '',
+          lastName: parts.slice(1).join(' ') || ''
+        };
+      };
+
+      // Extract firstName and lastName, handling FullName fields
+      let firstName = registrationData.firstName || registrationData.FirstName || '';
+      let lastName = registrationData.lastName || registrationData.LastName || '';
+      
+      // If we don't have both firstName and lastName but have a FullName field, split it
+      if ((!firstName || !lastName) && (registrationData.FullName || registrationData.fullName || registrationData.full_name)) {
+        const fullName = registrationData.FullName || registrationData.fullName || registrationData.full_name;
+        const splitName = splitFullName(fullName);
+        firstName = firstName || splitName.firstName;
+        lastName = lastName || splitName.lastName;
+      }
+      
+      // Ensure we always have at least empty strings for firstName and lastName
+      firstName = firstName || '';
+      lastName = lastName || '';
+
       // Create pending registration record first (like ticket creation)
       const registrationRecord = {
         eventId: new mongoose.Types.ObjectId(eventId),
@@ -1274,9 +1300,9 @@ export function registerMongoRoutes(app: Express) {
         paymentCurrency: 'NGN',
         attendanceStatus: 'registered',
         createdAt: new Date(),
-        // Extract standard fields from custom field data
-        firstName: registrationData.firstName || registrationData.FirstName || '',
-        lastName: registrationData.lastName || registrationData.LastName || '',
+        // Extract standard fields from custom field data with FullName handling
+        firstName,
+        lastName,
         email: registrationData.email || registrationData.Email || userEmail,
         phone: registrationData.phone || registrationData.Phone || '',
         // Store the complete registration data as required by schema
@@ -1297,6 +1323,16 @@ export function registerMongoRoutes(app: Express) {
               registrationRecord.firstName = fieldValue;
             } else if (field.name === 'lastName' || field.name === 'LastName') {
               registrationRecord.lastName = fieldValue;
+            } else if (field.name === 'FullName' || field.name === 'fullName' || field.name === 'full_name') {
+              // Handle FullName fields by splitting them
+              const splitName = splitFullName(fieldValue);
+              // Only overwrite if we don't already have better values
+              if (!registrationRecord.firstName || registrationRecord.firstName === '') {
+                registrationRecord.firstName = splitName.firstName;
+              }
+              if (!registrationRecord.lastName || registrationRecord.lastName === '') {
+                registrationRecord.lastName = splitName.lastName;
+              }
             } else if (field.name === 'email' || field.name === 'Email') {
               registrationRecord.email = fieldValue;
             } else if (field.name === 'phone' || field.name === 'Phone') {
