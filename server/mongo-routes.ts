@@ -825,8 +825,17 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
-      // Generate manual verification code (6-digit)
-      const manualVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      // Generate manual verification code - alphabetic for secured events, numeric for ticket-based events
+      let manualVerificationCode;
+      if (event.validationMethod === 'secured' || event.validationMethod === 'qr_only') {
+        // Generate 6-character alphabetic code for secured registration events
+        manualVerificationCode = Array.from({length: 6}, () => 
+          String.fromCharCode(65 + Math.floor(Math.random() * 26))
+        ).join('');
+      } else {
+        // Generate 6-digit numeric code for ticket-based events
+        manualVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      }
       registrationData.registrationData = {
         ...formData,
         manualVerificationCode
@@ -2110,8 +2119,18 @@ export function registerMongoRoutes(app: Express) {
               );
             }
 
-            // Generate a shorter manual verification code (6 digits)
-            const shortCode = Math.floor(100000 + Math.random() * 900000).toString();
+            // Generate manual verification code - alphabetic for secured events, numeric for others
+            let shortCode;
+            // Reuse the event variable that was already fetched above
+            if (event && (event.validationMethod === 'secured' || event.validationMethod === 'qr_only')) {
+              // Generate 6-character alphabetic code for secured registration events
+              shortCode = Array.from({length: 6}, () => 
+                String.fromCharCode(65 + Math.floor(Math.random() * 26))
+              ).join('');
+            } else {
+              // Generate 6-digit numeric code for ticket-based events
+              shortCode = Math.floor(100000 + Math.random() * 900000).toString();
+            }
             
             // Update registration with short verification code
             await mongoStorage.updateEventRegistration(registration._id.toString(), {

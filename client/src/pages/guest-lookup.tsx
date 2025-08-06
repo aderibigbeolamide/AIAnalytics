@@ -326,10 +326,13 @@ export default function GuestLookup() {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="font-medium text-gray-600">Registration ID</p>
-                            <p className="font-mono font-bold">{registration.uniqueId}</p>
-                          </div>
+                          {/* Only show Registration ID for non-secured events */}
+                          {registration.event.validationMethod !== 'secured' && registration.event.validationMethod !== 'qr_only' && (
+                            <div>
+                              <p className="font-medium text-gray-600">Registration ID</p>
+                              <p className="font-mono font-bold">{registration.uniqueId}</p>
+                            </div>
+                          )}
                           <div>
                             <p className="font-medium text-gray-600">Type</p>
                             <p className="capitalize">{registration.registrationType}</p>
