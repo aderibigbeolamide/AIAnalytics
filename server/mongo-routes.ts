@@ -930,6 +930,77 @@ export function registerMongoRoutes(app: Express) {
 
   // ================ FILE UPLOADS ================
   
+  // General image upload endpoint (used by event form)
+  app.post("/api/upload/image", authenticateToken, upload.single('image'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file uploaded" });
+      }
+
+      // Initialize file storage handler
+      const fileStorage = new FileStorageHandler();
+      await fileStorage.initialize();
+      
+      // Get folder from form data or default
+      const folder = req.body.folder || 'general';
+      
+      // Upload file to Cloudinary or local storage
+      const uploadedFile = await fileStorage.saveFile(req.file, folder);
+
+      res.json({
+        success: true,
+        url: uploadedFile.url,
+        publicId: uploadedFile.publicId || uploadedFile.filename,
+        message: "Image uploaded successfully"
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Upload event image
+  app.post("/api/events/:eventId/upload-image", authenticateToken, upload.single('eventImage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file uploaded" });
+      }
+
+      const eventId = req.params.eventId;
+      
+      // Initialize file storage handler
+      const fileStorage = new FileStorageHandler();
+      await fileStorage.initialize();
+      
+      // Upload file to Cloudinary or local storage
+      const uploadedFile = await fileStorage.saveFile(req.file, 'event-images');
+      
+      // Update event with image URL
+      const updatedEvent = await mongoStorage.updateEvent(eventId, {
+        eventImage: uploadedFile.url
+      });
+
+      if (!updatedEvent) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      res.json({
+        success: true,
+        message: "Event image uploaded successfully",
+        imageUrl: uploadedFile.url,
+        event: {
+          id: updatedEvent._id.toString(),
+          ...updatedEvent.toObject(),
+          organizationId: updatedEvent.organizationId?.toString(),
+          createdBy: updatedEvent.createdBy?.toString()
+        }
+      });
+    } catch (error) {
+      console.error("Error uploading event image:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Upload CSV file
   app.post("/api/events/:eventId/upload-csv", authenticateToken, upload.single('csvFile'), async (req: AuthenticatedRequest, res: Response) => {
     try {
