@@ -25,6 +25,7 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
 - **Implemented Event Reminder Notifications**: Created comprehensive reminder system with automatic email/in-app notifications sent 7 days, 3 days, 1 day, 24 hours, and 2 hours before events. Includes manual reminder controls for admins and statistics dashboard.
 - **Enhanced Configurable Event Reminders**: Updated event creation form to allow admins to fully customize reminder settings including specific days/hours before event, custom messages, notification methods (email/in-app), and reminder titles. Admins can now specify exactly when and how participants receive reminders.
 - **Updated Manual Verification and Registration ID Display** (August 6, 2025): Modified manual verification code generation to use alphabetic codes (A-Z) for secured registration events while keeping numeric codes for ticket-based events. Completely removed Registration ID display from all pages and event types as it serves no functional purpose, improving user interface clarity.
+- **Resolved Critical Registration and Validation Bug** (August 6, 2025): Fixed major issue where secured registration events were not properly saving user registrations to MongoDB and manual verification codes were stored incorrectly. Updated payment validation logic to properly handle "not_required" payment status for registration-based events. Registration and validation flow now working end-to-end for secured events.
 
 ## System Architecture
 ### Frontend

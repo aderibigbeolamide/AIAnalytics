@@ -743,8 +743,8 @@ export function registerMongoRoutes(app: Express) {
       let lastName = formData.lastName || formData.LastName || formData.guestLastName || '';
       
       // If we don't have both firstName and lastName but have a FullName field, split it
-      if ((!firstName || !lastName) && (formData.FullName || formData.fullName || formData.full_name)) {
-        const fullName = formData.FullName || formData.fullName || formData.full_name;
+      if ((!firstName || !lastName) && (formData.FullName || formData.fullName || formData.full_name || formData.Fullname)) {
+        const fullName = formData.FullName || formData.fullName || formData.full_name || formData.Fullname;
         const splitName = splitFullName(fullName);
         firstName = firstName || splitName.firstName;
         lastName = lastName || splitName.lastName;
@@ -757,7 +757,7 @@ export function registerMongoRoutes(app: Express) {
       console.log("Name processing result:", { 
         originalFirstName: formData.firstName, 
         originalLastName: formData.lastName, 
-        fullName: formData.FullName || formData.fullName || formData.full_name,
+        fullName: formData.FullName || formData.fullName || formData.full_name || formData.Fullname,
         finalFirstName: firstName, 
         finalLastName: lastName 
       });
@@ -794,7 +794,7 @@ export function registerMongoRoutes(app: Express) {
               registrationData.firstName = fieldValue;
             } else if (field.name === 'lastName' || field.name === 'LastName' || field.name === 'guestLastName') {
               registrationData.lastName = fieldValue;
-            } else if (field.name === 'FullName' || field.name === 'fullName' || field.name === 'full_name') {
+            } else if (field.name === 'FullName' || field.name === 'fullName' || field.name === 'full_name' || field.name === 'Fullname') {
               // Handle FullName fields by splitting them
               const splitName = splitFullName(fieldValue);
               // Only overwrite if we don't already have better values
@@ -836,6 +836,11 @@ export function registerMongoRoutes(app: Express) {
         // Generate 6-digit numeric code for ticket-based events
         manualVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
       }
+      
+      // Store manual verification code at root level for validation lookup
+      registrationData.manualVerificationCode = manualVerificationCode;
+      
+      // Also store in nested registrationData for compatibility
       registrationData.registrationData = {
         ...formData,
         manualVerificationCode
@@ -2443,7 +2448,7 @@ export function registerMongoRoutes(app: Express) {
         }
 
         // CRITICAL: Check payment status for paid events
-        if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid') {
+        if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid' && registration.paymentStatus !== 'not_required') {
           return res.json({
             validationStatus: "invalid",
             message: `Payment not completed. Status: ${registration.paymentStatus}`,
@@ -2606,7 +2611,7 @@ export function registerMongoRoutes(app: Express) {
       // Try to find as registration
       const registration = await mongoStorage.getEventRegistration(identifier);
       if (registration && registration.eventId.toString() === eventId) {
-        if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid') {
+        if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid' && registration.paymentStatus !== 'not_required') {
           return res.json({
             validationStatus: "invalid",
             message: `Payment not completed. Status: ${registration.paymentStatus}`
@@ -2758,7 +2763,7 @@ export function registerMongoRoutes(app: Express) {
       console.log(`Found event: ${event.name} (${event._id})`);
 
       // Check payment status for paid events
-      if (event.paymentSettings?.isPaymentRequired && registration.paymentStatus !== 'paid') {
+      if (event.paymentSettings?.isPaymentRequired && registration.paymentStatus !== 'paid' && registration.paymentStatus !== 'not_required') {
         return res.status(400).json({
           message: "Payment required but not completed",
           validationStatus: "payment_required"
@@ -2860,13 +2865,15 @@ export function registerMongoRoutes(app: Express) {
       if (/^[A-Z]{6}$/.test(identifier)) {
         const allRegistrations = await mongoStorage.getEventRegistrations(eventId);
         registration = allRegistrations.find(reg => 
-          reg.registrationData?.manualVerificationCode === identifier
+          reg.registrationData?.manualVerificationCode === identifier ||
+          reg.manualVerificationCode === identifier
         );
       } else if (/^\d{6}$/.test(identifier)) {
         // Support legacy 6-digit numeric codes
         const allRegistrations = await mongoStorage.getEventRegistrations(eventId);
         registration = allRegistrations.find(reg => 
-          reg.registrationData?.manualVerificationCode === identifier.toString()
+          reg.registrationData?.manualVerificationCode === identifier.toString() ||
+          reg.manualVerificationCode === identifier.toString()
         );
       } else {
         // For longer IDs, first try by uniqueId (most common case)
@@ -2885,7 +2892,7 @@ export function registerMongoRoutes(app: Express) {
 
       const registrationEventId = registration?.eventId?._id || registration?.eventId;
       if (registration && registrationEventId && registrationEventId.toString() === eventId) {
-        if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid') {
+        if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid' && registration.paymentStatus !== 'not_required') {
           return res.json({
             validationStatus: "invalid",
             message: `Payment not completed. Status: ${registration.paymentStatus}`
@@ -2903,7 +2910,7 @@ export function registerMongoRoutes(app: Express) {
           status: 'online',
           validatedAt: new Date(),
           validatedBy: new mongoose.Types.ObjectId(req.user!.id),
-          validationMethod: registration.registrationData?.manualVerificationCode === identifier ? 'manual_verification_code' : 'manual_unique_id'
+          validationMethod: (registration.registrationData?.manualVerificationCode === identifier || registration.manualVerificationCode === identifier) ? 'manual_verification_code' : 'manual_unique_id'
         });
 
         return res.json({
@@ -2915,7 +2922,7 @@ export function registerMongoRoutes(app: Express) {
             email: registration.email,
             eventName: event.name,
             registrationType: registration.registrationType,
-            validationMethod: registration.registrationData?.manualVerificationCode === identifier ? 'manual_verification_code' : 'manual_unique_id'
+            validationMethod: (registration.registrationData?.manualVerificationCode === identifier || registration.manualVerificationCode === identifier) ? 'manual_verification_code' : 'manual_unique_id'
           }
         });
       }
