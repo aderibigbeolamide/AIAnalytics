@@ -749,6 +749,18 @@ export function registerMongoRoutes(app: Express) {
         firstName = firstName || splitName.firstName;
         lastName = lastName || splitName.lastName;
       }
+      
+      // Ensure we always have at least empty strings for firstName and lastName
+      firstName = firstName || '';
+      lastName = lastName || '';
+      
+      console.log("Name processing result:", { 
+        originalFirstName: formData.firstName, 
+        originalLastName: formData.lastName, 
+        fullName: formData.FullName || formData.fullName || formData.full_name,
+        finalFirstName: firstName, 
+        finalLastName: lastName 
+      });
 
       // Prepare registration data
       const registrationData: any = {
@@ -786,8 +798,12 @@ export function registerMongoRoutes(app: Express) {
               // Handle FullName fields by splitting them
               const splitName = splitFullName(fieldValue);
               // Only overwrite if we don't already have better values
-              if (!registrationData.firstName) registrationData.firstName = splitName.firstName;
-              if (!registrationData.lastName) registrationData.lastName = splitName.lastName;
+              if (!registrationData.firstName || registrationData.firstName === '') {
+                registrationData.firstName = splitName.firstName;
+              }
+              if (!registrationData.lastName || registrationData.lastName === '') {
+                registrationData.lastName = splitName.lastName;
+              }
             } else if (field.name === 'email' || field.name === 'Email' || field.name === 'guestEmail') {
               registrationData.email = fieldValue;
             } else if (field.name === 'phone' || field.name === 'Phone' || field.name === 'phoneNumber') {

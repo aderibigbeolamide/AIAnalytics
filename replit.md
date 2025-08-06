@@ -13,6 +13,7 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
 - Fixed landing page event card navigation issue: corrected `/event/${id}` to `/event-view/${id}` route
 - All workflows and dependencies confirmed working properly
 - MongoDB connection and auto-seeding functioning correctly
+- **Fixed FullName Field Handling**: Updated event registration system to properly handle events using FullName fields instead of separate firstName/lastName fields. Modified backend parsing logic and MongoDB schema to support both naming conventions seamlessly. Users can now create events with FullName fields and registration will work correctly by automatically splitting the full name into firstName and lastName components.
 - **Fixed Super Admin Event Oversight**: Resolved ObjectId casting errors and corrected function parameter calls for event registration counting
 - **Enhanced Event Statistics Display**: Updated event cards to show meaningful statistics for ticket-based events (Paid/Pending/Failed instead of Members/Guests/Invitees)
 - **Improved Ticket-Based Event Details**: Added comprehensive ticket purchaser view showing payment status, categories, and breakdown for ticket-based events
