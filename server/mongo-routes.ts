@@ -825,9 +825,9 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
-      // Generate manual verification code - alphabetic for secured events, numeric for ticket-based events
+      // Generate manual verification code - alphabetic for registration events, numeric for ticket events
       let manualVerificationCode;
-      if (event.validationMethod === 'secured' || event.validationMethod === 'qr_only') {
+      if (event.eventType === 'registration') {
         // Generate 6-character alphabetic code for secured registration events
         manualVerificationCode = Array.from({length: 6}, () => 
           String.fromCharCode(65 + Math.floor(Math.random() * 26))
@@ -2119,10 +2119,10 @@ export function registerMongoRoutes(app: Express) {
               );
             }
 
-            // Generate manual verification code - alphabetic for secured events, numeric for others
+            // Generate manual verification code - alphabetic for registration events, numeric for ticket events
             let shortCode;
             // Reuse the event variable that was already fetched above
-            if (event && (event.validationMethod === 'secured' || event.validationMethod === 'qr_only')) {
+            if (event && event.eventType === 'registration') {
               // Generate 6-character alphabetic code for secured registration events
               shortCode = Array.from({length: 6}, () => 
                 String.fromCharCode(65 + Math.floor(Math.random() * 26))

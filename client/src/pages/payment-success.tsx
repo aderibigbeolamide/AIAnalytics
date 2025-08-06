@@ -232,7 +232,7 @@ export default function PaymentSuccess() {
               </div>
             </div>
 
-            {/* Ticket/Registration Info */}
+            {/* Ticket/Registration Info */}  
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Registration ID completely removed as it serves no purpose */}
               <div>
