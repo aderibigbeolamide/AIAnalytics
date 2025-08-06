@@ -388,6 +388,18 @@ export default function EventDetail() {
                               </Button>
                             )}
                           </div>
+                        ) : reg.paymentStatus === 'completed' || reg.paymentStatus === 'paid' ? (
+                          <Badge variant="default" className="bg-green-100 text-green-800">
+                            Paid
+                          </Badge>
+                        ) : reg.paymentStatus === 'not_required' ? (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            Not Required
+                          </Badge>
+                        ) : reg.paymentStatus === 'pending' ? (
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            Pending
+                          </Badge>
                         ) : (
                           <span className="text-sm text-muted-foreground">No payment</span>
                         )}

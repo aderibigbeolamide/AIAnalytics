@@ -3426,4 +3426,30 @@ export function registerMongoRoutes(app: Express) {
 
   // ================ QR CODE VALIDATION API ================
   // Note: Main /api/validate-id endpoint is defined above to handle all validation methods
+
+  // ================ ADMIN UTILITIES ================
+  
+  // Add missing verification codes endpoint
+  app.post("/api/admin/add-verification-codes", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Only super admin can run this
+      if (req.user?.role !== 'super_admin') {
+        return res.status(403).json({ message: "Access denied. Super admin required." });
+      }
+
+      const { addMissingVerificationCodes } = await import('./add-verification-codes.js');
+      await addMissingVerificationCodes();
+      
+      res.json({ 
+        success: true, 
+        message: "Verification codes added successfully" 
+      });
+    } catch (error) {
+      console.error("Error adding verification codes:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to add verification codes" 
+      });
+    }
+  });
 }
