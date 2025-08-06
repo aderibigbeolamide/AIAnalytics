@@ -937,9 +937,8 @@ export function registerMongoRoutes(app: Express) {
         return res.status(400).json({ message: "No image file uploaded" });
       }
 
-      // Initialize file storage handler
-      const fileStorage = new FileStorageHandler();
-      await fileStorage.initialize();
+      // Import the singleton file storage instance
+      const { fileStorage } = await import('./storage-handler');
       
       // Get folder from form data or default
       const folder = req.body.folder || 'general';
