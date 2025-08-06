@@ -2711,6 +2711,23 @@ export function registerMongoRoutes(app: Express) {
         });
       }
 
+      // Handle both populated and non-populated eventId first
+      let eventId: string;
+      if (typeof registration.eventId === 'object' && registration.eventId._id) {
+        eventId = registration.eventId._id.toString();
+      } else {
+        eventId = registration.eventId.toString();
+      }
+
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        console.log(`Event not found for ID: ${eventId}`);
+        return res.status(404).json({ 
+          message: "Event not found",
+          validationStatus: "invalid" 
+        });
+      }
+
       console.log(`Found registration:`, {
         id: registration._id?.toString(),
         firstName: registration.firstName,
@@ -2740,23 +2757,6 @@ export function registerMongoRoutes(app: Express) {
             location: event.location,
             startDate: event.startDate
           }
-        });
-      }
-
-      // Handle both populated and non-populated eventId
-      let eventId: string;
-      if (typeof registration.eventId === 'object' && registration.eventId._id) {
-        eventId = registration.eventId._id.toString();
-      } else {
-        eventId = registration.eventId.toString();
-      }
-
-      const event = await mongoStorage.getEvent(eventId);
-      if (!event) {
-        console.log(`Event not found for ID: ${eventId}`);
-        return res.status(404).json({ 
-          message: "Event not found",
-          validationStatus: "invalid" 
         });
       }
 
