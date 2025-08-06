@@ -1,4 +1,4 @@
-import { mongoStorage } from './mongodb-storage.js';
+import { mongoStorage } from './mongodb-storage.ts';
 
 async function addMissingVerificationCodes() {
   try {
@@ -60,3 +60,14 @@ async function addMissingVerificationCodes() {
 
 // Export for use as API endpoint
 export { addMissingVerificationCodes };
+
+// If run directly, execute the function
+if (import.meta.url === `file://${process.argv[1]}`) {
+  addMissingVerificationCodes().then(() => {
+    console.log('Script completed');
+    process.exit(0);
+  }).catch((error) => {
+    console.error('Script failed:', error);
+    process.exit(1);
+  });
+}

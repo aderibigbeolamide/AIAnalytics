@@ -394,18 +394,20 @@ export class MongoStorage implements IMongoStorage {
 
   async getEventRegistrationByUniqueId(uniqueId: string): Promise<IEventRegistration | null> {
     try {
-      // Search by uniqueId first, then by manual verification codes
+      // Search by uniqueId field first
       let registration = await EventRegistration.findOne({ uniqueId }).populate('eventId memberId validatedBy');
       
-      if (!registration) {
-        // Also search by manual verification codes stored in different locations
-        registration = await EventRegistration.findOne({
-          $or: [
-            { 'registrationData.manualVerificationCode': uniqueId },
-            { manualVerificationCode: uniqueId }
-          ]
-        }).populate('eventId memberId validatedBy');
+      if (registration) {
+        return registration;
       }
+      
+      // Search by manual verification codes stored in different locations
+      registration = await EventRegistration.findOne({
+        $or: [
+          { 'registrationData.manualVerificationCode': uniqueId },
+          { manualVerificationCode: uniqueId }
+        ]
+      }).populate('eventId memberId validatedBy');
       
       return registration;
     } catch (error) {
