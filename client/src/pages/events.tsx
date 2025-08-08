@@ -26,12 +26,9 @@ export default function Events() {
   const queryClient = useQueryClient();
 
   const { data: events = [] } = useQuery({
-    queryKey: ["/api/events", statusFilter],
+    queryKey: ["/api/events"],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (statusFilter !== "all") params.append("status", statusFilter);
-      
-      const response = await apiRequest("GET", `/api/events?${params.toString()}`);
+      const response = await apiRequest("GET", `/api/events`);
       return response.json();
     },
   });
@@ -72,20 +69,34 @@ export default function Events() {
     },
   });
 
+  const getEventStatus = (event: any) => {
+    const now = new Date();
+    const start = new Date(event.startDate);
+    const end = new Date(event.endDate);
+    
+    if (now < start) return 'upcoming';
+    if (now >= start && now <= end) return 'ongoing';
+    return 'ended';
+  };
+
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       "upcoming": "bg-blue-100 text-blue-800",
-      "active": "bg-green-100 text-green-800",
-      "completed": "bg-gray-100 text-gray-800",
+      "ongoing": "bg-green-100 text-green-800",
+      "ended": "bg-gray-100 text-gray-800",
       "cancelled": "bg-red-100 text-red-800",
     };
     return colors[status] || "bg-gray-100 text-gray-800";
   };
 
-  const filteredEvents = events.filter((event: any) => 
-    event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEvents = events.filter((event: any) => {
+    const matchesSearch = event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || getEventStatus(event) === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const handleShowQR = async (eventId: number, eventName: string) => {
     try {
@@ -144,9 +155,9 @@ export default function Events() {
           <Card>
             <CardContent className="p-6">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Events</p>
+                <p className="text-sm font-medium text-gray-600">Ongoing Events</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {events.filter((e: any) => e.status === 'active').length}
+                  {events.filter((e: any) => getEventStatus(e) === 'ongoing').length}
                 </p>
               </div>
             </CardContent>
@@ -224,8 +235,8 @@ export default function Events() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="ongoing">Ongoing</SelectItem>
+                    <SelectItem value="ended">Ended</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
@@ -253,8 +264,8 @@ export default function Events() {
                             Ticket Event
                           </Badge>
                         )}
-                        <Badge className={getStatusBadge(event.status)}>
-                          {event.status}
+                        <Badge className={getStatusBadge(getEventStatus(event))}>
+                          {getEventStatus(event)}
                         </Badge>
                       </div>
                     </div>
