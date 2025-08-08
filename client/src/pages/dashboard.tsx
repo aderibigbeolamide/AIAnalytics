@@ -335,14 +335,14 @@ export default function Dashboard() {
           <>
             {/* Upcoming Events - Condensed */}
             {Array.isArray(events) && events.filter((event: any) => 
-              event.status === 'upcoming' && new Date(event.startDate) > new Date()
+              new Date(event.startDate) > new Date()
             ).length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Upcoming Events</h3>
                 <div className="space-y-3">
                   {Array.isArray(events) && events
                     .filter((event: any) => 
-                      event.status === 'upcoming' && new Date(event.startDate) > new Date()
+                      new Date(event.startDate) > new Date()
                     )
                     .slice(0, 2)
                     .map((event: any) => (
@@ -372,7 +372,7 @@ export default function Dashboard() {
               const now = new Date();
               const start = new Date(event.startDate);
               const end = new Date(event.endDate);
-              return now >= start && now < end;
+              return now >= start && now <= end;
             }).length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -385,7 +385,7 @@ export default function Dashboard() {
                       const now = new Date();
                       const start = new Date(event.startDate);
                       const end = new Date(event.endDate);
-                      return now >= start && now < end;
+                      return now >= start && now <= end;
                     })
                     .slice(0, 2)
                     .map((event: any) => (
