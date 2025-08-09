@@ -297,7 +297,7 @@ export default function SuperAdminDashboard() {
   const handleUserStatusUpdate = async (userId: number, status: string) => {
     try {
       const response = await fetch(`/api/super-admin/users/${userId}/status`, {
-        method: "PUT",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem("token")}`,
@@ -306,10 +306,26 @@ export default function SuperAdminDashboard() {
       });
 
       if (response.ok) {
+        toast({
+          title: "Success",
+          description: `User status updated to ${status}`,
+        });
         refetchUsers();
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Error",
+          description: errorData.message || "Failed to update user status",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error updating user status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive",
+      });
     }
   };
 
@@ -318,12 +334,22 @@ export default function SuperAdminDashboard() {
     mutationFn: async (orgId: string) => {
       return apiRequest('POST', `/api/super-admin/organizations/${orgId}/approve`, {});
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Success",
         description: "Organization approved successfully"
       });
+      
+      // Trigger user status sync after approval
+      try {
+        await apiRequest('POST', '/api/super-admin/sync-user-statuses', {});
+        console.log('User statuses synced after organization approval');
+      } catch (error) {
+        console.error('Failed to sync user statuses:', error);
+      }
+      
       refetchPendingOrgs();
+      refetchUsers(); // Refresh user list to show updated statuses
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
     },
     onError: (error: any) => {
