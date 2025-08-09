@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuthStore } from "@/lib/auth";
 
 const bankAccountSchema = z.object({
   bankCode: z.string().min(1, "Please select a bank"),
@@ -39,16 +40,25 @@ export default function BankAccountSetup() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const { user } = useAuthStore();
   const [verifiedAccount, setVerifiedAccount] = useState<{ accountName: string; accountNumber: string; bankName: string; bankCode: string } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [bankSearchTerm] = useState("");
   const [hasAttemptedVerification, setHasAttemptedVerification] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Check if current user is super admin
+  const isSuperAdmin = user?.role === "super_admin";
+
   // Edit bank account mutation
   const editBankAccountMutation = useMutation({
     mutationFn: async (data: BankAccountFormData) => {
-      const response = await apiRequest("PUT", "/api/users/bank-account", data);
+      // Only include percentageCharge if user is super admin
+      const submitData = { ...data };
+      if (!isSuperAdmin) {
+        delete submitData.percentageCharge;
+      }
+      const response = await apiRequest("PUT", "/api/users/bank-account", submitData);
       return await response.json();
     },
     onSuccess: () => {
@@ -188,7 +198,12 @@ export default function BankAccountSetup() {
   // Setup bank account mutation
   const setupAccountMutation = useMutation({
     mutationFn: async (data: BankAccountFormData) => {
-      const response = await apiRequest("POST", "/api/users/setup-bank-account", data);
+      // Only include percentageCharge if user is super admin
+      const submitData = { ...data };
+      if (!isSuperAdmin) {
+        delete submitData.percentageCharge;
+      }
+      const response = await apiRequest("POST", "/api/users/setup-bank-account", submitData);
       return await response.json();
     },
     onSuccess: (data: any) => {
@@ -820,33 +835,48 @@ export default function BankAccountSetup() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="percentageCharge"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <DollarSign className="w-4 h-4" />
-                          Platform Fee (%)
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            min="0"
-                            max="20"
-                            step="0.1"
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            placeholder="2.0"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                        <div className="text-xs text-gray-600">
-                          Platform fee charged on each transaction (0-20%). Default: 2%
-                        </div>
-                      </FormItem>
-                    )}
-                  />
+                  {isSuperAdmin ? (
+                    <FormField
+                      control={form.control}
+                      name="percentageCharge"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4" />
+                            Platform Fee (%) - Super Admin Only
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              min="0"
+                              max="20"
+                              step="0.1"
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              placeholder="2.0"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          <div className="text-xs text-gray-600">
+                            Platform fee charged on each transaction (0-20%). Default: 2%
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <FormLabel className="flex items-center gap-2 text-gray-500">
+                        <DollarSign className="w-4 h-4" />
+                        Platform Fee (%)
+                      </FormLabel>
+                      <div className="mt-2 p-3 bg-white rounded border border-gray-200 text-gray-500">
+                        {form.watch("percentageCharge") || 2}%
+                      </div>
+                      <div className="text-xs text-gray-500 mt-2">
+                        Platform fee settings can only be modified by super admin
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
                     <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">

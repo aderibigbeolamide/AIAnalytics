@@ -749,6 +749,22 @@ export function registerMongoDashboardRoutes(app: Express) {
         percentageCharge = 2 
       } = req.body;
 
+      // Only super admin can modify platform fee (percentageCharge)
+      let finalPercentageCharge = 2; // Default value
+      if (req.body.percentageCharge !== undefined) {
+        if (req.user.role !== "super_admin") {
+          return res.status(403).json({ 
+            success: false,
+            message: "Only super admin can modify platform fees" 
+          });
+        }
+        finalPercentageCharge = percentageCharge;
+      } else {
+        // If not provided, keep existing value or use default
+        const existingUser = await mongoStorage.getUserById(userId);
+        finalPercentageCharge = existingUser?.percentageCharge || 2;
+      }
+
       // Extract just the bank code from the combined value (format: "code|name|id")
       const cleanBankCode = bankCode.includes('|') ? bankCode.split('|')[0] : bankCode;
       console.log(`Bank account edit: Original bankCode: "${bankCode}", Cleaned: "${cleanBankCode}", Account: ${accountNumber}`);
@@ -778,7 +794,7 @@ export function registerMongoDashboardRoutes(app: Express) {
         businessName: businessName,
         businessEmail: businessEmail,
         businessPhone: businessPhone,
-        percentageCharge: percentageCharge,
+        percentageCharge: finalPercentageCharge,
         isVerified: true
       });
 
@@ -813,6 +829,18 @@ export function registerMongoDashboardRoutes(app: Express) {
         percentageCharge = 2 
       } = req.body;
 
+      // Only super admin can modify platform fee (percentageCharge)
+      let finalPercentageCharge = 2; // Default value
+      if (req.body.percentageCharge !== undefined) {
+        if (req.user.role !== "super_admin") {
+          return res.status(403).json({ 
+            success: false,
+            message: "Only super admin can modify platform fees" 
+          });
+        }
+        finalPercentageCharge = percentageCharge;
+      }
+
       // Verify the bank account first
       const paystackModule = await import("./paystack");
       const verificationData = await paystackModule.verifyBankAccount(accountNumber, bankCode);
@@ -834,7 +862,7 @@ export function registerMongoDashboardRoutes(app: Express) {
         business_name: businessName,
         bank_code: bankCode,
         account_number: accountNumber,
-        percentage_charge: percentageCharge,
+        percentage_charge: finalPercentageCharge,
         description: `Subaccount for ${businessName}`,
         primary_contact_email: businessEmail,
         primary_contact_name: businessName,
@@ -861,7 +889,7 @@ export function registerMongoDashboardRoutes(app: Express) {
         businessName: businessName,
         businessEmail: businessEmail,
         businessPhone: businessPhone,
-        percentageCharge: percentageCharge,
+        percentageCharge: finalPercentageCharge,
         isVerified: true
       });
 
