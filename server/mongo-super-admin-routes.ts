@@ -510,8 +510,31 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       
       // Update all users belonging to this organization based on new status
       const allUsers = await mongoStorage.getAllUsers();
+      console.log(`All users in system:`, allUsers.map(u => ({ email: u.email, orgId: u.organizationId })));
+      console.log(`Found ${allUsers.length} total users to check for organization ${organizationId}`);
+      
       const orgUsers = allUsers.filter(user => {
-        const userOrgId = user.organizationId ? (user.organizationId as any).toString() : null;
+        if (!user.organizationId) {
+          console.log(`User ${user.email} has no organizationId`);
+          return false;
+        }
+        
+        // Handle MongoDB populated/unpopulated organizationId field
+        let userOrgId;
+        if (typeof user.organizationId === 'object') {
+          // If populated, get the _id field
+          if (user.organizationId._id) {
+            userOrgId = user.organizationId._id.toString();
+          } else {
+            // If it's an ObjectId directly
+            userOrgId = user.organizationId.toString();
+          }
+        } else {
+          // If it's already a string
+          userOrgId = user.organizationId.toString();
+        }
+        
+        console.log(`Checking user ${user.email}: userOrgId=${userOrgId}, targetOrgId=${organizationId}, match=${userOrgId === organizationId}`);
         return userOrgId === organizationId;
       });
       const updatedUsers = [];
