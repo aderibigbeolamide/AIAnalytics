@@ -215,7 +215,11 @@ export function registerMongoAuthRoutes(app: Express) {
         contactPhone: contactPhone || '',
         address: address || '',
         website: website || '',
-        status: 'pending_approval'
+        status: 'pending_approval',
+        subscriptionPlan: 'basic',
+        subscriptionStatus: 'active',
+        maxEvents: 10,
+        maxMembers: 500
       });
 
       // Create admin user

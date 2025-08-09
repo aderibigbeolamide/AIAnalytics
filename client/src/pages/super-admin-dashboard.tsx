@@ -351,6 +351,8 @@ export default function SuperAdminDashboard() {
       refetchPendingOrgs();
       refetchUsers(); // Refresh user list to show updated statuses
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/pending-organizations"] });
     },
     onError: (error: any) => {
       toast({
@@ -372,7 +374,10 @@ export default function SuperAdminDashboard() {
         description: "Organization rejected successfully"
       });
       refetchPendingOrgs();
+      refetchUsers();
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/pending-organizations"] });
     },
     onError: (error: any) => {
       toast({
@@ -724,10 +729,10 @@ export default function SuperAdminDashboard() {
                       <TableCell className="hidden md:table-cell">
                         <div>
                           <div className="font-medium">
-                            {event.organizationName || 'Unknown Organization'}
+                            {(event as any).organizationName || 'Unknown Organization'}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {event.creatorName || 'Unknown User'}
+                            {(event as any).creatorName || 'Unknown User'}
                           </div>
                         </div>
                       </TableCell>
@@ -747,7 +752,7 @@ export default function SuperAdminDashboard() {
                         {event.registrationCount || 0}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        {event.attendanceCount || 0}
+                        {(event as any).attendanceCount || event.attendedCount || 0}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         {new Date(event.createdAt).toLocaleDateString()}
