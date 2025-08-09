@@ -23,6 +23,7 @@ import {
   CheckCircle, 
   XCircle, 
   AlertCircle,
+  Building,
   Building2,
   UserCheck,
   BarChart3,
@@ -33,7 +34,8 @@ import {
   Bell,
   MessageSquare,
   Megaphone,
-  FileText
+  FileText,
+  Ban
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -396,6 +398,35 @@ export default function SuperAdminDashboard() {
     rejectOrgMutation.mutate({ orgId, reason });
   };
 
+  // Organization status update mutation (suspend/activate)
+  const updateOrgStatusMutation = useMutation({
+    mutationFn: async ({ orgId, status }: { orgId: string; status: string }) => {
+      return apiRequest('PATCH', `/api/super-admin/organizations/${orgId}/status`, { status });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Organization status updated successfully"
+      });
+      refetchPendingOrgs();
+      refetchUsers();
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/pending-organizations"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update organization status",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleOrganizationStatusUpdate = (orgId: string, status: string) => {
+    updateOrgStatusMutation.mutate({ orgId, status });
+  };
+
   const handleReviewOrganization = (org: PendingOrganization) => {
     setSelectedOrg(org);
     setReviewOrgDialogOpen(true);
@@ -563,6 +594,10 @@ export default function SuperAdminDashboard() {
           <TabsTrigger value="analytics" className="text-xs md:text-sm">
             <span className="hidden sm:inline">Platform Analytics</span>
             <span className="sm:hidden">Analytics</span>
+          </TabsTrigger>
+          <TabsTrigger value="org-management" className="text-xs md:text-sm">
+            <span className="hidden sm:inline">Organization Management</span>
+            <span className="sm:hidden">Org Mgmt</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1365,6 +1400,130 @@ export default function SuperAdminDashboard() {
                   View Detailed Analytics
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="org-management" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="w-5 h-5" />
+                Organization Management
+              </CardTitle>
+              <CardDescription>
+                Manage organization statuses - suspend or activate organizations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[150px]">Organization</TableHead>
+                      <TableHead className="hidden md:table-cell">Contact</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="hidden sm:table-cell">Plan</TableHead>
+                      <TableHead className="hidden lg:table-cell">Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {organizationsData?.organizations?.map((org) => (
+                      <TableRow key={org.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{org.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {org.description || 'No description'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div>
+                            <div className="text-sm">{org.contactEmail}</div>
+                            {org.contactPhone && (
+                              <div className="text-xs text-muted-foreground">
+                                {org.contactPhone}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              org.status === 'approved' ? 'default' :
+                              org.status === 'suspended' ? 'destructive' :
+                              org.status === 'rejected' ? 'destructive' :
+                              'secondary'
+                            }
+                          >
+                            {org.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant="outline">
+                            {org.subscriptionPlan}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {new Date(org.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {org.status === 'approved' && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleOrganizationStatusUpdate(org.id, 'suspended')}
+                                disabled={updateOrgStatusMutation.isPending}
+                              >
+                                <Ban className="w-3 h-3 mr-1" />
+                                <span className="hidden sm:inline">Suspend</span>
+                                <span className="sm:hidden">⊗</span>
+                              </Button>
+                            )}
+                            {org.status === 'suspended' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOrganizationStatusUpdate(org.id, 'approved')}
+                                disabled={updateOrgStatusMutation.isPending}
+                              >
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                <span className="hidden sm:inline">Activate</span>
+                                <span className="sm:hidden">✓</span>
+                              </Button>
+                            )}
+                            {org.status === 'rejected' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOrganizationStatusUpdate(org.id, 'approved')}
+                                disabled={updateOrgStatusMutation.isPending}
+                              >
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                <span className="hidden sm:inline">Reactivate</span>
+                                <span className="sm:hidden">↻</span>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {(!organizationsData?.organizations || organizationsData.organizations.length === 0) && (
+                <div className="text-center py-8">
+                  <Building className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium">No organizations found</h3>
+                  <p className="text-muted-foreground">
+                    No organizations have been registered yet
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -484,6 +484,69 @@ export function registerMongoSuperAdminRoutes(app: Express) {
     }
   });
 
+  // Organization status update (suspend/activate)
+  app.patch("/api/super-admin/organizations/:id/status", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const organizationId = req.params.id;
+      const { status } = req.body;
+      
+      console.log(`Organization status update request - OrgID: ${organizationId}, New Status: ${status}, Requester: ${req.user?.username}`);
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      // Validate that status is one of the allowed values
+      const allowedStatuses = ['active', 'suspended', 'approved', 'rejected', 'pending_approval'];
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+      
+      const updatedOrg = await mongoStorage.updateOrganization(organizationId, { status });
+      
+      if (!updatedOrg) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      
+      // Update all users belonging to this organization based on new status
+      const allUsers = await mongoStorage.getAllUsers();
+      const orgUsers = allUsers.filter(user => {
+        const userOrgId = user.organizationId ? (user.organizationId as any).toString() : null;
+        return userOrgId === organizationId;
+      });
+      const updatedUsers = [];
+      
+      let userStatus = 'active';
+      if (status === 'suspended' || status === 'rejected') {
+        userStatus = 'suspended';
+      } else if (status === 'pending_approval') {
+        userStatus = 'pending_approval';
+      }
+      
+      for (const user of orgUsers) {
+        const updatedUser = await mongoStorage.updateUser((user._id as any).toString(), { status: userStatus });
+        if (updatedUser) {
+          updatedUsers.push(updatedUser);
+        }
+      }
+      
+      console.log(`Organization ${updatedOrg.name} status updated to ${status}. Updated ${updatedUsers.length} user(s) to ${userStatus} status.`);
+      
+      res.json({ 
+        message: "Organization status updated successfully",
+        organization: {
+          id: (updatedOrg._id as any).toString(),
+          name: updatedOrg.name,
+          status: updatedOrg.status
+        },
+        usersUpdated: updatedUsers.length
+      });
+    } catch (error) {
+      console.error("Error updating organization status:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Handle chatbot message forwarding
   app.post("/api/super-admin/chatbot-message", async (req: Request, res: Response) => {
     try {
