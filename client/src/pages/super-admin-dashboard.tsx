@@ -154,16 +154,16 @@ function StatCard({ title, value, description, icon: Icon, trend }: {
   trend?: string;
 }) {
   return (
-    <Card>
+    <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <CardTitle className="text-xs md:text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value.toLocaleString()}</div>
-        <p className="text-xs text-muted-foreground">
+        <div className="text-xl md:text-2xl font-bold">{value.toLocaleString()}</div>
+        <p className="text-xs md:text-sm text-muted-foreground">
           {description}
-          {trend && <span className="text-green-600 ml-1">{trend}</span>}
+          {trend && <span className="text-green-600 ml-1 bg-green-50 px-2 py-1 rounded-full">{trend}</span>}
         </p>
       </CardContent>
     </Card>
@@ -296,40 +296,7 @@ export default function SuperAdminDashboard() {
     }
   });
 
-  const handleUserStatusUpdate = async (userId: number, status: string) => {
-    try {
-      const response = await fetch(`/api/super-admin/users/${userId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ status }),
-      });
 
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: `User status updated to ${status}`,
-        });
-        refetchUsers();
-      } else {
-        const errorData = await response.json();
-        toast({
-          title: "Error",
-          description: errorData.message || "Failed to update user status",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error updating user status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update user status",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Organization approval mutation
   const approveOrgMutation = useMutation({
@@ -427,6 +394,32 @@ export default function SuperAdminDashboard() {
     updateOrgStatusMutation.mutate({ orgId, status });
   };
 
+  // User status update mutation
+  const updateUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, status }: { userId: string; status: string }) => {
+      return apiRequest('PATCH', `/api/super-admin/users/${userId}/status`, { status });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User status updated successfully"
+      });
+      refetchUsers();
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user status",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleUserStatusUpdate = (userId: string, status: string) => {
+    updateUserStatusMutation.mutate({ userId, status });
+  };
+
   const handleReviewOrganization = (org: PendingOrganization) => {
     setSelectedOrg(org);
     setReviewOrgDialogOpen(true);
@@ -460,43 +453,31 @@ export default function SuperAdminDashboard() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Mobile-friendly header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+    <div className="container mx-auto py-4 md:py-6 space-y-4 md:space-y-6 px-4">
+      {/* Mobile-optimized header */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setLocation("/dashboard")}
-            className="flex items-center gap-2 self-start"
+            className="flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Back to Dashboard</span>
             <span className="sm:hidden">Back</span>
           </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Super Admin Dashboard</h1>
-            <p className="text-sm md:text-base text-muted-foreground">
-              Platform oversight and organization management
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation("/dashboard")}
-            className="flex items-center gap-2"
-          >
-            <Home className="w-4 h-4" />
-            <span className="hidden sm:inline">Main Dashboard</span>
-            <span className="sm:hidden">Main</span>
-          </Button>
           <Badge variant="outline" className="text-purple-600 border-purple-200">
-            <Shield className="w-4 h-4 mr-2" />
+            <Shield className="w-3 h-3 mr-1" />
             <span className="hidden sm:inline">Super Admin</span>
             <span className="sm:hidden">Admin</span>
           </Badge>
+        </div>
+        <div className="text-center md:text-left">
+          <h1 className="text-xl md:text-3xl font-bold tracking-tight">Super Admin Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
+            Platform oversight and organization management
+          </p>
         </div>
       </div>
 
@@ -558,48 +539,57 @@ export default function SuperAdminDashboard() {
         />
       </div>
 
-      <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 gap-1">
-          <TabsTrigger value="users" className="text-xs md:text-sm">
-            <span className="hidden sm:inline">User Management</span>
-            <span className="sm:hidden">Users</span>
-          </TabsTrigger>
-          <TabsTrigger value="events" className="text-xs md:text-sm">
-            <span className="hidden sm:inline">Event Oversight</span>
-            <span className="sm:hidden">Events</span>
-          </TabsTrigger>
-          <TabsTrigger value="organizations" className="relative text-xs md:text-sm">
-            <span className="hidden sm:inline">Organization Approvals</span>
-            <span className="sm:hidden">Orgs</span>
-            {pendingOrganizations && pendingOrganizations.organizations && pendingOrganizations.organizations.length > 0 && (
-              <Badge variant="destructive" className="ml-1 md:ml-2 px-1 md:px-1.5 py-0.5 text-xs">
-                {pendingOrganizations.organizations.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="support" className="relative text-xs md:text-sm">
-            <MessageSquare className="w-4 h-4 lg:mr-2" />
-            <span className="hidden lg:inline">Customer Support</span>
-            <span className="lg:hidden">Support</span>
-            {chatSessions && chatSessions.length > 0 && (
-              <Badge variant="destructive" className="ml-1 md:ml-2 px-1 md:px-1.5 py-0.5 text-xs">
-                {chatSessions.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="text-xs md:text-sm">
-            <Bell className="w-4 h-4 lg:mr-2" />
-            <span className="hidden lg:inline">Notifications</span>
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="text-xs md:text-sm">
-            <span className="hidden sm:inline">Platform Analytics</span>
-            <span className="sm:hidden">Analytics</span>
-          </TabsTrigger>
-          <TabsTrigger value="org-management" className="text-xs md:text-sm">
-            <span className="hidden sm:inline">Organization Management</span>
-            <span className="sm:hidden">Org Mgmt</span>
-          </TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="users" className="space-y-6">
+        {/* Mobile-friendly tab navigation */}
+        <div className="w-full overflow-x-auto">
+          <TabsList className="grid grid-cols-4 lg:grid-cols-7 gap-1 h-auto min-w-max lg:min-w-full">
+            <TabsTrigger value="users" className="flex flex-col items-center gap-1 py-3 text-xs">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Users</span>
+              <span className="sm:hidden text-xs">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="events" className="flex flex-col items-center gap-1 py-3 text-xs">
+              <Calendar className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Events</span>
+              <span className="sm:hidden text-xs">Events</span>
+            </TabsTrigger>
+            <TabsTrigger value="organizations" className="flex flex-col items-center gap-1 py-3 text-xs relative">
+              <Building2 className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Approvals</span>
+              <span className="sm:hidden text-xs">Approval</span>
+              {pendingOrganizations && pendingOrganizations.organizations && pendingOrganizations.organizations.length > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 px-1 py-0 text-xs min-w-5 h-5 flex items-center justify-center">
+                  {pendingOrganizations.organizations.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="org-management" className="flex flex-col items-center gap-1 py-3 text-xs">
+              <Building className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Org Mgmt</span>
+              <span className="sm:hidden text-xs">Manage</span>
+            </TabsTrigger>
+            <TabsTrigger value="support" className="flex flex-col items-center gap-1 py-3 text-xs relative">
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Support</span>
+              <span className="sm:hidden text-xs">Support</span>
+              {chatSessions && chatSessions.length > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 px-1 py-0 text-xs min-w-5 h-5 flex items-center justify-center">
+                  {chatSessions.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex flex-col items-center gap-1 py-3 text-xs">
+              <Bell className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Notifications</span>
+              <span className="sm:hidden text-xs">Alerts</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex flex-col items-center gap-1 py-3 text-xs">
+              <TrendingUp className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Analytics</span>
+              <span className="sm:hidden text-xs">Stats</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="users" className="space-y-4">
           <Card>
@@ -684,13 +674,15 @@ export default function SuperAdminDashboard() {
                         {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:gap-2">
                           {user.status === 'active' && (
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="destructive"
                               onClick={() => handleUserStatusUpdate(user.id, 'suspended')}
+                              className="w-full sm:w-auto text-xs"
                             >
+                              <Ban className="w-3 h-3 mr-1" />
                               Suspend
                             </Button>
                           )}
@@ -699,9 +691,27 @@ export default function SuperAdminDashboard() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleUserStatusUpdate(user.id, 'active')}
+                              className="w-full sm:w-auto text-xs"
                             >
+                              <CheckCircle className="w-3 h-3 mr-1" />
                               Activate
                             </Button>
+                          )}
+                          {user.status === 'pending_approval' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUserStatusUpdate(user.id, 'active')}
+                              className="w-full sm:w-auto text-xs"
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Approve
+                            </Button>
+                          )}
+                          {updateUserStatusMutation.isPending && (
+                            <div className="flex items-center justify-center py-1">
+                              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            </div>
                           )}
                         </div>
                       </TableCell>
@@ -1470,17 +1480,18 @@ export default function SuperAdminDashboard() {
                           {new Date(org.createdAt).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:gap-2">
                             {org.status === 'approved' && (
                               <Button
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => handleOrganizationStatusUpdate(org.id, 'suspended')}
                                 disabled={updateOrgStatusMutation.isPending}
+                                className="w-full sm:w-auto text-xs"
                               >
                                 <Ban className="w-3 h-3 mr-1" />
                                 <span className="hidden sm:inline">Suspend</span>
-                                <span className="sm:hidden">⊗</span>
+                                <span className="sm:hidden">Suspend</span>
                               </Button>
                             )}
                             {org.status === 'suspended' && (
@@ -1489,10 +1500,10 @@ export default function SuperAdminDashboard() {
                                 variant="outline"
                                 onClick={() => handleOrganizationStatusUpdate(org.id, 'approved')}
                                 disabled={updateOrgStatusMutation.isPending}
+                                className="w-full sm:w-auto text-xs"
                               >
                                 <CheckCircle className="w-3 h-3 mr-1" />
-                                <span className="hidden sm:inline">Activate</span>
-                                <span className="sm:hidden">✓</span>
+                                <span>Activate</span>
                               </Button>
                             )}
                             {org.status === 'rejected' && (
@@ -1501,11 +1512,16 @@ export default function SuperAdminDashboard() {
                                 variant="outline"
                                 onClick={() => handleOrganizationStatusUpdate(org.id, 'approved')}
                                 disabled={updateOrgStatusMutation.isPending}
+                                className="w-full sm:w-auto text-xs"
                               >
                                 <CheckCircle className="w-3 h-3 mr-1" />
-                                <span className="hidden sm:inline">Reactivate</span>
-                                <span className="sm:hidden">↻</span>
+                                <span>Reactivate</span>
                               </Button>
+                            )}
+                            {updateOrgStatusMutation.isPending && (
+                              <div className="flex items-center justify-center py-1">
+                                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                              </div>
                             )}
                           </div>
                         </TableCell>
