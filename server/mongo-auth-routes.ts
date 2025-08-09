@@ -215,8 +215,7 @@ export function registerMongoAuthRoutes(app: Express) {
         contactPhone: contactPhone || '',
         address: address || '',
         website: website || '',
-        status: 'pending_approval',
-        createdAt: new Date()
+        status: 'pending_approval'
       });
 
       // Create admin user
@@ -227,7 +226,7 @@ export function registerMongoAuthRoutes(app: Express) {
         firstName: adminFirstName,
         lastName: adminLastName,
         role: 'admin',
-        organizationId: organization._id,
+        organizationId: (organization._id as any).toString(),
         status: 'pending_approval'
       });
 

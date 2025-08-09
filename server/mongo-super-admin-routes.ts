@@ -121,7 +121,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       const allUsers = await mongoStorage.getAllUsers();
       
       const users = allUsers.map(user => ({
-        id: user._id.toString(),
+        id: (user._id as any).toString(),
         username: user.username,
         email: user.email,
         role: user.role,
@@ -146,7 +146,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       const allOrganizations = await mongoStorage.getOrganizations();
       
       const organizations = allOrganizations.map(org => ({
-        id: org._id.toString(),
+        id: (org._id as any).toString(),
         name: org.name,
         contactEmail: org.contactEmail,
         status: org.status,
@@ -176,7 +176,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       const pendingOrganizations = await mongoStorage.getOrganizations({ status: 'pending_approval' });
       
       const organizations = pendingOrganizations.map(org => ({
-        id: org._id.toString(),
+        id: (org._id as any).toString(),
         name: org.name,
         contactEmail: org.contactEmail,
         status: org.status,
@@ -253,7 +253,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
         }
 
         return {
-          id: event._id.toString(),
+          id: (event._id as any).toString(),
           name: event.name,
           description: event.description,
           location: event.location,
@@ -300,6 +300,8 @@ export function registerMongoSuperAdminRoutes(app: Express) {
     try {
       const organizationId = req.params.id;
       
+      console.log(`Approving organization: ${organizationId} by ${req.user?.username}`);
+      
       // Update organization status
       const updatedOrg = await mongoStorage.updateOrganization(organizationId, {
         status: 'approved'
@@ -318,6 +320,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       const updatedUsers = [];
       
       for (const user of orgUsers) {
+        console.log(`Updating user ${user.username} status from ${user.status} to active`);
         const updatedUser = await mongoStorage.updateUser((user._id as any).toString(), { status: 'active' });
         if (updatedUser) {
           updatedUsers.push(updatedUser);
@@ -329,10 +332,9 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       res.json({ 
         message: "Organization approved successfully",
         organization: {
-          id: updatedOrg._id.toString(),
+          id: (updatedOrg._id as any).toString(),
           name: updatedOrg.name,
-          status: updatedOrg.status,
-          approvedAt: updatedOrg.approvedAt
+          status: updatedOrg.status
         },
         usersUpdated: updatedUsers.length
       });
@@ -377,7 +379,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       res.json({ 
         message: "Organization rejected successfully",
         organization: {
-          id: updatedOrg._id.toString(),
+          id: (updatedOrg._id as any).toString(),
           name: updatedOrg.name,
           status: updatedOrg.status,
           rejectionReason: updatedOrg.rejectionReason
@@ -396,8 +398,16 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       const userId = req.params.id;
       const { status } = req.body;
       
+      console.log(`User status update request - UserID: ${userId}, New Status: ${status}, Requester: ${req.user?.username}`);
+      
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
+      }
+      
+      // Validate that status is one of the allowed values
+      const allowedStatuses = ['active', 'suspended', 'pending_approval'];
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
       }
       
       const updatedUser = await mongoStorage.updateUser(userId, { status });
@@ -405,6 +415,8 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
+      
+      console.log(`User status updated successfully - User: ${updatedUser.username}, New Status: ${updatedUser.status}`);
       
       res.json({ 
         message: "User status updated successfully",
