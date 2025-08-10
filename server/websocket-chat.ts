@@ -105,13 +105,16 @@ class WebSocketChatServer {
 
   private async handleUserJoin(ws: WebSocket, data: any) {
     const { sessionId, userEmail } = data;
+    console.log(`User joining WebSocket session: ${sessionId}, email: ${userEmail}`);
     
     // Store user connection
     this.userConnections.set(sessionId, ws);
+    console.log(`Stored user WebSocket connection for session: ${sessionId}`);
     
     // Get or create chat session
     let session = this.chatSessions.get(sessionId);
     if (!session) {
+      console.log(`Creating new session: ${sessionId}`);
       session = {
         id: sessionId,
         userEmail,
@@ -122,6 +125,8 @@ class WebSocketChatServer {
         lastActivity: new Date()
       };
       this.chatSessions.set(sessionId, session);
+    } else {
+      console.log(`Found existing session: ${sessionId} with ${session.messages.length} messages`);
     }
     
     // Send existing messages to user
@@ -133,6 +138,12 @@ class WebSocketChatServer {
         isEscalated: session.isEscalated,
         status: session.status
       }
+    }));
+    
+    // Confirm connection to user
+    ws.send(JSON.stringify({
+      type: 'connected',
+      data: { message: 'WebSocket connection established' }
     }));
   }
 
@@ -310,14 +321,17 @@ class WebSocketChatServer {
 
     // Send to user connection if available
     const userWs = this.userConnections.get(sessionId);
+    console.log(`Looking for user WebSocket connection for session ${sessionId}...`);
+    console.log(`User connections available:`, Array.from(this.userConnections.keys()));
+    
     if (userWs && userWs.readyState === WebSocket.OPEN) {
-      console.log(`Notifying user in session ${sessionId} of new admin message`);
+      console.log(`✅ Notifying user in session ${sessionId} of new admin message`);
       userWs.send(JSON.stringify({
         type: 'admin_message',
         data: message
       }));
     } else {
-      console.log(`User not connected via WebSocket for session ${sessionId}`);
+      console.log(`❌ User not connected via WebSocket for session ${sessionId}. Connection state:`, userWs ? userWs.readyState : 'No connection');
     }
 
     // Broadcast session update to all connected admins

@@ -243,11 +243,12 @@ export default function ChatbotComponent() {
       wsRef.current = new WebSocket(wsUrl);
       
       wsRef.current.onopen = () => {
-        console.log('Customer WebSocket connected');
+        console.log('Customer WebSocket connected for session:', sessionId);
         setWsConnected(true);
         
         // Join as user
         if (sessionId) {
+          console.log('Sending join_user_session message:', { sessionId, userEmail });
           wsRef.current?.send(JSON.stringify({
             type: 'join_user_session',
             data: { 
@@ -298,6 +299,7 @@ export default function ChatbotComponent() {
         break;
       
       case 'admin_message':
+        console.log('🎉 Received admin message via WebSocket:', data);
         // Real-time admin message
         const adminMessage: Message = {
           id: data.id || `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -308,6 +310,7 @@ export default function ChatbotComponent() {
         };
         
         setMessages(prev => [...prev, adminMessage]);
+        console.log('✅ Admin message added to chat');
         break;
       
       case 'session_data':
@@ -666,8 +669,7 @@ export default function ChatbotComponent() {
         
         setMessages(prev => [...prev, statusMessage]);
         
-        // Start polling for admin responses immediately
-        setTimeout(pollForAdminResponse, 1000);
+        // WebSocket will handle real-time responses
         
         toast({
           title: "Connected to Support",
