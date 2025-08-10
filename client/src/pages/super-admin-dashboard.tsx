@@ -287,23 +287,24 @@ export default function SuperAdminDashboard() {
     }
   });
 
-  // Fetch platform statsData
-  const { data: statsDataResponse } = useQuery<{success: boolean; statsData: PlatformStatistics}>({
-    queryKey: ["/api/super-admin/statsData"],
+  // Fetch platform statistics with conditional loading for better performance
+  const { data: statisticsResponse, isLoading: statisticsLoading } = useQuery<{success: boolean; statistics: PlatformStatistics}>({
+    queryKey: ["/api/super-admin/statistics"],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Debug: Log what we're getting from the API
-  console.log('Current statsData:', statsDataResponse);
+  console.log('Current statistics:', statisticsResponse);
   
-  // Extract the actual statsData data from the response wrapper
-  const statsData = statsDataResponse?.statsData;
+  // Extract the actual statistics data from the response wrapper
+  const statsData = statisticsResponse?.statistics;
 
   // Fetch platform fee data
   const { data: platformFeeData } = useQuery<{ platformFee: number }>({
     queryKey: ["/api/super-admin/platform-fee"],
   });
 
-  // Fetch users
+  // Fetch users only when needed
   const { data: usersData, refetch: refetchUsers } = useQuery<{
     users: User[];
     pagination: any;
@@ -312,9 +313,10 @@ export default function SuperAdminDashboard() {
       search: userSearch, 
       role: userRole === "all_roles" ? "" : userRole 
     }],
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
   });
 
-  // Fetch events
+  // Fetch events only when needed
   const { data: eventsData } = useQuery<{
     events: Event[];
     pagination: any;
@@ -322,6 +324,7 @@ export default function SuperAdminDashboard() {
     queryKey: ["/api/super-admin/events", { 
       status: eventStatus === "all_statuses" ? "" : eventStatus 
     }],
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
   });
 
   // Fetch pending organizations
