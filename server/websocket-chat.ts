@@ -182,6 +182,7 @@ class WebSocketChatServer {
 
   private async handleUserMessage(ws: WebSocket, data: any) {
     const { sessionId, text, userEmail } = data;
+    console.log(`WebSocket user message received for session ${sessionId}:`, text);
     
     const session = this.chatSessions.get(sessionId);
     if (!session) {
@@ -198,9 +199,25 @@ class WebSocketChatServer {
       timestamp: new Date()
     };
 
-    // Add to session
+    // Add to session and update timestamps
     session.messages.push(message);
     session.lastActivity = new Date();
+    
+    // Update in-memory cache
+    this.chatSessions.set(sessionId, session);
+
+    // Save to database immediately
+    try {
+      const chatbotModule = await import('./chatbot-routes.js');
+      if (chatbotModule.saveChatSession) {
+        await chatbotModule.saveChatSession(session);
+        console.log(`WebSocket USER message saved to database for session ${sessionId}`);
+      } else {
+        console.log('saveChatSession function not available, user message stored in memory only');
+      }
+    } catch (error) {
+      console.error('Error saving WebSocket user message to database:', error);
+    }
 
     // Send to user (confirmation)
     ws.send(JSON.stringify({
@@ -212,10 +229,13 @@ class WebSocketChatServer {
     if (session.isEscalated && session.adminId) {
       const adminWs = this.adminConnections.get(session.adminId);
       if (adminWs && adminWs.readyState === WebSocket.OPEN) {
+        console.log(`Notifying admin ${session.adminId} of new user message in session ${sessionId}`);
         adminWs.send(JSON.stringify({
           type: 'new_user_message',
           data: { ...message, sessionId, userEmail: session.userEmail }
         }));
+      } else {
+        console.log(`Admin ${session.adminId} not connected via WebSocket for session ${sessionId}`);
       }
     }
   }
