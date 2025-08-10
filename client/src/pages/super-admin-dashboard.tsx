@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -1398,25 +1399,33 @@ export default function SuperAdminDashboard() {
                 {notificationType === 'selective' && (
                   <div className="space-y-2">
                     <Label>Select Organizations</Label>
-                    <div className="grid gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
+                    <div className="grid gap-2 max-h-40 overflow-y-auto p-2 border rounded-md bg-background">
                       {organizationsData?.organizations?.map((org: any) => (
-                        <div key={org.id} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
+                        <div key={org.id} className="flex items-center space-x-2 p-2 hover:bg-accent rounded">
+                          <Checkbox
                             id={`org-${org.id}`}
                             checked={selectedOrganizations.includes(org.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
+                            onCheckedChange={(checked) => {
+                              console.log(`Checkbox clicked for org ${org.name}:`, checked);
+                              if (checked) {
                                 setSelectedOrganizations([...selectedOrganizations, org.id]);
                               } else {
                                 setSelectedOrganizations(selectedOrganizations.filter(id => id !== org.id));
                               }
                             }}
-                            className="rounded"
                           />
                           <label 
                             htmlFor={`org-${org.id}`} 
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
+                            className="text-sm font-medium leading-none cursor-pointer flex-1"
+                            onClick={() => {
+                              console.log(`Label clicked for org ${org.name}`);
+                              const isChecked = selectedOrganizations.includes(org.id);
+                              if (isChecked) {
+                                setSelectedOrganizations(selectedOrganizations.filter(id => id !== org.id));
+                              } else {
+                                setSelectedOrganizations([...selectedOrganizations, org.id]);
+                              }
+                            }}
                           >
                             {org.name} ({org.status})
                           </label>
