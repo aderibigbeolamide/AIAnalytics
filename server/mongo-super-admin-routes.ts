@@ -139,12 +139,12 @@ export function registerMongoSuperAdminRoutes(app: Express) {
 
       // Event status analysis
       const upcomingEvents = allEvents.filter(e => {
-        const eventDate = new Date(e.date);
+        const eventDate = new Date(e.startDate);
         return eventDate > now && e.status !== 'cancelled';
       }).length;
       
       const pastEvents = allEvents.filter(e => {
-        const eventDate = new Date(e.date);
+        const eventDate = new Date(e.startDate);
         return eventDate <= now;
       }).length;
       

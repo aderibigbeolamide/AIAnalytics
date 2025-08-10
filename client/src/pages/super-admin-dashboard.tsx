@@ -38,7 +38,6 @@ import {
   Ban,
   DollarSign,
   Settings,
-  PieChart,
   TrendingDown,
   Target,
   CreditCard,
@@ -48,6 +47,19 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart as RechartsPieChart,
+  Pie,
+  BarChart,
+  Bar
+} from "recharts";
 
 // Platform Fee Schema
 const platformFeeSchema = z.object({
@@ -591,15 +603,15 @@ export default function SuperAdminDashboard() {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Total Revenue"
-              value={`₦${statistics?.financial?.totalRevenue?.toLocaleString() || "0"}`}
-              description="Platform revenue"
+              value={statistics?.financial?.totalRevenue || 0}
+              description={`₦${statistics?.financial?.totalRevenue?.toLocaleString() || "0"} Platform revenue`}
               icon={DollarSign}
               trend={`${statistics?.financial?.totalTransactions || 0} transactions`}
             />
             <StatCard
               title="Platform Fees"
-              value={`₦${statistics?.financial?.platformFeesEarned?.toLocaleString() || "0"}`}
-              description="Fees earned"
+              value={statistics?.financial?.platformFeesEarned || 0}
+              description={`₦${statistics?.financial?.platformFeesEarned?.toLocaleString() || "0"} Fees earned`}
               icon={Receipt}
             />
             <StatCard
@@ -646,8 +658,8 @@ export default function SuperAdminDashboard() {
             />
             <StatCard
               title="Conversion Rate"
-              value={`${statistics?.engagement?.conversionRate || 0}%`}
-              description="Paid vs free registrations"
+              value={statistics?.engagement?.conversionRate || 0}
+              description={`${statistics?.engagement?.conversionRate || 0}% Paid vs free registrations`}
               icon={Target}
             />
           </div>
@@ -833,7 +845,7 @@ export default function SuperAdminDashboard() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => handleUserStatusUpdate(user.id, 'suspended')}
+                              onClick={() => handleUserStatusUpdate(user.id.toString(), 'suspended')}
                               className="w-full sm:w-auto text-xs"
                             >
                               <Ban className="w-3 h-3 mr-1" />
@@ -844,7 +856,7 @@ export default function SuperAdminDashboard() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleUserStatusUpdate(user.id, 'active')}
+                              onClick={() => handleUserStatusUpdate(user.id.toString(), 'active')}
                               className="w-full sm:w-auto text-xs"
                             >
                               <CheckCircle className="w-3 h-3 mr-1" />
@@ -855,7 +867,7 @@ export default function SuperAdminDashboard() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleUserStatusUpdate(user.id, 'active')}
+                              onClick={() => handleUserStatusUpdate(user.id.toString(), 'active')}
                               className="w-full sm:w-auto text-xs"
                             >
                               <CheckCircle className="w-3 h-3 mr-1" />
@@ -1522,46 +1534,267 @@ export default function SuperAdminDashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
+        <TabsContent value="analytics" className="space-y-6">
+          {/* Statistics Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <StatCard
+              title="Total Revenue"
+              value={statistics?.financial?.totalRevenue || 0}
+              description={`₦${statistics?.financial?.totalRevenue?.toLocaleString() || "0"}`}
+              icon={DollarSign}
+              trend={`${statistics?.financial?.totalTransactions || 0} transactions`}
+            />
+            <StatCard
+              title="Platform Users"
+              value={statistics?.overview?.totalUsers || 0}
+              description={`${statistics?.users?.active || 0} active users`}
+              icon={Users}
+              trend={`+${statistics?.growth?.userGrowthRate || 0}% this week`}
+            />
+            <StatCard
+              title="Total Events"
+              value={statistics?.overview?.totalEvents || 0}
+              description={`${statistics?.events?.upcoming || 0} upcoming`}
+              icon={Calendar}
+              trend={`+${statistics?.growth?.eventGrowthRate || 0}% this week`}
+            />
+            <StatCard
+              title="Organizations"
+              value={statistics?.overview?.totalOrganizations || 0}
+              description={`${statistics?.organizations?.approved || 0} approved`}
+              icon={Building2}
+              trend={`${statistics?.organizations?.pending || 0} pending`}
+            />
+          </div>
+
+          {/* Charts Section */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* User Growth Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                  User Growth Trend
+                </CardTitle>
+                <CardDescription>User registration over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={[
+                      { period: '30 days ago', users: Math.max(0, (statistics?.overview?.totalUsers || 0) - (statistics?.growth?.newUsersLast30Days || 0)) },
+                      { period: '7 days ago', users: Math.max(0, (statistics?.overview?.totalUsers || 0) - (statistics?.growth?.newUsersLast7Days || 0)) },
+                      { period: 'Today', users: statistics?.overview?.totalUsers || 0 }
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="period" />
+                      <YAxis />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="users" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Event Status Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-green-600" />
+                  Event Status Distribution
+                </CardTitle>
+                <CardDescription>Events by current status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={[
+                          { name: 'Upcoming', value: statistics?.events?.upcoming || 0, fill: '#10b981' },
+                          { name: 'Past', value: statistics?.events?.past || 0, fill: '#6b7280' },
+                          { name: 'Cancelled', value: statistics?.events?.cancelled || 0, fill: '#ef4444' }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                        label={({ name, value }) => `${name}: ${value}`}
+                      />
+                      <Tooltip />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Revenue Breakdown */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-yellow-600" />
+                  Revenue Breakdown
+                </CardTitle>
+                <CardDescription>Platform revenue sources</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={[
+                      {
+                        category: 'Event Revenue',
+                        amount: (statistics?.financial?.totalRevenue || 0) - (statistics?.financial?.platformFeesEarned || 0),
+                        fill: '#3b82f6'
+                      },
+                      {
+                        category: 'Platform Fees',
+                        amount: statistics?.financial?.platformFeesEarned || 0,
+                        fill: '#10b981'
+                      },
+                      {
+                        category: 'Ticket Revenue',
+                        amount: statistics?.financial?.totalTicketRevenue || 0,
+                        fill: '#f59e0b'
+                      }
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="category" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`₦${value?.toLocaleString()}`, 'Amount']} />
+                      <Bar dataKey="amount" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* User Status Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-purple-600" />
+                  User Status Overview
+                </CardTitle>
+                <CardDescription>Platform user statuses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={[
+                          { name: 'Active', value: statistics?.users?.active || 0, fill: '#10b981' },
+                          { name: 'Pending', value: statistics?.users?.pending || 0, fill: '#f59e0b' },
+                          { name: 'Suspended', value: statistics?.users?.suspended || 0, fill: '#ef4444' }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                        label={({ name, value }) => `${name}: ${value}`}
+                      />
+                      <Tooltip />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Statistics Export */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Platform Analytics
+                <Share className="w-5 h-5" />
+                Platform Analytics & Insights
               </CardTitle>
               <CardDescription>
-                Comprehensive platform performance metrics
+                Comprehensive platform analytics for stakeholder reports and growth tracking
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <h4 className="font-medium">User Growth</h4>
-                  <div className="text-2xl font-bold">{statistics?.overview?.totalUsers || 0}</div>
-                  <p className="text-sm text-muted-foreground">
-                    +{statistics?.recent?.newUsers || 0} this month
-                  </p>
+                  <h4 className="font-medium">User Engagement Rate</h4>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {statistics?.overview?.totalUsers > 0 ? 
+                      Math.round(((statistics?.users?.active || 0) / statistics.overview.totalUsers) * 100) : 0}%
+                  </div>
+                  <p className="text-sm text-muted-foreground">Active user ratio</p>
                 </div>
+                
                 <div className="space-y-2">
-                  <h4 className="font-medium">Event Activity</h4>
-                  <div className="text-2xl font-bold">{statistics?.overview?.totalEvents || 0}</div>
-                  <p className="text-sm text-muted-foreground">
-                    {statistics?.events?.active || 0} currently active
-                  </p>
+                  <h4 className="font-medium">Event Success Rate</h4>
+                  <div className="text-2xl font-bold text-green-600">
+                    {statistics?.overview?.totalEvents > 0 ? 
+                      Math.round(((statistics?.events?.past || 0) / statistics.overview.totalEvents) * 100) : 0}%
+                  </div>
+                  <p className="text-sm text-muted-foreground">Completed events</p>
                 </div>
+                
                 <div className="space-y-2">
-                  <h4 className="font-medium">Validation Rate</h4>
-                  <div className="text-2xl font-bold">{statistics?.registrations?.validationRate || 0}%</div>
-                  <p className="text-sm text-muted-foreground">
-                    {statistics?.registrations?.attended || 0} of {statistics?.overview?.totalRegistrations || 0} attended
-                  </p>
+                  <h4 className="font-medium">Payment Conversion</h4>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {statistics?.engagement?.conversionRate || 0}%
+                  </div>
+                  <p className="text-sm text-muted-foreground">Paid registrations</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="font-medium">Weekly Growth</h4>
+                  <div className="text-2xl font-bold text-orange-600">
+                    +{statistics?.growth?.newUsersLast7Days || 0}
+                  </div>
+                  <p className="text-sm text-muted-foreground">New users this week</p>
                 </div>
               </div>
-
-              <div className="mt-6">
-                <Button onClick={() => setLocation("/platform-analytics")}>
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  View Detailed Analytics
+              
+              <div className="flex gap-2 mt-6">
+                <Button 
+                  onClick={() => {
+                    if (statistics) {
+                      const dataStr = JSON.stringify(statistics, null, 2);
+                      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                      const url = URL.createObjectURL(dataBlob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `platform-statistics-${new Date().toISOString().split('T')[0]}.json`;
+                      link.click();
+                    }
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Share className="w-4 h-4" />
+                  Share Stats
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    if (statistics) {
+                      const csvData = [
+                        ['Metric', 'Value'],
+                        ['Total Users', statistics.overview?.totalUsers || 0],
+                        ['Total Events', statistics.overview?.totalEvents || 0],
+                        ['Total Revenue (₦)', statistics.financial?.totalRevenue || 0],
+                        ['Platform Fees Earned (₦)', statistics.financial?.platformFeesEarned || 0],
+                        ['Active Users', statistics.users?.active || 0],
+                        ['Upcoming Events', statistics.events?.upcoming || 0],
+                        ['Conversion Rate (%)', statistics.engagement?.conversionRate || 0]
+                      ].map(row => row.join(',')).join('\n');
+                      
+                      const csvBlob = new Blob([csvData], {type: 'text/csv'});
+                      const url = URL.createObjectURL(csvBlob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `platform-metrics-${new Date().toISOString().split('T')[0]}.csv`;
+                      link.click();
+                    }
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
                 </Button>
               </div>
             </CardContent>
