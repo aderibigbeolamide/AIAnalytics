@@ -168,6 +168,8 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       wsRef.current.onmessage = (event) => {
         try {
           console.log('🎯 Raw WebSocket message received by admin:', event.data);
+          console.log('🚨 ADMIN WEBSOCKET MESSAGE RECEIVED!'); // Force console output
+          window.alert && window.alert('WebSocket message received: ' + event.data.substring(0, 100)); // Temporary alert
           const message = JSON.parse(event.data);
           console.log('🎯 Parsed WebSocket message:', message);
           handleWebSocketMessage(message);
@@ -244,8 +246,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
           sessionId: data.sessionId,
           text: data.text,
           sender: 'user' as const,
-          timestamp: new Date(data.timestamp || new Date()),
-          type: 'text' as const
+          timestamp: new Date(data.timestamp || new Date())
         };
         
         console.log('📝 Created message object:', newUserMessage);
