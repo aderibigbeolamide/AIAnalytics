@@ -154,13 +154,41 @@ class WebSocketChatServer {
     this.adminConnections.set(adminId, ws);
     
     if (sessionId) {
-      const session = this.chatSessions.get(sessionId);
+      // First, try to load session from database to get latest state
+      let session = this.chatSessions.get(sessionId);
+      
+      try {
+        const chatbotModule = await import('./chatbot-routes.js');
+        if (chatbotModule.getChatSessionFromDB) {
+          const dbSession = await chatbotModule.getChatSessionFromDB(sessionId);
+          if (dbSession) {
+            console.log(`Admin joining: Loading session ${sessionId} from database with ${dbSession.messages.length} messages`);
+            session = dbSession;
+            this.chatSessions.set(sessionId, session);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading session from database for admin join:', error);
+      }
+      
       if (session) {
         session.adminId = adminId;
         session.isEscalated = true;
         session.status = 'active';
+        session.lastActivity = new Date();
         
-        // Send session data to admin
+        // Update in database
+        try {
+          const chatbotModule = await import('./chatbot-routes.js');
+          if (chatbotModule.saveChatSession) {
+            await chatbotModule.saveChatSession(session);
+            console.log(`✅ Session ${sessionId} status updated to active in database`);
+          }
+        } catch (error) {
+          console.error('Error updating session status in database:', error);
+        }
+        
+        // Send latest session data to admin
         ws.send(JSON.stringify({
           type: 'session_data',
           data: {
@@ -171,6 +199,11 @@ class WebSocketChatServer {
             status: session.status
           }
         }));
+        
+        console.log(`✅ Admin ${adminId} joined session ${sessionId} with ${session.messages.length} messages`);
+        
+        // Broadcast updated session status to all admins
+        this.broadcastActiveSessions();
       }
     }
 
@@ -237,27 +270,43 @@ class WebSocketChatServer {
       data: message
     }));
 
-    // If escalated, send to admin
-    if (session.isEscalated && session.adminId) {
-      const adminWs = this.adminConnections.get(session.adminId);
-      console.log(`🔍 Looking for admin ${session.adminId} WebSocket connection...`);
-      console.log(`🔍 Available admin connections:`, Array.from(this.adminConnections.keys()));
-      console.log(`🔍 Admin WebSocket state:`, adminWs ? adminWs.readyState : 'No connection found');
-      
-      if (adminWs && adminWs.readyState === WebSocket.OPEN) {
-        console.log(`✅ Notifying admin ${session.adminId} of new user message in session ${sessionId}`);
-        const messageToSend = {
-          type: 'new_user_message',
-          data: { ...message, sessionId, userEmail: session.userEmail }
-        };
-        console.log(`📤 Sending to admin:`, messageToSend);
-        adminWs.send(JSON.stringify(messageToSend));
+    // Send to all connected admins if escalated, or specific admin if assigned
+    if (session.isEscalated) {
+      if (session.adminId) {
+        // Send to specific admin
+        const adminWs = this.adminConnections.get(session.adminId);
+        console.log(`🔍 Looking for admin ${session.adminId} WebSocket connection...`);
+        console.log(`🔍 Available admin connections:`, Array.from(this.adminConnections.keys()));
+        console.log(`🔍 Admin WebSocket state:`, adminWs ? adminWs.readyState : 'No connection found');
+        
+        if (adminWs && adminWs.readyState === WebSocket.OPEN) {
+          console.log(`✅ Notifying admin ${session.adminId} of new user message in session ${sessionId}`);
+          const messageToSend = {
+            type: 'new_user_message',
+            data: { ...message, sessionId, userEmail: session.userEmail }
+          };
+          console.log(`📤 Sending to admin:`, messageToSend);
+          adminWs.send(JSON.stringify(messageToSend));
+        } else {
+          console.log(`❌ Admin ${session.adminId} not connected via WebSocket for session ${sessionId}`);
+          console.log(`🔧 Connection state: ${adminWs ? WebSocket.OPEN : 'undefined'} vs ${adminWs ? adminWs.readyState : 'no connection'}`);
+        }
       } else {
-        console.log(`❌ Admin ${session.adminId} not connected via WebSocket for session ${sessionId}`);
-        console.log(`🔧 Connection state: ${adminWs ? WebSocket.OPEN : 'undefined'} vs ${adminWs ? adminWs.readyState : 'no connection'}`);
+        // No specific admin assigned, broadcast to all admins
+        console.log(`📢 Broadcasting new user message to all admins for session ${sessionId}`);
+        this.adminConnections.forEach((adminWs, adminId) => {
+          if (adminWs.readyState === WebSocket.OPEN) {
+            const messageToSend = {
+              type: 'new_user_message',
+              data: { ...message, sessionId, userEmail: session.userEmail }
+            };
+            console.log(`📤 Sending to admin ${adminId}:`, messageToSend);
+            adminWs.send(JSON.stringify(messageToSend));
+          }
+        });
       }
     } else {
-      console.log(`ℹ️ Session not escalated or no admin assigned. Escalated: ${session.isEscalated}, AdminId: ${session.adminId}`);
+      console.log(`ℹ️ Session not escalated. Escalated: ${session.isEscalated}, AdminId: ${session.adminId}`);
     }
 
     // Broadcast session update to all admins

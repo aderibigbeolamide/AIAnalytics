@@ -17,7 +17,8 @@ import {
   ArrowLeft,
   PhoneCall,
   Mail,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +103,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
           lastActivity: new Date(session.lastActivity)
         };
         
+        console.log('🔄 Setting session from loadSession:', processedSession);
         setCurrentSession(processedSession);
         scrollToBottom();
       } else {
@@ -125,8 +127,24 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
   useEffect(() => {
     if (sessionId && isConnected) {
       joinSession(sessionId);
+      // Force refresh session data after joining
+      setTimeout(() => {
+        loadSession(sessionId);
+      }, 1000);
     }
   }, [sessionId, isConnected]);
+
+  // Polling mechanism to keep session data fresh
+  useEffect(() => {
+    if (sessionId && currentSession) {
+      const interval = setInterval(() => {
+        console.log('🔄 Polling for session updates...');
+        loadSession(sessionId);
+      }, 10000); // Poll every 10 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [sessionId, currentSession?.id]);
 
   // Load session when sessionId changes
   useEffect(() => {
@@ -219,7 +237,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
           }));
           console.log('🎯 Processed messages:', processedMessages);
           
-          setCurrentSession({
+          const newSession = {
             id: data.sessionId,
             userEmail: data.userEmail,
             isEscalated: data.isEscalated,
@@ -227,7 +245,11 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
             messages: processedMessages,
             createdAt: new Date(),
             lastActivity: new Date()
-          });
+          };
+          
+          console.log('🎯 New session data:', newSession);
+          setCurrentSession(newSession);
+          scrollToBottom();
         }
         break;
       
@@ -260,7 +282,9 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
           setCurrentSession(prev => {
             console.log('🔍 Current session state:', prev);
             if (!prev) {
-              console.log('❌ No current session to update');
+              console.log('❌ No current session to update, refreshing from server');
+              // Refresh session data from server
+              if (sessionId) loadSession(sessionId);
               return null;
             }
             
@@ -277,7 +301,8 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
             const updatedSession = {
               ...prev,
               messages: [...prev.messages, newUserMessage],
-              lastActivity: new Date()
+              lastActivity: new Date(),
+              status: 'active' as const // Ensure status is active when receiving messages
             };
             
             console.log('✅ Updated session with new message count:', updatedSession.messages.length);
@@ -615,6 +640,15 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
           <Badge variant={isConnected ? "default" : "destructive"} className="ml-auto">
             {isConnected ? "Live" : "Offline"}
           </Badge>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => sessionId && loadSession(sessionId)}
+            className="ml-2"
+            title="Refresh chat messages"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
           {currentSession?.status !== 'resolved' && (
             <Button 
               variant="outline" 
@@ -633,9 +667,12 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       <CardContent className="flex-1 flex flex-col">
         <div className="flex-1 mb-4 border rounded-lg bg-background" style={{ minHeight: '400px', maxHeight: '500px', overflowY: 'auto' }}>
           <div className="p-4 space-y-4">
-            {console.log('🎬 RENDERING MESSAGES - Current session:', currentSession)}
-            {console.log('🎬 RENDERING MESSAGES - Message count:', currentSession?.messages?.length)}
-            {console.log('🎬 FULL MESSAGE ARRAY:', JSON.stringify(currentSession?.messages, null, 2))}
+            {(() => {
+              console.log('🎬 RENDERING MESSAGES - Current session:', currentSession);
+              console.log('🎬 RENDERING MESSAGES - Message count:', currentSession?.messages?.length);
+              console.log('🎬 FULL MESSAGE ARRAY:', JSON.stringify(currentSession?.messages, null, 2));
+              return null;
+            })()}
             
             {!currentSession?.messages || currentSession.messages.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
