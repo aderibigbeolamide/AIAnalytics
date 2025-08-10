@@ -70,6 +70,10 @@ app.use((req, res, next) => {
   const { registerEventReminderRoutes } = await import("./event-reminder-routes.js");
   registerEventReminderRoutes(app);
   
+  // Register analytics routes
+  const { registerAnalyticsRoutes } = await import("./mongo-analytics-routes.js");
+  registerAnalyticsRoutes(app);
+  
   // Create HTTP server directly since legacy routes disabled
   const server = createServer(app);
   
