@@ -20,9 +20,87 @@ interface ChatSession {
   lastActivity: Date;
 }
 
-// In-memory storage for chat sessions (in production, use MongoDB)
+import mongoose from 'mongoose';
+
+// MongoDB Schema for Chat Sessions
+const chatSessionSchema = new mongoose.Schema({
+  sessionId: { type: String, required: true, unique: true },
+  userEmail: { type: String, required: true },
+  isEscalated: { type: Boolean, default: false },
+  adminId: { type: String },
+  status: { 
+    type: String, 
+    enum: ['active', 'resolved', 'pending_admin'], 
+    default: 'active' 
+  },
+  messages: [{
+    id: String,
+    text: String,
+    sender: { type: String, enum: ['user', 'admin', 'bot'] },
+    timestamp: Date,
+    type: { type: String, enum: ['text', 'quick_reply', 'escalation'], default: 'text' }
+  }],
+  createdAt: { type: Date, default: Date.now },
+  lastActivity: { type: Date, default: Date.now }
+});
+
+const ChatSessionModel = mongoose.model('ChatSession', chatSessionSchema);
+
+// In-memory cache for quick access (with MongoDB persistence)
 const chatSessions = new Map<string, ChatSession>();
 const adminLastSeen = new Map<string, Date>();
+
+// Helper functions for database operations
+async function saveChatSession(session: ChatSession) {
+  try {
+    console.log(`Attempting to save chat session ${session.id} to database...`);
+    const result = await ChatSessionModel.findOneAndUpdate(
+      { sessionId: session.id },
+      {
+        sessionId: session.id,
+        userEmail: session.userEmail,
+        isEscalated: session.isEscalated,
+        adminId: session.adminId,
+        status: session.status,
+        messages: session.messages,
+        createdAt: session.createdAt,
+        lastActivity: session.lastActivity
+      },
+      { upsert: true, new: true }
+    );
+    console.log(`✅ Chat session ${session.id} saved to database successfully:`, result?.sessionId);
+  } catch (error) {
+    console.error('❌ Error saving chat session:', error);
+  }
+}
+
+async function loadChatSessions() {
+  try {
+    const sessions = await ChatSessionModel.find({ status: { $ne: 'resolved' } });
+    console.log(`Loaded ${sessions.length} chat sessions from database`);
+    
+    sessions.forEach(session => {
+      chatSessions.set(session.sessionId, {
+        id: session.sessionId,
+        userEmail: session.userEmail,
+        isEscalated: session.isEscalated,
+        adminId: session.adminId,
+        status: session.status as 'active' | 'resolved' | 'pending_admin',
+        messages: session.messages.map(msg => ({
+          id: msg.id,
+          text: msg.text,
+          sender: msg.sender as 'bot' | 'user' | 'admin',
+          timestamp: msg.timestamp,
+          type: msg.type as 'text' | 'quick_reply' | 'escalation'
+        })),
+        createdAt: session.createdAt,
+        lastActivity: session.lastActivity
+      });
+    });
+  } catch (error) {
+    console.error('Error loading chat sessions:', error);
+  }
+}
 
 // Knowledge base for quick responses
 const KNOWLEDGE_BASE = {
@@ -38,6 +116,8 @@ const KNOWLEDGE_BASE = {
 };
 
 export function setupChatbotRoutes(app: Express) {
+  // Initialize chat sessions from database on startup
+  loadChatSessions();
   
   // AI-powered chat endpoint
   app.post("/api/chatbot/chat", async (req: Request, res: Response) => {
@@ -155,6 +235,7 @@ export function setupChatbotRoutes(app: Express) {
       };
 
       chatSessions.set(sessionId, session);
+      await saveChatSession(session);
 
       // Send notification to all super admins
       const superAdmins = await mongoStorage.getUsersByRole('super_admin');
@@ -215,6 +296,7 @@ export function setupChatbotRoutes(app: Express) {
       session.messages.push(userMessage);
       session.lastActivity = new Date();
       chatSessions.set(sessionId, session);
+      await saveChatSession(session);
 
       // Notify admin of new message
       const superAdmins = await mongoStorage.getUsersByRole('super_admin');
