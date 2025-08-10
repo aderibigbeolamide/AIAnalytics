@@ -161,10 +161,12 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
 
       wsRef.current.onmessage = (event) => {
         try {
+          console.log('🎯 Raw WebSocket message received by admin:', event.data);
           const message = JSON.parse(event.data);
+          console.log('🎯 Parsed WebSocket message:', message);
           handleWebSocketMessage(message);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('❌ Error parsing WebSocket message:', error, 'Raw data:', event.data);
         }
       };
 
