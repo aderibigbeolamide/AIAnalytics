@@ -240,15 +240,24 @@ class WebSocketChatServer {
     // If escalated, send to admin
     if (session.isEscalated && session.adminId) {
       const adminWs = this.adminConnections.get(session.adminId);
+      console.log(`🔍 Looking for admin ${session.adminId} WebSocket connection...`);
+      console.log(`🔍 Available admin connections:`, Array.from(this.adminConnections.keys()));
+      console.log(`🔍 Admin WebSocket state:`, adminWs ? adminWs.readyState : 'No connection found');
+      
       if (adminWs && adminWs.readyState === WebSocket.OPEN) {
-        console.log(`Notifying admin ${session.adminId} of new user message in session ${sessionId}`);
-        adminWs.send(JSON.stringify({
+        console.log(`✅ Notifying admin ${session.adminId} of new user message in session ${sessionId}`);
+        const messageToSend = {
           type: 'new_user_message',
           data: { ...message, sessionId, userEmail: session.userEmail }
-        }));
+        };
+        console.log(`📤 Sending to admin:`, messageToSend);
+        adminWs.send(JSON.stringify(messageToSend));
       } else {
-        console.log(`Admin ${session.adminId} not connected via WebSocket for session ${sessionId}`);
+        console.log(`❌ Admin ${session.adminId} not connected via WebSocket for session ${sessionId}`);
+        console.log(`🔧 Connection state: ${adminWs ? WebSocket.OPEN : 'undefined'} vs ${adminWs ? adminWs.readyState : 'no connection'}`);
       }
+    } else {
+      console.log(`ℹ️ Session not escalated or no admin assigned. Escalated: ${session.isEscalated}, AdminId: ${session.adminId}`);
     }
 
     // Broadcast session update to all admins
