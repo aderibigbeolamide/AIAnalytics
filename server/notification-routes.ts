@@ -201,6 +201,84 @@ export function setupNotificationRoutes(app: Application) {
     }
   });
 
+  // Selective notifications endpoint - send to specific organizations
+  app.post("/api/super-admin/notifications/selective", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Check if user is super admin
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Access denied. Super admin role required." });
+      }
+
+      const { message, organizationIds, title = "System Notification", priority = 'medium' } = req.body;
+
+      if (!message || !organizationIds || !Array.isArray(organizationIds) || organizationIds.length === 0) {
+        return res.status(400).json({ message: "Message and organizationIds array are required" });
+      }
+
+      // Send notification to each selected organization
+      const promises = organizationIds.map(orgId =>
+        NotificationService.createSuperAdminMessage(
+          orgId,
+          req.user.id,
+          title,
+          message,
+          priority
+        )
+      );
+
+      await Promise.all(promises);
+
+      res.json({ 
+        message: `Notification sent to ${organizationIds.length} organizations successfully`,
+        sentCount: organizationIds.length
+      });
+    } catch (error) {
+      console.error("Error sending selective notification:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Broadcast notifications endpoint - send to all organizations  
+  app.post("/api/super-admin/notifications/broadcast", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Check if user is super admin
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Access denied. Super admin role required." });
+      }
+
+      const { message, title = "System Notification", priority = 'medium' } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      // Get all active organizations
+      const { Organization } = await import('../shared/mongoose-schema.js');
+      const organizations = await Organization.find({ status: 'approved' });
+
+      // Send notification to each organization
+      const promises = organizations.map(org =>
+        NotificationService.createSuperAdminMessage(
+          (org._id as mongoose.Types.ObjectId).toString(),
+          req.user.id,
+          title,
+          message,
+          priority
+        )
+      );
+
+      await Promise.all(promises);
+
+      res.json({ 
+        message: `Notification broadcasted to ${organizations.length} organizations successfully`,
+        sentCount: organizations.length
+      });
+    } catch (error) {
+      console.error("Error broadcasting notification:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Debug endpoint to check notification system state
   app.get("/api/debug/notification-system", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
