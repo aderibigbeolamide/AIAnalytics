@@ -1185,26 +1185,29 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       }
 
       // Get all users for broadcasting
-      const allUsers = await mongoStorage.getAllUsers();
-      const activeUsers = allUsers.filter(user => user.status === 'active');
-
-      // Create notification for each active user
-      const notifications = activeUsers.map(user => ({
-        userId: (user._id as any).toString(),
-        message: message.trim(),
-        type: 'broadcast',
-        createdAt: new Date(),
-        read: false
-      }));
-
-      // Save notifications (in a real app, you'd have a notifications collection)
-      // For now, we'll just log and return success
-      console.log(`Broadcasting notification to ${notifications.length} users:`, message);
+      const users = await User.find({ role: { $in: ['admin', 'user'] }, status: 'active' });
+      console.log(`Broadcasting notification to ${users.length} users: ${message}`);
+      
+      const notifications = [];
+      for (const user of users) {
+        const notification = new Notification({
+          organizationId: user.organizationId,
+          recipientId: user._id,
+          type: 'broadcast',
+          title: 'Platform Announcement',
+          message: message.trim(),
+          category: 'system',
+          isRead: false
+        });
+        
+        await notification.save();
+        notifications.push(notification);
+      }
 
       res.json({
         success: true,
         message: "Notification broadcasted successfully",
-        recipientCount: notifications.length,
+        sentCount: notifications.length,
         broadcastMessage: message.trim()
       });
     } catch (error: any) {
@@ -1212,6 +1215,66 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       res.status(500).json({
         success: false,
         message: "Failed to broadcast notification"
+      });
+    }
+  });
+
+  // Selective notification to specific organizations
+  app.post("/api/super-admin/notifications/selective", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { message, organizationIds } = req.body;
+      
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Message is required and must be a non-empty string" 
+        });
+      }
+      
+      if (!organizationIds || !Array.isArray(organizationIds) || organizationIds.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "At least one organization must be selected" 
+        });
+      }
+
+      console.log(`Sending selective notification to ${organizationIds.length} organizations: ${message}`);
+
+      // Get users from selected organizations
+      const users = await User.find({ 
+        organizationId: { $in: organizationIds.map(id => new mongoose.Types.ObjectId(id)) },
+        role: { $in: ['admin', 'user'] }
+      });
+
+      console.log(`Found ${users.length} users in selected organizations`);
+
+      const notifications = [];
+      for (const user of users) {
+        const notification = new Notification({
+          organizationId: user.organizationId,
+          recipientId: user._id,
+          type: 'selective',
+          title: 'Organization Notification',
+          message: message.trim(),
+          category: 'system',
+          isRead: false
+        });
+        
+        await notification.save();
+        notifications.push(notification);
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Notification sent to selected organizations successfully',
+        sentCount: notifications.length,
+        organizationCount: organizationIds.length
+      });
+    } catch (error: any) {
+      console.error('Error sending selective notification:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to send notification' 
       });
     }
   });

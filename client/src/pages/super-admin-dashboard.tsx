@@ -39,7 +39,8 @@ import {
   PieChart,
   Pie,
   BarChart,
-  Bar
+  Bar,
+  Legend
 } from "recharts";
 import RealTimeChat from "@/components/real-time-chat";
 
@@ -192,6 +193,8 @@ export default function SuperAdminDashboard() {
   const [selectedChatSession, setSelectedChatSession] = useState<string>("");
   const [platformFeeRate, setPlatformFeeRate] = useState<number>(5);
   const [notificationMessage, setNotificationMessage] = useState<string>('');
+  const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
+  const [notificationType, setNotificationType] = useState<'broadcast' | 'selective'>('broadcast');
   const { toast } = useToast();
 
   // Statistics query
@@ -251,10 +254,33 @@ export default function SuperAdminDashboard() {
     },
     onSuccess: () => {
       setNotificationMessage('');
+      setSelectedOrganizations([]);
       toast({ title: "Success", description: "Notification broadcasted successfully" });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to broadcast notification", variant: "destructive" });
+    }
+  });
+
+  // Selective notification mutation
+  const selectiveNotificationMutation = useMutation({
+    mutationFn: async ({ message, organizationIds }: { message: string; organizationIds: string[] }) => {
+      const response = await apiRequest('POST', '/api/super-admin/notifications/selective', { 
+        message, 
+        organizationIds 
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Success", 
+        description: `Notification sent to ${data.sentCount || selectedOrganizations.length} organizations successfully` 
+      });
+      setNotificationMessage('');
+      setSelectedOrganizations([]);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to send notification", variant: "destructive" });
     }
   });
 
@@ -632,39 +658,77 @@ export default function SuperAdminDashboard() {
                     <CardDescription>User registration over time</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
-                      <div className="text-center">
-                        <BarChart3 className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">User Growth Chart</p>
-                        <div className="mt-2">
-                          <p className="text-xs text-muted-foreground">Previous: {Math.max(0, (statsData?.statistics?.overview?.totalUsers || 7) - (statsData?.statistics?.growth?.newUsersLast30Days || 7))} users</p>
-                          <p className="text-xs text-muted-foreground">Current: {statsData?.statistics?.overview?.totalUsers || 7} users</p>
-                          <p className="text-xs text-green-600">Growth: +{statsData?.statistics?.growth?.newUsersLast30Days || 7}</p>
-                        </div>
-                      </div>
-                    </div>
-                    {/*<ResponsiveContainer width="100%" height="100%">
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={[
                           { 
                             period: '30 days ago', 
-                            users: Math.max(0, (statsData?.statistics?.overview?.totalUsers || 7) - (statsData?.statistics?.growth?.newUsersLast30Days || 7))
+                            users: Math.max(0, (statsData?.statistics?.overview?.totalUsers || 7) - (statsData?.statistics?.growth?.newUsersLast30Days || 7)),
+                            events: Math.max(0, (statsData?.statistics?.overview?.totalEvents || 15) - (statsData?.statistics?.growth?.newEventsLast30Days || 15))
                           },
                           { 
                             period: '7 days ago', 
-                            users: Math.max(2, (statsData?.statistics?.overview?.totalUsers || 7) - (statsData?.statistics?.growth?.newUsersLast7Days || 5))
+                            users: Math.max(2, (statsData?.statistics?.overview?.totalUsers || 7) - (statsData?.statistics?.growth?.newUsersLast7Days || 5)),
+                            events: Math.max(3, (statsData?.statistics?.overview?.totalEvents || 15) - (statsData?.statistics?.growth?.newEventsLast7Days || 7))
                           },
                           { 
                             period: 'Today', 
-                            users: statsData?.statistics?.overview?.totalUsers || 7
+                            users: statsData?.statistics?.overview?.totalUsers || 7,
+                            events: statsData?.statistics?.overview?.totalEvents || 15
                           }
-                        ]}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="period" />
-                          <YAxis />
-                          <Tooltip />
-                          <Area type="monotone" dataKey="users" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
+                        ]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <defs>
+                            <linearGradient id="userGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="eventGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <XAxis 
+                            dataKey="period" 
+                            stroke="#6b7280"
+                            fontSize={12}
+                            tick={{ fill: '#6b7280' }}
+                          />
+                          <YAxis 
+                            stroke="#6b7280"
+                            fontSize={12}
+                            tick={{ fill: '#6b7280' }}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'white', 
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            }}
+                            labelStyle={{ color: '#374151', fontWeight: 'bold' }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="users" 
+                            stackId="1"
+                            stroke="#3b82f6" 
+                            strokeWidth={2}
+                            fill="url(#userGradient)" 
+                            name="Users"
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="events" 
+                            stackId="2"
+                            stroke="#10b981" 
+                            strokeWidth={2}
+                            fill="url(#eventGradient)" 
+                            name="Events"
+                          />
                         </AreaChart>
-                      </ResponsiveContainer>*/}
+                      </ResponsiveContainer>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -678,30 +742,40 @@ export default function SuperAdminDashboard() {
                     <CardDescription>Events by current status</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
-                      <div className="text-center space-y-4">
-                        <div className="flex justify-center space-x-4">
-                          <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-2">
-                              <div className="text-2xl font-bold text-green-600">{statsData?.statistics?.events?.upcoming || 1}</div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">Upcoming</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-2">
-                              <div className="text-2xl font-bold text-gray-600">{statsData?.statistics?.events?.past || 14}</div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">Past</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mx-auto mb-2">
-                              <div className="text-2xl font-bold text-red-600">{statsData?.statistics?.events?.cancelled || 0}</div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">Cancelled</p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">Event Status Distribution</p>
-                      </div>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <Pie
+                            data={[
+                              { name: 'Upcoming', value: statsData?.statistics?.events?.upcoming || 1, fill: '#10b981' },
+                              { name: 'Past', value: statsData?.statistics?.events?.past || 14, fill: '#6b7280' },
+                              { name: 'Cancelled', value: statsData?.statistics?.events?.cancelled || 0, fill: '#ef4444' }
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                            stroke="#ffffff"
+                            strokeWidth={2}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'white', 
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            }}
+                          />
+                          <Legend 
+                            verticalAlign="bottom" 
+                            height={36}
+                            iconType="circle"
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
                     </div>
                   </CardContent>
                 </Card>
@@ -716,25 +790,56 @@ export default function SuperAdminDashboard() {
                     <CardDescription>Platform revenue over time</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
-                      <div className="text-center space-y-4">
-                        <div className="flex justify-center space-x-8">
-                          <div className="text-center">
-                            <div className="text-2xl font-bold text-emerald-600">₦{Math.max(0, Math.round((statsData?.statistics?.financial?.totalRevenue || 170) * 0.6))}</div>
-                            <p className="text-xs text-muted-foreground">Last Month</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-2xl font-bold text-emerald-600">₦{statsData?.statistics?.financial?.totalRevenue || 170}</div>
-                            <p className="text-xs text-muted-foreground">This Month</p>
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-emerald-600">
-                            +{Math.round(((statsData?.statistics?.financial?.totalRevenue || 170) - Math.max(0, (statsData?.statistics?.financial?.totalRevenue || 170) * 0.6)) / Math.max(0, (statsData?.statistics?.financial?.totalRevenue || 170) * 0.6) * 100)}%
-                          </div>
-                          <p className="text-xs text-muted-foreground">Growth Rate</p>
-                        </div>
-                      </div>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={[
+                          { 
+                            period: 'Last Month', 
+                            revenue: Math.max(0, Math.round((statsData?.statistics?.financial?.totalRevenue || 170) * 0.6)),
+                            fees: Math.max(0, Math.round((statsData?.statistics?.financial?.platformFeesEarned || 9) * 0.6))
+                          },
+                          { 
+                            period: 'This Month', 
+                            revenue: statsData?.statistics?.financial?.totalRevenue || 170,
+                            fees: statsData?.statistics?.financial?.platformFeesEarned || 9
+                          }
+                        ]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <XAxis 
+                            dataKey="period" 
+                            stroke="#6b7280"
+                            fontSize={12}
+                            tick={{ fill: '#6b7280' }}
+                          />
+                          <YAxis 
+                            stroke="#6b7280"
+                            fontSize={12}
+                            tick={{ fill: '#6b7280' }}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'white', 
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            }}
+                            formatter={(value, name) => [`₦${value}`, name === 'revenue' ? 'Total Revenue' : 'Platform Fees']}
+                          />
+                          <Legend />
+                          <Bar 
+                            dataKey="revenue" 
+                            fill="#10b981" 
+                            name="Total Revenue"
+                            radius={[4, 4, 0, 0]}
+                          />
+                          <Bar 
+                            dataKey="fees" 
+                            fill="#3b82f6" 
+                            name="Platform Fees"
+                            radius={[4, 4, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </CardContent>
                 </Card>
@@ -1193,6 +1298,55 @@ export default function SuperAdminDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Notification Type Selector */}
+                <div className="space-y-2">
+                  <Label>Notification Type</Label>
+                  <Select value={notificationType} onValueChange={(value: 'broadcast' | 'selective') => setNotificationType(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose notification type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="broadcast">Broadcast to All Organizations</SelectItem>
+                      <SelectItem value="selective">Send to Selected Organizations</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Organization Selector for Selective Notifications */}
+                {notificationType === 'selective' && (
+                  <div className="space-y-2">
+                    <Label>Select Organizations</Label>
+                    <div className="grid gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
+                      {organizationsData?.organizations?.map((org: any) => (
+                        <div key={org.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`org-${org.id}`}
+                            checked={selectedOrganizations.includes(org.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedOrganizations([...selectedOrganizations, org.id]);
+                              } else {
+                                setSelectedOrganizations(selectedOrganizations.filter(id => id !== org.id));
+                              }
+                            }}
+                            className="rounded"
+                          />
+                          <label 
+                            htmlFor={`org-${org.id}`} 
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
+                          >
+                            {org.name} ({org.status})
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {selectedOrganizations.length} organizations selected
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="notification-message">Message</Label>
                   <Textarea
@@ -1204,13 +1358,29 @@ export default function SuperAdminDashboard() {
                     data-testid="textarea-notification-message"
                   />
                 </div>
+                
                 <div className="flex gap-2">
                   <Button 
-                    onClick={() => broadcastNotificationMutation.mutate({ message: notificationMessage })}
-                    disabled={!notificationMessage.trim() || broadcastNotificationMutation.isPending}
-                    data-testid="button-broadcast-notification"
+                    onClick={() => {
+                      if (notificationType === 'broadcast') {
+                        broadcastNotificationMutation.mutate({ message: notificationMessage });
+                      } else {
+                        selectiveNotificationMutation.mutate({ 
+                          message: notificationMessage, 
+                          organizationIds: selectedOrganizations 
+                        });
+                      }
+                    }}
+                    disabled={
+                      !notificationMessage.trim() || 
+                      broadcastNotificationMutation.isPending || 
+                      selectiveNotificationMutation.isPending ||
+                      (notificationType === 'selective' && selectedOrganizations.length === 0)
+                    }
+                    data-testid="button-send-notification"
                   >
-                    {broadcastNotificationMutation.isPending ? 'Sending...' : 'Broadcast to All'}
+                    {(broadcastNotificationMutation.isPending || selectiveNotificationMutation.isPending) ? 'Sending...' : 
+                     notificationType === 'broadcast' ? 'Broadcast to All' : `Send to ${selectedOrganizations.length} Organizations`}
                   </Button>
                   <Button variant="outline" data-testid="button-preview-notification">
                     Preview
