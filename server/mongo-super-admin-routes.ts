@@ -1280,4 +1280,65 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       });
     }
   });
+
+  // Get notification history
+  app.get("/api/super-admin/notifications/history", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      // Get notifications created by super admin actions (broadcast and selective)
+      const notifications = await Notification.find({ 
+        type: { $in: ['broadcast', 'selective'] }
+      })
+        .populate('organizationId', 'name status')
+        .sort({ createdAt: -1 })
+        .limit(limit);
+
+      // Group notifications by message and type to show history properly
+      const groupedNotifications = new Map();
+      
+      for (const notification of notifications) {
+        const key = `${notification.message}_${notification.type}_${notification.createdAt.toISOString().split('T')[0]}`;
+        
+        if (!groupedNotifications.has(key)) {
+          groupedNotifications.set(key, {
+            _id: notification._id,
+            message: notification.message,
+            type: notification.type,
+            title: notification.title,
+            createdAt: notification.createdAt,
+            delivered: true,
+            targetOrganizations: [],
+            recipientCount: 0
+          });
+        }
+        
+        const entry = groupedNotifications.get(key);
+        entry.recipientCount++;
+        
+        if (notification.type === 'selective' && notification.organizationId) {
+          const orgExists = entry.targetOrganizations.find((org: any) => org._id?.toString() === notification.organizationId._id?.toString());
+          if (!orgExists) {
+            entry.targetOrganizations.push({
+              _id: notification.organizationId._id,
+              name: notification.organizationId.name || 'Unknown Organization'
+            });
+          }
+        }
+      }
+
+      const history = Array.from(groupedNotifications.values());
+
+      res.json({
+        success: true,
+        notifications: history
+      });
+    } catch (error: any) {
+      console.error('Error getting notification history:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to get notification history' 
+      });
+    }
+  });
 }

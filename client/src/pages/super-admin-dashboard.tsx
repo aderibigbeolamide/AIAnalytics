@@ -217,6 +217,12 @@ export default function SuperAdminDashboard() {
     staleTime: 2 * 60 * 1000,
   });
 
+  // Notification history query
+  const { data: notificationHistory, isLoading: notificationHistoryLoading } = useQuery<{ notifications: any[] }>({
+    queryKey: ['/api/super-admin/notifications/history'],
+    staleTime: 1 * 60 * 1000, // 1 minute
+  });
+
   // Organization status mutation
   const updateOrgStatusMutation = useMutation({
     mutationFn: async ({ orgId, status }: { orgId: string; status: string }) => {
@@ -256,6 +262,7 @@ export default function SuperAdminDashboard() {
     onSuccess: () => {
       setNotificationMessage('');
       setSelectedOrganizations([]);
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/notifications/history'] });
       toast({ title: "Success", description: "Notification broadcasted successfully" });
     },
     onError: () => {
@@ -273,6 +280,7 @@ export default function SuperAdminDashboard() {
       return response.json();
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/notifications/history'] });
       toast({ 
         title: "Success", 
         description: `Notification sent to ${data.sentCount || selectedOrganizations.length} organizations successfully` 
@@ -1556,41 +1564,44 @@ export default function SuperAdminDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="p-3 border rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">System Maintenance</div>
-                        <div className="text-xs text-muted-foreground">
-                          Sent 2 hours ago • 24 recipients
+                {notificationHistoryLoading ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    Loading notification history...
+                  </div>
+                ) : notificationHistory?.notifications?.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No notifications sent yet
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notificationHistory?.notifications?.slice(0, 10).map((notification: any) => (
+                      <div key={notification._id} className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="text-sm font-medium">
+                              {notification.message?.substring(0, 50)}
+                              {notification.message?.length > 50 ? '...' : ''}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Sent {new Date(notification.createdAt).toLocaleDateString()} • 
+                              {notification.type === 'broadcast' ? 'All organizations' : 
+                               `${notification.targetOrganizations?.length || 0} organizations`}
+                            </div>
+                            {notification.targetOrganizations?.length > 0 && notification.type === 'selective' && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                Targets: {notification.targetOrganizations?.slice(0, 2).map((org: any) => org.name).join(', ')}
+                                {notification.targetOrganizations?.length > 2 && ` +${notification.targetOrganizations.length - 2} more`}
+                              </div>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="text-green-600">
+                            {notification.delivered ? 'Delivered' : 'Pending'}
+                          </Badge>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-green-600">Delivered</Badge>
-                    </div>
+                    ))}
                   </div>
-                  <div className="p-3 border rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">Welcome New Users</div>
-                        <div className="text-xs text-muted-foreground">
-                          Sent 1 day ago • 12 recipients
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-green-600">Delivered</Badge>
-                    </div>
-                  </div>
-                  <div className="p-3 border rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">Feature Update</div>
-                        <div className="text-xs text-muted-foreground">
-                          Sent 3 days ago • 45 recipients
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-green-600">Delivered</Badge>
-                    </div>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
