@@ -45,7 +45,7 @@ import {
   Download,
   Share
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   ResponsiveContainer,
@@ -291,6 +291,12 @@ export default function SuperAdminDashboard() {
   const { data: statistics } = useQuery<PlatformStatistics>({
     queryKey: ["/api/super-admin/statistics"],
   });
+
+  // Debug: Log what we're getting from the API
+  console.log('Current statistics:', statistics);
+  
+  // Extract the actual statistics data from the response wrapper
+  const statsData = statistics?.statistics;
 
   // Fetch platform fee data
   const { data: platformFeeData } = useQuery<{ platformFee: number }>({
@@ -603,26 +609,26 @@ export default function SuperAdminDashboard() {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Total Revenue"
-              value={statistics?.financial?.totalTicketRevenue || 0}
-              description={`₦${(statistics?.financial?.totalTicketRevenue || 0).toLocaleString()} revenue`}
+              value={statsData?.financial?.totalTicketRevenue || 0}
+              description={`₦${(statsData?.financial?.totalTicketRevenue || 0).toLocaleString()} revenue`}
               icon={DollarSign}
-              trend={`${statistics?.financial?.ticketsSold || 0} tickets sold`}
+              trend={`${statsData?.financial?.ticketsSold || 0} tickets sold`}
             />
             <StatCard
               title="Platform Fees"
-              value={statistics?.financial?.platformFeesEarned || 0}
-              description={`₦${(statistics?.financial?.platformFeesEarned || 0).toLocaleString()} earned`}
+              value={statsData?.financial?.platformFeesEarned || 0}
+              description={`₦${(statsData?.financial?.platformFeesEarned || 0).toLocaleString()} earned`}
               icon={Receipt}
             />
             <StatCard
               title="Tickets Sold"
-              value={statistics?.financial?.ticketsSold || 0}
+              value={statsData?.financial?.ticketsSold || 0}
               description="Paid tickets"
               icon={CreditCard}
             />
             <StatCard
               title="Paid Registrations"
-              value={statistics?.financial?.paidRegistrations || 0}
+              value={statsData?.financial?.paidRegistrations || 0}
               description="Registration payments"
               icon={UserCheck}
             />
@@ -638,28 +644,28 @@ export default function SuperAdminDashboard() {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="User Growth (7d)"
-              value={statistics?.growth?.newUsersLast7Days || 0}
-              description={`${Math.round(statistics?.growth?.userGrowthRate || 0)}% vs prev week`}
+              value={statsData?.growth?.newUsersLast7Days || 0}
+              description={`${Math.round(statsData?.growth?.userGrowthRate || 0)}% vs prev week`}
               icon={Users}
-              trend={statistics?.growth?.userGrowthRate > 0 ? "positive" : "neutral"}
+              trend={statsData?.growth?.userGrowthRate > 0 ? "positive" : "neutral"}
             />
             <StatCard
               title="Event Growth (7d)"
-              value={statistics?.growth?.newEventsLast7Days || 0}
-              description={`${Math.round(statistics?.growth?.eventGrowthRate || 0)}% vs prev week`}
+              value={statsData?.growth?.newEventsLast7Days || 0}
+              description={`${Math.round(statsData?.growth?.eventGrowthRate || 0)}% vs prev week`}
               icon={Calendar}
-              trend={statistics?.growth?.eventGrowthRate > 0 ? "positive" : "neutral"}
+              trend={statsData?.growth?.eventGrowthRate > 0 ? "positive" : "neutral"}
             />
             <StatCard
               title="Organizations (7d)"
-              value={statistics?.growth?.newOrgsLast7Days || 0}
+              value={statsData?.growth?.newOrgsLast7Days || 0}
               description="New organizations"
               icon={Building2}
             />
             <StatCard
               title="Conversion Rate"
-              value={statistics?.engagement?.conversionRate || 0}
-              description={`${statistics?.engagement?.conversionRate || 0}% conversion rate`}
+              value={statsData?.engagement?.conversionRate || 0}
+              description={`${statsData?.engagement?.conversionRate || 0}% conversion rate`}
               icon={Target}
             />
           </div>
@@ -1539,31 +1545,31 @@ export default function SuperAdminDashboard() {
           <div className="grid gap-4 md:grid-cols-4">
             <StatCard
               title="Total Revenue"
-              value={statistics?.financial?.totalTicketRevenue || 0}
-              description={`₦${(statistics?.financial?.totalTicketRevenue || 0).toLocaleString()} revenue`}
+              value={statsData?.financial?.totalTicketRevenue || 0}
+              description={`₦${(statsData?.financial?.totalTicketRevenue || 0).toLocaleString()} revenue`}
               icon={DollarSign}
-              trend={`${statistics?.financial?.ticketsSold || 0} tickets sold`}
+              trend={`${statsData?.financial?.ticketsSold || 0} tickets sold`}
             />
             <StatCard
               title="Platform Users"
-              value={statistics?.overview?.totalUsers || 0}
-              description={`${statistics?.users?.active || 0} active users`}
+              value={statsData?.overview?.totalUsers || 0}
+              description={`${statsData?.users?.active || 0} active users`}
               icon={Users}
-              trend={`+${Math.round(statistics?.growth?.userGrowthRate || 0)}% this week`}
+              trend={`+${Math.round(statsData?.growth?.userGrowthRate || 0)}% this week`}
             />
             <StatCard
               title="Total Events"
-              value={statistics?.overview?.totalEvents || 0}
-              description={`${statistics?.events?.upcoming || 0} upcoming`}
+              value={statsData?.overview?.totalEvents || 0}
+              description={`${statsData?.events?.upcoming || 0} upcoming`}
               icon={Calendar}
-              trend={`+${Math.round(statistics?.growth?.eventGrowthRate || 0)}% this week`}
+              trend={`+${Math.round(statsData?.growth?.eventGrowthRate || 0)}% this week`}
             />
             <StatCard
               title="Organizations"
-              value={statistics?.overview?.totalOrganizations || 0}
-              description={`${statistics?.organizations?.approved || 0} approved`}
+              value={statsData?.overview?.totalOrganizations || 0}
+              description={`${statsData?.organizations?.approved || 0} approved`}
               icon={Building2}
-              trend={`${statistics?.organizations?.pending || 0} pending`}
+              trend={`${statsData?.organizations?.pending || 0} pending`}
             />
           </div>
 
@@ -1584,15 +1590,15 @@ export default function SuperAdminDashboard() {
                     <AreaChart data={[
                       { 
                         period: '30 days ago', 
-                        users: Math.max(0, (statistics?.overview?.totalUsers || 7) - (statistics?.growth?.newUsersLast30Days || 7))
+                        users: Math.max(0, (statsData?.overview?.totalUsers || 7) - (statsData?.growth?.newUsersLast30Days || 7))
                       },
                       { 
                         period: '7 days ago', 
-                        users: Math.max(2, (statistics?.overview?.totalUsers || 7) - (statistics?.growth?.newUsersLast7Days || 5))
+                        users: Math.max(2, (statsData?.overview?.totalUsers || 7) - (statsData?.growth?.newUsersLast7Days || 5))
                       },
                       { 
                         period: 'Today', 
-                        users: statistics?.overview?.totalUsers || 7
+                        users: statsData?.overview?.totalUsers || 7
                       }
                     ]}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -1621,9 +1627,9 @@ export default function SuperAdminDashboard() {
                     <RechartsPieChart>
                       <Pie
                         data={[
-                          { name: 'Upcoming', value: statistics?.events?.upcoming || 1, fill: '#10b981' },
-                          { name: 'Past', value: statistics?.events?.past || 14, fill: '#6b7280' },
-                          { name: 'Cancelled', value: statistics?.events?.cancelled || 0, fill: '#ef4444' }
+                          { name: 'Upcoming', value: statsData?.events?.upcoming || 1, fill: '#10b981' },
+                          { name: 'Past', value: statsData?.events?.past || 14, fill: '#6b7280' },
+                          { name: 'Cancelled', value: statsData?.events?.cancelled || 0, fill: '#ef4444' }
                         ]}
                         cx="50%"
                         cy="50%"
@@ -1653,17 +1659,17 @@ export default function SuperAdminDashboard() {
                     <BarChart data={[
                       {
                         category: 'Ticket Revenue',
-                        amount: statistics?.financial?.totalTicketRevenue || 170,
+                        amount: statsData?.financial?.totalTicketRevenue || 170,
                         fill: '#3b82f6'
                       },
                       {
                         category: 'Platform Fees',
-                        amount: statistics?.financial?.platformFeesEarned || 0,
+                        amount: statsData?.financial?.platformFeesEarned || 0,
                         fill: '#10b981'
                       },
                       {
                         category: 'Registration Revenue',
-                        amount: (statistics?.financial?.paidRegistrations || 1) * 50,
+                        amount: (statsData?.financial?.paidRegistrations || 1) * 50,
                         fill: '#f59e0b'
                       }
                     ]}>
@@ -1693,9 +1699,9 @@ export default function SuperAdminDashboard() {
                     <RechartsPieChart>
                       <Pie
                         data={[
-                          { name: 'Active', value: statistics?.users?.active || 5, fill: '#10b981' },
-                          { name: 'Pending', value: statistics?.users?.pending || 0, fill: '#f59e0b' },
-                          { name: 'Suspended', value: statistics?.users?.suspended || 2, fill: '#ef4444' }
+                          { name: 'Active', value: statsData?.users?.active || 5, fill: '#10b981' },
+                          { name: 'Pending', value: statsData?.users?.pending || 0, fill: '#f59e0b' },
+                          { name: 'Suspended', value: statsData?.users?.suspended || 2, fill: '#ef4444' }
                         ]}
                         cx="50%"
                         cy="50%"
