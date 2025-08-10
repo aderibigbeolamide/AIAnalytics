@@ -226,12 +226,16 @@ class WebSocketChatServer {
     
     // First, try to load the latest session from database to ensure we have current state
     try {
-      // Use the chatbot routes system which has MongoDB persistence
-      const { getChatSessionFromDB } = await import('./chatbot-routes.js');
-      const dbSession = await getChatSessionFromDB(sessionId);
-      if (dbSession) {
-        console.log(`Found session in database, updating in-memory cache`);
-        this.chatSessions.set(sessionId, dbSession);
+      // Import the chat session model directly
+      const chatbotModule = await import('./chatbot-routes.js');
+      if (chatbotModule.getChatSessionFromDB) {
+        const dbSession = await chatbotModule.getChatSessionFromDB(sessionId);
+        if (dbSession) {
+          console.log(`Found session in database, updating in-memory cache`);
+          this.chatSessions.set(sessionId, dbSession);
+        }
+      } else {
+        console.log('getChatSessionFromDB function not available, using in-memory session');
       }
     } catch (error) {
       console.error('Error syncing with database:', error);
@@ -262,9 +266,13 @@ class WebSocketChatServer {
 
     // Save to database immediately
     try {
-      const { saveChatSession } = await import('./chatbot-routes.js');
-      await saveChatSession(session);
-      console.log(`WebSocket message saved to database for session ${sessionId}`);
+      const chatbotModule = await import('./chatbot-routes.js');
+      if (chatbotModule.saveChatSession) {
+        await chatbotModule.saveChatSession(session);
+        console.log(`WebSocket message saved to database for session ${sessionId}`);
+      } else {
+        console.log('saveChatSession function not available, message stored in memory only');
+      }
     } catch (error) {
       console.error('Error saving WebSocket message to database:', error);
     }
