@@ -140,22 +140,28 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
     
+    console.log('🚀 ADMIN: Attempting to connect WebSocket to:', wsUrl);
+    console.log('🚀 ADMIN: User ID:', user?.id);
+    console.log('🚀 ADMIN: Session ID:', sessionId);
+    
     try {
       wsRef.current = new WebSocket(wsUrl);
       
       wsRef.current.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('✅ ADMIN: WebSocket connected successfully');
         setIsConnected(true);
         
         // Join as admin
         if (user?.id) {
-          wsRef.current?.send(JSON.stringify({
+          const joinMessage = {
             type: 'join_admin_session',
             data: { 
               adminId: user.id,
               sessionId: sessionId
             }
-          }));
+          };
+          console.log('📤 ADMIN: Sending join message:', joinMessage);
+          wsRef.current?.send(JSON.stringify(joinMessage));
         }
       };
 
@@ -170,21 +176,21 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         }
       };
 
-      wsRef.current.onclose = () => {
-        console.log('WebSocket disconnected - attempting reconnect...');
+      wsRef.current.onclose = (event) => {
+        console.log('❌ ADMIN: WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
         
         // Try to reconnect after 2 seconds
         setTimeout(() => {
           if (user?.id) {
-            console.log('Reconnecting WebSocket...');
+            console.log('🔄 ADMIN: Attempting to reconnect WebSocket...');
             connectWebSocket();
           }
         }, 2000);
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('❌ ADMIN: WebSocket error:', error);
         setIsConnected(false);
       };
     } catch (error) {
