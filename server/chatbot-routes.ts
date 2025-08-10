@@ -366,6 +366,9 @@ export function setupChatbotRoutes(app: Express) {
   // Get all active chat sessions (for super admin)
   app.get("/api/admin/chat-sessions", async (req: Request, res: Response) => {
     try {
+      // Reload from database to ensure we have latest data
+      await loadChatSessions();
+      
       console.log('API: Getting chat sessions, total in memory:', chatSessions.size);
       const allSessions = Array.from(chatSessions.values());
       console.log('API: All sessions:', allSessions.map(s => ({ id: s.id, email: s.userEmail, status: s.status })));
@@ -392,8 +395,40 @@ export function setupChatbotRoutes(app: Express) {
   app.get("/api/admin/chat-sessions/:sessionId", async (req: Request, res: Response) => {
     try {
       const { sessionId } = req.params;
+      
+      // First try to get from database for most up-to-date data
+      try {
+        const dbSession = await ChatSessionModel.findOne({ sessionId });
+        if (dbSession) {
+          const sessionData = {
+            id: dbSession.sessionId,
+            userEmail: dbSession.userEmail,
+            isEscalated: dbSession.isEscalated,
+            adminId: dbSession.adminId,
+            status: dbSession.status as 'active' | 'resolved' | 'pending_admin',
+            messages: dbSession.messages.map(msg => ({
+              id: msg.id,
+              text: msg.text,
+              sender: msg.sender as 'bot' | 'user' | 'admin',
+              timestamp: msg.timestamp,
+              type: msg.type as 'text' | 'quick_reply' | 'escalation'
+            })),
+            createdAt: dbSession.createdAt,
+            lastActivity: dbSession.lastActivity
+          };
+          
+          // Update in-memory cache
+          chatSessions.set(sessionId, sessionData);
+          
+          console.log(`✅ Loaded session ${sessionId} from database with ${sessionData.messages.length} messages`);
+          return res.json(sessionData);
+        }
+      } catch (dbError) {
+        console.error('Database lookup failed, using in-memory:', dbError);
+      }
+      
+      // Fallback to in-memory
       const session = chatSessions.get(sessionId);
-
       if (!session) {
         return res.status(404).json({ message: "Chat session not found" });
       }
