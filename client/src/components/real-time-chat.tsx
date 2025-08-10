@@ -193,6 +193,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
 
   const handleWebSocketMessage = (message: any) => {
     const { type, data } = message;
+    console.log('🎯 Admin WebSocket message received:', { type, data });
 
     switch (type) {
       case 'connected':
@@ -225,7 +226,9 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         break;
       
       case 'new_user_message':
-        console.log('🎉 WebSocket: New user message received', data);
+        console.log('🎉 ADMIN: New user message received via WebSocket', data);
+        console.log('🎯 Current sessionId:', sessionId);
+        console.log('🎯 Message sessionId:', data.sessionId);
         
         // Create proper message object
         const newUserMessage: ChatMessage = {
@@ -237,24 +240,41 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
           type: 'text' as const
         };
         
+        console.log('📝 Created message object:', newUserMessage);
+        
         if (data.sessionId === sessionId) {
-          console.log('✅ Adding user message to current session');
+          console.log('✅ ADMIN: Adding user message to current active session');
           setCurrentSession(prev => {
-            if (!prev) return null;
+            if (!prev) {
+              console.log('❌ No current session to update');
+              return null;
+            }
+            
+            console.log('🔍 Current session messages count before:', prev.messages.length);
             
             // Check if message already exists to prevent duplicates
             const messageExists = prev.messages.some(msg => msg.id === newUserMessage.id);
             if (messageExists) {
-              console.log('Message already exists, skipping duplicate');
+              console.log('⚠️ Message already exists, skipping duplicate');
               return prev;
             }
             
-            return {
+            const updatedSession = {
               ...prev,
               messages: [...prev.messages, newUserMessage],
               lastActivity: new Date()
             };
+            
+            console.log('✅ Updated session with new message count:', updatedSession.messages.length);
+            return updatedSession;
           });
+          
+          // Scroll to bottom after adding message
+          setTimeout(() => {
+            scrollToBottom();
+          }, 100);
+        } else {
+          console.log('ℹ️ Message is for different session, not updating current view');
         }
         
         // Update sessions list with new message count
