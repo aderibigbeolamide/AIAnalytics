@@ -73,6 +73,10 @@ export interface IMongoStorage {
 
   // Attendance
   createAttendance(attendance: any): Promise<any>;
+
+  // Platform Settings
+  getPlatformSettings(): Promise<any>;
+  updatePlatformSettings(settings: any): Promise<any>;
   getAttendance(eventId: string): Promise<any[]>;
   
   // CSV Validation
@@ -802,6 +806,31 @@ export class MongoStorage implements IMongoStorage {
         validationRate: 0,
         scansToday: 0
       };
+    }
+  }
+
+  // Platform Settings methods
+  async getPlatformSettings(): Promise<any> {
+    try {
+      const collection = mongoose.connection.db.collection('platform_settings');
+      return await collection.findOne({}) || { platformFee: 2 };
+    } catch (error) {
+      console.error('Error getting platform settings:', error);
+      return { platformFee: 2 };
+    }
+  }
+
+  async updatePlatformSettings(settings: any): Promise<any> {
+    try {
+      const collection = mongoose.connection.db.collection('platform_settings');
+      return await collection.updateOne(
+        {},
+        { $set: { ...settings, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    } catch (error) {
+      console.error('Error updating platform settings:', error);
+      throw error;
     }
   }
 }

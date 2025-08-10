@@ -35,7 +35,16 @@ import {
   MessageSquare,
   Megaphone,
   FileText,
-  Ban
+  Ban,
+  DollarSign,
+  Settings,
+  PieChart,
+  TrendingDown,
+  Target,
+  CreditCard,
+  Receipt,
+  Download,
+  Share
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -48,22 +57,59 @@ interface PlatformStatistics {
     totalEvents: number;
     totalRegistrations: number;
     totalMembers: number;
+    totalOrganizations: number;
+    activeUsers: number;
+    approvedOrganizations: number;
+    upcomingEvents: number;
+    activeMembers: number;
+  };
+  financial: {
+    totalRevenue: number;
+    totalTransactions: number;
+    platformFeesEarned: number;
+    ticketsSold: number;
+    totalTicketRevenue: number;
+    paidRegistrations: number;
+    averageTransactionValue: number;
+  };
+  growth: {
+    newUsersLast7Days: number;
+    newUsersLast30Days: number;
+    newEventsLast7Days: number;
+    newEventsLast30Days: number;
+    newOrgsLast7Days: number;
+    newOrgsLast30Days: number;
+    userGrowthRate: number;
+    eventGrowthRate: number;
   };
   events: {
-    active: number;
-    completed: number;
+    upcoming: number;
+    past: number;
     cancelled: number;
-    draft: number;
+    total: number;
+    registrationBased: number;
+    ticketBased: number;
   };
-  registrations: {
+  users: {
+    active: number;
     pending: number;
-    attended: number;
-    validationRate: number;
+    suspended: number;
+    admins: number;
+    superAdmins: number;
+    members: number;
   };
-  recent: {
-    newUsers: number;
-    newEvents: number;
-    newRegistrations: number;
+  organizations: {
+    approved: number;
+    pending: number;
+    suspended: number;
+    total: number;
+  };
+  engagement: {
+    totalRegistrations: number;
+    paidRegistrations: number;
+    freeRegistrations: number;
+    conversionRate: number;
+    averageRegistrationsPerEvent: number;
   };
 }
 
@@ -179,6 +225,7 @@ export default function SuperAdminDashboard() {
   const [orgMessageDialogOpen, setOrgMessageDialogOpen] = useState(false);
   const [reviewOrgDialogOpen, setReviewOrgDialogOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<PendingOrganization | null>(null);
+  const [platformFeeDialogOpen, setPlatformFeeDialogOpen] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -202,6 +249,14 @@ export default function SuperAdminDashboard() {
       title: "",
       message: "",
       priority: "medium"
+    }
+  });
+
+  // Platform fee form
+  const platformFeeForm = useForm<PlatformFeeFormData>({
+    resolver: zodResolver(platformFeeSchema),
+    defaultValues: {
+      platformFee: 2,
     }
   });
 
@@ -250,6 +305,11 @@ export default function SuperAdminDashboard() {
   const { data: chatSessions, refetch: refetchChatSessions } = useQuery<ChatSession[]>({
     queryKey: ["/api/admin/chat-sessions"],
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+  });
+
+  // Fetch platform fee settings
+  const { data: platformFeeData } = useQuery<{ platformFee: number }>({
+    queryKey: ["/api/super-admin/platform-fee"],
   });
 
   // Broadcast message mutation
@@ -420,6 +480,28 @@ export default function SuperAdminDashboard() {
     updateUserStatusMutation.mutate({ userId, status });
   };
 
+  // Platform fee update mutation
+  const updatePlatformFeeMutation = useMutation({
+    mutationFn: async (data: PlatformFeeFormData) => {
+      return apiRequest('PUT', '/api/super-admin/platform-fee', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Platform fee updated successfully"
+      });
+      setPlatformFeeDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/platform-fee"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update platform fee",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleReviewOrganization = (org: PendingOrganization) => {
     setSelectedOrg(org);
     setReviewOrgDialogOpen(true);
@@ -481,68 +563,118 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      {/* Platform Statistics - Mobile responsive grid */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Users"
-          value={statistics.overview.totalUsers}
-          description={`${statistics.recent.newUsers} new this month`}
-          icon={Users}
-          trend={statistics.recent.newUsers > 0 ? `+${statistics.recent.newUsers}` : ""}
-        />
-        <StatCard
-          title="Organizations"
-          value={statistics.overview.totalAdmins}
-          description="Active admin accounts"
-          icon={Building2}
-        />
-        <StatCard
-          title="Total Events"
-          value={statistics.overview.totalEvents}
-          description={`${statistics.recent.newEvents} new this month`}
-          icon={Calendar}
-          trend={statistics.recent.newEvents > 0 ? `+${statistics.recent.newEvents}` : ""}
-        />
-        <StatCard
-          title="Registrations"
-          value={statistics.overview.totalRegistrations}
-          description={`${statistics.registrations.validationRate}% validation rate`}
-          icon={UserCheck}
-        />
-      </div>
+      {/* Comprehensive Platform Statistics */}
+      <div className="space-y-6">
+        {/* Financial Overview */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-green-600" />
+            Financial Overview
+          </h3>
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total Revenue"
+              value={`₦${statistics?.financial?.totalRevenue?.toLocaleString() || 0}`}
+              description="Platform revenue"
+              icon={DollarSign}
+              trend={`${statistics?.financial?.totalTransactions || 0} transactions`}
+            />
+            <StatCard
+              title="Platform Fees"
+              value={`₦${statistics?.financial?.platformFeesEarned?.toLocaleString() || 0}`}
+              description="Fees earned"
+              icon={Receipt}
+            />
+            <StatCard
+              title="Tickets Sold"
+              value={statistics?.financial?.ticketsSold || 0}
+              description="Paid tickets"
+              icon={CreditCard}
+            />
+            <StatCard
+              title="Paid Registrations"
+              value={statistics?.financial?.paidRegistrations || 0}
+              description="Registration payments"
+              icon={UserCheck}
+            />
+          </div>
+        </div>
 
-      {/* Event Statistics - Mobile responsive */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        <StatCard
-          title="Active Events"
-          value={statistics.events.active}
-          description="Currently running"
-          icon={Activity}
-        />
-        <StatCard
-          title="Completed Events"
-          value={statistics.events.completed}
-          description="Successfully finished"
-          icon={CheckCircle}
-        />
-        <StatCard
-          title="Cancelled Events"
-          value={statistics.events.cancelled}
-          description="Cancelled by organizers"
-          icon={XCircle}
-        />
-        <StatCard
-          title="Draft Events"
-          value={statistics.events.draft}
-          description="Being prepared"
-          icon={Clock}
-        />
+        {/* Growth Metrics */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-blue-600" />
+            Growth Analytics
+          </h3>
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="User Growth (7d)"
+              value={statistics?.growth?.newUsersLast7Days || 0}
+              description={`${statistics?.growth?.userGrowthRate || 0}% vs prev week`}
+              icon={Users}
+              trend={statistics?.growth?.userGrowthRate > 0 ? "positive" : "neutral"}
+            />
+            <StatCard
+              title="Event Growth (7d)"
+              value={statistics?.growth?.newEventsLast7Days || 0}
+              description={`${statistics?.growth?.eventGrowthRate || 0}% vs prev week`}
+              icon={Calendar}
+              trend={statistics?.growth?.eventGrowthRate > 0 ? "positive" : "neutral"}
+            />
+            <StatCard
+              title="Organizations (7d)"
+              value={statistics?.growth?.newOrgsLast7Days || 0}
+              description="New organizations"
+              icon={Building2}
+            />
+            <StatCard
+              title="Conversion Rate"
+              value={`${statistics?.engagement?.conversionRate || 0}%`}
+              description="Paid vs free registrations"
+              icon={Target}
+            />
+          </div>
+        </div>
+
+        {/* Platform Overview */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-purple-600" />
+            Platform Overview
+          </h3>
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total Users"
+              value={statistics?.overview?.totalUsers || 0}
+              description={`${statistics?.users?.active || 0} active users`}
+              icon={Users}
+            />
+            <StatCard
+              title="Organizations"
+              value={statistics?.overview?.totalOrganizations || 0}
+              description={`${statistics?.organizations?.approved || 0} approved`}
+              icon={Building2}
+            />
+            <StatCard
+              title="Total Events"
+              value={statistics?.overview?.totalEvents || 0}
+              description={`${statistics?.events?.upcoming || 0} upcoming`}
+              icon={Calendar}
+            />
+            <StatCard
+              title="Total Registrations"
+              value={statistics?.overview?.totalRegistrations || 0}
+              description={`${statistics?.engagement?.averageRegistrationsPerEvent || 0} avg per event`}
+              icon={UserCheck}
+            />
+          </div>
+        </div>
       </div>
 
       <Tabs defaultValue="users" className="space-y-6">
         {/* Mobile-friendly tab navigation */}
         <div className="w-full overflow-x-auto">
-          <TabsList className="grid grid-cols-4 lg:grid-cols-7 gap-1 h-auto min-w-max lg:min-w-full">
+          <TabsList className="grid grid-cols-5 lg:grid-cols-8 gap-1 h-auto min-w-max lg:min-w-full">
             <TabsTrigger value="users" className="flex flex-col items-center gap-1 py-3 text-xs">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline text-xs">Users</span>
@@ -587,6 +719,11 @@ export default function SuperAdminDashboard() {
               <TrendingUp className="w-4 h-4" />
               <span className="hidden sm:inline text-xs">Analytics</span>
               <span className="sm:hidden text-xs">Stats</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex flex-col items-center gap-1 py-3 text-xs">
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Settings</span>
+              <span className="sm:hidden text-xs">Settings</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1543,7 +1680,309 @@ export default function SuperAdminDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Platform Settings Tab */}
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Platform Settings
+              </CardTitle>
+              <CardDescription>
+                Configure platform-wide settings and fees
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Platform Fee Management */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Platform Fee</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Current platform fee: {platformFeeData?.platformFee || 2}%
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      platformFeeForm.setValue('platformFee', platformFeeData?.platformFee || 2);
+                      setPlatformFeeDialogOpen(true);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Update Fee
+                  </Button>
+                </div>
+                
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <div className="font-medium">Current Fee</div>
+                      <div className="text-muted-foreground">{platformFeeData?.platformFee || 2}%</div>
+                    </div>
+                    <div>
+                      <div className="font-medium">Estimated Monthly Revenue</div>
+                      <div className="text-muted-foreground">₦{Math.round((statistics?.financial?.totalRevenue || 0) * 0.1).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="font-medium">Total Fees Earned</div>
+                      <div className="text-muted-foreground">₦{statistics?.financial?.platformFeesEarned?.toLocaleString() || 0}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <PieChart className="w-5 h-5" />
+                  Platform Analytics & Insights
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const statsData = JSON.stringify(statistics, null, 2);
+                      navigator.clipboard.writeText(statsData);
+                      toast({ title: "Success", description: "Statistics copied to clipboard" });
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Share className="w-4 h-4" />
+                    Share Stats
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const csvData = [
+                        ['Metric', 'Value'],
+                        ['Total Users', statistics?.overview?.totalUsers || 0],
+                        ['Total Organizations', statistics?.overview?.totalOrganizations || 0],
+                        ['Total Events', statistics?.overview?.totalEvents || 0],
+                        ['Total Revenue', `₦${statistics?.financial?.totalRevenue || 0}`],
+                        ['Platform Fees Earned', `₦${statistics?.financial?.platformFeesEarned || 0}`],
+                        ['Conversion Rate', `${statistics?.engagement?.conversionRate || 0}%`],
+                      ].map(row => row.join(',')).join('\n');
+                      
+                      const blob = new Blob([csvData], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `platform-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      
+                      toast({ title: "Success", description: "Analytics exported to CSV" });
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export CSV
+                  </Button>
+                </div>
+              </CardTitle>
+              <CardDescription>
+                Comprehensive platform analytics for stakeholder reports and growth tracking
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {/* Key Performance Indicators */}
+              <div>
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-blue-600" />
+                  Key Performance Indicators (KPIs)
+                </h4>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      ₦{statistics?.financial?.totalRevenue?.toLocaleString() || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Platform Revenue</div>
+                    <div className="text-xs text-green-600 mt-1">
+                      +{statistics?.growth?.newEventsLast7Days || 0} events this week
+                    </div>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {((statistics?.users?.active || 0) / (statistics?.overview?.totalUsers || 1) * 100).toFixed(1)}%
+                    </div>
+                    <div className="text-sm text-muted-foreground">User Engagement Rate</div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      {statistics?.users?.active || 0} of {statistics?.overview?.totalUsers || 0} users active
+                    </div>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {statistics?.engagement?.conversionRate || 0}%
+                    </div>
+                    <div className="text-sm text-muted-foreground">Payment Conversion</div>
+                    <div className="text-xs text-purple-600 mt-1">
+                      {statistics?.financial?.paidRegistrations || 0} paid registrations
+                    </div>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {statistics?.growth?.userGrowthRate || 0}%
+                    </div>
+                    <div className="text-sm text-muted-foreground">Weekly Growth Rate</div>
+                    <div className="text-xs text-orange-600 mt-1">
+                      +{statistics?.growth?.newUsersLast7Days || 0} new users
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Growth Trends */}
+              <div>
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                  Growth Trends & Insights
+                </h4>
+                <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="font-medium">User Acquisition</div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Last 7 days</span>
+                        <span className="font-medium">{statistics?.growth?.newUsersLast7Days || 0} users</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Last 30 days</span>
+                        <span className="font-medium">{statistics?.growth?.newUsersLast30Days || 0} users</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Growth rate</span>
+                        <span className={`font-medium ${(statistics?.growth?.userGrowthRate || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {(statistics?.growth?.userGrowthRate || 0) >= 0 ? '+' : ''}{statistics?.growth?.userGrowthRate || 0}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="font-medium">Event Creation</div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Last 7 days</span>
+                        <span className="font-medium">{statistics?.growth?.newEventsLast7Days || 0} events</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Last 30 days</span>
+                        <span className="font-medium">{statistics?.growth?.newEventsLast30Days || 0} events</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Growth rate</span>
+                        <span className={`font-medium ${(statistics?.growth?.eventGrowthRate || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {(statistics?.growth?.eventGrowthRate || 0) >= 0 ? '+' : ''}{statistics?.growth?.eventGrowthRate || 0}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Platform Health */}
+              <div>
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-blue-600" />
+                  Platform Health Metrics
+                </h4>
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                  <div className="p-4 border rounded-lg">
+                    <div className="font-medium text-green-600 mb-2">Active Organizations</div>
+                    <div className="text-2xl font-bold">{statistics?.organizations?.approved || 0}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {statistics?.organizations?.pending || 0} pending approval
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 border rounded-lg">
+                    <div className="font-medium text-blue-600 mb-2">Event Success Rate</div>
+                    <div className="text-2xl font-bold">
+                      {statistics?.overview?.totalEvents > 0 ? 
+                        Math.round(((statistics?.events?.past || 0) / statistics.overview.totalEvents) * 100) : 0}%
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {statistics?.events?.past || 0} completed events
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 border rounded-lg">
+                    <div className="font-medium text-purple-600 mb-2">Revenue per Event</div>
+                    <div className="text-2xl font-bold">
+                      ₦{statistics?.overview?.totalEvents > 0 ? 
+                        Math.round((statistics?.financial?.totalRevenue || 0) / statistics.overview.totalEvents).toLocaleString() : 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Average revenue generation
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Platform Fee Update Dialog */}
+      <Dialog open={platformFeeDialogOpen} onOpenChange={setPlatformFeeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Platform Fee</DialogTitle>
+            <DialogDescription>
+              Set the platform fee percentage (0-20%). This affects all new transactions.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...platformFeeForm}>
+            <form onSubmit={platformFeeForm.handleSubmit((data) => updatePlatformFeeMutation.mutate(data))} className="space-y-4">
+              <FormField
+                control={platformFeeForm.control}
+                name="platformFee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Platform Fee (%)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="20"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Current fee: {platformFeeData?.platformFee || 2}%. Enter a value between 0 and 20.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPlatformFeeDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updatePlatformFeeMutation.isPending}>
+                  {updatePlatformFeeMutation.isPending ? "Updating..." : "Update Fee"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

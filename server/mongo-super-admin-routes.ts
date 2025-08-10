@@ -15,41 +15,155 @@ function requireSuperAdmin(req: AuthenticatedRequest, res: Response, next: Funct
 }
 
 export function registerMongoSuperAdminRoutes(app: Express) {
-  // Get super admin statistics
+  // Get platform fee settings
+  app.get("/api/super-admin/platform-fee", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Get current platform fee from settings or default
+      const settings = await mongoStorage.getPlatformSettings();
+      res.json({
+        success: true,
+        platformFee: settings?.platformFee || 2
+      });
+    } catch (error: any) {
+      console.error("Get platform fee error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch platform fee" 
+      });
+    }
+  });
+
+  // Update platform fee (Super admin only)
+  app.put("/api/super-admin/platform-fee", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { platformFee } = req.body;
+      
+      if (typeof platformFee !== 'number' || platformFee < 0 || platformFee > 20) {
+        return res.status(400).json({
+          success: false,
+          message: "Platform fee must be a number between 0 and 20"
+        });
+      }
+
+      // Update platform fee in settings
+      await mongoStorage.updatePlatformSettings({ platformFee });
+      
+      res.json({
+        success: true,
+        message: "Platform fee updated successfully",
+        platformFee
+      });
+    } catch (error: any) {
+      console.error("Update platform fee error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to update platform fee" 
+      });
+    }
+  });
+
+  // Get comprehensive platform statistics for growth analysis
   app.get("/api/super-admin/statistics", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Get basic counts from MongoDB
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+      const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+      const yesterdayStart = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+      yesterdayStart.setHours(0, 0, 0, 0);
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+
+      // Get all data
       const allUsers = await mongoStorage.getAllUsers();
       const allOrganizations = await mongoStorage.getOrganizations();
       const allEvents = await mongoStorage.getEvents();
       const allMembers = await mongoStorage.getMembers();
       
-      // Calculate total registrations and tickets across all events
+      // Calculate total payments and revenue
+      let totalRevenue = 0;
+      let totalTransactions = 0;
       let totalRegistrations = 0;
+      let paidRegistrations = 0;
+      let ticketsSold = 0;
+      let totalTicketRevenue = 0;
+      
       for (const event of allEvents) {
         try {
+          const eventId = (event._id as any).toString();
+          
           // Get registrations for registration-based events
-          const registrations = await mongoStorage.getEventRegistrations((event._id as any).toString());
+          const registrations = await mongoStorage.getEventRegistrations(eventId);
           totalRegistrations += registrations.length;
+          
+          // Count paid registrations
+          const eventPaidRegs = registrations.filter(r => r.paymentStatus === 'paid').length;
+          paidRegistrations += eventPaidRegs;
           
           // Get tickets for ticket-based events
           if (event.eventType === 'ticket') {
-            const tickets = await mongoStorage.getTickets({ eventId: (event._id as any).toString() });
-            totalRegistrations += tickets.length;
+            const tickets = await mongoStorage.getTickets({ eventId });
+            ticketsSold += tickets.filter(t => t.paymentStatus === 'paid').length;
+            
+            // Calculate ticket revenue
+            const ticketRevenue = tickets
+              .filter(t => t.paymentStatus === 'paid')
+              .reduce((sum, ticket) => sum + (ticket.price || 0), 0);
+            totalTicketRevenue += ticketRevenue;
           }
+          
+          // Get payment history
+          const payments = await mongoStorage.getPaymentHistory([eventId]);
+          const eventRevenue = payments
+            .filter(p => p.status === 'success')
+            .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+          
+          totalRevenue += eventRevenue;
+          totalTransactions += payments.filter(p => p.status === 'success').length;
         } catch (error) {
-          console.error(`Error counting registrations for event ${event.name}:`, error);
+          console.error(`Error calculating stats for event ${event.name}:`, error);
         }
       }
 
-      // Calculate recent activity (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      // Calculate platform fees earned (assuming 2% default)
+      const platformSettings = await mongoStorage.getPlatformSettings();
+      const platformFeeRate = (platformSettings?.platformFee || 2) / 100;
+      const platformFeesEarned = Math.round(totalRevenue * platformFeeRate);
 
-      const recentUsers = allUsers.filter(u => u.createdAt >= thirtyDaysAgo).length;
-      const recentOrganizations = allOrganizations.filter(o => o.createdAt >= thirtyDaysAgo).length;
-      const recentEvents = allEvents.filter(e => e.createdAt >= thirtyDaysAgo).length;
-      const recentMembers = allMembers.filter(m => m.createdAt >= thirtyDaysAgo).length;
+      // Time-based statistics
+      const newUsersLast7Days = allUsers.filter(u => u.createdAt >= sevenDaysAgo).length;
+      const newUsersLast30Days = allUsers.filter(u => u.createdAt >= thirtyDaysAgo).length;
+      const newEventsLast7Days = allEvents.filter(e => e.createdAt >= sevenDaysAgo).length;
+      const newEventsLast30Days = allEvents.filter(e => e.createdAt >= thirtyDaysAgo).length;
+      const newOrgsLast7Days = allOrganizations.filter(o => o.createdAt >= sevenDaysAgo).length;
+      const newOrgsLast30Days = allOrganizations.filter(o => o.createdAt >= thirtyDaysAgo).length;
+
+      // Event status analysis
+      const upcomingEvents = allEvents.filter(e => {
+        const eventDate = new Date(e.date);
+        return eventDate > now && e.status !== 'cancelled';
+      }).length;
+      
+      const pastEvents = allEvents.filter(e => {
+        const eventDate = new Date(e.date);
+        return eventDate <= now;
+      }).length;
+      
+      const cancelledEvents = allEvents.filter(e => e.status === 'cancelled').length;
+
+      // User engagement metrics
+      const activeUsers = allUsers.filter(u => u.status === 'active').length;
+      const pendingUsers = allUsers.filter(u => u.status === 'pending').length;
+      const suspendedUsers = allUsers.filter(u => u.status === 'suspended').length;
+      
+      // Organization metrics
+      const approvedOrgs = allOrganizations.filter(o => o.status === 'approved').length;
+      const pendingOrgs = allOrganizations.filter(o => o.status === 'pending').length;
+      const suspendedOrgs = allOrganizations.filter(o => o.status === 'suspended').length;
+
+      // Growth metrics (comparing last 7 days vs previous 7 days)
+      const previous7Days = new Date(sevenDaysAgo.getTime() - (7 * 24 * 60 * 60 * 1000));
+      const userGrowthRate = ((newUsersLast7Days / Math.max(allUsers.filter(u => u.createdAt >= previous7Days && u.createdAt < sevenDaysAgo).length, 1)) - 1) * 100;
+      const eventGrowthRate = ((newEventsLast7Days / Math.max(allEvents.filter(e => e.createdAt >= previous7Days && e.createdAt < sevenDaysAgo).length, 1)) - 1) * 100;
 
       const statistics = {
         overview: {
@@ -58,60 +172,110 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           totalEvents: allEvents.length,
           totalMembers: allMembers.length,
           totalAdmins: allUsers.filter(u => u.role === 'admin').length,
+          totalSuperAdmins: allUsers.filter(u => u.role === 'super_admin').length,
           totalRegistrations: totalRegistrations,
-          activeUsers: allUsers.filter(u => u.status === 'active').length,
-          approvedOrganizations: allOrganizations.filter(o => o.status === 'approved').length,
-          upcomingEvents: allEvents.filter(e => e.status === 'upcoming').length,
+          activeUsers,
+          approvedOrganizations: approvedOrgs,
+          upcomingEvents,
           activeMembers: allMembers.filter(m => m.status === 'active').length
         },
-        recent: {
-          newUsers: recentUsers,
-          newOrganizations: recentOrganizations,
-          newEvents: recentEvents,
-          newMembers: recentMembers
+        financial: {
+          totalRevenue: Math.round(totalRevenue / 100), // Convert from kobo to naira
+          totalTransactions,
+          platformFeesEarned: Math.round(platformFeesEarned / 100),
+          ticketsSold,
+          totalTicketRevenue: Math.round(totalTicketRevenue / 100),
+          paidRegistrations,
+          averageTransactionValue: totalTransactions > 0 ? Math.round((totalRevenue / totalTransactions) / 100) : 0
+        },
+        growth: {
+          newUsersLast7Days,
+          newUsersLast30Days,
+          newEventsLast7Days,
+          newEventsLast30Days,
+          newOrgsLast7Days,
+          newOrgsLast30Days,
+          userGrowthRate: Math.round(userGrowthRate * 100) / 100,
+          eventGrowthRate: Math.round(eventGrowthRate * 100) / 100
         },
         events: {
-          // Calculate dynamic status counts based on current date
-          active: allEvents.filter(e => {
-            const now = new Date();
-            const startDate = new Date(e.startDate);
-            const endDate = new Date(e.endDate);
-            return now >= startDate && now <= endDate && e.status !== 'cancelled';
-          }).length,
-          upcoming: allEvents.filter(e => {
-            const now = new Date();
-            const startDate = new Date(e.startDate);
-            return now < startDate && e.status !== 'cancelled';
-          }).length,
-          completed: allEvents.filter(e => {
-            const now = new Date();
-            const endDate = new Date(e.endDate);
-            return now > endDate && e.status !== 'cancelled';
-          }).length,
-          cancelled: allEvents.filter(e => e.status === 'cancelled').length,
-          draft: allEvents.filter(e => e.status === 'draft').length
+          upcoming: upcomingEvents,
+          past: pastEvents,
+          cancelled: cancelledEvents,
+          total: allEvents.length,
+          registrationBased: allEvents.filter(e => e.eventType === 'registration').length,
+          ticketBased: allEvents.filter(e => e.eventType === 'ticket').length
         },
-        registrations: {
-          validationRate: 100 // Default since no registrations yet
+        users: {
+          active: activeUsers,
+          pending: pendingUsers,
+          suspended: suspendedUsers,
+          admins: allUsers.filter(u => u.role === 'admin').length,
+          superAdmins: allUsers.filter(u => u.role === 'super_admin').length,
+          members: allUsers.filter(u => u.role === 'member').length
         },
-        usersByRole: allUsers.reduce((acc: any, user) => {
-          acc[user.role] = (acc[user.role] || 0) + 1;
-          return acc;
-        }, {}),
-        organizationsByStatus: allOrganizations.reduce((acc: any, org) => {
-          acc[org.status] = (acc[org.status] || 0) + 1;
-          return acc;
-        }, {}),
-        eventsByStatus: allEvents.reduce((acc: any, event) => {
-          acc[event.status] = (acc[event.status] || 0) + 1;
-          return acc;
-        }, {})
+        organizations: {
+          approved: approvedOrgs,
+          pending: pendingOrgs,
+          suspended: suspendedOrgs,
+          total: allOrganizations.length
+        },
+        engagement: {
+          totalRegistrations,
+          paidRegistrations,
+          freeRegistrations: totalRegistrations - paidRegistrations,
+          conversionRate: totalRegistrations > 0 ? Math.round((paidRegistrations / totalRegistrations) * 100) : 0,
+          averageRegistrationsPerEvent: allEvents.length > 0 ? Math.round(totalRegistrations / allEvents.length) : 0
+        }
       };
 
-      res.json(statistics);
-    } catch (error) {
-      console.error("Error getting super admin statistics:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.json({ success: true, statistics });
+    } catch (error: any) {
+      console.error("Get statistics error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch platform statistics" 
+      });
+    }
+  });
+
+  // Platform fee management routes
+  app.get("/api/super-admin/platform-fee", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const settings = await mongoStorage.getPlatformSettings();
+      res.json({ platformFee: settings.platformFee || 2 });
+    } catch (error: any) {
+      console.error("Get platform fee error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch platform fee" 
+      });
+    }
+  });
+
+  app.put("/api/super-admin/platform-fee", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { platformFee } = req.body;
+      
+      if (typeof platformFee !== 'number' || platformFee < 0 || platformFee > 20) {
+        return res.status(400).json({
+          success: false,
+          message: "Platform fee must be a number between 0 and 20"
+        });
+      }
+
+      await mongoStorage.updatePlatformSettings({ platformFee });
+      
+      res.json({ 
+        success: true,
+        message: "Platform fee updated successfully" 
+      });
+    } catch (error: any) {
+      console.error("Update platform fee error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to update platform fee" 
+      });
     }
   });
 
