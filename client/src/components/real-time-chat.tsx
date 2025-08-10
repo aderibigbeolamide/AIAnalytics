@@ -168,8 +168,6 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       wsRef.current.onmessage = (event) => {
         try {
           console.log('🎯 Raw WebSocket message received by admin:', event.data);
-          console.log('🚨 ADMIN WEBSOCKET MESSAGE RECEIVED!'); // Force console output
-          window.alert && window.alert('WebSocket message received: ' + event.data.substring(0, 100)); // Temporary alert
           const message = JSON.parse(event.data);
           console.log('🎯 Parsed WebSocket message:', message);
           handleWebSocketMessage(message);
@@ -254,12 +252,14 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         if (data.sessionId === sessionId) {
           console.log('✅ ADMIN: Adding user message to current active session');
           setCurrentSession(prev => {
+            console.log('🔍 Current session state:', prev);
             if (!prev) {
               console.log('❌ No current session to update');
               return null;
             }
             
             console.log('🔍 Current session messages count before:', prev.messages.length);
+            console.log('🔍 New message to add:', newUserMessage);
             
             // Check if message already exists to prevent duplicates
             const messageExists = prev.messages.some(msg => msg.id === newUserMessage.id);
@@ -275,7 +275,10 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
             };
             
             console.log('✅ Updated session with new message count:', updatedSession.messages.length);
-            return updatedSession;
+            console.log('✅ Updated session messages:', updatedSession.messages);
+            
+            // Force React to re-render by ensuring state change is detected
+            return { ...updatedSession };
           });
           
           // Scroll to bottom after adding message
@@ -624,6 +627,8 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       <CardContent className="flex-1 flex flex-col">
         <ScrollArea className="flex-1 mb-4 max-h-96">
           <div className="space-y-4">
+            {console.log('🎬 RENDERING MESSAGES - Current session:', currentSession)}
+            {console.log('🎬 RENDERING MESSAGES - Message count:', currentSession?.messages?.length)}
             {currentSession?.messages?.map((message) => (
               <div
                 key={message.id}
