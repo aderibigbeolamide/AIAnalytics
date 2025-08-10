@@ -67,15 +67,25 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
 
   useEffect(() => {
     if (user?.id) {
+      console.log('RealTimeChat: User ID found, initializing...', user.id);
       connectWebSocket();
       loadActiveSessions(); // Load sessions immediately on mount
+      
+      // Set up polling fallback
+      const pollInterval = setInterval(() => {
+        console.log('RealTimeChat: Polling for sessions...');
+        loadActiveSessions();
+      }, 10000); // Poll every 10 seconds
+      
+      return () => {
+        clearInterval(pollInterval);
+        if (wsRef.current) {
+          wsRef.current.close();
+        }
+      };
+    } else {
+      console.log('RealTimeChat: No user ID found');
     }
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -351,6 +361,13 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
                 <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No active support sessions</p>
                 <p className="text-sm">Sessions will appear here when users request help</p>
+                <button 
+                  onClick={loadActiveSessions}
+                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Refresh Sessions
+                </button>
+                <p className="text-xs mt-2">Debug: {activeSessions.length} sessions loaded</p>
               </div>
             ) : (
               <div className="space-y-2">
