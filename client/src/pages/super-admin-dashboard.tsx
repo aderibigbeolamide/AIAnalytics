@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,6 +48,17 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+
+// Platform Fee Schema
+const platformFeeSchema = z.object({
+  platformFee: z.number()
+    .min(0, "Platform fee must be at least 0%")
+    .max(20, "Platform fee cannot exceed 20%")
+});
+
+type PlatformFeeFormData = z.infer<typeof platformFeeSchema>;
+
+
 
 interface PlatformStatistics {
   overview: {
@@ -162,8 +173,12 @@ interface Organization {
   id: string;
   name: string;
   contactEmail: string;
+  contactPhone?: string;
+  description?: string;
   status: string;
+  subscriptionPlan?: string;
   adminCount: number;
+  createdAt: string;
 }
 
 interface ChatSession {
@@ -265,6 +280,11 @@ export default function SuperAdminDashboard() {
     queryKey: ["/api/super-admin/statistics"],
   });
 
+  // Fetch platform fee data
+  const { data: platformFeeData } = useQuery<{ platformFee: number }>({
+    queryKey: ["/api/super-admin/platform-fee"],
+  });
+
   // Fetch users
   const { data: usersData, refetch: refetchUsers } = useQuery<{
     users: User[];
@@ -307,10 +327,7 @@ export default function SuperAdminDashboard() {
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
-  // Fetch platform fee settings
-  const { data: platformFeeData } = useQuery<{ platformFee: number }>({
-    queryKey: ["/api/super-admin/platform-fee"],
-  });
+
 
   // Broadcast message mutation
   const broadcastMutation = useMutation({
@@ -574,14 +591,14 @@ export default function SuperAdminDashboard() {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Total Revenue"
-              value={`₦${statistics?.financial?.totalRevenue?.toLocaleString() || 0}`}
+              value={`₦${statistics?.financial?.totalRevenue?.toLocaleString() || "0"}`}
               description="Platform revenue"
               icon={DollarSign}
               trend={`${statistics?.financial?.totalTransactions || 0} transactions`}
             />
             <StatCard
               title="Platform Fees"
-              value={`₦${statistics?.financial?.platformFeesEarned?.toLocaleString() || 0}`}
+              value={`₦${statistics?.financial?.platformFeesEarned?.toLocaleString() || "0"}`}
               description="Fees earned"
               icon={Receipt}
             />
