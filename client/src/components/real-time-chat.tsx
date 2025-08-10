@@ -631,51 +631,58 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       </CardHeader>
       
       <CardContent className="flex-1 flex flex-col">
-        <ScrollArea className="flex-1 mb-4 max-h-96">
-          <div className="space-y-4">
+        <div className="flex-1 mb-4 border rounded-lg bg-background" style={{ minHeight: '400px', maxHeight: '500px', overflowY: 'auto' }}>
+          <div className="p-4 space-y-4">
             {console.log('🎬 RENDERING MESSAGES - Current session:', currentSession)}
             {console.log('🎬 RENDERING MESSAGES - Message count:', currentSession?.messages?.length)}
-            {currentSession?.messages?.length === 0 && (
+            {console.log('🎬 FULL MESSAGE ARRAY:', JSON.stringify(currentSession?.messages, null, 2))}
+            
+            {!currentSession?.messages || currentSession.messages.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No messages yet. Start the conversation!
+                <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No messages yet. Start the conversation!</p>
               </div>
-            )}
-            {currentSession?.messages?.map((message, index) => {
-              console.log(`🎬 Rendering message ${index}:`, message);
-              return (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex gap-3 p-3 rounded-lg",
-                  message.sender === 'admin' 
-                    ? "bg-blue-50 dark:bg-blue-900/20 ml-12" 
-                    : "bg-muted mr-12"
-                )}
-              >
-                <div className="flex-shrink-0">
-                  {message.sender === 'admin' ? (
-                    <CheckCircle2 className="w-6 h-6 text-blue-600" />
-                  ) : (
-                    <User className="w-6 h-6 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium">
-                      {message.sender === 'admin' ? 'You' : 'Customer'}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {message.timestamp.toLocaleTimeString()}
-                    </span>
+            ) : (
+              currentSession.messages.map((message, index) => {
+                console.log(`🎬 Rendering message ${index}:`, message);
+                const isAdmin = message.sender === 'admin';
+                return (
+                  <div
+                    key={message.id}
+                    className={cn(
+                      "flex gap-3 p-4 rounded-lg shadow-sm border",
+                      isAdmin 
+                        ? "bg-blue-50 dark:bg-blue-900/20 ml-8 border-blue-200" 
+                        : "bg-gray-50 dark:bg-gray-800 mr-8 border-gray-200"
+                    )}
+                  >
+                    <div className="flex-shrink-0">
+                      {isAdmin ? (
+                        <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                      ) : (
+                        <User className="w-6 h-6 text-gray-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-semibold text-sm">
+                          {isAdmin ? 'You' : 'Customer'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(message.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-900 dark:text-gray-100 break-words">
+                        {message.text}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-                </div>
-              </div>
-            );
-            })}
+                );
+              })
+            )}
             <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
+        </div>
         
         <div className="flex gap-2">
           <Input
