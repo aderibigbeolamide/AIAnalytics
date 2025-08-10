@@ -306,7 +306,14 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
   const loadActiveSessions = async () => {
     try {
       console.log('Loading active chat sessions...');
-      const response = await fetch('/api/admin/chat-sessions');
+      const response = await fetch('/api/admin/chat-sessions?' + Date.now(), {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       if (response.ok) {
         const sessions = await response.json();
         console.log('Received sessions from API:', sessions);

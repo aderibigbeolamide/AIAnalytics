@@ -284,10 +284,21 @@ export function setupChatbotRoutes(app: Express) {
   // Get all active chat sessions (for super admin)
   app.get("/api/admin/chat-sessions", async (req: Request, res: Response) => {
     try {
-      const sessions = Array.from(chatSessions.values())
+      console.log('API: Getting chat sessions, total in memory:', chatSessions.size);
+      const allSessions = Array.from(chatSessions.values());
+      console.log('API: All sessions:', allSessions.map(s => ({ id: s.id, email: s.userEmail, status: s.status })));
+      
+      const sessions = allSessions
         .filter(session => session.isEscalated && session.status !== 'resolved')
         .sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
 
+      console.log('API: Filtered sessions to return:', sessions.length);
+      
+      // Disable caching for this endpoint
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(sessions);
     } catch (error) {
       console.error("Error getting chat sessions:", error);
