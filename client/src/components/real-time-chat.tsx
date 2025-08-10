@@ -23,10 +23,11 @@ import { cn } from "@/lib/utils";
 
 interface ChatMessage {
   id: string;
-  sessionId: string;
+  sessionId?: string;
   text: string;
   sender: 'user' | 'admin';
   timestamp: Date;
+  type?: string;
 }
 
 interface ChatSession {
@@ -210,15 +211,20 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       
       case 'session_data':
         if (data.sessionId === sessionId) {
+          console.log('🎯 Setting session data from WebSocket:', data);
+          const processedMessages = data.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+            sessionId: msg.sessionId || data.sessionId
+          }));
+          console.log('🎯 Processed messages:', processedMessages);
+          
           setCurrentSession({
             id: data.sessionId,
             userEmail: data.userEmail,
             isEscalated: data.isEscalated,
             status: data.status,
-            messages: data.messages.map((msg: any) => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp)
-            })),
+            messages: processedMessages,
             createdAt: new Date(),
             lastActivity: new Date()
           });
@@ -629,7 +635,14 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
           <div className="space-y-4">
             {console.log('🎬 RENDERING MESSAGES - Current session:', currentSession)}
             {console.log('🎬 RENDERING MESSAGES - Message count:', currentSession?.messages?.length)}
-            {currentSession?.messages?.map((message) => (
+            {currentSession?.messages?.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No messages yet. Start the conversation!
+              </div>
+            )}
+            {currentSession?.messages?.map((message, index) => {
+              console.log(`🎬 Rendering message ${index}:`, message);
+              return (
               <div
                 key={message.id}
                 className={cn(
@@ -658,7 +671,8 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
                   <p className="text-sm whitespace-pre-wrap">{message.text}</p>
                 </div>
               </div>
-            ))}
+            );
+            })}
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
