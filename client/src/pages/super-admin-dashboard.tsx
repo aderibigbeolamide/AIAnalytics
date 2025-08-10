@@ -204,6 +204,22 @@ export default function SuperAdminDashboard() {
   const [selectedOrgAnalytics, setSelectedOrgAnalytics] = useState<string | null>(null);
   const [selectedChatSession, setSelectedChatSession] = useState<string>("");
   const [platformFeeRate, setPlatformFeeRate] = useState<number>(5);
+
+  // Fetch current platform fee rate
+  const { data: platformFeeData } = useQuery({
+    queryKey: ['/api/super-admin/platform-fee'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/super-admin/platform-fee', {});
+      return response.json();
+    },
+  });
+
+  // Update local state when platform fee data is loaded
+  useEffect(() => {
+    if (platformFeeData?.platformFee !== undefined) {
+      setPlatformFeeRate(platformFeeData.platformFee);
+    }
+  }, [platformFeeData]);
   const [notificationMessage, setNotificationMessage] = useState<string>('');
   const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
   const [notificationType, setNotificationType] = useState<'broadcast' | 'selective'>('broadcast');
@@ -256,8 +272,16 @@ export default function SuperAdminDashboard() {
       const response = await apiRequest('PATCH', '/api/super-admin/platform-settings', { platformFeeRate: rate });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate and refetch statistics and platform fee to get updated information
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/platform-fee'] });
       toast({ title: "Success", description: "Platform fee rate updated successfully" });
+      
+      // Update the local state if the server returns the new rate
+      if (data.platformFeeRate !== undefined) {
+        setPlatformFeeRate(data.platformFeeRate);
+      }
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update platform fee rate", variant: "destructive" });

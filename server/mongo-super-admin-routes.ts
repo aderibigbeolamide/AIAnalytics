@@ -64,6 +64,35 @@ export function registerMongoSuperAdminRoutes(app: Express) {
     }
   });
 
+  // PATCH endpoint for platform settings (matches frontend API call)
+  app.patch("/api/super-admin/platform-settings", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { platformFeeRate } = req.body;
+      
+      if (typeof platformFeeRate !== 'number' || platformFeeRate < 0 || platformFeeRate > 20) {
+        return res.status(400).json({
+          success: false,
+          message: "Platform fee rate must be a number between 0 and 20"
+        });
+      }
+
+      // Update platform fee in settings
+      await mongoStorage.updatePlatformSettings({ platformFee: platformFeeRate });
+      
+      res.json({
+        success: true,
+        message: "Platform fee rate updated successfully",
+        platformFeeRate: platformFeeRate
+      });
+    } catch (error: any) {
+      console.error("Update platform settings error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to update platform settings" 
+      });
+    }
+  });
+
   // Get comprehensive platform statistics for growth analysis
   app.get("/api/super-admin/statistics", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
