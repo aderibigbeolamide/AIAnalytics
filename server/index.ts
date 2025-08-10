@@ -11,6 +11,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
 import { connectToMongoDB } from "./mongodb";
 import { mongoAutoSeed } from "./mongo-auto-seed";
+import { WebSocketChatServer } from "./websocket-chat";
 import path from "path";
 
 const app = express();
@@ -71,6 +72,9 @@ app.use((req, res, next) => {
   
   // Create HTTP server directly since legacy routes disabled
   const server = createServer(app);
+  
+  // Initialize WebSocket chat server
+  const chatServer = new WebSocketChatServer(server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

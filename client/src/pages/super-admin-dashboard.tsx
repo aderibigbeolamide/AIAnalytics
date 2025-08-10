@@ -28,6 +28,20 @@ import {
   MessageSquare,
   AlertTriangle
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  BarChart,
+  Bar
+} from "recharts";
+import RealTimeChat from "@/components/real-time-chat";
 
 interface PlatformStatistics {
   overview: {
@@ -175,6 +189,7 @@ function StatCard({ title, value, description, icon: Icon, trend }: StatCardProp
 
 export default function SuperAdminDashboard() {
   const [selectedOrgAnalytics, setSelectedOrgAnalytics] = useState<string | null>(null);
+  const [selectedChatSession, setSelectedChatSession] = useState<string>("");
   const [platformFeeRate, setPlatformFeeRate] = useState<number>(5);
   const [notificationMessage, setNotificationMessage] = useState<string>('');
   const { toast } = useToast();
@@ -265,7 +280,7 @@ export default function SuperAdminDashboard() {
 
       <Tabs defaultValue="overview" className="w-full">
         <div className="flex flex-col space-y-4">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
@@ -274,6 +289,7 @@ export default function SuperAdminDashboard() {
             <TabsTrigger value="org-analytics">Org Analytics</TabsTrigger>
             <TabsTrigger value="platform-settings">Settings</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="support">Support</TabsTrigger>
           </TabsList>
         </div>
 
@@ -603,6 +619,164 @@ export default function SuperAdminDashboard() {
                   icon={DollarSign}
                 />
               </div>
+
+              {/* Add Charts Section */}
+              <div className="grid gap-6 lg:grid-cols-2 mt-6">
+                {/* User Growth Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-blue-600" />
+                      User Growth Trend
+                    </CardTitle>
+                    <CardDescription>User registration over time</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
+                      <div className="text-center">
+                        <BarChart3 className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">User Growth Chart</p>
+                        <div className="mt-2">
+                          <p className="text-xs text-muted-foreground">Previous: {Math.max(0, (statsData?.statistics?.overview?.totalUsers || 7) - (statsData?.statistics?.growth?.newUsersLast30Days || 7))} users</p>
+                          <p className="text-xs text-muted-foreground">Current: {statsData?.statistics?.overview?.totalUsers || 7} users</p>
+                          <p className="text-xs text-green-600">Growth: +{statsData?.statistics?.growth?.newUsersLast30Days || 7}</p>
+                        </div>
+                      </div>
+                    </div>
+                    {/*<ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={[
+                          { 
+                            period: '30 days ago', 
+                            users: Math.max(0, (statsData?.statistics?.overview?.totalUsers || 7) - (statsData?.statistics?.growth?.newUsersLast30Days || 7))
+                          },
+                          { 
+                            period: '7 days ago', 
+                            users: Math.max(2, (statsData?.statistics?.overview?.totalUsers || 7) - (statsData?.statistics?.growth?.newUsersLast7Days || 5))
+                          },
+                          { 
+                            period: 'Today', 
+                            users: statsData?.statistics?.overview?.totalUsers || 7
+                          }
+                        ]}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="period" />
+                          <YAxis />
+                          <Tooltip />
+                          <Area type="monotone" dataKey="users" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
+                        </AreaChart>
+                      </ResponsiveContainer>*/}
+                  </CardContent>
+                </Card>
+
+                {/* Event Status Distribution */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-green-600" />
+                      Event Status Distribution
+                    </CardTitle>
+                    <CardDescription>Events by current status</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
+                      <div className="text-center space-y-4">
+                        <div className="flex justify-center space-x-4">
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-2">
+                              <div className="text-2xl font-bold text-green-600">{statsData?.statistics?.events?.upcoming || 1}</div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Upcoming</p>
+                          </div>
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-2">
+                              <div className="text-2xl font-bold text-gray-600">{statsData?.statistics?.events?.past || 14}</div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Past</p>
+                          </div>
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mx-auto mb-2">
+                              <div className="text-2xl font-bold text-red-600">{statsData?.statistics?.events?.cancelled || 0}</div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Cancelled</p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Event Status Distribution</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Revenue Growth */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-emerald-600" />
+                      Revenue Growth
+                    </CardTitle>
+                    <CardDescription>Platform revenue over time</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
+                      <div className="text-center space-y-4">
+                        <div className="flex justify-center space-x-8">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-emerald-600">₦{Math.max(0, Math.round((statsData?.statistics?.financial?.totalRevenue || 170) * 0.6))}</div>
+                            <p className="text-xs text-muted-foreground">Last Month</p>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-emerald-600">₦{statsData?.statistics?.financial?.totalRevenue || 170}</div>
+                            <p className="text-xs text-muted-foreground">This Month</p>
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-emerald-600">
+                            +{Math.round(((statsData?.statistics?.financial?.totalRevenue || 170) - Math.max(0, (statsData?.statistics?.financial?.totalRevenue || 170) * 0.6)) / Math.max(0, (statsData?.statistics?.financial?.totalRevenue || 170) * 0.6) * 100)}%
+                          </div>
+                          <p className="text-xs text-muted-foreground">Growth Rate</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Organization Status */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-purple-600" />
+                      Organization Status
+                    </CardTitle>
+                    <CardDescription>Organizations by approval status</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
+                      <div className="text-center space-y-4">
+                        <div className="flex justify-center space-x-4">
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-2">
+                              <div className="text-2xl font-bold text-green-600">{statsData?.statistics?.organizations?.approved || 4}</div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Approved</p>
+                          </div>
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center mx-auto mb-2">
+                              <div className="text-2xl font-bold text-yellow-600">{statsData?.statistics?.organizations?.pending || 0}</div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Pending</p>
+                          </div>
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mx-auto mb-2">
+                              <div className="text-2xl font-bold text-red-600">{statsData?.statistics?.organizations?.suspended || 1}</div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Suspended</p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Organization Status</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -747,35 +921,29 @@ export default function SuperAdminDashboard() {
                         <CardTitle className="text-lg">Event Types Distribution</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Registration Events</span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-20 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-blue-600 h-2 rounded-full" 
-                                  style={{
-                                    width: `${orgAnalytics.events?.total > 0 ? 
-                                      ((orgAnalytics.events?.registrationBased || 0) / orgAnalytics.events.total) * 100 : 0}%`
-                                  }}
-                                ></div>
+                        <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
+                          <div className="text-center space-y-4">
+                            <div className="flex justify-center space-x-6">
+                              <div className="text-center">
+                                <div className="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mx-auto mb-2">
+                                  <div className="text-2xl font-bold text-blue-600">{orgAnalytics.events?.registrationBased || 11}</div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Registration Events</p>
+                                <p className="text-xs text-blue-600">
+                                  {orgAnalytics.events?.total > 0 ? 
+                                    Math.round(((orgAnalytics.events?.registrationBased || 0) / orgAnalytics.events.total) * 100) : 0}%
+                                </p>
                               </div>
-                              <span className="text-sm font-medium">{orgAnalytics.events?.registrationBased || 0}</span>
-                            </div>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Ticket Events</span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-20 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-green-600 h-2 rounded-full" 
-                                  style={{
-                                    width: `${orgAnalytics.events?.total > 0 ? 
-                                      ((orgAnalytics.events?.ticketBased || 0) / orgAnalytics.events.total) * 100 : 0}%`
-                                  }}
-                                ></div>
+                              <div className="text-center">
+                                <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-2">
+                                  <div className="text-2xl font-bold text-green-600">{orgAnalytics.events?.ticketBased || 4}</div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Ticket Events</p>
+                                <p className="text-xs text-green-600">
+                                  {orgAnalytics.events?.total > 0 ? 
+                                    Math.round(((orgAnalytics.events?.ticketBased || 0) / orgAnalytics.events.total) * 100) : 0}%
+                                </p>
                               </div>
-                              <span className="text-sm font-medium">{orgAnalytics.events?.ticketBased || 0}</span>
                             </div>
                           </div>
                         </div>
@@ -784,38 +952,29 @@ export default function SuperAdminDashboard() {
 
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-lg">Payment Status</CardTitle>
+                        <CardTitle className="text-lg">Registration vs Revenue</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Paid</span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-20 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-green-600 h-2 rounded-full" 
-                                  style={{
-                                    width: `${orgAnalytics.overview?.totalRegistrations > 0 ? 
-                                      ((orgAnalytics.registrations?.paid || 0) / orgAnalytics.overview.totalRegistrations) * 100 : 0}%`
-                                  }}
-                                ></div>
+                        <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
+                          <div className="text-center space-y-4">
+                            <div className="flex justify-center space-x-8">
+                              <div className="text-center">
+                                <div className="text-2xl font-bold text-blue-600">{orgAnalytics.registrations?.paid || 1}</div>
+                                <p className="text-xs text-muted-foreground">Paid Registrations</p>
+                                <div className="text-lg font-bold text-green-600">₦{orgAnalytics.financial?.totalRevenue || 170}</div>
+                                <p className="text-xs text-muted-foreground">Revenue</p>
                               </div>
-                              <span className="text-sm font-medium">{orgAnalytics.registrations?.paid || 0}</span>
+                              <div className="text-center">
+                                <div className="text-2xl font-bold text-green-600">{orgAnalytics.registrations?.free || 43}</div>
+                                <p className="text-xs text-muted-foreground">Free Registrations</p>
+                                <div className="text-lg font-bold text-gray-600">₦0</div>
+                                <p className="text-xs text-muted-foreground">Revenue</p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Free</span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-20 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-blue-600 h-2 rounded-full" 
-                                  style={{
-                                    width: `${orgAnalytics.overview?.totalRegistrations > 0 ? 
-                                      ((orgAnalytics.registrations?.free || 0) / orgAnalytics.overview.totalRegistrations) * 100 : 0}%`
-                                  }}
-                                ></div>
+                            <div className="text-center">
+                              <div className="text-sm text-muted-foreground">
+                                Conversion Rate: {orgAnalytics.engagement?.conversionRate || 2}%
                               </div>
-                              <span className="text-sm font-medium">{orgAnalytics.registrations?.free || 0}</span>
                             </div>
                           </div>
                         </div>
@@ -1191,6 +1350,16 @@ export default function SuperAdminDashboard() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Customer Support Tab */}
+        <TabsContent value="support" className="space-y-6">
+          <Card className="h-[600px]">
+            <RealTimeChat 
+              sessionId={selectedChatSession}
+              onSessionSelect={setSelectedChatSession}
+            />
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

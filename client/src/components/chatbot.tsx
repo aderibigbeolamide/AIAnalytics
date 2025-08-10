@@ -635,7 +635,7 @@ export default function ChatbotComponent() {
       if (response.ok) {
         const data = await response.json();
         if (data.hasNewMessages && data.messages.length > 0) {
-          const newAdminMessages = data.messages.map((msg: any) => ({
+          const newAdminMessages = data.messages.map((msg: any): Message => ({
             id: msg.id || `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             text: msg.text || msg.message,
             sender: 'admin' as const,
