@@ -359,6 +359,40 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
     }
   };
 
+  const closeSession = async () => {
+    if (!currentSession || !user?.id) return;
+
+    try {
+      const response = await fetch(`/api/admin/chat-sessions/${currentSession.id}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminId: user.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to close session');
+      }
+
+      toast({
+        title: "Session Closed",
+        description: "Chat session has been resolved and closed"
+      });
+
+      // Go back to session list after closing
+      onSessionSelect?.("");
+
+    } catch (error) {
+      console.error('Error closing session:', error);
+      toast({
+        title: "Failed to Close",
+        description: "Unable to close session",
+        variant: "destructive"
+      });
+    }
+  };
+
   const loadActiveSessions = async () => {
     try {
       console.log('Loading active chat sessions...');
@@ -531,6 +565,18 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
           <Badge variant={isConnected ? "default" : "destructive"} className="ml-auto">
             {isConnected ? "Live" : "Offline"}
           </Badge>
+          {currentSession?.status !== 'resolved' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={closeSession}
+              className="ml-2"
+              title="Close and resolve this chat session"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Close
+            </Button>
+          )}
         </CardTitle>
       </CardHeader>
       
