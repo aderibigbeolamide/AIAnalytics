@@ -1537,23 +1537,23 @@ export default function SuperAdminDashboard() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <h4 className="font-medium">User Growth</h4>
-                  <div className="text-2xl font-bold">{statistics.overview.totalUsers}</div>
+                  <div className="text-2xl font-bold">{statistics?.overview?.totalUsers || 0}</div>
                   <p className="text-sm text-muted-foreground">
-                    +{statistics.recent.newUsers} this month
+                    +{statistics?.recent?.newUsers || 0} this month
                   </p>
                 </div>
                 <div className="space-y-2">
                   <h4 className="font-medium">Event Activity</h4>
-                  <div className="text-2xl font-bold">{statistics.overview.totalEvents}</div>
+                  <div className="text-2xl font-bold">{statistics?.overview?.totalEvents || 0}</div>
                   <p className="text-sm text-muted-foreground">
-                    {statistics.events.active} currently active
+                    {statistics?.events?.active || 0} currently active
                   </p>
                 </div>
                 <div className="space-y-2">
                   <h4 className="font-medium">Validation Rate</h4>
-                  <div className="text-2xl font-bold">{statistics.registrations.validationRate}%</div>
+                  <div className="text-2xl font-bold">{statistics?.registrations?.validationRate || 0}%</div>
                   <p className="text-sm text-muted-foreground">
-                    {statistics.registrations.attended} of {statistics.overview.totalRegistrations} attended
+                    {statistics?.registrations?.attended || 0} of {statistics?.overview?.totalRegistrations || 0} attended
                   </p>
                 </div>
               </div>
