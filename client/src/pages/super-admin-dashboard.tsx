@@ -287,16 +287,16 @@ export default function SuperAdminDashboard() {
     }
   });
 
-  // Fetch platform statistics
-  const { data: statisticsResponse } = useQuery<{success: boolean; statistics: PlatformStatistics}>({
-    queryKey: ["/api/super-admin/statistics"],
+  // Fetch platform statsData
+  const { data: statsDataResponse } = useQuery<{success: boolean; statsData: PlatformStatistics}>({
+    queryKey: ["/api/super-admin/statsData"],
   });
 
   // Debug: Log what we're getting from the API
-  console.log('Current statistics:', statisticsResponse);
+  console.log('Current statsData:', statsDataResponse);
   
-  // Extract the actual statistics data from the response wrapper
-  const statsData = statisticsResponse?.statistics;
+  // Extract the actual statsData data from the response wrapper
+  const statsData = statsDataResponse?.statsData;
 
   // Fetch platform fee data
   const { data: platformFeeData } = useQuery<{ platformFee: number }>({
@@ -414,7 +414,7 @@ export default function SuperAdminDashboard() {
       
       refetchPendingOrgs();
       refetchUsers(); // Refresh user list to show updated statuses
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statsData"] });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/organizations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/pending-organizations"] });
     },
@@ -439,7 +439,7 @@ export default function SuperAdminDashboard() {
       });
       refetchPendingOrgs();
       refetchUsers();
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statsData"] });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/organizations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/pending-organizations"] });
     },
@@ -472,7 +472,7 @@ export default function SuperAdminDashboard() {
       });
       refetchPendingOrgs();
       refetchUsers();
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statsData"] });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/organizations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/pending-organizations"] });
     },
@@ -500,7 +500,7 @@ export default function SuperAdminDashboard() {
         description: "User status updated successfully"
       });
       refetchUsers();
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statistics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/statsData"] });
     },
     onError: (error: any) => {
       toast({
@@ -1774,7 +1774,7 @@ export default function SuperAdminDashboard() {
                       const url = URL.createObjectURL(dataBlob);
                       const link = document.createElement('a');
                       link.href = url;
-                      link.download = `platform-statistics-${new Date().toISOString().split('T')[0]}.json`;
+                      link.download = `platform-statsData-${new Date().toISOString().split('T')[0]}.json`;
                       link.click();
                     }
                   }}
@@ -1988,11 +1988,11 @@ export default function SuperAdminDashboard() {
                     </div>
                     <div>
                       <div className="font-medium">Estimated Monthly Revenue</div>
-                      <div className="text-muted-foreground">₦{Math.round((statistics?.financial?.totalRevenue || 0) * 0.1).toLocaleString()}</div>
+                      <div className="text-muted-foreground">₦{Math.round((statsData?.financial?.totalRevenue || 0) * 0.1).toLocaleString()}</div>
                     </div>
                     <div>
                       <div className="font-medium">Total Fees Earned</div>
-                      <div className="text-muted-foreground">₦{statistics?.financial?.platformFeesEarned?.toLocaleString() || 0}</div>
+                      <div className="text-muted-foreground">₦{statsData?.financial?.platformFeesEarned?.toLocaleString() || 0}</div>
                     </div>
                   </div>
                 </div>
@@ -2015,7 +2015,7 @@ export default function SuperAdminDashboard() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const statsData = JSON.stringify(statistics, null, 2);
+                      const statsData = JSON.stringify(statsData, null, 2);
                       navigator.clipboard.writeText(statsData);
                       toast({ title: "Success", description: "Statistics copied to clipboard" });
                     }}
@@ -2030,12 +2030,12 @@ export default function SuperAdminDashboard() {
                     onClick={() => {
                       const csvData = [
                         ['Metric', 'Value'],
-                        ['Total Users', statistics?.overview?.totalUsers || 0],
-                        ['Total Organizations', statistics?.overview?.totalOrganizations || 0],
-                        ['Total Events', statistics?.overview?.totalEvents || 0],
-                        ['Total Revenue', `₦${statistics?.financial?.totalRevenue || 0}`],
-                        ['Platform Fees Earned', `₦${statistics?.financial?.platformFeesEarned || 0}`],
-                        ['Conversion Rate', `${statistics?.engagement?.conversionRate || 0}%`],
+                        ['Total Users', statsData?.overview?.totalUsers || 0],
+                        ['Total Organizations', statsData?.overview?.totalOrganizations || 0],
+                        ['Total Events', statsData?.overview?.totalEvents || 0],
+                        ['Total Revenue', `₦${statsData?.financial?.totalRevenue || 0}`],
+                        ['Platform Fees Earned', `₦${statsData?.financial?.platformFeesEarned || 0}`],
+                        ['Conversion Rate', `${statsData?.engagement?.conversionRate || 0}%`],
                       ].map(row => row.join(',')).join('\n');
                       
                       const blob = new Blob([csvData], { type: 'text/csv' });
@@ -2069,38 +2069,38 @@ export default function SuperAdminDashboard() {
                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-green-600">
-                      ₦{statistics?.financial?.totalRevenue?.toLocaleString() || 0}
+                      ₦{statsData?.financial?.totalRevenue?.toLocaleString() || 0}
                     </div>
                     <div className="text-sm text-muted-foreground">Total Platform Revenue</div>
                     <div className="text-xs text-green-600 mt-1">
-                      +{statistics?.growth?.newEventsLast7Days || 0} events this week
+                      +{statsData?.growth?.newEventsLast7Days || 0} events this week
                     </div>
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-blue-600">
-                      {((statistics?.users?.active || 0) / (statistics?.overview?.totalUsers || 1) * 100).toFixed(1)}%
+                      {((statsData?.users?.active || 0) / (statsData?.overview?.totalUsers || 1) * 100).toFixed(1)}%
                     </div>
                     <div className="text-sm text-muted-foreground">User Engagement Rate</div>
                     <div className="text-xs text-blue-600 mt-1">
-                      {statistics?.users?.active || 0} of {statistics?.overview?.totalUsers || 0} users active
+                      {statsData?.users?.active || 0} of {statsData?.overview?.totalUsers || 0} users active
                     </div>
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-purple-600">
-                      {statistics?.engagement?.conversionRate || 0}%
+                      {statsData?.engagement?.conversionRate || 0}%
                     </div>
                     <div className="text-sm text-muted-foreground">Payment Conversion</div>
                     <div className="text-xs text-purple-600 mt-1">
-                      {statistics?.financial?.paidRegistrations || 0} paid registrations
+                      {statsData?.financial?.paidRegistrations || 0} paid registrations
                     </div>
                   </div>
                   <div className="p-4 border rounded-lg">
                     <div className="text-2xl font-bold text-orange-600">
-                      {statistics?.growth?.userGrowthRate || 0}%
+                      {statsData?.growth?.userGrowthRate || 0}%
                     </div>
                     <div className="text-sm text-muted-foreground">Weekly Growth Rate</div>
                     <div className="text-xs text-orange-600 mt-1">
-                      +{statistics?.growth?.newUsersLast7Days || 0} new users
+                      +{statsData?.growth?.newUsersLast7Days || 0} new users
                     </div>
                   </div>
                 </div>
@@ -2118,16 +2118,16 @@ export default function SuperAdminDashboard() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Last 7 days</span>
-                        <span className="font-medium">{statistics?.growth?.newUsersLast7Days || 0} users</span>
+                        <span className="font-medium">{statsData?.growth?.newUsersLast7Days || 0} users</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Last 30 days</span>
-                        <span className="font-medium">{statistics?.growth?.newUsersLast30Days || 0} users</span>
+                        <span className="font-medium">{statsData?.growth?.newUsersLast30Days || 0} users</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Growth rate</span>
-                        <span className={`font-medium ${(statistics?.growth?.userGrowthRate || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {(statistics?.growth?.userGrowthRate || 0) >= 0 ? '+' : ''}{statistics?.growth?.userGrowthRate || 0}%
+                        <span className={`font-medium ${(statsData?.growth?.userGrowthRate || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {(statsData?.growth?.userGrowthRate || 0) >= 0 ? '+' : ''}{statsData?.growth?.userGrowthRate || 0}%
                         </span>
                       </div>
                     </div>
@@ -2138,16 +2138,16 @@ export default function SuperAdminDashboard() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Last 7 days</span>
-                        <span className="font-medium">{statistics?.growth?.newEventsLast7Days || 0} events</span>
+                        <span className="font-medium">{statsData?.growth?.newEventsLast7Days || 0} events</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Last 30 days</span>
-                        <span className="font-medium">{statistics?.growth?.newEventsLast30Days || 0} events</span>
+                        <span className="font-medium">{statsData?.growth?.newEventsLast30Days || 0} events</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Growth rate</span>
-                        <span className={`font-medium ${(statistics?.growth?.eventGrowthRate || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {(statistics?.growth?.eventGrowthRate || 0) >= 0 ? '+' : ''}{statistics?.growth?.eventGrowthRate || 0}%
+                        <span className={`font-medium ${(statsData?.growth?.eventGrowthRate || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {(statsData?.growth?.eventGrowthRate || 0) >= 0 ? '+' : ''}{statsData?.growth?.eventGrowthRate || 0}%
                         </span>
                       </div>
                     </div>
@@ -2164,28 +2164,28 @@ export default function SuperAdminDashboard() {
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                   <div className="p-4 border rounded-lg">
                     <div className="font-medium text-green-600 mb-2">Active Organizations</div>
-                    <div className="text-2xl font-bold">{statistics?.organizations?.approved || 0}</div>
+                    <div className="text-2xl font-bold">{statsData?.organizations?.approved || 0}</div>
                     <div className="text-sm text-muted-foreground">
-                      {statistics?.organizations?.pending || 0} pending approval
+                      {statsData?.organizations?.pending || 0} pending approval
                     </div>
                   </div>
                   
                   <div className="p-4 border rounded-lg">
                     <div className="font-medium text-blue-600 mb-2">Event Success Rate</div>
                     <div className="text-2xl font-bold">
-                      {statistics?.overview?.totalEvents > 0 ? 
-                        Math.round(((statistics?.events?.past || 0) / statsData?.overview.totalEvents) * 100) : 0}%
+                      {statsData?.overview?.totalEvents > 0 ? 
+                        Math.round(((statsData?.events?.past || 0) / statsData?.overview.totalEvents) * 100) : 0}%
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {statistics?.events?.past || 0} completed events
+                      {statsData?.events?.past || 0} completed events
                     </div>
                   </div>
                   
                   <div className="p-4 border rounded-lg">
                     <div className="font-medium text-purple-600 mb-2">Revenue per Event</div>
                     <div className="text-2xl font-bold">
-                      ₦{statistics?.overview?.totalEvents > 0 ? 
-                        Math.round((statistics?.financial?.totalRevenue || 0) / statsData?.overview.totalEvents).toLocaleString() : 0}
+                      ₦{statsData?.overview?.totalEvents > 0 ? 
+                        Math.round((statsData?.financial?.totalRevenue || 0) / statsData?.overview.totalEvents).toLocaleString() : 0}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Average revenue generation

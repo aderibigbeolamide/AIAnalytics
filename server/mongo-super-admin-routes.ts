@@ -932,4 +932,73 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // Organization-specific analytics endpoint
+  app.get("/api/super-admin/organization-analytics/:orgId", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { orgId } = req.params;
+      
+      const organization = await Organization.findById(orgId);
+      if (!organization) {
+        return res.status(404).json({ success: false, message: 'Organization not found' });
+      }
+
+      // Get organization users
+      const orgUsers = await User.find({ organizationId: orgId });
+
+      // Get organization events
+      const orgEvents = await Event.find({ organizationId: orgId });
+      const eventIds = orgEvents.map(event => event._id);
+
+      // Get organization registrations
+      const orgRegistrations = await EventRegistration.find({ eventId: { $in: eventIds } });
+
+      // Calculate organization statistics
+      const stats = {
+        organization: {
+          id: organization._id,
+          name: organization.organizationName,
+          status: organization.status
+        },
+        overview: {
+          totalUsers: orgUsers.length,
+          totalEvents: orgEvents.length,
+          totalRegistrations: orgRegistrations.length,
+          activeUsers: orgUsers.filter(user => user.status === 'active').length
+        },
+        events: {
+          upcoming: orgEvents.filter(event => new Date(event.startDate) > new Date()).length,
+          past: orgEvents.filter(event => new Date(event.startDate) <= new Date()).length,
+          byType: {
+            registration: orgEvents.filter(event => event.eventType === 'registration').length,
+            ticket: orgEvents.filter(event => event.eventType === 'ticket').length
+          }
+        },
+        registrations: {
+          total: orgRegistrations.length,
+          validated: orgRegistrations.filter(reg => reg.validationStatus === 'validated').length,
+          pending: orgRegistrations.filter(reg => reg.validationStatus === 'pending').length,
+          byPaymentStatus: {
+            paid: orgRegistrations.filter(reg => reg.paymentStatus === 'paid').length,
+            pending: orgRegistrations.filter(reg => reg.paymentStatus === 'pending').length,
+            not_required: orgRegistrations.filter(reg => reg.paymentStatus === 'not_required').length
+          }
+        },
+        financial: {
+          totalRevenue: orgRegistrations
+            .filter(reg => reg.paymentStatus === 'paid' && reg.amountPaid)
+            .reduce((sum, reg) => sum + (reg.amountPaid || 0), 0),
+          averageEventRevenue: orgEvents.length > 0 ? 
+            orgRegistrations
+              .filter(reg => reg.paymentStatus === 'paid' && reg.amountPaid)
+              .reduce((sum, reg) => sum + (reg.amountPaid || 0), 0) / orgEvents.length : 0
+        }
+      };
+
+      return res.json({ success: true, analytics: stats });
+    } catch (error) {
+      console.error('Error fetching organization analytics:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  });
 }
