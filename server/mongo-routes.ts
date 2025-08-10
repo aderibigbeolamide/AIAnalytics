@@ -1178,6 +1178,10 @@ export function registerMongoRoutes(app: Express) {
         // Import paystack module
         const { initializePaystackPayment } = await import('./paystack');
 
+        // Get current platform fee from settings
+        const platformSettings = await mongoStorage.getPlatformSettings();
+        const platformFeeRate = platformSettings.platformFee || 2;
+
         // Initialize payment with Paystack
         const paymentResponse = await initializePaystackPayment(
           email,
@@ -1185,7 +1189,7 @@ export function registerMongoRoutes(app: Express) {
           paymentReference,
           metadata,
           organization?.paystackSubaccountCode || undefined,
-          2 // 2% platform fee
+          platformFeeRate // Dynamic platform fee from settings
         );
 
         if (paymentResponse.status) {
@@ -1386,6 +1390,10 @@ export function registerMongoRoutes(app: Express) {
       // Import paystack module
       const { initializePaystackPayment } = await import('./paystack');
 
+      // Get current platform fee from settings
+      const platformSettings = await mongoStorage.getPlatformSettings();
+      const platformFeeRate = platformSettings.platformFee || 2;
+
       // Initialize payment with Paystack (same pattern as ticket purchase)
       const paymentResponse = await initializePaystackPayment(
         userEmail,
@@ -1394,7 +1402,7 @@ export function registerMongoRoutes(app: Express) {
         metadata,
         organization?.paystackSubaccountCode || undefined,
         undefined, // splitConfig - not needed for basic payments
-        2 // 2% platform fee
+        platformFeeRate // Dynamic platform fee from settings
       );
 
       if (paymentResponse.status) {
@@ -1553,6 +1561,13 @@ export function registerMongoRoutes(app: Express) {
       const { initializePaystackPayment } = await import('./paystack');
       const { nanoid } = await import('nanoid');
       
+      // Get organization to check for subaccount and platform fee
+      const organization = await mongoStorage.getOrganization(event.organizationId.toString());
+      
+      // Get current platform fee from settings
+      const platformSettings = await mongoStorage.getPlatformSettings();
+      const platformFeeRate = platformSettings.platformFee || 2;
+      
       const reference = `TKT_${Date.now()}_${nanoid(8)}`;
       const amount = ticket.price * 100; // Convert to kobo
       
@@ -1566,7 +1581,10 @@ export function registerMongoRoutes(app: Express) {
           eventName: event.name,
           ticketNumber: ticket.ticketNumber,
           type: 'ticket_purchase'
-        }
+        },
+        organization?.paystackSubaccountCode || undefined,
+        undefined, // splitConfig - not needed for basic payments
+        platformFeeRate // Dynamic platform fee from settings
       );
 
       if (paymentData.status) {
