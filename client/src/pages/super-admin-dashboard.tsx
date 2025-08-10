@@ -288,15 +288,15 @@ export default function SuperAdminDashboard() {
   });
 
   // Fetch platform statistics
-  const { data: statistics } = useQuery<PlatformStatistics>({
+  const { data: statisticsResponse } = useQuery<{success: boolean; statistics: PlatformStatistics}>({
     queryKey: ["/api/super-admin/statistics"],
   });
 
   // Debug: Log what we're getting from the API
-  console.log('Current statistics:', statistics);
+  console.log('Current statistics:', statisticsResponse);
   
   // Extract the actual statistics data from the response wrapper
-  const statsData = statistics?.statistics;
+  const statsData = statisticsResponse?.statistics;
 
   // Fetch platform fee data
   const { data: platformFeeData } = useQuery<{ platformFee: number }>({
@@ -558,7 +558,7 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  if (!statistics) {
+  if (!statsData) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -680,26 +680,26 @@ export default function SuperAdminDashboard() {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Total Users"
-              value={statistics?.overview?.totalUsers || 0}
-              description={`${statistics?.users?.active || 0} active users`}
+              value={statsData?.overview?.totalUsers || 0}
+              description={`${statsData?.users?.active || 0} active users`}
               icon={Users}
             />
             <StatCard
               title="Organizations"
-              value={statistics?.overview?.totalOrganizations || 0}
-              description={`${statistics?.organizations?.approved || 0} approved`}
+              value={statsData?.overview?.totalOrganizations || 0}
+              description={`${statsData?.organizations?.approved || 0} approved`}
               icon={Building2}
             />
             <StatCard
               title="Total Events"
-              value={statistics?.overview?.totalEvents || 0}
-              description={`${statistics?.events?.upcoming || 0} upcoming`}
+              value={statsData?.overview?.totalEvents || 0}
+              description={`${statsData?.events?.upcoming || 0} upcoming`}
               icon={Calendar}
             />
             <StatCard
               title="Total Registrations"
-              value={statistics?.overview?.totalRegistrations || 0}
-              description={`${statistics?.engagement?.averageRegistrationsPerEvent || 0} avg per event`}
+              value={statsData?.overview?.totalRegistrations || 0}
+              description={`${statsData?.engagement?.averageRegistrationsPerEvent || 0} avg per event`}
               icon={UserCheck}
             />
           </div>
@@ -1733,8 +1733,8 @@ export default function SuperAdminDashboard() {
                 <div className="space-y-2">
                   <h4 className="font-medium">User Engagement Rate</h4>
                   <div className="text-2xl font-bold text-blue-600">
-                    {statistics?.overview?.totalUsers > 0 ? 
-                      Math.round(((statistics?.users?.active || 0) / statistics.overview.totalUsers) * 100) : 0}%
+                    {statsData?.overview?.totalUsers > 0 ? 
+                      Math.round(((statsData?.users?.active || 0) / statsData.overview.totalUsers) * 100) : 0}%
                   </div>
                   <p className="text-sm text-muted-foreground">Active user ratio</p>
                 </div>
@@ -1742,8 +1742,8 @@ export default function SuperAdminDashboard() {
                 <div className="space-y-2">
                   <h4 className="font-medium">Event Success Rate</h4>
                   <div className="text-2xl font-bold text-green-600">
-                    {statistics?.overview?.totalEvents > 0 ? 
-                      Math.round(((statistics?.events?.past || 0) / statistics.overview.totalEvents) * 100) : 0}%
+                    {statsData?.overview?.totalEvents > 0 ? 
+                      Math.round(((statsData?.events?.past || 0) / statsData.overview.totalEvents) * 100) : 0}%
                   </div>
                   <p className="text-sm text-muted-foreground">Completed events</p>
                 </div>
@@ -1751,7 +1751,7 @@ export default function SuperAdminDashboard() {
                 <div className="space-y-2">
                   <h4 className="font-medium">Payment Conversion</h4>
                   <div className="text-2xl font-bold text-purple-600">
-                    {statistics?.engagement?.conversionRate || 0}%
+                    {statsData?.engagement?.conversionRate || 0}%
                   </div>
                   <p className="text-sm text-muted-foreground">Paid registrations</p>
                 </div>
@@ -1759,7 +1759,7 @@ export default function SuperAdminDashboard() {
                 <div className="space-y-2">
                   <h4 className="font-medium">Weekly Growth</h4>
                   <div className="text-2xl font-bold text-orange-600">
-                    +{statistics?.growth?.newUsersLast7Days || 0}
+                    +{statsData?.growth?.newUsersLast7Days || 0}
                   </div>
                   <p className="text-sm text-muted-foreground">New users this week</p>
                 </div>
@@ -1768,8 +1768,8 @@ export default function SuperAdminDashboard() {
               <div className="flex gap-2 mt-6">
                 <Button 
                   onClick={() => {
-                    if (statistics) {
-                      const dataStr = JSON.stringify(statistics, null, 2);
+                    if (statsData) {
+                      const dataStr = JSON.stringify(statsData, null, 2);
                       const dataBlob = new Blob([dataStr], {type: 'application/json'});
                       const url = URL.createObjectURL(dataBlob);
                       const link = document.createElement('a');
@@ -1786,16 +1786,16 @@ export default function SuperAdminDashboard() {
                 <Button 
                   variant="outline"
                   onClick={() => {
-                    if (statistics) {
+                    if (statsData) {
                       const csvData = [
                         ['Metric', 'Value'],
-                        ['Total Users', statistics.overview?.totalUsers || 0],
-                        ['Total Events', statistics.overview?.totalEvents || 0],
-                        ['Total Revenue (₦)', statistics.financial?.totalRevenue || 0],
-                        ['Platform Fees Earned (₦)', statistics.financial?.platformFeesEarned || 0],
-                        ['Active Users', statistics.users?.active || 0],
-                        ['Upcoming Events', statistics.events?.upcoming || 0],
-                        ['Conversion Rate (%)', statistics.engagement?.conversionRate || 0]
+                        ['Total Users', statsData.overview?.totalUsers || 0],
+                        ['Total Events', statsData.overview?.totalEvents || 0],
+                        ['Total Revenue (₦)', statsData.financial?.totalRevenue || 0],
+                        ['Platform Fees Earned (₦)', statsData.financial?.platformFeesEarned || 0],
+                        ['Active Users', statsData.users?.active || 0],
+                        ['Upcoming Events', statsData.events?.upcoming || 0],
+                        ['Conversion Rate (%)', statsData.engagement?.conversionRate || 0]
                       ].map(row => row.join(',')).join('\n');
                       
                       const csvBlob = new Blob([csvData], {type: 'text/csv'});
@@ -2174,7 +2174,7 @@ export default function SuperAdminDashboard() {
                     <div className="font-medium text-blue-600 mb-2">Event Success Rate</div>
                     <div className="text-2xl font-bold">
                       {statistics?.overview?.totalEvents > 0 ? 
-                        Math.round(((statistics?.events?.past || 0) / statistics.overview.totalEvents) * 100) : 0}%
+                        Math.round(((statistics?.events?.past || 0) / statsData?.overview.totalEvents) * 100) : 0}%
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {statistics?.events?.past || 0} completed events
@@ -2185,7 +2185,7 @@ export default function SuperAdminDashboard() {
                     <div className="font-medium text-purple-600 mb-2">Revenue per Event</div>
                     <div className="text-2xl font-bold">
                       ₦{statistics?.overview?.totalEvents > 0 ? 
-                        Math.round((statistics?.financial?.totalRevenue || 0) / statistics.overview.totalEvents).toLocaleString() : 0}
+                        Math.round((statistics?.financial?.totalRevenue || 0) / statsData?.overview.totalEvents).toLocaleString() : 0}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Average revenue generation

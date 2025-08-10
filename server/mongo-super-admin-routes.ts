@@ -111,7 +111,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
             totalTicketRevenue += ticketRevenue;
           }
           
-          // Get payment history
+          // Get payment history - try both array and single ID
           const payments = await mongoStorage.getPaymentHistory([eventId]);
           const eventRevenue = payments
             .filter(p => p.status === 'success')
@@ -180,13 +180,13 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           activeMembers: allMembers.filter(m => m.status === 'active').length
         },
         financial: {
-          totalRevenue: Math.round(totalRevenue / 100), // Convert from kobo to naira
+          totalRevenue: Math.round((totalRevenue + totalTicketRevenue) / 100), // Convert from kobo to naira
           totalTransactions,
-          platformFeesEarned: Math.round(platformFeesEarned / 100),
+          platformFeesEarned: Math.round(((totalRevenue + totalTicketRevenue) * platformFeeRate) / 100),
           ticketsSold,
           totalTicketRevenue: Math.round(totalTicketRevenue / 100),
           paidRegistrations,
-          averageTransactionValue: totalTransactions > 0 ? Math.round((totalRevenue / totalTransactions) / 100) : 0
+          averageTransactionValue: totalTransactions > 0 ? Math.round(((totalRevenue + totalTicketRevenue) / totalTransactions) / 100) : 0
         },
         growth: {
           newUsersLast7Days,
@@ -235,6 +235,163 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       res.status(500).json({ 
         success: false,
         message: "Failed to fetch platform statistics" 
+      });
+    }
+  });
+
+  // Get organization-specific analytics
+  app.get("/api/super-admin/organizations/:orgId/analytics", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { orgId } = req.params;
+      
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+      const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+
+      // Get organization data
+      const organization = await mongoStorage.getOrganizations({ _id: orgId });
+      if (!organization || organization.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Organization not found" 
+        });
+      }
+
+      const org = organization[0];
+
+      // Get users for this organization
+      const orgUsers = await mongoStorage.getAllUsers({ organizationId: orgId });
+      
+      // Get events for this organization  
+      const orgEvents = await mongoStorage.getEvents({ organizationId: orgId });
+      
+      // Calculate organization-specific metrics
+      let totalRevenue = 0;
+      let totalTransactions = 0;
+      let totalRegistrations = 0;
+      let paidRegistrations = 0;
+      let ticketsSold = 0;
+      let totalTicketRevenue = 0;
+      
+      for (const event of orgEvents) {
+        try {
+          const eventId = (event._id as any).toString();
+          
+          // Get registrations for registration-based events
+          const registrations = await mongoStorage.getEventRegistrations(eventId);
+          totalRegistrations += registrations.length;
+          
+          // Count paid registrations
+          const eventPaidRegs = registrations.filter(r => r.paymentStatus === 'paid').length;
+          paidRegistrations += eventPaidRegs;
+          
+          // Get tickets for ticket-based events
+          if (event.eventType === 'ticket') {
+            const tickets = await mongoStorage.getTickets({ eventId });
+            ticketsSold += tickets.filter(t => t.paymentStatus === 'paid').length;
+            
+            // Calculate ticket revenue
+            const ticketRevenue = tickets
+              .filter(t => t.paymentStatus === 'paid')
+              .reduce((sum, ticket) => sum + (ticket.price || 0), 0);
+            totalTicketRevenue += ticketRevenue;
+          }
+          
+          // Get payment history
+          const payments = await mongoStorage.getPaymentHistory([eventId]);
+          const eventRevenue = payments
+            .filter(p => p.status === 'success')
+            .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+          
+          totalRevenue += eventRevenue;
+          totalTransactions += payments.filter(p => p.status === 'success').length;
+        } catch (error) {
+          console.error(`Error calculating org stats for event ${event.name}:`, error);
+        }
+      }
+
+      // Time-based statistics
+      const newUsersLast7Days = orgUsers.filter(u => u.createdAt >= sevenDaysAgo).length;
+      const newUsersLast30Days = orgUsers.filter(u => u.createdAt >= thirtyDaysAgo).length;
+      const newEventsLast7Days = orgEvents.filter(e => e.createdAt >= sevenDaysAgo).length;
+      const newEventsLast30Days = orgEvents.filter(e => e.createdAt >= thirtyDaysAgo).length;
+
+      // Event status analysis
+      const upcomingEvents = orgEvents.filter(e => {
+        const eventDate = new Date(e.startDate);
+        return eventDate > now && e.status !== 'cancelled';
+      }).length;
+      
+      const pastEvents = orgEvents.filter(e => {
+        const eventDate = new Date(e.startDate);
+        return eventDate <= now;
+      }).length;
+      
+      const cancelledEvents = orgEvents.filter(e => e.status === 'cancelled').length;
+
+      // User engagement metrics
+      const activeUsers = orgUsers.filter(u => u.status === 'active').length;
+      const pendingUsers = orgUsers.filter(u => u.status === 'pending').length;
+      const suspendedUsers = orgUsers.filter(u => u.status === 'suspended').length;
+
+      const orgAnalytics = {
+        organization: {
+          id: (org._id as any).toString(),
+          name: org.name,
+          status: org.status,
+          createdAt: org.createdAt
+        },
+        overview: {
+          totalUsers: orgUsers.length,
+          totalEvents: orgEvents.length,
+          totalRegistrations: totalRegistrations,
+          activeUsers,
+          upcomingEvents
+        },
+        financial: {
+          totalRevenue: Math.round((totalRevenue + totalTicketRevenue) / 100), // Convert from kobo to naira
+          totalTransactions,
+          ticketsSold,
+          totalTicketRevenue: Math.round(totalTicketRevenue / 100),
+          paidRegistrations,
+          averageTransactionValue: totalTransactions > 0 ? Math.round(((totalRevenue + totalTicketRevenue) / totalTransactions) / 100) : 0
+        },
+        growth: {
+          newUsersLast7Days,
+          newUsersLast30Days,
+          newEventsLast7Days,
+          newEventsLast30Days
+        },
+        events: {
+          upcoming: upcomingEvents,
+          past: pastEvents,
+          cancelled: cancelledEvents,
+          total: orgEvents.length,
+          registrationBased: orgEvents.filter(e => e.eventType === 'registration').length,
+          ticketBased: orgEvents.filter(e => e.eventType === 'ticket').length
+        },
+        users: {
+          active: activeUsers,
+          pending: pendingUsers,
+          suspended: suspendedUsers,
+          admins: orgUsers.filter(u => u.role === 'admin').length,
+          members: orgUsers.filter(u => u.role === 'member').length
+        },
+        engagement: {
+          totalRegistrations,
+          paidRegistrations,
+          freeRegistrations: totalRegistrations - paidRegistrations,
+          conversionRate: totalRegistrations > 0 ? Math.round((paidRegistrations / totalRegistrations) * 100) : 0,
+          averageRegistrationsPerEvent: orgEvents.length > 0 ? Math.round(totalRegistrations / orgEvents.length) : 0
+        }
+      };
+
+      res.json({ success: true, analytics: orgAnalytics });
+    } catch (error: any) {
+      console.error("Get organization analytics error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch organization analytics" 
       });
     }
   });
