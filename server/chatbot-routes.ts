@@ -51,7 +51,7 @@ const chatSessions = new Map<string, ChatSession>();
 const adminLastSeen = new Map<string, Date>();
 
 // Helper functions for database operations
-async function saveChatSession(session: ChatSession) {
+export async function saveChatSession(session: ChatSession) {
   try {
     console.log(`Attempting to save chat session ${session.id} to database...`);
     const result = await ChatSessionModel.findOneAndUpdate(
@@ -74,6 +74,33 @@ async function saveChatSession(session: ChatSession) {
   }
 }
 
+export async function getChatSessionFromDB(sessionId: string): Promise<ChatSession | null> {
+  try {
+    const dbSession = await ChatSessionModel.findOne({ sessionId });
+    if (!dbSession) return null;
+    
+    return {
+      id: dbSession.sessionId,
+      userEmail: dbSession.userEmail || '',
+      isEscalated: dbSession.isEscalated,
+      adminId: dbSession.adminId || undefined,
+      status: dbSession.status as 'active' | 'resolved' | 'pending_admin',
+      messages: dbSession.messages.map(msg => ({
+        id: msg.id || '',
+        text: msg.text || '',
+        sender: msg.sender as 'bot' | 'user' | 'admin',
+        timestamp: msg.timestamp || new Date(),
+        type: (msg.type as 'text' | 'quick_reply' | 'escalation') || 'text'
+      })),
+      createdAt: dbSession.createdAt,
+      lastActivity: dbSession.lastActivity
+    };
+  } catch (error) {
+    console.error('Error getting chat session from database:', error);
+    return null;
+  }
+}
+
 async function loadChatSessions() {
   try {
     const sessions = await ChatSessionModel.find({ status: { $ne: 'resolved' } });
@@ -82,16 +109,16 @@ async function loadChatSessions() {
     sessions.forEach(session => {
       chatSessions.set(session.sessionId, {
         id: session.sessionId,
-        userEmail: session.userEmail,
+        userEmail: session.userEmail || '',
         isEscalated: session.isEscalated,
-        adminId: session.adminId,
+        adminId: session.adminId || undefined,
         status: session.status as 'active' | 'resolved' | 'pending_admin',
         messages: session.messages.map(msg => ({
-          id: msg.id,
-          text: msg.text,
+          id: msg.id || '',
+          text: msg.text || '',
           sender: msg.sender as 'bot' | 'user' | 'admin',
-          timestamp: msg.timestamp,
-          type: msg.type as 'text' | 'quick_reply' | 'escalation'
+          timestamp: msg.timestamp || new Date(),
+          type: (msg.type as 'text' | 'quick_reply' | 'escalation') || 'text'
         })),
         createdAt: session.createdAt,
         lastActivity: session.lastActivity
@@ -402,16 +429,16 @@ export function setupChatbotRoutes(app: Express) {
         if (dbSession) {
           const sessionData = {
             id: dbSession.sessionId,
-            userEmail: dbSession.userEmail,
+            userEmail: dbSession.userEmail || '',
             isEscalated: dbSession.isEscalated,
-            adminId: dbSession.adminId,
+            adminId: dbSession.adminId || undefined,
             status: dbSession.status as 'active' | 'resolved' | 'pending_admin',
             messages: dbSession.messages.map(msg => ({
-              id: msg.id,
-              text: msg.text,
+              id: msg.id || '',
+              text: msg.text || '',
               sender: msg.sender as 'bot' | 'user' | 'admin',
-              timestamp: msg.timestamp,
-              type: msg.type as 'text' | 'quick_reply' | 'escalation'
+              timestamp: msg.timestamp || new Date(),
+              type: (msg.type as 'text' | 'quick_reply' | 'escalation') || 'text'
             })),
             createdAt: dbSession.createdAt,
             lastActivity: dbSession.lastActivity

@@ -35,10 +35,20 @@ class WebSocketChatServer {
       
       ws.on('message', async (data) => {
         try {
-          const message = JSON.parse(data.toString());
+          const rawMessage = data.toString();
+          console.log('Raw WebSocket message received:', rawMessage);
+          
+          if (!rawMessage || rawMessage.trim() === '') {
+            console.log('Empty message received, ignoring');
+            return;
+          }
+          
+          const message = JSON.parse(rawMessage);
+          console.log('Parsed WebSocket message:', message);
           await this.handleMessage(ws, message);
         } catch (error) {
-          console.error('Error handling WebSocket message:', error);
+          console.error('Error parsing WebSocket message:', error);
+          console.error('Raw data was:', data.toString());
           ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
         }
       });
@@ -212,6 +222,20 @@ class WebSocketChatServer {
 
   private async handleAdminMessage(ws: WebSocket, data: any) {
     const { sessionId, text, adminId } = data;
+    console.log(`WebSocket admin message received for session ${sessionId}:`, text);
+    
+    // First, try to load the latest session from database to ensure we have current state
+    try {
+      // Use the chatbot routes system which has MongoDB persistence
+      const { getChatSessionFromDB } = await import('./chatbot-routes.js');
+      const dbSession = await getChatSessionFromDB(sessionId);
+      if (dbSession) {
+        console.log(`Found session in database, updating in-memory cache`);
+        this.chatSessions.set(sessionId, dbSession);
+      }
+    } catch (error) {
+      console.error('Error syncing with database:', error);
+    }
     
     const session = this.chatSessions.get(sessionId);
     if (!session) {
@@ -228,10 +252,22 @@ class WebSocketChatServer {
       timestamp: new Date()
     };
 
-    // Add to session
+    // Add to session and update timestamps
     session.messages.push(message);
     session.lastActivity = new Date();
     session.adminId = adminId;
+    
+    // Update in-memory cache
+    this.chatSessions.set(sessionId, session);
+
+    // Save to database immediately
+    try {
+      const { saveChatSession } = await import('./chatbot-routes.js');
+      await saveChatSession(session);
+      console.log(`WebSocket message saved to database for session ${sessionId}`);
+    } catch (error) {
+      console.error('Error saving WebSocket message to database:', error);
+    }
 
     // Send to admin (confirmation)
     ws.send(JSON.stringify({
