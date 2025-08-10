@@ -933,72 +933,177 @@ export function registerMongoSuperAdminRoutes(app: Express) {
     }
   });
 
-  // Organization-specific analytics endpoint
-  app.get("/api/super-admin/organization-analytics/:orgId", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  // Organization-specific analytics endpoint that frontend expects
+  app.get("/api/super-admin/organization-analytics", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { orgId } = req.params;
+      const { orgId } = req.query;
       
-      const organization = await Organization.findById(orgId);
-      if (!organization) {
-        return res.status(404).json({ success: false, message: 'Organization not found' });
+      if (!orgId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Organization ID is required" 
+        });
       }
 
-      // Get organization users
-      const orgUsers = await User.find({ organizationId: orgId });
+      // Get organization data
+      const organizations = await mongoStorage.getOrganizations({ _id: orgId });
+      if (!organizations || organizations.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Organization not found" 
+        });
+      }
 
-      // Get organization events
-      const orgEvents = await Event.find({ organizationId: orgId });
-      const eventIds = orgEvents.map(event => event._id);
+      const organization = organizations[0];
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+      const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
 
-      // Get organization registrations
-      const orgRegistrations = await EventRegistration.find({ eventId: { $in: eventIds } });
+      // Get users for this organization
+      const orgUsers = await mongoStorage.getAllUsers({ organizationId: orgId });
+      
+      // Get events for this organization  
+      const orgEvents = await mongoStorage.getEvents({ organizationId: orgId });
+      
+      // Calculate organization-specific metrics
+      let totalRevenue = 0;
+      let totalTransactions = 0;
+      let totalRegistrations = 0;
+      let paidRegistrations = 0;
+      let validatedRegistrations = 0;
+      let ticketsSold = 0;
+      let totalTicketRevenue = 0;
+      
+      for (const event of orgEvents) {
+        try {
+          const eventId = (event._id as any).toString();
+          
+          // Get registrations for registration-based events
+          const registrations = await mongoStorage.getEventRegistrations(eventId);
+          totalRegistrations += registrations.length;
+          
+          // Count paid and validated registrations
+          const eventPaidRegs = registrations.filter(r => r.paymentStatus === 'paid').length;
+          const eventValidatedRegs = registrations.filter(r => r.isValidated === true).length;
+          paidRegistrations += eventPaidRegs;
+          validatedRegistrations += eventValidatedRegs;
+          
+          // Get tickets for ticket-based events
+          if (event.eventType === 'ticket') {
+            const tickets = await mongoStorage.getTickets({ eventId });
+            ticketsSold += tickets.filter(t => t.paymentStatus === 'paid').length;
+            
+            // Calculate ticket revenue
+            const ticketRevenue = tickets
+              .filter(t => t.paymentStatus === 'paid')
+              .reduce((sum, ticket) => sum + (ticket.price || 0), 0);
+            totalTicketRevenue += ticketRevenue;
+          }
+          
+          // Get payment history
+          const payments = await mongoStorage.getPaymentHistory([eventId]);
+          const eventRevenue = payments
+            .filter(p => p.status === 'success')
+            .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+          
+          totalRevenue += eventRevenue;
+          totalTransactions += payments.filter(p => p.status === 'success').length;
+        } catch (error) {
+          console.error(`Error calculating org stats for event ${event.name}:`, error);
+        }
+      }
 
-      // Calculate organization statistics
-      const stats = {
+      // Time-based statistics
+      const newUsersLast7Days = orgUsers.filter(u => u.createdAt >= sevenDaysAgo).length;
+      const newUsersLast30Days = orgUsers.filter(u => u.createdAt >= thirtyDaysAgo).length;
+      const newEventsLast7Days = orgEvents.filter(e => e.createdAt >= sevenDaysAgo).length;
+      const newEventsLast30Days = orgEvents.filter(e => e.createdAt >= thirtyDaysAgo).length;
+
+      // Event status analysis
+      const upcomingEvents = orgEvents.filter(e => {
+        const eventDate = new Date(e.startDate);
+        return eventDate > now && e.status !== 'cancelled';
+      }).length;
+      
+      const pastEvents = orgEvents.filter(e => {
+        const eventDate = new Date(e.startDate);
+        return eventDate <= now;
+      }).length;
+      
+      const cancelledEvents = orgEvents.filter(e => e.status === 'cancelled').length;
+
+      // User engagement metrics
+      const activeUsers = orgUsers.filter(u => u.status === 'active').length;
+      const pendingUsers = orgUsers.filter(u => u.status === 'pending').length;
+      const suspendedUsers = orgUsers.filter(u => u.status === 'suspended').length;
+
+      const orgAnalytics = {
         organization: {
-          id: organization._id,
-          name: organization.organizationName,
-          status: organization.status
+          id: (organization._id as any).toString(),
+          name: organization.name,
+          status: organization.status,
+          createdAt: organization.createdAt
         },
         overview: {
           totalUsers: orgUsers.length,
           totalEvents: orgEvents.length,
-          totalRegistrations: orgRegistrations.length,
-          activeUsers: orgUsers.filter(user => user.status === 'active').length
-        },
-        events: {
-          upcoming: orgEvents.filter(event => new Date(event.startDate) > new Date()).length,
-          past: orgEvents.filter(event => new Date(event.startDate) <= new Date()).length,
-          byType: {
-            registration: orgEvents.filter(event => event.eventType === 'registration').length,
-            ticket: orgEvents.filter(event => event.eventType === 'ticket').length
-          }
-        },
-        registrations: {
-          total: orgRegistrations.length,
-          validated: orgRegistrations.filter(reg => reg.validationStatus === 'validated').length,
-          pending: orgRegistrations.filter(reg => reg.validationStatus === 'pending').length,
-          byPaymentStatus: {
-            paid: orgRegistrations.filter(reg => reg.paymentStatus === 'paid').length,
-            pending: orgRegistrations.filter(reg => reg.paymentStatus === 'pending').length,
-            not_required: orgRegistrations.filter(reg => reg.paymentStatus === 'not_required').length
-          }
+          totalRegistrations: totalRegistrations,
+          activeUsers,
+          upcomingEvents
         },
         financial: {
-          totalRevenue: orgRegistrations
-            .filter(reg => reg.paymentStatus === 'paid' && reg.amountPaid)
-            .reduce((sum, reg) => sum + (reg.amountPaid || 0), 0),
-          averageEventRevenue: orgEvents.length > 0 ? 
-            orgRegistrations
-              .filter(reg => reg.paymentStatus === 'paid' && reg.amountPaid)
-              .reduce((sum, reg) => sum + (reg.amountPaid || 0), 0) / orgEvents.length : 0
+          totalRevenue: Math.round((totalRevenue + totalTicketRevenue) / 100), // Convert from kobo to naira
+          totalTransactions,
+          ticketsSold,
+          totalTicketRevenue: Math.round(totalTicketRevenue / 100),
+          paidRegistrations,
+          averageEventRevenue: orgEvents.length > 0 ? Math.round(((totalRevenue + totalTicketRevenue) / orgEvents.length) / 100) : 0,
+          averageTransactionValue: totalTransactions > 0 ? Math.round(((totalRevenue + totalTicketRevenue) / totalTransactions) / 100) : 0
+        },
+        growth: {
+          newUsersLast7Days,
+          newUsersLast30Days,
+          newEventsLast7Days,
+          newEventsLast30Days
+        },
+        events: {
+          upcoming: upcomingEvents,
+          past: pastEvents,
+          cancelled: cancelledEvents,
+          total: orgEvents.length,
+          registrationBased: orgEvents.filter(e => e.eventType === 'registration').length,
+          ticketBased: orgEvents.filter(e => e.eventType === 'ticket').length
+        },
+        users: {
+          active: activeUsers,
+          pending: pendingUsers,
+          suspended: suspendedUsers,
+          admins: orgUsers.filter(u => u.role === 'admin').length,
+          members: orgUsers.filter(u => u.role === 'member').length
+        },
+        registrations: {
+          total: totalRegistrations,
+          paid: paidRegistrations,
+          validated: validatedRegistrations,
+          free: totalRegistrations - paidRegistrations
+        },
+        engagement: {
+          totalRegistrations,
+          paidRegistrations,
+          freeRegistrations: totalRegistrations - paidRegistrations,
+          conversionRate: totalRegistrations > 0 ? Math.round((paidRegistrations / totalRegistrations) * 100) : 0,
+          validationRate: totalRegistrations > 0 ? Math.round((validatedRegistrations / totalRegistrations) * 100) : 0,
+          averageRegistrationsPerEvent: orgEvents.length > 0 ? Math.round(totalRegistrations / orgEvents.length) : 0
         }
       };
 
-      return res.json({ success: true, analytics: stats });
-    } catch (error) {
-      console.error('Error fetching organization analytics:', error);
-      return res.status(500).json({ success: false, message: 'Internal server error' });
+      res.json(orgAnalytics);
+    } catch (error: any) {
+      console.error("Get organization analytics error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch organization analytics" 
+      });
     }
   });
 }

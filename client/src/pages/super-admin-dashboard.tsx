@@ -15,6 +15,124 @@ import {
   UserCheck
 } from "lucide-react";
 
+interface PlatformStatistics {
+  overview: {
+    totalUsers: number;
+    totalAdmins: number;
+    totalSuperAdmins: number;
+    totalEvents: number;
+    totalRegistrations: number;
+    totalMembers: number;
+    totalOrganizations: number;
+    activeUsers: number;
+    approvedOrganizations: number;
+    upcomingEvents: number;
+    activeMembers: number;
+  };
+  financial: {
+    totalRevenue: number;
+    totalTransactions: number;
+    platformFeesEarned: number;
+    ticketsSold: number;
+    totalTicketRevenue: number;
+    paidRegistrations: number;
+    averageTransactionValue: number;
+  };
+  growth: {
+    newUsersLast7Days: number;
+    newUsersLast30Days: number;
+    newEventsLast7Days: number;
+    newEventsLast30Days: number;
+    newOrgsLast7Days: number;
+    newOrgsLast30Days: number;
+    userGrowthRate: number;
+    eventGrowthRate: number;
+  };
+  events: {
+    upcoming: number;
+    past: number;
+    cancelled: number;
+    total: number;
+    registrationBased: number;
+    ticketBased: number;
+  };
+  users: {
+    active: number;
+    pending: number;
+    suspended: number;
+    admins: number;
+    superAdmins: number;
+    members: number;
+  };
+  organizations: {
+    approved: number;
+    pending: number;
+    suspended: number;
+    total: number;
+  };
+  engagement: {
+    totalRegistrations: number;
+    paidRegistrations: number;
+    freeRegistrations: number;
+    conversionRate: number;
+    averageRegistrationsPerEvent: number;
+  };
+}
+
+interface OrganizationAnalytics {
+  organization: {
+    id: string;
+    name: string;
+    status: string;
+    createdAt: Date;
+  };
+  overview: {
+    totalUsers: number;
+    totalEvents: number;
+    totalRegistrations: number;
+    activeUsers: number;
+    upcomingEvents: number;
+  };
+  financial: {
+    totalRevenue: number;
+    totalTransactions: number;
+    ticketsSold: number;
+    totalTicketRevenue: number;
+    paidRegistrations: number;
+    averageEventRevenue: number;
+    averageTransactionValue: number;
+  };
+  events: {
+    upcoming: number;
+    past: number;
+    cancelled: number;
+    total: number;
+    registrationBased: number;
+    ticketBased: number;
+  };
+  users: {
+    active: number;
+    pending: number;
+    suspended: number;
+    admins: number;
+    members: number;
+  };
+  registrations: {
+    total: number;
+    paid: number;
+    validated: number;
+    free: number;
+  };
+  engagement: {
+    totalRegistrations: number;
+    paidRegistrations: number;
+    freeRegistrations: number;
+    conversionRate: number;
+    validationRate: number;
+    averageRegistrationsPerEvent: number;
+  };
+}
+
 interface StatCardProps {
   title: string;
   value: number;
@@ -45,20 +163,26 @@ export default function SuperAdminDashboard() {
   const [selectedOrgAnalytics, setSelectedOrgAnalytics] = useState<string | null>(null);
 
   // Statistics query
-  const { data: statsData } = useQuery({
+  const { data: statsData } = useQuery<{ success: boolean; statistics: PlatformStatistics }>({
     queryKey: ['/api/super-admin/statistics'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Organizations query
-  const { data: organizationsData } = useQuery({
+  const { data: organizationsData } = useQuery<{ organizations: any[] }>({
     queryKey: ['/api/super-admin/organizations'],
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   // Organization analytics query
-  const { data: orgAnalytics } = useQuery({
+  const { data: orgAnalytics } = useQuery<OrganizationAnalytics>({
     queryKey: ['/api/super-admin/organization-analytics', selectedOrgAnalytics],
+    queryFn: async () => {
+      if (!selectedOrgAnalytics) return null;
+      const response = await fetch(`/api/super-admin/organization-analytics?orgId=${selectedOrgAnalytics}`);
+      if (!response.ok) throw new Error('Failed to fetch organization analytics');
+      return response.json();
+    },
     enabled: !!selectedOrgAnalytics,
     staleTime: 2 * 60 * 1000,
   });
@@ -215,7 +339,9 @@ export default function SuperAdminDashboard() {
                   {organizationsData?.organizations?.map((org: any) => (
                     <Card 
                       key={org.id} 
-                      className="cursor-pointer hover:bg-muted/50 transition-colors border-2 hover:border-primary/20"
+                      className={`cursor-pointer hover:bg-muted/50 transition-colors border-2 hover:border-primary/20 ${
+                        selectedOrgAnalytics === org.id ? 'border-primary bg-primary/5' : ''
+                      }`}
                       onClick={() => setSelectedOrgAnalytics(org.id)}
                     >
                       <CardContent className="p-4">
@@ -307,8 +433,7 @@ export default function SuperAdminDashboard() {
                     <div className="space-y-2">
                       <h4 className="font-medium">Validation Rate</h4>
                       <div className="text-2xl font-bold text-purple-600">
-                        {orgAnalytics.overview?.totalRegistrations > 0 ? 
-                          Math.round(((orgAnalytics.registrations?.validated || 0) / orgAnalytics.overview.totalRegistrations) * 100) : 0}%
+                        {orgAnalytics.engagement?.validationRate || 0}%
                       </div>
                       <p className="text-sm text-muted-foreground">Validated registrations</p>
                     </div>
@@ -322,6 +447,135 @@ export default function SuperAdminDashboard() {
                       <p className="text-sm text-muted-foreground">Average per user</p>
                     </div>
                   </div>
+
+                  {/* Additional Analytics Charts */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Event Types Distribution</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm">Registration Events</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-20 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full" 
+                                  style={{
+                                    width: `${orgAnalytics.events?.total > 0 ? 
+                                      ((orgAnalytics.events?.registrationBased || 0) / orgAnalytics.events.total) * 100 : 0}%`
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="text-sm font-medium">{orgAnalytics.events?.registrationBased || 0}</span>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm">Ticket Events</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-20 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-green-600 h-2 rounded-full" 
+                                  style={{
+                                    width: `${orgAnalytics.events?.total > 0 ? 
+                                      ((orgAnalytics.events?.ticketBased || 0) / orgAnalytics.events.total) * 100 : 0}%`
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="text-sm font-medium">{orgAnalytics.events?.ticketBased || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Payment Status</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm">Paid</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-20 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-green-600 h-2 rounded-full" 
+                                  style={{
+                                    width: `${orgAnalytics.overview?.totalRegistrations > 0 ? 
+                                      ((orgAnalytics.registrations?.paid || 0) / orgAnalytics.overview.totalRegistrations) * 100 : 0}%`
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="text-sm font-medium">{orgAnalytics.registrations?.paid || 0}</span>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm">Free</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-20 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full" 
+                                  style={{
+                                    width: `${orgAnalytics.overview?.totalRegistrations > 0 ? 
+                                      ((orgAnalytics.registrations?.free || 0) / orgAnalytics.overview.totalRegistrations) * 100 : 0}%`
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="text-sm font-medium">{orgAnalytics.registrations?.free || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Summary Insights */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Key Insights</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <div className="text-lg font-semibold text-blue-900">
+                            Conversion Rate
+                          </div>
+                          <div className="text-2xl font-bold text-blue-600">
+                            {orgAnalytics.engagement?.conversionRate || 0}%
+                          </div>
+                          <p className="text-sm text-blue-700">
+                            Registration to payment conversion
+                          </p>
+                        </div>
+                        
+                        <div className="p-4 bg-green-50 rounded-lg">
+                          <div className="text-lg font-semibold text-green-900">
+                            Event Completion
+                          </div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {orgAnalytics.events?.past || 0}
+                          </div>
+                          <p className="text-sm text-green-700">
+                            Successfully completed events
+                          </p>
+                        </div>
+                        
+                        <div className="p-4 bg-purple-50 rounded-lg">
+                          <div className="text-lg font-semibold text-purple-900">
+                            Avg. Registrations
+                          </div>
+                          <div className="text-2xl font-bold text-purple-600">
+                            {orgAnalytics.engagement?.averageRegistrationsPerEvent || 0}
+                          </div>
+                          <p className="text-sm text-purple-700">
+                            Registrations per event
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
 
