@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import responsive styles */
+@import './styles/responsive.css';
+
 /* Mobile-first responsive base styles */
 @layer base {
   html {
