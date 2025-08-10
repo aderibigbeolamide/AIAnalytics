@@ -4,10 +4,11 @@ import { mongoStorage } from './mongodb-storage';
 
 interface ChatMessage {
   id: string;
-  sessionId: string;
+  sessionId?: string;
   text: string;
-  sender: 'user' | 'admin';
+  sender: 'user' | 'admin' | 'bot';
   timestamp: Date;
+  type?: 'text' | 'quick_reply' | 'escalation';
 }
 
 interface ChatSession {
@@ -238,6 +239,9 @@ class WebSocketChatServer {
         console.log(`Admin ${session.adminId} not connected via WebSocket for session ${sessionId}`);
       }
     }
+
+    // Broadcast session update to all admins
+    this.broadcastActiveSessions();
   }
 
   private async handleAdminMessage(ws: WebSocket, data: any) {
@@ -304,14 +308,24 @@ class WebSocketChatServer {
       data: message
     }));
 
-    // Send to user
+    // Send to user connection if available
     const userWs = this.userConnections.get(sessionId);
     if (userWs && userWs.readyState === WebSocket.OPEN) {
+      console.log(`Notifying user in session ${sessionId} of new admin message`);
       userWs.send(JSON.stringify({
-        type: 'admin_reply',
+        type: 'admin_message',
         data: message
       }));
+    } else {
+      console.log(`User not connected via WebSocket for session ${sessionId}`);
     }
+
+    // Broadcast session update to all connected admins
+    this.broadcastToAdmins('session_updated', {
+      sessionId,
+      lastActivity: session.lastActivity,
+      messageCount: session.messages.length
+    });
   }
 
   private async handleEscalation(ws: WebSocket, data: any) {
@@ -388,6 +402,21 @@ class WebSocketChatServer {
   // Get session by ID
   public getSession(sessionId: string): ChatSession | undefined {
     return this.chatSessions.get(sessionId);
+  }
+
+  // Broadcast message to all connected admins
+  private broadcastToAdmins(type: string, data: any) {
+    this.adminConnections.forEach((adminWs) => {
+      if (adminWs.readyState === WebSocket.OPEN) {
+        adminWs.send(JSON.stringify({ type, data }));
+      }
+    });
+  }
+
+  // Broadcast active sessions to all admins
+  public broadcastActiveSessions() {
+    const activeSessions = this.getActiveSessions();
+    this.broadcastToAdmins('active_sessions', activeSessions);
   }
 }
 

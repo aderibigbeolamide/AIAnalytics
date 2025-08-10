@@ -67,18 +67,11 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
 
   useEffect(() => {
     if (user?.id) {
-      console.log('RealTimeChat: User ID found, initializing...', user.id);
+      console.log('RealTimeChat: User ID found, initializing WebSocket...', user.id);
       connectWebSocket();
       loadActiveSessions(); // Load sessions immediately on mount
       
-      // Set up polling fallback
-      const pollInterval = setInterval(() => {
-        console.log('RealTimeChat: Polling for sessions...');
-        loadActiveSessions();
-      }, 10000); // Poll every 10 seconds
-      
       return () => {
-        clearInterval(pollInterval);
         if (wsRef.current) {
           wsRef.current.close();
         }
@@ -176,15 +169,16 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       };
 
       wsRef.current.onclose = () => {
-        console.log('WebSocket disconnected');
+        console.log('WebSocket disconnected - attempting reconnect...');
         setIsConnected(false);
         
-        // Try to reconnect after 3 seconds
+        // Try to reconnect after 2 seconds
         setTimeout(() => {
           if (user?.id) {
+            console.log('Reconnecting WebSocket...');
             connectWebSocket();
           }
-        }, 3000);
+        }, 2000);
       };
 
       wsRef.current.onerror = (error) => {
@@ -193,8 +187,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       };
     } catch (error) {
       console.error('Error connecting to WebSocket:', error);
-      // Fallback to polling
-      startPolling();
+      setIsConnected(false);
     }
   };
 
@@ -224,6 +217,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         break;
       
       case 'active_sessions':
+        console.log('WebSocket: Received active sessions update', data);
         setActiveSessions(data.map((session: any) => ({
           ...session,
           lastActivity: new Date(session.lastActivity)
@@ -231,6 +225,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         break;
       
       case 'new_user_message':
+        console.log('WebSocket: New user message received', data);
         if (data.sessionId === sessionId) {
           setCurrentSession(prev => {
             if (!prev) return null;
@@ -244,6 +239,13 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
             };
           });
         }
+        
+        // Update sessions list with new message count
+        setActiveSessions(prev => prev.map(session => 
+          session.id === data.sessionId 
+            ? { ...session, messageCount: (session.messageCount || 0) + 1, lastActivity: new Date() }
+            : session
+        ));
         
         // Show notification for new messages
         toast({
@@ -429,14 +431,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
     }
   };
 
-  const startPolling = () => {
-    // Load sessions immediately
-    loadActiveSessions();
-    
-    // Set up polling for updates
-    const pollInterval = setInterval(loadActiveSessions, 5000);
-    return () => clearInterval(pollInterval);
-  };
+  // Removed polling - using WebSocket only for real-time updates;
 
   if (!sessionId) {
     // Show session list

@@ -15,6 +15,7 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
 - **UI**: Radix UI components with shadcn/ui, Tailwind CSS
 - **Data Fetching**: TanStack Query
 - **Build Tool**: Vite
+- **Real-time Communication**: WebSocket for instant messaging
 
 ### Backend
 - **Runtime**: Node.js with Express.js
@@ -22,6 +23,7 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
 - **Database**: MongoDB with Mongoose (MongoDB Atlas)
 - **Authentication**: JWT tokens with bcrypt
 - **API**: RESTful API
+- **Real-time Messaging**: WebSocket server with broadcasting
 - **File Storage**: Local file system with Cloudinary integration
 - **Payment Processing**: Paystack API (multi-tenant support)
 
@@ -32,6 +34,7 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
 - **Robust Authentication**: Implements JWT-based, role-based access control with secure password hashing.
 - **AI-Powered Features**: Includes AI-driven solutions such as a seat availability heatmap for real-time capacity visualization and an event recommendation engine for personalized suggestions.
 - **Notification System**: Provides real-time in-app notifications with broadcasting and targeted messaging.
+- **Real-time Chat System**: WhatsApp-like instant messaging between customers and admins with WebSocket technology, eliminating the need for page refreshes.
 - **Event Reminder System**: Automated email and in-app reminders sent to event participants at configurable intervals.
 - **QR Code Management**: Handles secure generation, encryption, and validation of QR codes for event access.
 - **UI/UX Design**: Prioritizes a clean, professional, and accessible user interface with responsive design principles.

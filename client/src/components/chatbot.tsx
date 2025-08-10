@@ -229,22 +229,111 @@ export default function ChatbotComponent() {
     checkAdminStatus();
   }, []);
 
-  // Start polling when escalated
-  useEffect(() => {
-    // Clear any existing polling interval first
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
+  // Connect to WebSocket when escalated for real-time messaging
+  const wsRef = useRef<WebSocket | null>(null);
+  const [wsConnected, setWsConnected] = useState(false);
 
+  const connectWebSocket = () => {
+    if (wsRef.current) return; // Already connected
+    
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+    
+    try {
+      wsRef.current = new WebSocket(wsUrl);
+      
+      wsRef.current.onopen = () => {
+        console.log('Customer WebSocket connected');
+        setWsConnected(true);
+        
+        // Join as user
+        if (sessionId) {
+          wsRef.current?.send(JSON.stringify({
+            type: 'join_user_session',
+            data: { 
+              sessionId,
+              userEmail
+            }
+          }));
+        }
+      };
+
+      wsRef.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          handleWebSocketMessage(message);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+
+      wsRef.current.onclose = () => {
+        console.log('Customer WebSocket disconnected');
+        setWsConnected(false);
+        wsRef.current = null;
+        
+        // Try to reconnect after 2 seconds if escalated
+        if (isEscalated) {
+          setTimeout(() => {
+            connectWebSocket();
+          }, 2000);
+        }
+      };
+
+      wsRef.current.onerror = (error) => {
+        console.error('Customer WebSocket error:', error);
+        setWsConnected(false);
+      };
+    } catch (error) {
+      console.error('Error connecting to WebSocket:', error);
+    }
+  };
+
+  const handleWebSocketMessage = (message: any) => {
+    const { type, data } = message;
+    
+    switch (type) {
+      case 'connected':
+        console.log('Customer WebSocket connection confirmed');
+        break;
+      
+      case 'admin_message':
+        // Real-time admin message
+        const adminMessage: Message = {
+          id: data.id || `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          text: data.text,
+          sender: 'admin',
+          timestamp: new Date(data.timestamp),
+          type: 'text'
+        };
+        
+        setMessages(prev => [...prev, adminMessage]);
+        break;
+      
+      case 'session_data':
+        // Session data update
+        if (data.messages && data.messages.length > 0) {
+          const newMessages = data.messages.map((msg: any): Message => ({
+            id: msg.id,
+            text: msg.text,
+            sender: msg.sender,
+            timestamp: new Date(msg.timestamp),
+            type: msg.type || 'text'
+          }));
+          setMessages(newMessages);
+        }
+        break;
+    }
+  };
+
+  useEffect(() => {
     if (isEscalated && sessionId) {
-      // Set up single polling interval using ref
-      pollingIntervalRef.current = setInterval(pollForAdminResponse, 2000);
+      connectWebSocket();
       
       return () => {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
+        if (wsRef.current) {
+          wsRef.current.close();
+          wsRef.current = null;
         }
       };
     }
@@ -602,24 +691,34 @@ export default function ChatbotComponent() {
 
   const sendToAdmin = async (message: string) => {
     try {
-      const response = await fetch('/api/chatbot/send-to-admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sessionId,
-          message,
-          userEmail
-        }),
-      });
+      if (wsRef.current && wsConnected) {
+        // Send via WebSocket for real-time delivery
+        wsRef.current.send(JSON.stringify({
+          type: 'user_message',
+          data: {
+            sessionId,
+            text: message,
+            userEmail
+          }
+        }));
+      } else {
+        // Fallback to HTTP API
+        const response = await fetch('/api/chatbot/send-to-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId,
+            message,
+            userEmail
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to send message');
+        if (!response.ok) {
+          throw new Error('Failed to send message');
+        }
       }
-      
-      // Poll for admin responses
-      pollForAdminResponse();
     } catch (error) {
       toast({
         title: "Message Failed",
@@ -646,7 +745,7 @@ export default function ChatbotComponent() {
           // Only add messages that don't already exist
           setMessages(prev => {
             const existingMessageIds = prev.map(m => m.id);
-            const trulyNewMessages = newAdminMessages.filter(msg => !existingMessageIds.includes(msg.id));
+            const trulyNewMessages = newAdminMessages.filter((msg: Message) => !existingMessageIds.includes(msg.id));
             
             if (trulyNewMessages.length > 0) {
               return [...prev, ...trulyNewMessages];
