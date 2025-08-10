@@ -174,17 +174,27 @@ interface StatCardProps {
 
 function StatCard({ title, value, description, icon: Icon, trend }: StatCardProps) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xs md:text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+    <Card className="hover:shadow-lg transition-all duration-200 border-0 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm hover:scale-105">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">{title}</CardTitle>
+        <div className="p-2 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-xl md:text-2xl font-bold">{value.toLocaleString()}</div>
-        <p className="text-xs md:text-sm text-muted-foreground">
-          {description}
-          {trend && <span className="text-green-600 ml-1 bg-green-50 px-2 py-1 rounded-full">{trend}</span>}
-        </p>
+      <CardContent className="pb-4">
+        <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">
+          {value.toLocaleString()}
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-xs sm:text-sm text-muted-foreground flex-1">
+            {description}
+          </p>
+          {trend && (
+            <span className="text-green-600 dark:text-green-400 text-xs font-medium bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full ml-2">
+              {trend}
+            </span>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -300,64 +310,154 @@ export default function SuperAdminDashboard() {
   console.log('Selected Org Analytics:', selectedOrgAnalytics, orgAnalytics);
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Super Admin Dashboard</h1>
-        <p className="text-muted-foreground">
-          Comprehensive platform management and analytics
-        </p>
-        {statsLoading && (
-          <div className="text-sm text-blue-600">Loading statistics...</div>
-        )}
-        {statsError && (
-          <div className="text-sm text-red-600">Error loading data. Please refresh the page.</div>
-        )}
-      </div>
-
-      <Tabs defaultValue="overview" className="w-full">
-        <div className="flex flex-col space-y-4">
-          <TabsList className="grid w-full grid-cols-9">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="events">Events</TabsTrigger>
-            <TabsTrigger value="organizations">Organizations</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="org-analytics">Org Analytics</TabsTrigger>
-            <TabsTrigger value="platform-settings">Settings</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="support">Support</TabsTrigger>
-          </TabsList>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="container mx-auto px-4 py-6 space-y-8">
+        {/* Header Section */}
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Super Admin Dashboard
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Comprehensive platform management and analytics
+              </p>
+            </div>
+            {statsLoading && (
+              <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-full">
+                <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                Loading statistics...
+              </div>
+            )}
+          </div>
+          {statsError && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-3 rounded-lg">
+              Error loading data. Please refresh the page.
+            </div>
+          )}
         </div>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-4">
-            <StatCard
-              title="Total Users"
-              value={statsData?.statistics?.overview?.totalUsers || 0}
-              description={`${statsData?.statistics?.users?.active || 0} active users`}
-              icon={Users}
-            />
-            <StatCard
-              title="Total Events"
-              value={statsData?.statistics?.overview?.totalEvents || 0}
-              description={`${statsData?.statistics?.events?.upcoming || 0} upcoming`}
-              icon={Calendar}
-            />
-            <StatCard
-              title="Total Organizations"
-              value={statsData?.statistics?.overview?.totalOrganizations || 0}
-              description={`${statsData?.statistics?.organizations?.approved || 0} approved`}
-              icon={Building2}
-            />
-            <StatCard
-              title="Total Revenue"
-              value={statsData?.statistics?.financial?.totalRevenue || 0}
-              description={`₦${(statsData?.statistics?.financial?.totalRevenue || 0).toLocaleString()}`}
-              icon={DollarSign}
-            />
+        <Tabs defaultValue="overview" className="w-full">
+          {/* Mobile-friendly tabs */}
+          <div className="flex flex-col space-y-4">
+            <div className="w-full overflow-x-auto">
+              <TabsList className="grid w-full min-w-max grid-cols-9 p-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700">
+                <TabsTrigger value="overview" className="text-xs sm:text-sm whitespace-nowrap">
+                  <Activity className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Overview</span>
+                </TabsTrigger>
+                <TabsTrigger value="users" className="text-xs sm:text-sm whitespace-nowrap">
+                  <Users className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Users</span>
+                </TabsTrigger>
+                <TabsTrigger value="events" className="text-xs sm:text-sm whitespace-nowrap">
+                  <Calendar className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Events</span>
+                </TabsTrigger>
+                <TabsTrigger value="organizations" className="text-xs sm:text-sm whitespace-nowrap">
+                  <Building2 className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Organizations</span>
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="text-xs sm:text-sm whitespace-nowrap">
+                  <BarChart3 className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Analytics</span>
+                </TabsTrigger>
+                <TabsTrigger value="org-analytics" className="text-xs sm:text-sm whitespace-nowrap">
+                  <TrendingUp className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Org Analytics</span>
+                </TabsTrigger>
+                <TabsTrigger value="platform-settings" className="text-xs sm:text-sm whitespace-nowrap">
+                  <Settings className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Settings</span>
+                </TabsTrigger>
+                <TabsTrigger value="notifications" className="text-xs sm:text-sm whitespace-nowrap">
+                  <Bell className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Notifications</span>
+                </TabsTrigger>
+                <TabsTrigger value="support" className="text-xs sm:text-sm whitespace-nowrap">
+                  <MessageSquare className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Support</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
           </div>
-        </TabsContent>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                title="Total Users"
+                value={statsData?.statistics?.overview?.totalUsers || 0}
+                description={`${statsData?.statistics?.users?.active || 0} active users`}
+                icon={Users}
+                trend={statsData?.statistics?.growth?.userGrowthRate > 0 ? `+${statsData?.statistics?.growth?.userGrowthRate}%` : undefined}
+              />
+              <StatCard
+                title="Total Events"
+                value={statsData?.statistics?.overview?.totalEvents || 0}
+                description={`${statsData?.statistics?.events?.upcoming || 0} upcoming`}
+                icon={Calendar}
+                trend={statsData?.statistics?.growth?.eventGrowthRate > 0 ? `+${statsData?.statistics?.growth?.eventGrowthRate}%` : undefined}
+              />
+              <StatCard
+                title="Total Organizations"
+                value={statsData?.statistics?.overview?.totalOrganizations || 0}
+                description={`${statsData?.statistics?.organizations?.approved || 0} approved`}
+                icon={Building2}
+              />
+              <StatCard
+                title="Total Revenue"
+                value={statsData?.statistics?.financial?.totalRevenue || 0}
+                description={`₦${(statsData?.statistics?.financial?.totalRevenue || 0).toLocaleString()}`}
+                icon={DollarSign}
+              />
+            </div>
+            
+            {/* Quick Stats Grid */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-600 dark:text-blue-400 font-medium">New Users (7d)</p>
+                      <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                        {statsData?.statistics?.growth?.newUsersLast7Days || 0}
+                      </p>
+                    </div>
+                    <UserCheck className="w-8 h-8 text-blue-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-600 dark:text-green-400 font-medium">New Events (7d)</p>
+                      <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                        {statsData?.statistics?.growth?.newEventsLast7Days || 0}
+                      </p>
+                    </div>
+                    <Calendar className="w-8 h-8 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-600 dark:text-purple-400 font-medium">Platform Fees</p>
+                      <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                        ₦{statsData?.statistics?.financial?.platformFeesEarned || 0}
+                      </p>
+                    </div>
+                    <DollarSign className="w-8 h-8 text-purple-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4">
@@ -539,73 +639,84 @@ export default function SuperAdminDashboard() {
                     </div>
                   )}
                   {organizationsData?.organizations?.map((org: any) => (
-                    <div key={org.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{org.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {org.contactEmail} • Created: {new Date(org.createdAt).toLocaleDateString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Plan: {org.subscriptionPlan} • Max Events: {org.maxEvents}
-                          </p>
+                    <div key={org.id} className="p-4 border rounded-lg bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm hover:shadow-md transition-all">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-medium text-lg truncate">{org.name}</h4>
+                            <Badge 
+                              variant={org.status === 'approved' ? 'default' : 
+                                      org.status === 'pending' ? 'secondary' : 'destructive'} 
+                              data-testid={`badge-org-status-${org.id}`}
+                              className="text-xs"
+                            >
+                              {org.status}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm text-muted-foreground flex items-center gap-2">
+                              <span className="truncate">{org.contactEmail}</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Created: {new Date(org.createdAt).toLocaleDateString()} • 
+                              Plan: {org.subscriptionPlan} • 
+                              Max Events: {org.maxEvents}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={org.status === 'approved' ? 'default' : 
-                                        org.status === 'pending' ? 'secondary' : 'destructive'} 
-                                 data-testid={`badge-org-status-${org.id}`}>
-                            {org.status}
-                          </Badge>
-                          <div className="flex gap-1">
-                            {org.status === 'pending' && (
-                              <>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  className="text-green-600 hover:bg-green-50"
-                                  onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'approved' })}
-                                  disabled={updateOrgStatusMutation.isPending}
-                                  data-testid={`button-approve-${org.id}`}
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  className="text-red-600 hover:bg-red-50"
-                                  onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'rejected' })}
-                                  disabled={updateOrgStatusMutation.isPending}
-                                  data-testid={`button-reject-${org.id}`}
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </Button>
-                              </>
-                            )}
-                            {org.status === 'approved' && (
+                        <div className="flex gap-2 sm:flex-col lg:flex-row">
+                          {org.status === 'pending' && (
+                            <>
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="text-orange-600 hover:bg-orange-50"
-                                onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'suspended' })}
-                                disabled={updateOrgStatusMutation.isPending}
-                                data-testid={`button-suspend-${org.id}`}
-                              >
-                                <Ban className="w-4 h-4" />
-                              </Button>
-                            )}
-                            {org.status === 'suspended' && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="text-green-600 hover:bg-green-50"
+                                className="text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-1"
                                 onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'approved' })}
                                 disabled={updateOrgStatusMutation.isPending}
-                                data-testid={`button-reactivate-${org.id}`}
+                                data-testid={`button-approve-${org.id}`}
                               >
-                                <Play className="w-4 h-4" />
+                                <CheckCircle className="w-4 h-4" />
+                                <span className="hidden sm:inline">Approve</span>
                               </Button>
-                            )}
-                          </div>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-1"
+                                onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'rejected' })}
+                                disabled={updateOrgStatusMutation.isPending}
+                                data-testid={`button-reject-${org.id}`}
+                              >
+                                <XCircle className="w-4 h-4" />
+                                <span className="hidden sm:inline">Reject</span>
+                              </Button>
+                            </>
+                          )}
+                          {org.status === 'approved' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center gap-1"
+                              onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'suspended' })}
+                              disabled={updateOrgStatusMutation.isPending}
+                              data-testid={`button-suspend-${org.id}`}
+                            >
+                              <Ban className="w-4 h-4" />
+                              <span className="hidden sm:inline">Suspend</span>
+                            </Button>
+                          )}
+                          {org.status === 'suspended' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center gap-1"
+                              onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'approved' })}
+                              disabled={updateOrgStatusMutation.isPending}
+                              data-testid={`button-reactivate-${org.id}`}
+                            >
+                              <Play className="w-4 h-4" />
+                              <span className="hidden sm:inline">Reactivate</span>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1366,91 +1477,136 @@ export default function SuperAdminDashboard() {
           </div>
         </TabsContent>
 
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Broadcast Notifications */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-5 h-5" />
-                  Broadcast Notifications
-                </CardTitle>
-                <CardDescription>
-                  Send notifications to all users or specific organizations
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Notification Type Selector */}
-                <div className="space-y-2">
-                  <Label>Notification Type</Label>
-                  <Select value={notificationType} onValueChange={(value: 'broadcast' | 'selective') => setNotificationType(value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose notification type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="broadcast">Broadcast to All Organizations</SelectItem>
-                      <SelectItem value="selective">Send to Selected Organizations</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Send Notifications */}
+              <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-blue-600" />
+                    Send Notifications
+                  </CardTitle>
+                  <CardDescription>
+                    Send notifications to all organizations or select specific ones
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Notification Type Selector */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Notification Type</Label>
+                    <Select value={notificationType} onValueChange={(value: 'broadcast' | 'selective') => setNotificationType(value)}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Choose notification type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="broadcast" className="flex items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            Broadcast to All Organizations
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="selective" className="flex items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Send to Selected Organizations
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* Organization Selector for Selective Notifications */}
-                {notificationType === 'selective' && (
-                  <div className="space-y-2">
-                    <Label>Select Organizations</Label>
-                    <div className="grid gap-2 max-h-40 overflow-y-auto p-2 border rounded-md bg-background">
-                      {organizationsData?.organizations?.map((org: any) => (
-                        <div key={org.id} className="flex items-center space-x-2 p-2 hover:bg-accent rounded">
-                          <Checkbox
-                            id={`org-${org.id}`}
-                            checked={selectedOrganizations.includes(org.id)}
-                            onCheckedChange={(checked) => {
-                              console.log(`Checkbox clicked for org ${org.name}:`, checked);
-                              if (checked) {
-                                setSelectedOrganizations([...selectedOrganizations, org.id]);
-                              } else {
-                                setSelectedOrganizations(selectedOrganizations.filter(id => id !== org.id));
-                              }
-                            }}
-                          />
-                          <label 
-                            htmlFor={`org-${org.id}`} 
-                            className="text-sm font-medium leading-none cursor-pointer flex-1"
-                            onClick={() => {
-                              console.log(`Label clicked for org ${org.name}`);
-                              const isChecked = selectedOrganizations.includes(org.id);
-                              if (isChecked) {
-                                setSelectedOrganizations(selectedOrganizations.filter(id => id !== org.id));
-                              } else {
-                                setSelectedOrganizations([...selectedOrganizations, org.id]);
-                              }
-                            }}
-                          >
-                            {org.name} ({org.status})
-                          </label>
+                  {/* Organization Selector for Selective Notifications */}
+                  {notificationType === 'selective' && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium flex items-center justify-between">
+                        Select Organizations
+                        <Badge variant="secondary" className="text-xs">
+                          {selectedOrganizations.length} selected
+                        </Badge>
+                      </Label>
+                      <div className="border rounded-lg bg-background">
+                        <div className="p-3 border-b bg-muted/30 flex items-center justify-between">
+                          <span className="text-sm font-medium">Available Organizations</span>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                const approvedOrgs = organizationsData?.organizations?.filter((org: any) => org.status === 'approved').map((org: any) => org.id) || [];
+                                setSelectedOrganizations(approvedOrgs);
+                              }}
+                              className="text-xs h-7"
+                            >
+                              Select All Approved
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSelectedOrganizations([])}
+                              className="text-xs h-7"
+                            >
+                              Clear All
+                            </Button>
+                          </div>
                         </div>
-                      ))}
+                        <div className="max-h-48 overflow-y-auto">
+                          {organizationsData?.organizations?.map((org: any) => (
+                            <div key={org.id} className="flex items-center space-x-3 p-3 hover:bg-accent/50 transition-colors border-b last:border-b-0">
+                              <Checkbox
+                                id={`org-${org.id}`}
+                                checked={selectedOrganizations.includes(org.id)}
+                                onCheckedChange={(checked) => {
+                                  console.log(`Checkbox clicked for org ${org.name}:`, checked);
+                                  if (checked) {
+                                    setSelectedOrganizations([...selectedOrganizations, org.id]);
+                                  } else {
+                                    setSelectedOrganizations(selectedOrganizations.filter(id => id !== org.id));
+                                  }
+                                }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <label 
+                                  htmlFor={`org-${org.id}`} 
+                                  className="text-sm font-medium cursor-pointer block truncate"
+                                >
+                                  {org.name}
+                                </label>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {org.contactEmail}
+                                </p>
+                              </div>
+                              <Badge 
+                                variant={org.status === 'approved' ? 'default' : 
+                                        org.status === 'suspended' ? 'destructive' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {org.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {selectedOrganizations.length} organizations selected
+                  )}
+
+                  <div className="space-y-3">
+                    <Label htmlFor="notification-message" className="text-sm font-medium">Message</Label>
+                    <Textarea
+                      id="notification-message"
+                      placeholder="Enter your notification message..."
+                      value={notificationMessage}
+                      onChange={(e) => setNotificationMessage(e.target.value)}
+                      rows={4}
+                      className="resize-none"
+                      data-testid="textarea-notification-message"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{notificationMessage.length} characters</span>
+                      <span>Max 500 characters</span>
                     </div>
                   </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="notification-message">Message</Label>
-                  <Textarea
-                    id="notification-message"
-                    placeholder="Enter your notification message..."
-                    value={notificationMessage}
-                    onChange={(e) => setNotificationMessage(e.target.value)}
-                    rows={4}
-                    data-testid="textarea-notification-message"
-                  />
-                </div>
-                
-                <div className="flex gap-2">
+                  
                   <Button 
                     onClick={() => {
                       if (notificationType === 'broadcast') {
@@ -1464,24 +1620,97 @@ export default function SuperAdminDashboard() {
                     }}
                     disabled={
                       !notificationMessage.trim() || 
+                      notificationMessage.length > 500 ||
                       broadcastNotificationMutation.isPending || 
                       selectiveNotificationMutation.isPending ||
                       (notificationType === 'selective' && selectedOrganizations.length === 0)
                     }
+                    className="w-full h-11"
                     data-testid="button-send-notification"
                   >
-                    {(broadcastNotificationMutation.isPending || selectiveNotificationMutation.isPending) ? 'Sending...' : 
-                     notificationType === 'broadcast' ? 'Broadcast to All' : `Send to ${selectedOrganizations.length} Organizations`}
+                    {(broadcastNotificationMutation.isPending || selectiveNotificationMutation.isPending) ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        Sending...
+                      </div>
+                    ) : notificationType === 'broadcast' ? (
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4" />
+                        Broadcast to All Organizations
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4" />
+                        Send to {selectedOrganizations.length} Organizations
+                      </div>
+                    )}
                   </Button>
-                  <Button variant="outline" data-testid="button-preview-notification">
-                    Preview
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Notification Statistics */}
-            <Card>
+              {/* Notification History */}
+              <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-orange-600" />
+                    Notification History
+                  </CardTitle>
+                  <CardDescription>
+                    Recent notifications sent to organizations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {notificationHistoryLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="animate-pulse">
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+                            <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        {notificationHistory?.notifications?.slice(0, 5).map((notification: any) => (
+                          <div key={notification.id} className="p-3 rounded-lg border bg-background/50">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {notification.title || 'System Notification'}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  {new Date(notification.createdAt).toLocaleDateString()} at{' '}
+                                  {new Date(notification.createdAt).toLocaleTimeString()}
+                                </p>
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {notification.type || 'notification'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                        {(!notificationHistory?.notifications || notificationHistory.notifications.length === 0) && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p className="text-sm">No notifications sent yet</p>
+                            <p className="text-xs">Sent notifications will appear here</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Support Tab */}
+          <TabsContent value="support" className="space-y-6">
+            <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle>Notification Statistics</CardTitle>
                 <CardDescription>
@@ -1613,7 +1842,6 @@ export default function SuperAdminDashboard() {
                 )}
               </CardContent>
             </Card>
-          </div>
         </TabsContent>
 
         {/* Customer Support Tab */}
@@ -1625,7 +1853,8 @@ export default function SuperAdminDashboard() {
             />
           </Card>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
     </div>
   );
 }
