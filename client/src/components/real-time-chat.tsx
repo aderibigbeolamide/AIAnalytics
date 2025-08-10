@@ -295,16 +295,22 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
 
   const loadActiveSessions = async () => {
     try {
+      console.log('Loading active chat sessions...');
       const response = await fetch('/api/admin/chat-sessions');
       if (response.ok) {
         const sessions = await response.json();
+        console.log('Received sessions from API:', sessions);
         // API returns array directly, not wrapped in data.sessions
-        setActiveSessions(sessions.map((session: any) => ({
+        const processedSessions = sessions.map((session: any) => ({
           ...session,
           createdAt: new Date(session.createdAt),
           lastActivity: new Date(session.lastActivity),
           messageCount: session.messages?.length || 0
-        })));
+        }));
+        console.log('Processed sessions for display:', processedSessions);
+        setActiveSessions(processedSessions);
+      } else {
+        console.error('Failed to load sessions, response status:', response.status);
       }
     } catch (error) {
       console.error('Error loading active sessions:', error);

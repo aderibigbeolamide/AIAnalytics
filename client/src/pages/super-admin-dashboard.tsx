@@ -414,14 +414,14 @@ export default function SuperAdminDashboard() {
                 value={statsData?.statistics?.overview?.totalUsers || 0}
                 description={`${statsData?.statistics?.users?.active || 0} active users`}
                 icon={Users}
-                trend={statsData?.statistics?.growth?.userGrowthRate > 0 ? `+${statsData?.statistics?.growth?.userGrowthRate}%` : undefined}
+                trend={(statsData?.statistics?.growth?.userGrowthRate || 0) > 0 ? `+${statsData?.statistics?.growth?.userGrowthRate || 0}%` : undefined}
               />
               <StatCard
                 title="Total Events"
                 value={statsData?.statistics?.overview?.totalEvents || 0}
                 description={`${statsData?.statistics?.events?.upcoming || 0} upcoming`}
                 icon={Calendar}
-                trend={statsData?.statistics?.growth?.eventGrowthRate > 0 ? `+${statsData?.statistics?.growth?.eventGrowthRate}%` : undefined}
+                trend={(statsData?.statistics?.growth?.eventGrowthRate || 0) > 0 ? `+${statsData?.statistics?.growth?.eventGrowthRate || 0}%` : undefined}
               />
               <StatCard
                 title="Total Organizations"
