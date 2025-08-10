@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { mongoStorage } from "./mongodb-storage";
 import { authenticateToken, type AuthenticatedRequest } from "./mongo-auth-routes";
+import { User, Notification } from "../shared/mongoose-schema.js";
+import mongoose from "mongoose";
 
 function requireSuperAdmin(req: AuthenticatedRequest, res: Response, next: Function) {
   if (!req.user) {

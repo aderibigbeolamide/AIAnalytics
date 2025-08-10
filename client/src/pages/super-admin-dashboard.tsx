@@ -854,30 +854,49 @@ export default function SuperAdminDashboard() {
                     <CardDescription>Organizations by approval status</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
-                      <div className="text-center space-y-4">
-                        <div className="flex justify-center space-x-4">
-                          <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-2">
-                              <div className="text-2xl font-bold text-green-600">{statsData?.statistics?.organizations?.approved || 4}</div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">Approved</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center mx-auto mb-2">
-                              <div className="text-2xl font-bold text-yellow-600">{statsData?.statistics?.organizations?.pending || 0}</div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">Pending</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mx-auto mb-2">
-                              <div className="text-2xl font-bold text-red-600">{statsData?.statistics?.organizations?.suspended || 1}</div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">Suspended</p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">Organization Status</p>
-                      </div>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <defs>
+                            <linearGradient id="approvedGradient" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor="#10b981" stopOpacity={0.8}/>
+                              <stop offset="100%" stopColor="#059669" stopOpacity={0.6}/>
+                            </linearGradient>
+                            <linearGradient id="pendingGradient" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                              <stop offset="100%" stopColor="#d97706" stopOpacity={0.6}/>
+                            </linearGradient>
+                            <linearGradient id="suspendedGradient" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8}/>
+                              <stop offset="100%" stopColor="#dc2626" stopOpacity={0.6}/>
+                            </linearGradient>
+                          </defs>
+                          <Pie
+                            data={[
+                              { name: 'Approved', value: statsData?.statistics?.organizations?.approved || 4, fill: 'url(#approvedGradient)' },
+                              { name: 'Pending', value: statsData?.statistics?.organizations?.pending || 0, fill: 'url(#pendingGradient)' },
+                              { name: 'Suspended', value: statsData?.statistics?.organizations?.suspended || 1, fill: 'url(#suspendedGradient)' }
+                            ].filter(item => item.value > 0)}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                          >
+                            <LabelList dataKey="value" position="center" style={{ fontSize: '12px', fontWeight: 'bold' }} />
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--background))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px'
+                            }}
+                            formatter={(value, name) => [value, `${name} Organizations`]}
+                          />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
                     </div>
                   </CardContent>
                 </Card>
@@ -1026,31 +1045,52 @@ export default function SuperAdminDashboard() {
                         <CardTitle className="text-lg">Event Types Distribution</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
-                          <div className="text-center space-y-4">
-                            <div className="flex justify-center space-x-6">
-                              <div className="text-center">
-                                <div className="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mx-auto mb-2">
-                                  <div className="text-2xl font-bold text-blue-600">{orgAnalytics.events?.registrationBased || 11}</div>
-                                </div>
-                                <p className="text-xs text-muted-foreground">Registration Events</p>
-                                <p className="text-xs text-blue-600">
-                                  {orgAnalytics.events?.total > 0 ? 
-                                    Math.round(((orgAnalytics.events?.registrationBased || 0) / orgAnalytics.events.total) * 100) : 0}%
-                                </p>
-                              </div>
-                              <div className="text-center">
-                                <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-2">
-                                  <div className="text-2xl font-bold text-green-600">{orgAnalytics.events?.ticketBased || 4}</div>
-                                </div>
-                                <p className="text-xs text-muted-foreground">Ticket Events</p>
-                                <p className="text-xs text-green-600">
-                                  {orgAnalytics.events?.total > 0 ? 
-                                    Math.round(((orgAnalytics.events?.ticketBased || 0) / orgAnalytics.events.total) * 100) : 0}%
-                                </p>
-                              </div>
-                            </div>
-                          </div>
+                        <div className="h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <defs>
+                                <linearGradient id="registrationEventsGradient" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                  <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.6}/>
+                                </linearGradient>
+                                <linearGradient id="ticketEventsGradient" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.8}/>
+                                  <stop offset="100%" stopColor="#059669" stopOpacity={0.6}/>
+                                </linearGradient>
+                              </defs>
+                              <Pie
+                                data={[
+                                  { 
+                                    name: 'Registration Events', 
+                                    value: orgAnalytics.events?.registrationBased || 11, 
+                                    fill: 'url(#registrationEventsGradient)' 
+                                  },
+                                  { 
+                                    name: 'Ticket Events', 
+                                    value: orgAnalytics.events?.ticketBased || 4, 
+                                    fill: 'url(#ticketEventsGradient)' 
+                                  }
+                                ].filter(item => item.value > 0)}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={30}
+                                outerRadius={70}
+                                paddingAngle={5}
+                                dataKey="value"
+                              >
+                                <LabelList dataKey="value" position="center" style={{ fontSize: '12px', fontWeight: 'bold' }} />
+                              </Pie>
+                              <Tooltip 
+                                contentStyle={{ 
+                                  backgroundColor: 'hsl(var(--background))', 
+                                  border: '1px solid hsl(var(--border))',
+                                  borderRadius: '8px'
+                                }}
+                                formatter={(value, name) => [value, name]}
+                              />
+                              <Legend />
+                            </PieChart>
+                          </ResponsiveContainer>
                         </div>
                       </CardContent>
                     </Card>
@@ -1060,28 +1100,61 @@ export default function SuperAdminDashboard() {
                         <CardTitle className="text-lg">Registration vs Revenue</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-64 w-full bg-muted/30 rounded-md flex items-center justify-center">
-                          <div className="text-center space-y-4">
-                            <div className="flex justify-center space-x-8">
-                              <div className="text-center">
-                                <div className="text-2xl font-bold text-blue-600">{orgAnalytics.registrations?.paid || 1}</div>
-                                <p className="text-xs text-muted-foreground">Paid Registrations</p>
-                                <div className="text-lg font-bold text-green-600">₦{orgAnalytics.financial?.totalRevenue || 170}</div>
-                                <p className="text-xs text-muted-foreground">Revenue</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-2xl font-bold text-green-600">{orgAnalytics.registrations?.free || 43}</div>
-                                <p className="text-xs text-muted-foreground">Free Registrations</p>
-                                <div className="text-lg font-bold text-gray-600">₦0</div>
-                                <p className="text-xs text-muted-foreground">Revenue</p>
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-sm text-muted-foreground">
-                                Conversion Rate: {orgAnalytics.engagement?.conversionRate || 2}%
-                              </div>
-                            </div>
-                          </div>
+                        <div className="h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={[
+                                {
+                                  type: 'Paid',
+                                  registrations: orgAnalytics.registrations?.paid || 1,
+                                  revenue: orgAnalytics.financial?.totalRevenue || 170,
+                                },
+                                {
+                                  type: 'Free',
+                                  registrations: orgAnalytics.registrations?.free || 43,
+                                  revenue: 0,
+                                }
+                              ]}
+                            >
+                              <defs>
+                                <linearGradient id="registrationsGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                  <stop offset="100%" stopColor="#1e40af" stopOpacity={0.6}/>
+                                </linearGradient>
+                                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.8}/>
+                                  <stop offset="100%" stopColor="#059669" stopOpacity={0.6}/>
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="type" stroke="hsl(var(--muted-foreground))" />
+                              <YAxis stroke="hsl(var(--muted-foreground))" />
+                              <Tooltip 
+                                contentStyle={{ 
+                                  backgroundColor: 'hsl(var(--background))', 
+                                  border: '1px solid hsl(var(--border))',
+                                  borderRadius: '8px'
+                                }}
+                                formatter={(value, name) => [
+                                  name === 'revenue' ? `₦${value}` : value, 
+                                  name === 'registrations' ? 'Registrations' : 'Revenue'
+                                ]}
+                              />
+                              <Legend />
+                              <Bar 
+                                dataKey="registrations" 
+                                fill="url(#registrationsGradient)" 
+                                name="Registrations"
+                                radius={[4, 4, 0, 0]}
+                              />
+                              <Bar 
+                                dataKey="revenue" 
+                                fill="url(#revenueGradient)" 
+                                name="Revenue (₦)"
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
                         </div>
                       </CardContent>
                     </Card>
