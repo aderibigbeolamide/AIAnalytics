@@ -435,6 +435,23 @@ export function setupChatbotRoutes(app: Express) {
       session.status = 'active';
       chatSessions.set(sessionId, session);
 
+      // Also save to database
+      try {
+        await ChatSessionModel.findOneAndUpdate(
+          { sessionId },
+          {
+            messages: session.messages,
+            lastActivity: session.lastActivity,
+            adminId: session.adminId,
+            status: session.status
+          }
+        );
+        console.log(`✅ Admin response saved to database for session ${sessionId}`);
+      } catch (dbError) {
+        console.error('Error saving admin response to database:', dbError);
+        // Continue anyway as in-memory is updated
+      }
+
       // Update admin heartbeat
       if (adminId) {
         adminLastSeen.set(adminId, new Date());
