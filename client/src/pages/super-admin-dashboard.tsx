@@ -163,29 +163,28 @@ export default function SuperAdminDashboard() {
   const [selectedOrgAnalytics, setSelectedOrgAnalytics] = useState<string | null>(null);
 
   // Statistics query
-  const { data: statsData } = useQuery<{ success: boolean; statistics: PlatformStatistics }>({
+  const { data: statsData, isLoading: statsLoading, error: statsError } = useQuery<{ success: boolean; statistics: PlatformStatistics }>({
     queryKey: ['/api/super-admin/statistics'],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Organizations query
-  const { data: organizationsData } = useQuery<{ organizations: any[] }>({
+  const { data: organizationsData, isLoading: orgsLoading } = useQuery<{ organizations: any[] }>({
     queryKey: ['/api/super-admin/organizations'],
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   // Organization analytics query
-  const { data: orgAnalytics } = useQuery<OrganizationAnalytics>({
-    queryKey: ['/api/super-admin/organization-analytics', selectedOrgAnalytics],
-    queryFn: async () => {
-      if (!selectedOrgAnalytics) return null;
-      const response = await fetch(`/api/super-admin/organization-analytics?orgId=${selectedOrgAnalytics}`);
-      if (!response.ok) throw new Error('Failed to fetch organization analytics');
-      return response.json();
-    },
+  const { data: orgAnalytics, isLoading: analyticsLoading } = useQuery<OrganizationAnalytics>({
+    queryKey: [`/api/super-admin/organization-analytics?orgId=${selectedOrgAnalytics}`, selectedOrgAnalytics],
     enabled: !!selectedOrgAnalytics,
     staleTime: 2 * 60 * 1000,
   });
+
+  // Debug logging
+  console.log('Stats Data:', statsData);
+  console.log('Organizations Data:', organizationsData);
+  console.log('Selected Org Analytics:', selectedOrgAnalytics, orgAnalytics);
 
   return (
     <div className="container mx-auto p-6 space-y-8">
@@ -194,6 +193,12 @@ export default function SuperAdminDashboard() {
         <p className="text-muted-foreground">
           Comprehensive platform management and analytics
         </p>
+        {statsLoading && (
+          <div className="text-sm text-blue-600">Loading statistics...</div>
+        )}
+        {statsError && (
+          <div className="text-sm text-red-600">Error loading data. Please refresh the page.</div>
+        )}
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
@@ -213,26 +218,26 @@ export default function SuperAdminDashboard() {
           <div className="grid gap-4 md:grid-cols-4">
             <StatCard
               title="Total Users"
-              value={statsData?.overview?.totalUsers || 0}
-              description={`${statsData?.users?.active || 0} active users`}
+              value={statsData?.statistics?.overview?.totalUsers || 0}
+              description={`${statsData?.statistics?.users?.active || 0} active users`}
               icon={Users}
             />
             <StatCard
               title="Total Events"
-              value={statsData?.overview?.totalEvents || 0}
-              description={`${statsData?.events?.upcoming || 0} upcoming`}
+              value={statsData?.statistics?.overview?.totalEvents || 0}
+              description={`${statsData?.statistics?.events?.upcoming || 0} upcoming`}
               icon={Calendar}
             />
             <StatCard
               title="Total Organizations"
-              value={statsData?.overview?.totalOrganizations || 0}
-              description={`${statsData?.organizations?.approved || 0} approved`}
+              value={statsData?.statistics?.overview?.totalOrganizations || 0}
+              description={`${statsData?.statistics?.organizations?.approved || 0} approved`}
               icon={Building2}
             />
             <StatCard
               title="Total Revenue"
-              value={statsData?.financial?.totalRevenue || 0}
-              description={`₦${(statsData?.financial?.totalRevenue || 0).toLocaleString()}`}
+              value={statsData?.statistics?.financial?.totalRevenue || 0}
+              description={`₦${(statsData?.statistics?.financial?.totalRevenue || 0).toLocaleString()}`}
               icon={DollarSign}
             />
           </div>
@@ -242,11 +247,54 @@ export default function SuperAdminDashboard() {
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>Manage platform users and their permissions</CardDescription>
+              <CardTitle>User Statistics</CardTitle>
+              <CardDescription>Platform user metrics and demographics</CardDescription>
             </CardHeader>
             <CardContent>
-              <p>User management functionality would go here.</p>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {statsData?.statistics?.overview?.totalUsers || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Users</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {statsData?.statistics?.users?.active || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Active Users</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {statsData?.statistics?.users?.admins || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Admin Users</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {statsData?.statistics?.users?.members || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Member Users</div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4">User Growth</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="text-lg font-semibold text-blue-900">New Users (7 days)</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {statsData?.statistics?.growth?.newUsersLast7Days || 0}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="text-lg font-semibold text-green-900">New Users (30 days)</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {statsData?.statistics?.growth?.newUsersLast30Days || 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -255,11 +303,78 @@ export default function SuperAdminDashboard() {
         <TabsContent value="events" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Event Management</CardTitle>
-              <CardDescription>Overview of all platform events</CardDescription>
+              <CardTitle>Event Statistics</CardTitle>
+              <CardDescription>Platform event metrics and performance</CardDescription>
             </CardHeader>
             <CardContent>
-              <p>Event management functionality would go here.</p>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {statsData?.statistics?.overview?.totalEvents || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Events</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {statsData?.statistics?.events?.upcoming || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Upcoming Events</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {statsData?.statistics?.events?.past || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Past Events</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {statsData?.statistics?.overview?.totalRegistrations || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Registrations</div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4">Event Types</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="text-lg font-semibold text-blue-900">Registration Events</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {statsData?.statistics?.events?.registrationBased || 0}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="text-lg font-semibold text-green-900">Ticket Events</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {statsData?.statistics?.events?.ticketBased || 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4">Financial Performance</h3>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="text-lg font-semibold text-green-900">Total Revenue</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      ₦{statsData?.statistics?.financial?.totalRevenue || 0}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="text-lg font-semibold text-blue-900">Paid Registrations</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {statsData?.statistics?.financial?.paidRegistrations || 0}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <div className="text-lg font-semibold text-purple-900">Tickets Sold</div>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {statsData?.statistics?.financial?.ticketsSold || 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -268,11 +383,63 @@ export default function SuperAdminDashboard() {
         <TabsContent value="organizations" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Organization Management</CardTitle>
-              <CardDescription>Manage platform organizations</CardDescription>
+              <CardTitle>Organization Statistics</CardTitle>
+              <CardDescription>Platform organization metrics and status</CardDescription>
             </CardHeader>
             <CardContent>
-              <p>Organization management functionality would go here.</p>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {statsData?.statistics?.overview?.totalOrganizations || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Organizations</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {statsData?.statistics?.organizations?.approved || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Approved</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {statsData?.statistics?.organizations?.pending || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Pending Approval</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">
+                    {statsData?.statistics?.organizations?.suspended || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Suspended</div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4">Organization List</h3>
+                <div className="space-y-4">
+                  {orgsLoading && (
+                    <div className="text-center py-4">
+                      <div className="text-sm text-muted-foreground">Loading organizations...</div>
+                    </div>
+                  )}
+                  {organizationsData?.organizations?.map((org: any) => (
+                    <div key={org.id} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">{org.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {org.adminCount} admins • Created: {new Date(org.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Badge variant={org.status === 'approved' ? 'default' : 
+                                      org.status === 'pending' ? 'secondary' : 'destructive'}>
+                          {org.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -293,26 +460,26 @@ export default function SuperAdminDashboard() {
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                   title="Total Users"
-                  value={statsData?.overview?.totalUsers || 0}
-                  description={`${statsData?.users?.active || 0} active users`}
+                  value={statsData?.statistics?.overview?.totalUsers || 0}
+                  description={`${statsData?.statistics?.users?.active || 0} active users`}
                   icon={Users}
                 />
                 <StatCard
                   title="Total Events"
-                  value={statsData?.overview?.totalEvents || 0}
-                  description={`${statsData?.events?.upcoming || 0} upcoming`}
+                  value={statsData?.statistics?.overview?.totalEvents || 0}
+                  description={`${statsData?.statistics?.events?.upcoming || 0} upcoming`}
                   icon={Calendar}
                 />
                 <StatCard
                   title="Total Organizations"
-                  value={statsData?.overview?.totalOrganizations || 0}
-                  description={`${statsData?.organizations?.approved || 0} approved`}
+                  value={statsData?.statistics?.overview?.totalOrganizations || 0}
+                  description={`${statsData?.statistics?.organizations?.approved || 0} approved`}
                   icon={Building2}
                 />
                 <StatCard
                   title="Total Revenue"
-                  value={statsData?.financial?.totalRevenue || 0}
-                  description={`₦${(statsData?.financial?.totalRevenue || 0).toLocaleString()}`}
+                  value={statsData?.statistics?.financial?.totalRevenue || 0}
+                  description={`₦${(statsData?.statistics?.financial?.totalRevenue || 0).toLocaleString()}`}
                   icon={DollarSign}
                 />
               </div>
@@ -363,7 +530,12 @@ export default function SuperAdminDashboard() {
               </div>
 
               {/* Selected Organization Analytics */}
-              {selectedOrgAnalytics && orgAnalytics && (
+              {selectedOrgAnalytics && analyticsLoading && (
+                <div className="text-center py-8">
+                  <div className="text-muted-foreground">Loading organization analytics...</div>
+                </div>
+              )}
+              {selectedOrgAnalytics && orgAnalytics && !analyticsLoading && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 text-lg font-semibold">
                     <Building2 className="w-5 h-5" />
