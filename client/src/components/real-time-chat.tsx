@@ -68,6 +68,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
   useEffect(() => {
     if (user?.id) {
       connectWebSocket();
+      loadActiveSessions(); // Load sessions immediately on mount
     }
 
     return () => {
@@ -292,20 +293,35 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
     }
   };
 
-  const startPolling = () => {
-    // Fallback polling implementation for when WebSocket fails
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch('/api/admin/chat-sessions');
-        if (response.ok) {
-          const data = await response.json();
-          setActiveSessions(data.sessions || []);
-        }
-      } catch (error) {
-        console.error('Polling error:', error);
+  const loadActiveSessions = async () => {
+    try {
+      const response = await fetch('/api/admin/chat-sessions');
+      if (response.ok) {
+        const sessions = await response.json();
+        // API returns array directly, not wrapped in data.sessions
+        setActiveSessions(sessions.map((session: any) => ({
+          ...session,
+          createdAt: new Date(session.createdAt),
+          lastActivity: new Date(session.lastActivity),
+          messageCount: session.messages?.length || 0
+        })));
       }
-    }, 5000);
+    } catch (error) {
+      console.error('Error loading active sessions:', error);
+      toast({
+        title: "Connection Error",
+        description: "Unable to load chat sessions",
+        variant: "destructive"
+      });
+    }
+  };
 
+  const startPolling = () => {
+    // Load sessions immediately
+    loadActiveSessions();
+    
+    // Set up polling for updates
+    const pollInterval = setInterval(loadActiveSessions, 5000);
     return () => clearInterval(pollInterval);
   };
 
