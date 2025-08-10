@@ -728,37 +728,7 @@ export default function ChatbotComponent() {
     }
   };
 
-  const pollForAdminResponse = async () => {
-    try {
-      const response = await fetch(`/api/chatbot/admin-response/${sessionId}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.hasNewMessages && data.messages.length > 0) {
-          const newAdminMessages = data.messages.map((msg: any): Message => ({
-            id: msg.id || `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            text: msg.text || msg.message,
-            sender: 'admin' as const,
-            timestamp: new Date(msg.timestamp),
-            type: 'text' as const
-          }));
-          
-          // Only add messages that don't already exist
-          setMessages(prev => {
-            const existingMessageIds = prev.map(m => m.id);
-            const trulyNewMessages = newAdminMessages.filter((msg: Message) => !existingMessageIds.includes(msg.id));
-            
-            if (trulyNewMessages.length > 0) {
-              return [...prev, ...trulyNewMessages];
-            }
-            return prev;
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error polling for admin response:', error);
-    }
-    // Removed the setTimeout recursive call - now handled by setInterval in useEffect
-  };
+  // Removed polling - using WebSocket for real-time admin responses
 
   const closeChat = () => {
     // Clear polling interval
