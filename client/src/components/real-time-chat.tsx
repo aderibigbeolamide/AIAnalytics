@@ -88,11 +88,60 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
     }
   }, [user?.id]);
 
+  // Load individual session when sessionId is provided
+  const loadSession = async (sessionIdToLoad: string) => {
+    try {
+      console.log(`Loading individual session: ${sessionIdToLoad}`);
+      const response = await fetch(`/api/admin/chat-sessions/${sessionIdToLoad}?_t=${Date.now()}`);
+      if (response.ok) {
+        const session = await response.json();
+        console.log('Loaded individual session:', session);
+        
+        // Convert to proper format
+        const processedSession = {
+          ...session,
+          messages: session.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          })),
+          createdAt: new Date(session.createdAt),
+          lastActivity: new Date(session.lastActivity)
+        };
+        
+        setCurrentSession(processedSession);
+        scrollToBottom();
+      } else {
+        console.error('Failed to load individual session:', response.status);
+        toast({
+          title: "Error",
+          description: "Failed to load chat session",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error loading individual session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load chat session",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     if (sessionId && isConnected) {
       joinSession(sessionId);
     }
   }, [sessionId, isConnected]);
+
+  // Load session when sessionId changes
+  useEffect(() => {
+    if (sessionId) {
+      loadSession(sessionId);
+    } else {
+      setCurrentSession(null);
+    }
+  }, [sessionId]);
 
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -276,11 +325,10 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         }));
       } else {
         // Fallback to HTTP API
-        const response = await fetch('/api/chatbot/admin-reply', {
+        const response = await fetch(`/api/admin/chat-sessions/${currentSession.id}/respond`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sessionId: currentSession.id,
             message: inputText,
             adminId: user.id
           })
@@ -289,6 +337,9 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         if (!response.ok) {
           throw new Error('Failed to send message');
         }
+        
+        // Reload session to get updated messages
+        await loadSession(currentSession.id);
       }
       
       setInputText("");
