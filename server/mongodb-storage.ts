@@ -12,6 +12,7 @@ export interface IMongoStorage {
   getOrganizations(filters?: { status?: string }): Promise<IOrganization[]>;
   createOrganization(organization: InsertOrganization): Promise<IOrganization>;
   updateOrganization(id: string, updates: Partial<InsertOrganization>): Promise<IOrganization | null>;
+  updateOrganizationStatus(id: string, status: string): Promise<IOrganization | null>;
   
   // Users
   getUser(id: string): Promise<IUser | null>;
@@ -77,6 +78,10 @@ export interface IMongoStorage {
   // Platform Settings
   getPlatformSettings(): Promise<any>;
   updatePlatformSettings(settings: any): Promise<any>;
+
+  // Platform Settings
+  getPlatformSettings(): Promise<any>;
+  updatePlatformSettings(settings: any): Promise<any>;
   getAttendance(eventId: string): Promise<any[]>;
   
   // CSV Validation
@@ -132,6 +137,22 @@ export class MongoStorage implements IMongoStorage {
       return await Organization.findByIdAndUpdate(id, updates, { new: true });
     } catch (error) {
       console.error('Error updating organization:', error);
+      return null;
+    }
+  }
+
+  async updateOrganizationStatus(id: string, status: string): Promise<IOrganization | null> {
+    try {
+      const updates: any = { status, updatedAt: new Date() };
+      
+      // Set approvedAt when status is approved
+      if (status === 'approved') {
+        updates.approvedAt = new Date();
+      }
+      
+      return await Organization.findByIdAndUpdate(id, updates, { new: true });
+    } catch (error) {
+      console.error('Error updating organization status:', error);
       return null;
     }
   }

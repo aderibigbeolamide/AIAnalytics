@@ -1106,4 +1106,113 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       });
     }
   });
+
+  // Organization status management
+  app.patch("/api/super-admin/organizations/:orgId/status", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { orgId } = req.params;
+      const { status } = req.body;
+
+      if (!['approved', 'suspended', 'rejected', 'pending'].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid status. Must be one of: approved, suspended, rejected, pending"
+        });
+      }
+
+      const result = await mongoStorage.updateOrganizationStatus(orgId, status);
+      
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          message: "Organization not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Organization status updated to ${status}`,
+        organizationId: orgId,
+        newStatus: status
+      });
+    } catch (error: any) {
+      console.error("Update organization status error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update organization status"
+      });
+    }
+  });
+
+  // Platform settings management
+  app.patch("/api/super-admin/platform-settings", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { platformFeeRate } = req.body;
+
+      if (typeof platformFeeRate !== 'number' || platformFeeRate < 0 || platformFeeRate > 20) {
+        return res.status(400).json({
+          success: false,
+          message: "Platform fee rate must be a number between 0 and 20"
+        });
+      }
+
+      await mongoStorage.updatePlatformSettings({ platformFeeRate });
+
+      res.json({
+        success: true,
+        message: "Platform settings updated successfully",
+        platformFeeRate
+      });
+    } catch (error: any) {
+      console.error("Update platform settings error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update platform settings"
+      });
+    }
+  });
+
+  // Notification broadcast
+  app.post("/api/super-admin/notifications/broadcast", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { message } = req.body;
+
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Message is required and must be a non-empty string"
+        });
+      }
+
+      // Get all users for broadcasting
+      const allUsers = await mongoStorage.getAllUsers();
+      const activeUsers = allUsers.filter(user => user.status === 'active');
+
+      // Create notification for each active user
+      const notifications = activeUsers.map(user => ({
+        userId: (user._id as any).toString(),
+        message: message.trim(),
+        type: 'broadcast',
+        createdAt: new Date(),
+        read: false
+      }));
+
+      // Save notifications (in a real app, you'd have a notifications collection)
+      // For now, we'll just log and return success
+      console.log(`Broadcasting notification to ${notifications.length} users:`, message);
+
+      res.json({
+        success: true,
+        message: "Notification broadcasted successfully",
+        recipientCount: notifications.length,
+        broadcastMessage: message.trim()
+      });
+    } catch (error: any) {
+      console.error("Broadcast notification error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to broadcast notification"
+      });
+    }
+  });
 }

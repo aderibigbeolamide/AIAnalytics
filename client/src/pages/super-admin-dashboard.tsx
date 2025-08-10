@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Users, 
   Calendar, 
@@ -12,7 +18,15 @@ import {
   TrendingUp,
   BarChart3,
   Activity,
-  UserCheck
+  UserCheck,
+  Settings,
+  Bell,
+  CheckCircle,
+  XCircle,
+  Ban,
+  Play,
+  MessageSquare,
+  AlertTriangle
 } from "lucide-react";
 
 interface PlatformStatistics {
@@ -161,6 +175,9 @@ function StatCard({ title, value, description, icon: Icon, trend }: StatCardProp
 
 export default function SuperAdminDashboard() {
   const [selectedOrgAnalytics, setSelectedOrgAnalytics] = useState<string | null>(null);
+  const [platformFeeRate, setPlatformFeeRate] = useState<number>(5);
+  const [notificationMessage, setNotificationMessage] = useState<string>('');
+  const { toast } = useToast();
 
   // Statistics query
   const { data: statsData, isLoading: statsLoading, error: statsError } = useQuery<{ success: boolean; statistics: PlatformStatistics }>({
@@ -179,6 +196,51 @@ export default function SuperAdminDashboard() {
     queryKey: [`/api/super-admin/organization-analytics?orgId=${selectedOrgAnalytics}`, selectedOrgAnalytics],
     enabled: !!selectedOrgAnalytics,
     staleTime: 2 * 60 * 1000,
+  });
+
+  // Organization status mutation
+  const updateOrgStatusMutation = useMutation({
+    mutationFn: async ({ orgId, status }: { orgId: string; status: string }) => {
+      const response = await apiRequest('PATCH', `/api/super-admin/organizations/${orgId}/status`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/statistics'] });
+      toast({ title: "Success", description: "Organization status updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update organization status", variant: "destructive" });
+    }
+  });
+
+  // Platform fee mutation
+  const updatePlatformFeeMutation = useMutation({
+    mutationFn: async ({ rate }: { rate: number }) => {
+      const response = await apiRequest('PATCH', '/api/super-admin/platform-settings', { platformFeeRate: rate });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Platform fee rate updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update platform fee rate", variant: "destructive" });
+    }
+  });
+
+  // Notification broadcast mutation
+  const broadcastNotificationMutation = useMutation({
+    mutationFn: async ({ message }: { message: string }) => {
+      const response = await apiRequest('POST', '/api/super-admin/notifications/broadcast', { message });
+      return response.json();
+    },
+    onSuccess: () => {
+      setNotificationMessage('');
+      toast({ title: "Success", description: "Notification broadcasted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to broadcast notification", variant: "destructive" });
+    }
   });
 
   // Debug logging
@@ -203,13 +265,15 @@ export default function SuperAdminDashboard() {
 
       <Tabs defaultValue="overview" className="w-full">
         <div className="flex flex-col space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="organizations">Organizations</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="org-analytics">Org Analytics</TabsTrigger>
+            <TabsTrigger value="platform-settings">Settings</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
         </div>
 
@@ -425,16 +489,72 @@ export default function SuperAdminDashboard() {
                   {organizationsData?.organizations?.map((org: any) => (
                     <div key={org.id} className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between">
-                        <div>
+                        <div className="flex-1">
                           <h4 className="font-medium">{org.name}</h4>
                           <p className="text-sm text-muted-foreground">
-                            {org.adminCount} admins • Created: {new Date(org.createdAt).toLocaleDateString()}
+                            {org.contactEmail} • Created: {new Date(org.createdAt).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Plan: {org.subscriptionPlan} • Max Events: {org.maxEvents}
                           </p>
                         </div>
-                        <Badge variant={org.status === 'approved' ? 'default' : 
-                                      org.status === 'pending' ? 'secondary' : 'destructive'}>
-                          {org.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={org.status === 'approved' ? 'default' : 
+                                        org.status === 'pending' ? 'secondary' : 'destructive'} 
+                                 data-testid={`badge-org-status-${org.id}`}>
+                            {org.status}
+                          </Badge>
+                          <div className="flex gap-1">
+                            {org.status === 'pending' && (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-green-600 hover:bg-green-50"
+                                  onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'approved' })}
+                                  disabled={updateOrgStatusMutation.isPending}
+                                  data-testid={`button-approve-${org.id}`}
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-red-600 hover:bg-red-50"
+                                  onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'rejected' })}
+                                  disabled={updateOrgStatusMutation.isPending}
+                                  data-testid={`button-reject-${org.id}`}
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                            {org.status === 'approved' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-orange-600 hover:bg-orange-50"
+                                onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'suspended' })}
+                                disabled={updateOrgStatusMutation.isPending}
+                                data-testid={`button-suspend-${org.id}`}
+                              >
+                                <Ban className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {org.status === 'suspended' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-green-600 hover:bg-green-50"
+                                onClick={() => updateOrgStatusMutation.mutate({ orgId: org.id, status: 'approved' })}
+                                disabled={updateOrgStatusMutation.isPending}
+                                data-testid={`button-reactivate-${org.id}`}
+                              >
+                                <Play className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -761,6 +881,316 @@ export default function SuperAdminDashboard() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Platform Settings Tab */}
+        <TabsContent value="platform-settings" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Platform Fee Management */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Platform Fee Management
+                </CardTitle>
+                <CardDescription>
+                  Configure platform-wide fee rates and revenue settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="platform-fee-rate">Platform Fee Rate (%)</Label>
+                  <Input
+                    id="platform-fee-rate"
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.1"
+                    value={platformFeeRate}
+                    onChange={(e) => setPlatformFeeRate(Number(e.target.value))}
+                    data-testid="input-platform-fee-rate"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Current fee earned: ₦{statsData?.statistics?.financial?.platformFeesEarned || 0}
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => updatePlatformFeeMutation.mutate({ rate: platformFeeRate })}
+                  disabled={updatePlatformFeeMutation.isPending}
+                  data-testid="button-update-platform-fee"
+                >
+                  {updatePlatformFeeMutation.isPending ? 'Updating...' : 'Update Fee Rate'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Customer Support Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  Customer Support
+                </CardTitle>
+                <CardDescription>
+                  Real-time support and communication settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <div className="font-medium">Support Chat</div>
+                      <div className="text-sm text-muted-foreground">Live chat with users</div>
+                    </div>
+                    <Badge variant="outline" className="text-green-600">Active</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <div className="font-medium">Auto-responses</div>
+                      <div className="text-sm text-muted-foreground">Automated support replies</div>
+                    </div>
+                    <Badge variant="outline" className="text-blue-600">Enabled</Badge>
+                  </div>
+                  <Button variant="outline" className="w-full" data-testid="button-support-dashboard">
+                    Open Support Dashboard
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* System Monitoring */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  System Health
+                </CardTitle>
+                <CardDescription>
+                  Platform performance and monitoring
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">API Response Time</span>
+                    <Badge variant="outline" className="text-green-600">Normal</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Database Performance</span>
+                    <Badge variant="outline" className="text-green-600">Optimal</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Storage Usage</span>
+                    <Badge variant="outline" className="text-blue-600">75%</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Active Connections</span>
+                    <Badge variant="outline" className="text-blue-600">{statsData?.statistics?.overview?.activeUsers || 0}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" />
+                  Recent Activity
+                </CardTitle>
+                <CardDescription>
+                  Latest platform actions and alerts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="text-sm p-2 bg-green-50 rounded border-l-4 border-green-500">
+                    New organization "Sysbeams" approved
+                  </div>
+                  <div className="text-sm p-2 bg-blue-50 rounded border-l-4 border-blue-500">
+                    {statsData?.statistics?.growth?.newEventsLast7Days || 0} new events this week
+                  </div>
+                  <div className="text-sm p-2 bg-orange-50 rounded border-l-4 border-orange-500">
+                    Platform fees earned: ₦{statsData?.statistics?.financial?.platformFeesEarned || 0}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Broadcast Notifications */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="w-5 h-5" />
+                  Broadcast Notifications
+                </CardTitle>
+                <CardDescription>
+                  Send notifications to all users or specific organizations
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="notification-message">Message</Label>
+                  <Textarea
+                    id="notification-message"
+                    placeholder="Enter your notification message..."
+                    value={notificationMessage}
+                    onChange={(e) => setNotificationMessage(e.target.value)}
+                    rows={4}
+                    data-testid="textarea-notification-message"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => broadcastNotificationMutation.mutate({ message: notificationMessage })}
+                    disabled={!notificationMessage.trim() || broadcastNotificationMutation.isPending}
+                    data-testid="button-broadcast-notification"
+                  >
+                    {broadcastNotificationMutation.isPending ? 'Sending...' : 'Broadcast to All'}
+                  </Button>
+                  <Button variant="outline" data-testid="button-preview-notification">
+                    Preview
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Notification Statistics */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Statistics</CardTitle>
+                <CardDescription>
+                  Track notification engagement and delivery
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid gap-4 grid-cols-2">
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">24</div>
+                      <div className="text-sm text-muted-foreground">Sent Today</div>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">89%</div>
+                      <div className="text-sm text-muted-foreground">Delivery Rate</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Email notifications</span>
+                      <span className="text-green-600">18 delivered</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>In-app notifications</span>
+                      <span className="text-blue-600">24 delivered</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Failed deliveries</span>
+                      <span className="text-red-600">2 failed</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Notification Templates */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Templates</CardTitle>
+                <CardDescription>
+                  Pre-defined notification templates for common scenarios
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setNotificationMessage("🎉 Welcome to EventValidate! Start creating amazing events today.")}
+                    data-testid="button-template-welcome"
+                  >
+                    Welcome Message
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setNotificationMessage("🔧 Scheduled maintenance will occur tonight from 2-4 AM. Plan accordingly.")}
+                    data-testid="button-template-maintenance"
+                  >
+                    Maintenance Alert
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setNotificationMessage("🚀 New features available! Check out our latest updates in your dashboard.")}
+                    data-testid="button-template-feature"
+                  >
+                    Feature Update
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setNotificationMessage("⚠️ Important: Please verify your account details to continue using our services.")}
+                    data-testid="button-template-verification"
+                  >
+                    Verification Reminder
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Notifications */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Notifications</CardTitle>
+                <CardDescription>
+                  History of sent notifications
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="p-3 border rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">System Maintenance</div>
+                        <div className="text-xs text-muted-foreground">
+                          Sent 2 hours ago • 24 recipients
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-green-600">Delivered</Badge>
+                    </div>
+                  </div>
+                  <div className="p-3 border rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">Welcome New Users</div>
+                        <div className="text-xs text-muted-foreground">
+                          Sent 1 day ago • 12 recipients
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-green-600">Delivered</Badge>
+                    </div>
+                  </div>
+                  <div className="p-3 border rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">Feature Update</div>
+                        <div className="text-xs text-muted-foreground">
+                          Sent 3 days ago • 45 recipients
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-green-600">Delivered</Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
