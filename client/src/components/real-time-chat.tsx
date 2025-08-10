@@ -225,16 +225,33 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         break;
       
       case 'new_user_message':
-        console.log('WebSocket: New user message received', data);
+        console.log('🎉 WebSocket: New user message received', data);
+        
+        // Create proper message object
+        const newUserMessage: ChatMessage = {
+          id: data.id || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          sessionId: data.sessionId,
+          text: data.text,
+          sender: 'user' as const,
+          timestamp: new Date(data.timestamp || new Date()),
+          type: 'text' as const
+        };
+        
         if (data.sessionId === sessionId) {
+          console.log('✅ Adding user message to current session');
           setCurrentSession(prev => {
             if (!prev) return null;
+            
+            // Check if message already exists to prevent duplicates
+            const messageExists = prev.messages.some(msg => msg.id === newUserMessage.id);
+            if (messageExists) {
+              console.log('Message already exists, skipping duplicate');
+              return prev;
+            }
+            
             return {
               ...prev,
-              messages: [...prev.messages, {
-                ...data,
-                timestamp: new Date(data.timestamp)
-              }],
+              messages: [...prev.messages, newUserMessage],
               lastActivity: new Date()
             };
           });
@@ -250,7 +267,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         // Show notification for new messages
         toast({
           title: "New Message",
-          description: `From ${data.userEmail}: ${data.text.substring(0, 50)}...`,
+          description: `From ${data.userEmail || 'Customer'}: ${data.text.substring(0, 50)}...`,
           duration: 5000
         });
         break;
