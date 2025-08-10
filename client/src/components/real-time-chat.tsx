@@ -343,6 +343,11 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       }
       
       setInputText("");
+      
+      // Also refresh the session list to update message count
+      if (!sessionId) {
+        loadActiveSessions();
+      }
     } catch (error) {
       toast({
         title: "Message Failed",
@@ -399,7 +404,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
     return () => clearInterval(pollInterval);
   };
 
-  if (!sessionId || !currentSession) {
+  if (!sessionId) {
     // Show session list
     return (
       <div className="h-full">
@@ -473,6 +478,40 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
   }
 
   // Show chat interface for selected session
+  if (!currentSession) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => onSessionSelect?.("")}
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            Loading Chat Session...
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50 animate-pulse" />
+            <p className="text-muted-foreground">Loading conversation...</p>
+            <p className="text-xs mt-2">Session ID: {sessionId}</p>
+            <Button 
+              onClick={() => sessionId && loadSession(sessionId)}
+              variant="outline"
+              size="sm"
+              className="mt-4"
+            >
+              Retry Loading
+            </Button>
+          </div>
+        </CardContent>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       <CardHeader>
@@ -485,9 +524,9 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <User className="w-5 h-5" />
-          {currentSession.userEmail || 'Anonymous User'}
-          <Badge variant={currentSession.status === 'active' ? 'default' : 'secondary'}>
-            {currentSession.status}
+          {currentSession?.userEmail || 'Anonymous User'}
+          <Badge variant={currentSession?.status === 'active' ? 'default' : 'secondary'}>
+            {currentSession?.status}
           </Badge>
           <Badge variant={isConnected ? "default" : "destructive"} className="ml-auto">
             {isConnected ? "Live" : "Offline"}
@@ -498,7 +537,7 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
       <CardContent className="flex-1 flex flex-col">
         <ScrollArea className="flex-1 mb-4 max-h-96">
           <div className="space-y-4">
-            {currentSession.messages.map((message) => (
+            {currentSession?.messages?.map((message) => (
               <div
                 key={message.id}
                 className={cn(
