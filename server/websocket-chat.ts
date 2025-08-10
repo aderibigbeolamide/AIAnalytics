@@ -280,21 +280,22 @@ class WebSocketChatServer {
     session.messages.push(message);
     session.lastActivity = new Date();
     session.adminId = adminId;
+    session.status = 'active'; // Ensure status becomes active when admin responds via WebSocket
     
     // Update in-memory cache
     this.chatSessions.set(sessionId, session);
 
-    // Save to database immediately
+    // Save to database immediately with better error handling
     try {
       const chatbotModule = await import('./chatbot-routes.js');
       if (chatbotModule.saveChatSession) {
         await chatbotModule.saveChatSession(session);
-        console.log(`WebSocket message saved to database for session ${sessionId}`);
+        console.log(`✅ WebSocket admin message saved to database for session ${sessionId}, status: ${session.status}`);
       } else {
-        console.log('saveChatSession function not available, message stored in memory only');
+        console.log('⚠️ saveChatSession function not available, message stored in memory only');
       }
     } catch (error) {
-      console.error('Error saving WebSocket message to database:', error);
+      console.error('❌ Error saving WebSocket admin message to database:', error);
     }
 
     // Send to admin (confirmation)

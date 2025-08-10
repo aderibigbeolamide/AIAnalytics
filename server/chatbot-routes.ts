@@ -497,7 +497,7 @@ export function setupChatbotRoutes(app: Express) {
       session.status = 'active';
       chatSessions.set(sessionId, session);
 
-      // Also save to database
+      // Also save to database and ensure real-time sync
       try {
         await ChatSessionModel.findOneAndUpdate(
           { sessionId },
@@ -508,7 +508,14 @@ export function setupChatbotRoutes(app: Express) {
             status: session.status
           }
         );
-        console.log(`✅ Admin response saved to database for session ${sessionId}`);
+        console.log(`✅ Admin response saved to database for session ${sessionId}, status: ${session.status}`);
+        
+        // Force reload from database to ensure sync
+        const updatedSession = await ChatSessionModel.findOne({ sessionId });
+        if (updatedSession) {
+          chatSessions.set(sessionId, updatedSession);
+          console.log(`🔄 Session ${sessionId} reloaded from database for sync`);
+        }
       } catch (dbError) {
         console.error('Error saving admin response to database:', dbError);
         // Continue anyway as in-memory is updated
