@@ -20,6 +20,9 @@ import {
   AlertCircle,
   RefreshCw
 } from "lucide-react";
+import EmojiPicker from "@/components/emoji-picker";
+import ChatLoadingSpinner, { TypingIndicator } from "@/components/chat-loading-spinner";
+import SupportPerformanceDashboard from "@/components/support-performance-dashboard";
 import { cn } from "@/lib/utils";
 
 interface ChatMessage {
@@ -54,6 +57,8 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
   const [inputText, setInputText] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const { user } = useAuthStore();
@@ -475,6 +480,10 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
     }
   };
 
+  const handleEmojiSelect = (emoji: string) => {
+    setInputText(prev => prev + emoji);
+  };
+
   const loadActiveSessions = async () => {
     try {
       console.log('Loading active chat sessions...');
@@ -622,8 +631,10 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <CardHeader>
+    <div className="h-full flex gap-4">
+      {/* Main Chat Interface */}
+      <div className="flex-1 flex flex-col">
+        <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Button 
             variant="ghost" 
@@ -648,6 +659,15 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
             title="Refresh chat messages"
           >
             <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowPerformanceDashboard(!showPerformanceDashboard)}
+            className="ml-2"
+            title="Toggle performance dashboard"
+          >
+            📊
           </Button>
           {currentSession?.status !== 'resolved' && (
             <Button 
@@ -722,24 +742,37 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
         </div>
         
         <div className="flex gap-2">
-          <Input
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Type your response..."
-            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-            disabled={!isConnected || isSending}
-          />
+          <div className="flex-1 relative">
+            <Input
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Type your response..."
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+              disabled={!isConnected || isSending}
+              className="pr-12"
+            />
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+              <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+            </div>
+          </div>
           <Button 
             onClick={sendMessage} 
             disabled={!inputText.trim() || !isConnected || isSending}
           >
             {isSending ? (
-              <Clock className="w-4 h-4" />
+              <ChatLoadingSpinner variant="pulse" className="w-4 h-4" />
             ) : (
               <Send className="w-4 h-4" />
             )}
           </Button>
         </div>
+        
+        {/* Show typing indicator when needed */}
+        {isTyping && (
+          <div className="mt-2">
+            <TypingIndicator />
+          </div>
+        )}
         
         {!isConnected && (
           <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
@@ -748,7 +781,15 @@ export default function RealTimeChat({ sessionId, onSessionSelect }: RealTimeCha
             </p>
           </div>
         )}
-      </CardContent>
+        </CardContent>
+      </div>
+      
+      {/* Performance Dashboard Sidebar */}
+      {showPerformanceDashboard && (
+        <div className="w-80">
+          <SupportPerformanceDashboard />
+        </div>
+      )}
     </div>
   );
 }
