@@ -40,7 +40,8 @@ import {
   Pie,
   BarChart,
   Bar,
-  Legend
+  Legend,
+  LabelList
 } from "recharts";
 import RealTimeChat from "@/components/real-time-chat";
 
