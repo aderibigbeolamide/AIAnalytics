@@ -7,6 +7,7 @@ EventValidate is an AI-powered, multi-tenant member validation system designed t
 Preferred communication style: Simple, everyday language.
 UI/UX preferences: User-friendly design with professional appearance, no demo credentials on login page, direct users to contact admin for login issues.
 Code structure: Well-organized, developer-friendly structure with clear separation of concerns, responsive design for mobile and desktop, comprehensive documentation for easy onboarding.
+Business focus: Strong emphasis on investor attraction through compelling pitch deck showcasing flexible pricing plans and commission-based revenue model (5% base rate with growth potential to 12%+).
 
 ## System Architecture
 ### Frontend (React + TypeScript)
