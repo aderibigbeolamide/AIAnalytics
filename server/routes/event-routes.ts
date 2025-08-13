@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { authenticateToken, type AuthenticatedRequest } from "./auth-routes";
 import { EventService } from "../services/event-service";
 import { RegistrationService } from "../services/registration-service";
+import { notificationService } from "../services/notification-service";
 import multer from "multer";
 import { z } from "zod";
 
@@ -139,6 +140,16 @@ export function registerEventRoutes(app: Express) {
       };
 
       const event = await EventService.createEvent(req.user.id, fullEventData, req.file);
+      
+      // Schedule event reminders for future events
+      if (event) {
+        try {
+          await notificationService.scheduleEventReminders(event.id);
+        } catch (reminderError) {
+          console.warn('Failed to schedule event reminders:', reminderError);
+          // Don't fail event creation if reminder scheduling fails
+        }
+      }
       
       res.status(201).json({
         message: "Event created successfully",

@@ -5,6 +5,9 @@ import { createServer } from "http";
 import { registerAuthRoutes } from "./routes/auth-routes";
 import { registerEventRoutes } from "./routes/event-routes";
 import { registerRegistrationRoutes } from "./routes/registration-routes";
+import { registerPaymentRoutes } from "./routes/payment-routes";
+import { registerOrganizationRoutes } from "./routes/organization-routes";
+import { registerEmailRoutes } from "./routes/email-routes";
 
 // Legacy routes (to be migrated)
 import { registerMongoSuperAdminRoutes } from "./mongo-super-admin-routes";
@@ -66,6 +69,9 @@ app.use((req, res, next) => {
   registerAuthRoutes(app);
   registerEventRoutes(app);
   registerRegistrationRoutes(app);
+  registerPaymentRoutes(app);
+  registerOrganizationRoutes(app);
+  registerEmailRoutes(app);
   
   // Register legacy routes (to be migrated)
   registerMongoSuperAdminRoutes(app);

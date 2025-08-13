@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { mongoStorage } from "../mongodb-storage";
+import { notificationService } from "../services/notification-service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 

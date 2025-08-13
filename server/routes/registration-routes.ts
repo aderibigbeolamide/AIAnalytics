@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { authenticateToken, type AuthenticatedRequest } from "./auth-routes";
 import { RegistrationService } from "../services/registration-service";
+import { notificationService } from "../services/notification-service";
+import { mongoStorage } from "../mongodb-storage";
 import { z } from "zod";
 
 const registrationCreateSchema = z.object({
@@ -27,6 +29,18 @@ export function registerRegistrationRoutes(app: Express) {
         registrationData.eventId,
         registrationData
       );
+
+      // Get event details for notification
+      const event = await mongoStorage.getEvent(registrationData.eventId);
+      
+      // Send registration confirmation email
+      if (event) {
+        await notificationService.notifyRegistrationSuccess({
+          registration,
+          event,
+          qrCode: registration.qrCodeImage
+        });
+      }
       
       res.status(201).json({
         message: "Registration created successfully",

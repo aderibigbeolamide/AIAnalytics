@@ -45,7 +45,9 @@ Code structure: Well-organized, developer-friendly structure with clear separati
 - **Notification System**: Provides real-time in-app notifications with broadcasting and targeted messaging.
 - **Real-time Chat System**: WhatsApp-like instant messaging between customers and admins with WebSocket technology, eliminating the need for page refreshes.
 - **Event Reminder System**: Automated email and in-app reminders sent to event participants at configurable intervals.
+- **Comprehensive Email Service**: Professional email automation for organization approvals, event reminders, payment confirmations, and registration confirmations with PDF tickets using Zoho SMTP integration.
 - **QR Code Management**: Handles secure generation, encryption, and validation of QR codes for event access.
+- **PDF Ticket Generation**: Automated creation of professional event tickets with QR codes, branding, and security features.
 - **UI/UX Design**: Prioritizes a clean, professional, and accessible user interface with responsive design principles.
 - **Payment System**: Integrates with Paystack to support flexible payment rules, direct organizer payments via subaccounts, and platform revenue sharing.
 - **Bank Account Management**: Facilitates secure setup and verification of Nigerian bank accounts for organizations.
