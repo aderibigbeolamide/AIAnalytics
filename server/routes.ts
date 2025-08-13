@@ -972,6 +972,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const lastName = formData.lastName || formData.LastName || formData.last_name || '';
         const fullName = formData.name || formData.Name || formData.fullName || formData.FullName || '';
         
+        // Also check all custom fields to find name-related fields
+        if (event.customRegistrationFields) {
+          for (const field of event.customRegistrationFields) {
+            if (field.name && formData[field.name]) {
+              // Check if this field might be a full name field
+              if (field.name.toLowerCase().includes('name') || 
+                  field.label?.toLowerCase().includes('name')) {
+                return formData[field.name];
+              }
+            }
+          }
+        }
+        
         if (firstName && lastName) {
           return `${firstName} ${lastName}`;
         } else if (fullName) {

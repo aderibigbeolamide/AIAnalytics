@@ -53,7 +53,42 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 }
 
 export function generateRegistrationCardHTML(registration: any, event: any, qrImageBase64: string): string {
+  // Extract name from multiple sources including custom form data
+  const extractNameFromCustomData = () => {
+    if (!registration.customFormData) return null;
+    
+    try {
+      const customData = typeof registration.customFormData === 'string' 
+        ? JSON.parse(registration.customFormData) 
+        : registration.customFormData;
+      
+      // Try to find name fields in custom form data
+      for (const [key, value] of Object.entries(customData)) {
+        if (key.toLowerCase().includes('name') && value && typeof value === 'string') {
+          return value;
+        }
+      }
+      
+      // Try common field combinations
+      const firstName = customData.firstName || customData.FirstName || '';
+      const lastName = customData.lastName || customData.LastName || '';
+      
+      if (firstName && lastName) {
+        return `${firstName} ${lastName}`;
+      } else if (firstName) {
+        return firstName;
+      } else if (lastName) {
+        return lastName;
+      }
+    } catch (e) {
+      console.error('Error parsing custom form data:', e);
+    }
+    
+    return null;
+  };
+
   const memberName = registration.guestName || 
+    extractNameFromCustomData() ||
     (registration.member && registration.member.firstName && registration.member.lastName 
       ? `${registration.member.firstName} ${registration.member.lastName}` 
       : registration.member?.firstName || registration.member?.lastName || 'Guest');

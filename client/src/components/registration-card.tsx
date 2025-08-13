@@ -13,8 +13,34 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
   // Parse custom form data from registration
   const customFormData = registration.customFormData ? JSON.parse(registration.customFormData) : {};
   
-  // Get the name from custom form data
+  // Get the name from custom form data, with fallback to extract from customFormData
+  const extractNameFromCustomData = () => {
+    if (!customFormData) return null;
+    
+    // Try to find name fields in custom form data
+    for (const [key, value] of Object.entries(customFormData)) {
+      if (key.toLowerCase().includes('name') && value && typeof value === 'string') {
+        return value;
+      }
+    }
+    
+    // Try common field combinations
+    const firstName = customFormData.firstName || customFormData.FirstName || '';
+    const lastName = customFormData.lastName || customFormData.LastName || '';
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    } else if (firstName) {
+      return firstName;
+    } else if (lastName) {
+      return lastName;
+    }
+    
+    return null;
+  };
+
   const memberName = registration.guestName || 
+    extractNameFromCustomData() ||
     (registration.firstName && registration.lastName ? `${registration.firstName} ${registration.lastName}` : null) ||
     registration.firstName ||
     registration.lastName ||
