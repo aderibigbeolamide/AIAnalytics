@@ -967,18 +967,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Extract common fields from custom form data
       const getName = () => {
+        console.log('🔍 getName() called with formData:', formData);
+        console.log('🔍 Available field names:', Object.keys(formData));
+        
         // Try common name field combinations
         const firstName = formData.firstName || formData.FirstName || formData.first_name || '';
         const lastName = formData.lastName || formData.LastName || formData.last_name || '';
         const fullName = formData.name || formData.Name || formData.fullName || formData.FullName || '';
         
+        console.log('🔍 Initial name extraction:', { firstName, lastName, fullName });
+        
         // Also check all custom fields to find name-related fields
         if (event.customRegistrationFields) {
           for (const field of event.customRegistrationFields) {
             if (field.name && formData[field.name]) {
+              console.log(`🔍 Checking field: ${field.name} (${field.label}) = ${formData[field.name]}`);
               // Check if this field might be a full name field
               if (field.name.toLowerCase().includes('name') || 
                   field.label?.toLowerCase().includes('name')) {
+                console.log(`✅ Found name field: ${field.name} = ${formData[field.name]}`);
                 return formData[field.name];
               }
             }
@@ -986,10 +993,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         if (firstName && lastName) {
+          console.log(`✅ Using firstName + lastName: ${firstName} ${lastName}`);
           return `${firstName} ${lastName}`;
         } else if (fullName) {
+          console.log(`✅ Using fullName: ${fullName}`);
           return fullName;
         } else {
+          console.log('❌ No name found, using default');
           return 'Unknown User';
         }
       };

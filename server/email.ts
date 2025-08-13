@@ -53,6 +53,14 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 }
 
 export function generateRegistrationCardHTML(registration: any, event: any, qrImageBase64: string): string {
+  // Add debugging to see what data we're working with
+  console.log('🔍 Registration data for email generation:', {
+    guestName: registration.guestName,
+    customFormData: registration.customFormData,
+    member: registration.member,
+    allFields: Object.keys(registration)
+  });
+
   // Extract name from multiple sources including custom form data
   const extractNameFromCustomData = () => {
     if (!registration.customFormData) return null;
@@ -62,9 +70,12 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
         ? JSON.parse(registration.customFormData) 
         : registration.customFormData;
       
+      console.log('📋 Custom form data parsed:', customData);
+      
       // Try to find name fields in custom form data
       for (const [key, value] of Object.entries(customData)) {
         if (key.toLowerCase().includes('name') && value && typeof value === 'string') {
+          console.log('✅ Found name field:', key, '=', value);
           return value;
         }
       }
@@ -74,10 +85,13 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
       const lastName = customData.lastName || customData.LastName || '';
       
       if (firstName && lastName) {
+        console.log('✅ Found firstName + lastName:', firstName, lastName);
         return `${firstName} ${lastName}`;
       } else if (firstName) {
+        console.log('✅ Found firstName only:', firstName);
         return firstName;
       } else if (lastName) {
+        console.log('✅ Found lastName only:', lastName);
         return lastName;
       }
     } catch (e) {
@@ -87,11 +101,21 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
     return null;
   };
 
-  const memberName = registration.guestName || 
+  // Try multiple sources for member name
+  const memberName = 
+    registration.guestName || 
     extractNameFromCustomData() ||
+    registration.ownerName ||  // For ticket-based events
     (registration.member && registration.member.firstName && registration.member.lastName 
       ? `${registration.member.firstName} ${registration.member.lastName}` 
-      : registration.member?.firstName || registration.member?.lastName || 'Guest');
+      : registration.member?.firstName || registration.member?.lastName) ||
+    (registration.firstName && registration.lastName ? `${registration.firstName} ${registration.lastName}` : null) ||
+    registration.firstName ||
+    registration.lastName ||
+    (registration.guestEmail ? registration.guestEmail.split('@')[0] : null) || // Extract name from email as last resort
+    'Guest';
+  
+  console.log('🎯 Final member name determined:', memberName);
   
   const auxiliaryBody = registration.guestAuxiliaryBody || 
     (registration.member ? registration.member.auxiliaryBody : 'Guest');
