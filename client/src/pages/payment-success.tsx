@@ -111,7 +111,7 @@ export default function PaymentSuccess() {
               <p><strong>Time:</strong> ${data?.event?.startDate ? new Date(data.event.startDate).toLocaleTimeString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleTimeString() : 'TBD'}</p>
             </div>
             <div style="text-align: left; margin-bottom: 15px;">
-              <p><strong>${type === 'ticket' ? 'Ticket Number' : 'Manual Verification Code'}:</strong> ${data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId?.slice(-6) || 'N/A'}</p>
+              <p><strong>${type === 'ticket' ? 'Ticket Number' : 'Manual Verification Code'}:</strong> ${data?.ticketNumber || data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId?.slice(-6) || 'N/A'}</p>
               <p><strong>Owner:</strong> ${data?.ownerName || (data?.firstName + ' ' + data?.lastName) || (searchParams.get('firstName') + ' ' + searchParams.get('lastName')) || 'N/A'}</p>
               <p><strong>Email:</strong> ${data?.ownerEmail || data?.email || searchParams.get('email') || 'N/A'}</p>
               ${type === 'ticket' ? `<p><strong>Category:</strong> ${data?.category || 'N/A'}</p>` : ''}
@@ -147,7 +147,7 @@ export default function PaymentSuccess() {
         heightLeft -= pageHeight;
       }
       
-      pdf.save(`${type === 'ticket' ? 'ticket' : 'registration'}-${data?.ticketNumber || data?.registrationId || 'card'}.pdf`);
+      pdf.save(`${type === 'ticket' ? 'ticket' : 'registration'}-${data?.ticketNumber || data?.registrationId || data?.id || 'card'}.pdf`);
       
       document.body.removeChild(ticketElement);
     } catch (error) {
