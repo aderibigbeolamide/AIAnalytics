@@ -1,10 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 // import { registerRoutes } from "./routes"; // DISABLED - All routes migrated to MongoDB
-import { registerMongoAuthRoutes } from "./mongo-auth-routes";
+// New organized routes
+import { registerAuthRoutes } from "./routes/auth-routes";
+import { registerEventRoutes } from "./routes/event-routes";
+import { registerRegistrationRoutes } from "./routes/registration-routes";
+
+// Legacy routes (to be migrated)
 import { registerMongoSuperAdminRoutes } from "./mongo-super-admin-routes";
 import { registerMongoDashboardRoutes } from "./mongo-dashboard-routes";
-import { registerMongoRoutes } from "./mongo-routes";
 import { setupNotificationRoutes } from "./notification-routes";
 import { setupChatbotRoutes } from "./chatbot-routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -58,11 +62,14 @@ app.use((req, res, next) => {
   // Run auto-seeding before starting the server
   await mongoAutoSeed();
   
-  // Register MongoDB routes only (PostgreSQL routes disabled)
-  registerMongoAuthRoutes(app);
+  // Register new organized routes
+  registerAuthRoutes(app);
+  registerEventRoutes(app);
+  registerRegistrationRoutes(app);
+  
+  // Register legacy routes (to be migrated)
   registerMongoSuperAdminRoutes(app);
   registerMongoDashboardRoutes(app);
-  registerMongoRoutes(app);
   setupNotificationRoutes(app);
   setupChatbotRoutes(app);
   

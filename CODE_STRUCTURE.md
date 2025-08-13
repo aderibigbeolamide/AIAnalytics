@@ -1,317 +1,340 @@
-# EventValidate Code Structure Guide
+# Code Structure Guide
 
-## 📋 Overview
-This document outlines the improved code structure for EventValidate, making it easier for developers to work on the project with better organization, responsive design, and user experience.
+## 📂 Directory Structure
 
-## 🏗️ Enhanced Project Structure
+### `/client` - Frontend Application
 
-### Frontend Architecture (`client/`)
-
-```
-client/
-├── src/
-│   ├── components/
-│   │   ├── ui/                     # Base UI components (shadcn/ui)
-│   │   │   ├── button.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── sheet.tsx          # Mobile slide-out panels
-│   │   │   ├── popover.tsx        # Dropdowns and tooltips
-│   │   │   └── progress.tsx       # Progress bars
-│   │   │
-│   │   ├── layout/                # Layout & responsive components
-│   │   │   ├── responsive-layout.tsx    # Main layout system
-│   │   │   ├── mobile-container.tsx     # Mobile-optimized containers
-│   │   │   └── responsive-grid.tsx      # Responsive grid system
-│   │   │
-│   │   ├── features/              # Feature-specific components
-│   │   │   ├── mobile-navigation.tsx           # Mobile nav & bottom nav
-│   │   │   ├── responsive-chat-interface.tsx   # Enhanced chat UI
-│   │   │   ├── emoji-picker.tsx               # Emoji functionality
-│   │   │   ├── chat-loading-spinner.tsx       # Loading animations
-│   │   │   └── support-performance-dashboard.tsx # Agent metrics
-│   │   │
-│   │   └── forms/                 # Form components
-│   │       ├── login-form.tsx
-│   │       ├── event-form.tsx
-│   │       └── member-form.tsx
-│   │
-│   ├── pages/                     # Page components
-│   │   ├── dashboard.tsx
-│   │   ├── events.tsx
-│   │   ├── admin/
-│   │   │   ├── chat.tsx
-│   │   │   └── analytics.tsx
-│   │   └── auth/
-│   │       └── login.tsx
-│   │
-│   ├── stores/                    # State management (Zustand)
-│   │   ├── auth-store.ts          # Authentication state
-│   │   ├── chat-store.ts          # Chat-specific state
-│   │   └── ui-store.ts            # UI state (modals, notifications)
-│   │
-│   ├── hooks/                     # Custom React hooks
-│   │   ├── use-auth.ts
-│   │   ├── use-chat.ts
-│   │   ├── use-responsive.ts      # Responsive utilities
-│   │   └── use-toast.ts
-│   │
-│   ├── lib/                       # Utilities and configurations
-│   │   ├── utils.ts               # Common utilities
-│   │   ├── api.ts                 # API client
-│   │   ├── websocket.ts           # WebSocket management
-│   │   └── constants.ts           # App constants
-│   │
-│   └── styles/                    # Styling
-│       ├── globals.css            # Global styles
-│       └── components.css         # Component-specific styles
-```
-
-### Backend Architecture (`server/`)
+#### `/client/src/components`
+**Purpose**: Reusable UI components organized by functionality
 
 ```
-server/
-├── routes/                        # API route handlers
-│   ├── auth-routes.ts
-│   ├── chat-routes.ts             # Chat & messaging
-│   ├── admin-routes.ts
-│   ├── event-routes.ts
-│   ├── member-routes.ts
-│   ├── performance-routes.ts      # Performance metrics
-│   └── index.ts                   # Route aggregation
-│
-├── models/                        # Database models
-│   ├── User.ts
-│   ├── Event.ts
-│   ├── ChatSession.ts
-│   └── Member.ts
-│
-├── middleware/                    # Express middleware
-│   ├── auth.ts                    # Authentication
-│   ├── validation.ts              # Request validation
-│   ├── error-handling.ts          # Error handling
-│   └── rate-limiting.ts           # Rate limiting
-│
-├── services/                      # Business logic
-│   ├── auth-service.ts
-│   ├── chat-service.ts
-│   ├── email-service.ts
-│   ├── payment-service.ts
-│   └── notification-service.ts
-│
-├── utils/                         # Server utilities
-│   ├── database.ts                # DB connection
-│   ├── websocket.ts               # WebSocket server
-│   ├── logger.ts                  # Logging utility
-│   └── validation.ts              # Data validation
-│
-└── config/                        # Configuration
-    ├── database.ts
-    ├── redis.ts
-    └── environment.ts
+components/
+├── ui/                     # Base UI components (shadcn/ui)
+│   ├── button.tsx         # Button component
+│   ├── form.tsx           # Form components
+│   ├── input.tsx          # Input components
+│   └── ...
+├── features/              # Feature-specific components
+│   ├── auth/              # Authentication components
+│   ├── events/            # Event-related components
+│   ├── chat/              # Chat components
+│   └── payments/          # Payment components
+├── layout/                # Layout components
+│   ├── navbar.tsx         # Navigation bar
+│   ├── sidebar.tsx        # Sidebar navigation
+│   └── footer.tsx         # Footer component
+└── shared/                # Shared utility components
+    ├── loading-spinner.tsx
+    ├── error-boundary.tsx
+    └── modal.tsx
 ```
 
-## 📱 Responsive Design System
+#### `/client/src/pages`
+**Purpose**: Route-level components representing different pages
 
-### Mobile-First Approach
+```
+pages/
+├── auth/                  # Authentication pages
+│   ├── login.tsx
+│   ├── register.tsx
+│   └── forgot-password.tsx
+├── dashboard/             # Dashboard pages
+│   ├── dashboard.tsx
+│   ├── analytics.tsx
+│   └── settings.tsx
+├── events/                # Event-related pages
+│   ├── events.tsx
+│   ├── event-detail.tsx
+│   ├── event-registration.tsx
+│   └── create-event.tsx
+├── admin/                 # Admin pages
+│   ├── super-admin-dashboard.tsx
+│   ├── organization-management.tsx
+│   └── platform-analytics.tsx
+└── public/                # Public pages
+    ├── landing.tsx
+    ├── about.tsx
+    └── contact.tsx
+```
 
-1. **Breakpoints** (Tailwind CSS):
-   ```css
-   sm: 640px   /* Small devices (landscape phones) */
-   md: 768px   /* Medium devices (tablets) */
-   lg: 1024px  /* Large devices (laptops) */
-   xl: 1280px  /* Extra large devices (desktops) */
-   ```
+#### `/client/src/hooks`
+**Purpose**: Custom React hooks for reusable logic
 
-2. **Touch-Friendly Design**:
-   - Minimum 44px touch targets
-   - Adequate spacing between interactive elements
-   - Easy-to-reach navigation areas
+```
+hooks/
+├── use-auth.ts           # Authentication hooks
+├── use-events.ts         # Event-related hooks
+├── use-api.ts            # API interaction hooks
+├── use-websocket.ts      # WebSocket hooks
+└── use-responsive.ts     # Responsive design hooks
+```
 
-3. **Performance Optimizations**:
-   - Lazy loading for non-critical components
-   - Optimized images and assets
-   - Minimal JavaScript bundles
+#### `/client/src/lib`
+**Purpose**: Utilities, configurations, and helper functions
 
-### Responsive Components
+```
+lib/
+├── api/                  # API client configuration
+│   ├── client.ts         # Base API client
+│   ├── endpoints.ts      # API endpoints
+│   └── types.ts          # API response types
+├── auth/                 # Authentication utilities
+│   ├── auth-store.ts     # Auth state management
+│   ├── jwt-utils.ts      # JWT token utilities
+│   └── permissions.ts    # Permission checking
+├── utils/                # General utilities
+│   ├── date-utils.ts     # Date formatting
+│   ├── validation.ts     # Form validation
+│   └── formatters.ts     # Data formatters
+└── constants/            # Application constants
+    ├── routes.ts         # Route constants
+    ├── api-endpoints.ts  # API endpoint constants
+    └── app-config.ts     # App configuration
+```
 
-#### ResponsiveLayout
+### `/server` - Backend Application
+
+#### `/server/routes`
+**Purpose**: API route handlers organized by domain
+
+```
+routes/
+├── auth/                 # Authentication routes
+│   ├── auth-routes.ts    # Login, register, logout
+│   ├── password-reset.ts # Password reset functionality
+│   └── session-management.ts
+├── events/               # Event management routes
+│   ├── event-routes.ts   # CRUD operations
+│   ├── registration-routes.ts
+│   └── validation-routes.ts
+├── admin/                # Admin-specific routes
+│   ├── super-admin-routes.ts
+│   ├── organization-routes.ts
+│   └── analytics-routes.ts
+├── payments/             # Payment processing routes
+│   ├── paystack-routes.ts
+│   ├── transaction-routes.ts
+│   └── webhook-routes.ts
+└── chat/                 # Chat and messaging routes
+    ├── chat-routes.ts
+    ├── websocket-handler.ts
+    └── notification-routes.ts
+```
+
+#### `/server/services`
+**Purpose**: Business logic and external service integrations
+
+```
+services/
+├── auth/                 # Authentication services
+│   ├── AuthService.ts    # User authentication
+│   ├── TokenService.ts   # JWT token management
+│   └── PermissionService.ts
+├── events/               # Event-related services
+│   ├── EventService.ts   # Event management
+│   ├── RegistrationService.ts
+│   └── ValidationService.ts
+├── payments/             # Payment services
+│   ├── PaystackService.ts
+│   ├── PaymentProcessor.ts
+│   └── InvoiceService.ts
+├── external/             # External API integrations
+│   ├── OpenAIService.ts  # AI chatbot integration
+│   ├── EmailService.ts   # Email notifications
+│   └── SmsService.ts     # SMS notifications
+└── storage/              # File storage services
+    ├── CloudinaryService.ts
+    ├── LocalStorage.ts
+    └── FileHandler.ts
+```
+
+#### `/server/middleware`
+**Purpose**: Express middleware functions
+
+```
+middleware/
+├── auth/                 # Authentication middleware
+│   ├── jwt-middleware.ts # JWT verification
+│   ├── role-middleware.ts # Role-based access
+│   └── organization-middleware.ts
+├── validation/           # Request validation
+│   ├── schema-validator.ts
+│   ├── file-validator.ts
+│   └── sanitizer.ts
+├── security/             # Security middleware
+│   ├── rate-limiter.ts   # Rate limiting
+│   ├── cors-handler.ts   # CORS configuration
+│   └── helmet-config.ts  # Security headers
+└── logging/              # Logging middleware
+    ├── request-logger.ts
+    ├── error-logger.ts
+    └── audit-logger.ts
+```
+
+#### `/server/models`
+**Purpose**: Database models and schemas
+
+```
+models/
+├── User.ts              # User model
+├── Organization.ts      # Organization model
+├── Event.ts             # Event model
+├── Registration.ts      # Registration model
+├── Payment.ts           # Payment model
+├── Notification.ts      # Notification model
+└── ChatSession.ts       # Chat session model
+```
+
+### `/shared` - Shared Types and Schemas
+
+```
+shared/
+├── types/               # TypeScript interfaces
+│   ├── auth.ts          # Authentication types
+│   ├── events.ts        # Event-related types
+│   ├── payments.ts      # Payment types
+│   └── api.ts           # API response types
+├── schemas/             # Validation schemas
+│   ├── mongoose-schema.ts # MongoDB schemas
+│   ├── zod-schemas.ts   # Zod validation schemas
+│   └── api-schemas.ts   # API request/response schemas
+└── constants/           # Shared constants
+    ├── status-codes.ts  # HTTP status codes
+    ├── error-messages.ts # Error message constants
+    └── app-constants.ts # Application constants
+```
+
+## 🔄 Data Flow Architecture
+
+### Request Flow
+```
+Client Request → Router → Middleware → Controller → Service → Model → Database
+                                   ↓
+Client Response ← JSON ← Response ← Business Logic ← Data Access ← Query Result
+```
+
+### Authentication Flow
+```
+Login Request → Auth Controller → Auth Service → User Model → JWT Token
+                                                            ↓
+Protected Route → JWT Middleware → Token Validation → User Context
+```
+
+### WebSocket Flow
+```
+Client Connection → WebSocket Handler → Session Manager → Message Router → Database
+                                                                        ↓
+Broadcast Message ← WebSocket Server ← Event Handler ← Business Logic ← Data Update
+```
+
+## 🎯 Component Guidelines
+
+### React Component Structure
 ```typescript
-<ResponsiveLayout
-  layout="default" | "centered" | "full-width"
-  sidebar={<SidebarContent />}
-  sidebarWidth="sm" | "md" | "lg"
-  header={<HeaderContent />}
-  footer={<FooterContent />}
->
-  <MainContent />
-</ResponsiveLayout>
+// ComponentName.tsx
+import React from 'react';
+import { ComponentProps } from './types';
+import { useHook } from '../hooks/useHook';
+import './ComponentName.css';
+
+interface Props {
+  // Props interface
+}
+
+export const ComponentName: React.FC<Props> = ({ prop1, prop2 }) => {
+  // Hooks
+  const { data, loading } = useHook();
+  
+  // Event handlers
+  const handleEvent = () => {
+    // Handle logic
+  };
+  
+  // Render logic
+  if (loading) return <LoadingSpinner />;
+  
+  return (
+    <div className="component-container">
+      {/* Component JSX */}
+    </div>
+  );
+};
+
+export default ComponentName;
 ```
 
-#### Mobile Navigation
+### API Route Structure
 ```typescript
-<MobileNavigation />              // Hamburger menu for mobile
-<BottomNavigation />             // Bottom tab bar for mobile
-<Breadcrumb items={breadcrumbs} /> // Navigation context
-```
+// route-handler.ts
+import { Router } from 'express';
+import { authMiddleware } from '../middleware/auth';
+import { validateSchema } from '../middleware/validation';
+import { Service } from '../services/Service';
+import { schema } from '../schemas/schema';
 
-#### Responsive Grid
-```typescript
-<ResponsiveGrid
-  columns={{ default: 1, sm: 2, lg: 3, xl: 4 }}
-  gap="md"
->
-  {items.map(item => <GridItem key={item.id} {...item} />)}
-</ResponsiveGrid>
-```
+const router = Router();
 
-## 🎨 Design System Guidelines
-
-### Colors & Theming
-- **Light/Dark Mode**: Full support with CSS variables
-- **Consistent Color Palette**: Primary, secondary, accent colors
-- **Accessibility**: WCAG AA compliant contrast ratios
-
-### Typography
-- **Responsive Font Sizes**: Scale appropriately across devices
-- **Readable Line Heights**: Optimized for different screen sizes
-- **Font Weights**: Consistent hierarchy
-
-### Spacing & Layout
-- **Consistent Spacing Scale**: 4px base unit (0.25rem)
-- **Responsive Padding/Margins**: Adjust based on screen size
-- **Grid System**: Flexible 12-column grid
-
-## 🔧 Developer Experience Improvements
-
-### Code Organization Principles
-
-1. **Single Responsibility**: Each component has one clear purpose
-2. **Composition over Inheritance**: Build complex UIs from simple components
-3. **Consistent Naming**: Clear, descriptive names for files and components
-4. **Type Safety**: Full TypeScript coverage with proper interfaces
-
-### Development Workflow
-
-1. **Hot Reloading**: Instant feedback during development
-2. **Error Boundaries**: Graceful error handling in production
-3. **Debugging Tools**: Comprehensive logging and dev tools
-4. **Testing Integration**: Unit and integration test setup
-
-### Performance Monitoring
-
-1. **Bundle Analysis**: Regular bundle size monitoring
-2. **Core Web Vitals**: Performance metrics tracking
-3. **Error Tracking**: Production error monitoring
-4. **User Analytics**: Usage pattern analysis
-
-## 📚 Component Usage Examples
-
-### Basic Chat Interface
-```typescript
-import { ResponsiveChatInterface } from '@/components/features/responsive-chat-interface';
-
-<ResponsiveChatInterface
-  sessionId={currentSessionId}
-  currentSession={session}
-  messages={messages}
-  onSendMessage={handleSendMessage}
-  isConnected={isWebSocketConnected}
-  isSending={isMessageSending}
-  isTyping={isUserTyping}
-  onCloseSession={handleCloseSession}
-  onRefreshSession={handleRefreshSession}
-/>
-```
-
-### Mobile Navigation
-```typescript
-import { MobileNavigation, BottomNavigation } from '@/components/features/mobile-navigation';
-
-// In your layout component
-<ResponsiveLayout
-  header={
-    <header className="flex items-center justify-between p-4">
-      <Logo />
-      <MobileNavigation />
-    </header>
+// GET endpoint
+router.get('/endpoint', authMiddleware, async (req, res, next) => {
+  try {
+    const result = await Service.getData(req.params.id);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
   }
->
-  <YourContent />
-  <BottomNavigation />
-</ResponsiveLayout>
+});
+
+// POST endpoint with validation
+router.post('/endpoint', 
+  authMiddleware, 
+  validateSchema(schema), 
+  async (req, res, next) => {
+    try {
+      const result = await Service.createData(req.body);
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+export default router;
 ```
 
-### Performance Dashboard
-```typescript
-import { SupportPerformanceDashboard } from '@/components/features/support-performance-dashboard';
+## 📝 File Naming Conventions
 
-// Desktop sidebar
-<ResponsiveLayout
-  sidebar={<SupportPerformanceDashboard />}
-  sidebarWidth="md"
->
-  <ChatInterface />
-</ResponsiveLayout>
+### Frontend Files
+- Components: `PascalCase.tsx` (e.g., `EventForm.tsx`)
+- Hooks: `use-kebab-case.ts` (e.g., `use-event-data.ts`)
+- Utilities: `kebab-case.ts` (e.g., `date-utils.ts`)
+- Types: `kebab-case.types.ts` (e.g., `event.types.ts`)
+- Tests: `Component.test.tsx` or `utils.test.ts`
 
-// Mobile sheet
-<Sheet>
-  <SheetTrigger>View Stats</SheetTrigger>
-  <SheetContent>
-    <SupportPerformanceDashboard />
-  </SheetContent>
-</Sheet>
-```
+### Backend Files
+- Routes: `kebab-case-routes.ts` (e.g., `event-routes.ts`)
+- Services: `PascalCaseService.ts` (e.g., `EventService.ts`)
+- Models: `PascalCase.ts` (e.g., `Event.ts`)
+- Middleware: `kebab-case.ts` (e.g., `auth-middleware.ts`)
+- Utils: `kebab-case.ts` (e.g., `database-utils.ts`)
 
-## 🚀 Performance Best Practices
+## 🏗️ Architectural Patterns
 
-### Code Splitting
-- Route-based splitting for pages
-- Component-based splitting for large features
-- Dynamic imports for non-critical functionality
+### Separation of Concerns
+- **Presentation Layer**: React components (UI only)
+- **Business Logic**: Services and hooks
+- **Data Access**: Models and repositories
+- **External Services**: Dedicated service classes
+
+### Error Handling
+- Frontend: Error boundaries and try-catch blocks
+- Backend: Centralized error middleware
+- Database: Validation at schema level
+- API: Consistent error response format
 
 ### State Management
-- Local state for component-specific data
-- Zustand stores for shared application state
-- TanStack Query for server state management
+- Local state: React useState/useReducer
+- Global state: Zustand stores
+- Server state: TanStack Query
+- Session state: localStorage with hydration
 
-### Asset Optimization
-- Image optimization and lazy loading
-- SVG icons for scalability
-- Efficient font loading strategies
-
-## 🔒 Security Considerations
-
-### Authentication & Authorization
-- JWT token management
-- Role-based access control
-- Secure API endpoints
-
-### Data Validation
-- Client-side validation for UX
-- Server-side validation for security
-- Type-safe data handling
-
-### WebSocket Security
-- Connection authentication
-- Message validation
-- Rate limiting
-
-## 🧪 Testing Strategy
-
-### Unit Testing
-- Component testing with React Testing Library
-- Utility function testing
-- Store testing
-
-### Integration Testing
-- API endpoint testing
-- WebSocket functionality testing
-- User workflow testing
-
-### End-to-End Testing
-- Critical user journeys
-- Cross-browser compatibility
-- Mobile device testing
-
-This structure ensures the EventValidate project is maintainable, scalable, and provides an excellent developer experience while delivering a responsive, user-friendly application.
+This structure ensures maintainable, scalable code that's easy to navigate and understand.

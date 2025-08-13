@@ -9,24 +9,32 @@ UI/UX preferences: User-friendly design with professional appearance, no demo cr
 Code structure: Well-organized, developer-friendly structure with clear separation of concerns, responsive design for mobile and desktop, comprehensive documentation for easy onboarding.
 
 ## System Architecture
-### Frontend
+### Frontend (React + TypeScript)
 - **Framework**: React 18 with TypeScript
-- **Routing**: Wouter
-- **State Management**: Zustand
-- **UI**: Radix UI components with shadcn/ui, Tailwind CSS
-- **Data Fetching**: TanStack Query
-- **Build Tool**: Vite
+- **Routing**: Wouter for client-side routing
+- **State Management**: Zustand for global state management
+- **UI Framework**: Radix UI components with shadcn/ui
+- **Styling**: Tailwind CSS with responsive design
+- **Data Fetching**: TanStack Query for server state management
+- **Build Tool**: Vite for fast development and production builds
 - **Real-time Communication**: WebSocket for instant messaging
 
-### Backend
+### Backend (Node.js + Express)
 - **Runtime**: Node.js with Express.js
-- **Language**: TypeScript (ES modules)
-- **Database**: MongoDB with Mongoose (MongoDB Atlas)
-- **Authentication**: JWT tokens with bcrypt
-- **API**: RESTful API
-- **Real-time Messaging**: WebSocket server with broadcasting
+- **Language**: TypeScript with ES modules
+- **Database**: MongoDB with Mongoose ODM (MongoDB Atlas)
+- **Authentication**: JWT tokens with bcrypt password hashing
+- **API Architecture**: RESTful API with organized route structure
+- **Real-time Messaging**: WebSocket server with broadcasting capabilities
 - **File Storage**: Local file system with Cloudinary integration
-- **Payment Processing**: Paystack API (multi-tenant support)
+- **Payment Processing**: Paystack API with multi-tenant support
+
+### Code Organization (Recent Update - Jan 2025)
+- **Backend Structure**: Organized into `/routes`, `/services`, `/middleware`, and `/utils` directories
+- **Frontend Structure**: Feature-based components in `/components/features`, shared utilities in `/lib`
+- **API Client**: Centralized API client with consistent error handling and authentication
+- **State Management**: Zustand stores with persistence and session management
+- **Type Safety**: Shared TypeScript interfaces between frontend and backend
 
 ### Core Architectural Decisions
 - **Dual-Admin Architecture**: Features a super admin for system oversight and organization-specific admins for tenant management.

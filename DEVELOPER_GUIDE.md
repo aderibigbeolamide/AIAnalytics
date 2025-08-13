@@ -1,222 +1,224 @@
-# EventValidate Developer Guide
+# Developer Guide - EventValidate
 
-## Project Structure & Developer Guidelines
+## 🚀 Quick Start
 
-### 📁 Project Architecture
+### Prerequisites
+- Node.js 20+
+- MongoDB Atlas account
+- Paystack account (for payments)
+- Optional: Cloudinary account (for file uploads)
+
+### Setup
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up environment variables (see ENV_SETUP.md)
+4. Start development: `npm run dev`
+
+## 📁 Project Structure
 
 ```
 EventValidate/
-├── client/                     # Frontend React application
+├── client/                    # Frontend React application
 │   ├── src/
-│   │   ├── components/         # Reusable UI components
-│   │   │   ├── ui/            # Base UI components (shadcn/ui)
-│   │   │   ├── forms/         # Form components
-│   │   │   ├── layout/        # Layout components
-│   │   │   └── features/      # Feature-specific components
-│   │   ├── pages/             # Page components
-│   │   ├── hooks/             # Custom React hooks
-│   │   ├── lib/               # Utilities and configurations
-│   │   └── stores/            # Zustand state management
-├── server/                     # Backend Node.js/Express
-│   ├── models/                # Database models (MongoDB/Mongoose)
-│   ├── routes/                # API route handlers
-│   ├── middleware/            # Express middleware
-│   ├── utils/                 # Server utilities
-│   └── services/              # Business logic services
-├── shared/                     # Shared code between client/server
-│   └── schema.ts              # Shared type definitions
-└── config/                     # Configuration files
+│   │   ├── components/        # Reusable UI components
+│   │   │   ├── ui/           # Base UI components (shadcn/ui)
+│   │   │   ├── features/     # Feature-specific components
+│   │   │   └── layout/       # Layout components
+│   │   ├── pages/            # Route components/pages
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── lib/              # Utilities and configurations
+│   │   ├── stores/           # Zustand state management
+│   │   └── styles/           # CSS and styling
+├── server/                   # Backend Express.js application
+│   ├── routes/               # API route handlers
+│   ├── services/             # Business logic services
+│   ├── middleware/           # Express middleware
+│   ├── utils/                # Server utilities
+│   └── storage/              # Data access layer
+├── shared/                   # Shared types and schemas
+└── config/                   # Configuration files
 ```
 
-### 🛠️ Development Workflow
+## 🏗️ Architecture Overview
 
-#### 1. Setting Up Development Environment
+### Frontend (React + TypeScript)
+- **Framework**: React 18 with TypeScript
+- **Routing**: Wouter for client-side routing
+- **State Management**: Zustand for global state
+- **UI Framework**: Radix UI + shadcn/ui components
+- **Styling**: Tailwind CSS
+- **Data Fetching**: TanStack Query
+- **Build Tool**: Vite
+
+### Backend (Node.js + Express)
+- **Runtime**: Node.js with Express.js
+- **Language**: TypeScript with ES modules
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: JWT tokens with bcrypt
+- **Real-time**: WebSocket for chat functionality
+- **File Storage**: Local + Cloudinary integration
+- **Payment**: Paystack API integration
+
+### Key Features
+- **Multi-tenant Architecture**: Organization-specific dashboards
+- **Dual Admin System**: Super admin + Organization admins
+- **Event Management**: Registration-based and ticket-based events
+- **QR Code System**: Generation, encryption, and validation
+- **Real-time Chat**: WebSocket-based messaging
+- **AI Integration**: OpenAI for chatbot and recommendations
+- **Payment Processing**: Paystack with revenue splitting
+- **File Management**: Cloudinary integration for uploads
+
+## 🔄 Data Flow
+
+### Authentication Flow
+1. User logs in → JWT token generated
+2. Token stored in localStorage and auth store
+3. Protected routes check authentication status
+4. API requests include Authorization header
+
+### Event Registration Flow
+1. User selects event → Validation checks
+2. Form submission → Payment processing (if required)
+3. Registration created → QR code generated
+4. Email confirmation sent → Database updated
+
+### Real-time Features
+- WebSocket connection for live chat
+- Real-time notifications via broadcasting
+- Live event updates and status changes
+
+## 🛠️ Development Guidelines
+
+### Code Organization
+- **Components**: Single responsibility, reusable
+- **Pages**: Route-level components with minimal logic
+- **Services**: Business logic separated from UI
+- **Types**: Shared interfaces in `/shared` directory
+- **Utils**: Pure functions, no side effects
+
+### Naming Conventions
+- **Files**: kebab-case (e.g., `event-registration.tsx`)
+- **Components**: PascalCase (e.g., `EventForm`)
+- **Functions**: camelCase (e.g., `validateUser`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `API_BASE_URL`)
+
+### API Design
+- RESTful endpoints with clear resource naming
+- Consistent response format with proper HTTP status codes
+- Authentication middleware for protected routes
+- Input validation using Zod schemas
+
+### Database Design
+- MongoDB collections with Mongoose schemas
+- Soft deletion using `deletedAt` field
+- Indexing for performance optimization
+- Data validation at schema level
+
+## 🧪 Testing Strategy
+
+### Frontend Testing
+- Component tests using React Testing Library
+- Integration tests for user workflows
+- E2E tests for critical paths
+
+### Backend Testing
+- Unit tests for business logic
+- Integration tests for API endpoints
+- Database tests with test fixtures
+
+### Testing Commands
 ```bash
-npm install                    # Install dependencies
-npm run dev                   # Start development server
+npm test              # Run all tests
+npm run test:client   # Frontend tests only
+npm run test:server   # Backend tests only
+npm run test:e2e      # End-to-end tests
 ```
 
-#### 2. Code Organization Principles
+## 🚀 Deployment
 
-**Components Structure:**
-- **Base Components** (`client/src/components/ui/`): Reusable UI primitives
-- **Feature Components** (`client/src/components/features/`): Business logic components
-- **Page Components** (`client/src/pages/`): Top-level page containers
-- **Layout Components** (`client/src/components/layout/`): Navigation, headers, footers
+### Environment Setup
+- Development: Local MongoDB + Local file storage
+- Staging: MongoDB Atlas + Cloudinary
+- Production: MongoDB Atlas + Cloudinary + CDN
 
-**Naming Conventions:**
-- Components: PascalCase (`UserDashboard.tsx`)
-- Files: kebab-case (`user-dashboard.tsx`)
-- Variables/Functions: camelCase (`getUserData`)
-- Constants: SCREAMING_SNAKE_CASE (`API_BASE_URL`)
-
-**Import Organization:**
-```typescript
-// 1. External libraries
-import React from 'react';
-import { Button } from '@/components/ui/button';
-
-// 2. Internal components
-import { UserCard } from '@/components/features/user-card';
-
-// 3. Utilities and types
-import { cn } from '@/lib/utils';
-import type { User } from '@/types';
+### Build Process
+```bash
+npm run build         # Build for production
+npm start            # Start production server
 ```
 
-#### 3. State Management Guidelines
+### Performance Optimization
+- Code splitting with dynamic imports
+- Image optimization with Cloudinary
+- Caching strategies for API responses
+- MongoDB query optimization
 
-**Zustand Stores** (`client/src/stores/`):
-- `auth-store.ts`: Authentication state
-- `chat-store.ts`: Real-time chat state
-- `ui-store.ts`: UI state (modals, notifications)
+## 🔧 Common Development Tasks
 
-**API State Management:**
-- Use TanStack Query for server state
-- Use optimistic updates for better UX
-- Implement proper error boundaries
+### Adding a New Feature
+1. Define types in `/shared/mongoose-schema.ts`
+2. Create database schema/model
+3. Implement API endpoints in `/server`
+4. Create frontend components in `/client/src/components`
+5. Add routing in `/client/src/App.tsx`
+6. Update documentation
 
-#### 4. Styling Guidelines
+### Adding a New API Endpoint
+1. Define route in appropriate route file
+2. Add authentication middleware if needed
+3. Implement validation using Zod
+4. Add business logic to service layer
+5. Update frontend API calls
+6. Add error handling
 
-**Responsive Design:**
-- Mobile-first approach
-- Use Tailwind CSS breakpoints: `sm:`, `md:`, `lg:`, `xl:`
-- Consistent spacing: Use Tailwind spacing scale
+### Debugging Tips
+- Use browser dev tools for frontend debugging
+- Check server logs for backend issues
+- Monitor MongoDB queries for performance
+- Use WebSocket debugging for real-time features
 
-**Dark Mode Support:**
-- Use `dark:` variants for all styling
-- Define CSS variables in `index.css`
-- Test both light and dark themes
+## 📚 Key Dependencies
 
-#### 5. API Development
+### Frontend
+- `react` - UI library
+- `wouter` - Routing
+- `zustand` - State management
+- `@tanstack/react-query` - Data fetching
+- `@radix-ui/*` - UI components
+- `tailwindcss` - Styling
 
-**Route Organization:**
-- Group related routes in separate files
-- Use consistent error handling
-- Implement proper validation with Zod
-- Add TypeScript types for all endpoints
+### Backend
+- `express` - Web framework
+- `mongoose` - MongoDB ODM
+- `jsonwebtoken` - Authentication
+- `bcrypt` - Password hashing
+- `ws` - WebSocket support
+- `multer` - File uploads
 
-**Example Route Structure:**
-```typescript
-// server/routes/user-routes.ts
-import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
+### Shared
+- `zod` - Schema validation
+- `typescript` - Type safety
 
-const router = Router();
+## 🐛 Troubleshooting
 
-router.get('/users/:id', authenticateToken, async (req, res) => {
-  // Implementation
-});
+### Common Issues
+1. **MongoDB Connection**: Check MONGODB_URI environment variable
+2. **Authentication**: Verify JWT_SECRET is set
+3. **File Uploads**: Ensure UPLOAD_DIR exists and has permissions
+4. **WebSocket**: Check firewall settings for port 5000
+5. **Payments**: Verify Paystack credentials
 
-export default router;
+### Debug Commands
+```bash
+npm run check         # TypeScript type checking
+npm run db:push       # Push database schema changes
+npm run seed          # Seed database with test data
 ```
 
-### 📱 Mobile & Desktop Optimization
-
-#### Mobile-First Responsive Design
-- Touch-friendly interface (minimum 44px touch targets)
-- Optimized navigation for mobile
-- Responsive typography and spacing
-- Fast loading with minimal JavaScript bundles
-
-#### Desktop Enhancements
-- Keyboard navigation support
-- Hover states and transitions
-- Multi-column layouts where appropriate
-- Efficient use of screen real estate
-
-### 🎨 User Experience Guidelines
-
-#### Accessibility
-- Semantic HTML structure
-- ARIA labels and roles
-- Keyboard navigation
-- Color contrast compliance
-- Screen reader compatibility
-
-#### Performance
-- Code splitting and lazy loading
-- Image optimization
-- Efficient state updates
-- Minimal re-renders
-
-#### Error Handling
-- User-friendly error messages
-- Graceful degradation
-- Loading states
-- Retry mechanisms
-
-### 🔧 Development Tools
-
-#### Recommended VS Code Extensions
-- ES7+ React/Redux/React-Native snippets
-- Tailwind CSS IntelliSense
-- TypeScript Importer
-- Auto Rename Tag
-- Prettier - Code formatter
-
-#### Code Quality
-- ESLint configuration for consistent code style
-- Prettier for automatic formatting
-- TypeScript for type safety
-- Husky for pre-commit hooks
-
-### 📊 Monitoring & Debugging
-
-#### Development Debugging
-- React Developer Tools
-- Console logging best practices
-- Error boundaries for crash protection
-- Network request monitoring
-
-#### Production Monitoring
-- Error tracking and reporting
-- Performance monitoring
-- User analytics
-- API response time tracking
-
-### 🚀 Deployment Guidelines
-
-#### Environment Configuration
-- Separate configs for development/production
-- Environment variable management
-- Secure secret handling
-- Database migration strategies
-
-#### Build Optimization
-- Bundle size analysis
-- Tree shaking for unused code
-- Asset optimization
-- CDN configuration
-
-### 📚 Additional Resources
-
-- [React Best Practices](https://react.dev/learn)
-- [TypeScript Guidelines](https://www.typescriptlang.org/docs/)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-- [shadcn/ui Components](https://ui.shadcn.com/docs)
-
-### 🤝 Contributing Guidelines
-
-1. **Before Starting**: Check existing issues and discuss major changes
-2. **Code Style**: Follow established patterns and conventions
-3. **Testing**: Write tests for new features and bug fixes
-4. **Documentation**: Update relevant documentation
-5. **Pull Requests**: Provide clear descriptions and test instructions
-
-### 🐛 Common Issues & Solutions
-
-#### Development Server Issues
-- Clear node_modules and reinstall dependencies
-- Check port conflicts (default: 5000)
-- Verify environment variables
-
-#### Build Issues
-- Check TypeScript errors
-- Verify import paths
-- Ensure all dependencies are installed
-
-#### Runtime Issues
-- Check browser console for errors
-- Verify API endpoint connectivity
-- Check authentication state
+## 📖 Additional Resources
+- [MongoDB Documentation](https://docs.mongodb.com/)
+- [React Documentation](https://react.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Paystack API](https://paystack.com/docs)
+- [OpenAI API](https://platform.openai.com/docs)
