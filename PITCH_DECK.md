@@ -343,6 +343,7 @@
 - WebSocket real-time features
 - JWT authentication
 - Multi-tenant isolation
+- Email verification and notifications
 
 **Security Features:**
 - End-to-end encryption

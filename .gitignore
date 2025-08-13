@@ -9,3 +9,4 @@ vite.config.ts.*
 # pnpm specific
 .pnpm-debug.log
 .pnpm-store/
+.pnpm-lock.yaml
