@@ -14,7 +14,11 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
   const customFormData = registration.customFormData ? JSON.parse(registration.customFormData) : {};
   
   // Get the name from custom form data
-  const memberName = registration.guestName || `${registration.firstName} ${registration.lastName}` || 'Guest';
+  const memberName = registration.guestName || 
+    (registration.firstName && registration.lastName ? `${registration.firstName} ${registration.lastName}` : null) ||
+    registration.firstName ||
+    registration.lastName ||
+    'Guest';
   
   // Get auxiliary body from registration
   const auxiliaryBody = registration.guestAuxiliaryBody || 'N/A';

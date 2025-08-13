@@ -951,26 +951,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // For manual receipt uploads
-        if (paymentMethod === 'manual_receipt') {
-          if (!req.file) {
-            return res.status(400).json({ message: "Payment receipt is required" });
-          }
-        }
+
       }
 
-      // Handle file uploads if any
-      let paymentReceiptUrlFinal = null;
-      if (req.file) {
-        try {
-          const { fileStorage } = await import('./storage-handler');
-          const uploadedFile = await fileStorage.saveFile(req.file, 'payment-receipts');
-          paymentReceiptUrlFinal = uploadedFile.url;
-        } catch (error) {
-          console.error('File upload error:', error);
-          return res.status(400).json({ message: "Failed to upload file" });
-        }
-      }
+
 
       // Extract common fields for registration (if they exist in custom fields)
       const tempRegistrationData = {
@@ -1067,9 +1051,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         guestAuxiliaryBody: getAuxiliaryBody(),
         guestCircuit: formData.circuit || formData.Circuit || null,
         guestPost: formData.post || formData.Post || null,
-        paymentReceiptUrl: paymentReceiptUrlFinal,
+        paymentReceiptUrl: null,
         paymentAmount: formData.paymentAmount || null,
-        paymentStatus: paymentReceiptUrlFinal ? "pending" : undefined,
+        paymentStatus: undefined,
         status: "registered"
       };
 

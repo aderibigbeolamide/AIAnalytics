@@ -54,7 +54,9 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 
 export function generateRegistrationCardHTML(registration: any, event: any, qrImageBase64: string): string {
   const memberName = registration.guestName || 
-    (registration.member ? `${registration.member.firstName} ${registration.member.lastName}` : 'Guest');
+    (registration.member && registration.member.firstName && registration.member.lastName 
+      ? `${registration.member.firstName} ${registration.member.lastName}` 
+      : registration.member?.firstName || registration.member?.lastName || 'Guest');
   
   const auxiliaryBody = registration.guestAuxiliaryBody || 
     (registration.member ? registration.member.auxiliaryBody : 'Guest');

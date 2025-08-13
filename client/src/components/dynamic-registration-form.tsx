@@ -200,13 +200,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
       // Add all form fields
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          if (key === 'paymentReceipt' && value instanceof FileList) {
-            if (value.length > 0) {
-              formData.append(key, value[0]);
-            }
-          } else {
-            formData.append(key, String(value));
-          }
+          formData.append(key, String(value));
         }
       });
       
@@ -591,15 +585,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                                 </div>
                               </div>
                             )}
-                            {event.paymentSettings.allowManualReceipt && (
-                              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                                <RadioGroupItem value="manual_receipt" id="manual_receipt" />
-                                <div className="flex-1">
-                                  <Label htmlFor="manual_receipt" className="font-medium">Upload Payment Receipt</Label>
-                                  <p className="text-xs text-gray-600">Upload proof of payment made offline</p>
-                                </div>
-                              </div>
-                            )}
+
                           </RadioGroup>
                         </FormControl>
                         <FormMessage />
@@ -607,30 +593,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                     )}
                   />
 
-                  {/* Payment Receipt Upload (when manual receipt is selected) */}
-                  {form.watch("paymentMethod") === "manual_receipt" && (
-                    <FormField
-                      control={form.control}
-                      name="paymentReceipt"
-                      render={({ field: { onChange, ...field } }) => (
-                        <FormItem>
-                          <FormLabel>Payment Receipt *</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="file"
-                              accept="image/*,application/pdf"
-                              onChange={(e) => onChange(e.target.files)}
-                              {...field}
-                            />
-                          </FormControl>
-                          <p className="text-xs text-gray-500">
-                            Upload an image or PDF of your payment receipt
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+
                 </div>
               )}
 
