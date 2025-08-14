@@ -87,6 +87,10 @@ app.use((req, res, next) => {
   const { registerAnalyticsRoutes } = await import("./mongo-analytics-routes.js");
   registerAnalyticsRoutes(app);
   
+  // Register MongoDB routes (includes ticket lookup)
+  const { registerMongoRoutes } = await import("./mongo-routes.js");
+  registerMongoRoutes(app);
+  
   // Create HTTP server directly since legacy routes disabled
   const server = createServer(app);
   
