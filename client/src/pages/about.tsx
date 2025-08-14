@@ -302,31 +302,46 @@ export function AboutPage() {
             <div className="lg:pl-8">
               <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm">
                 <CardContent className="p-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">Technology Stack</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="space-y-2">
-                      <div className="font-semibold text-gray-800">Frontend</div>
-                      <div className="text-gray-600">React + TypeScript</div>
-                      <div className="text-gray-600">Tailwind CSS</div>
-                      <div className="text-gray-600">Radix UI</div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">Platform Benefits</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                        <CheckCircle className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Reduce Event Check-in Time</h4>
+                        <p className="text-gray-600">Cut registration time by 80% with instant QR code validation</p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="font-semibold text-gray-800">Backend</div>
-                      <div className="text-gray-600">Node.js + Express</div>
-                      <div className="text-gray-600">MongoDB Atlas</div>
-                      <div className="text-gray-600">WebSocket</div>
+                    
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                        <CheckCircle className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Eliminate Event Fraud</h4>
+                        <p className="text-gray-600">Multi-layered security prevents unauthorized access and duplicate entries</p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="font-semibold text-gray-800">Security</div>
-                      <div className="text-gray-600">JWT Authentication</div>
-                      <div className="text-gray-600">bcrypt Encryption</div>
-                      <div className="text-gray-600">Role-based Access</div>
+                    
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                        <CheckCircle className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Real-time Insights</h4>
+                        <p className="text-gray-600">Live attendance data and analytics for immediate decision making</p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="font-semibold text-gray-800">Integrations</div>
-                      <div className="text-gray-600">Paystack API</div>
-                      <div className="text-gray-600">Cloudinary</div>
-                      <div className="text-gray-600">Email Services</div>
+                    
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                        <CheckCircle className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Cost Effective Solution</h4>
+                        <p className="text-gray-600">Reduce staffing costs and eliminate paper-based registration systems</p>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
