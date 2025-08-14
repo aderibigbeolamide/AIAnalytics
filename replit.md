@@ -36,6 +36,8 @@ Business focus: Strong emphasis on investor attraction through compelling pitch 
 - **API Client**: Centralized API client with consistent error handling and authentication
 - **State Management**: Zustand stores with persistence and session management
 - **Type Safety**: Shared TypeScript interfaces between frontend and backend
+- **Public Pages**: Added comprehensive About page and Documentation system with user guidance
+- **Enhanced Landing Page**: Updated with clear mission, vision, and objectives prominently displayed
 
 ### Core Architectural Decisions
 - **Dual-Admin Architecture**: Features a super admin for system oversight and organization-specific admins for tenant management.
@@ -53,6 +55,8 @@ Business focus: Strong emphasis on investor attraction through compelling pitch 
 - **Payment System**: Integrates with Paystack to support flexible payment rules, direct organizer payments via subaccounts, and platform revenue sharing.
 - **Bank Account Management**: Facilitates secure setup and verification of Nigerian bank accounts for organizations.
 - **Platform Statistics & Analytics**: Implemented comprehensive super admin dashboard with platform settings, financial metrics, growth analytics, and KPI tracking with chart visualizations. Includes organization-specific analytics.
+- **Comprehensive Documentation System**: Multi-tabbed documentation covering Getting Started, Features, Pricing, API, Support, and FAQ sections to guide users through the platform.
+- **About Page**: Professional company overview showcasing mission, vision, goals, achievements, technology stack, and value propositions with investor-focused content.
 
 ## External Dependencies
 - **Database**:

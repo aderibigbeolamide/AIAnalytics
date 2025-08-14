@@ -293,11 +293,15 @@ export function LandingPage() {
               </div>
             </Link>
             <div className="hidden md:flex items-center space-x-8">
+              <Link href="/about">
+                <span className="text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">About</span>
+              </Link>
+              <Link href="/documentation">
+                <span className="text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">Documentation</span>
+              </Link>
               <a href="#events" className="text-gray-600 hover:text-gray-900 transition-colors">Events</a>
               <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
-              <a href="#benefits" className="text-gray-600 hover:text-gray-900 transition-colors">Benefits</a>
               <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
-              <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</a>
               {isAuthenticated ? (
                 <Link href="/dashboard">
                   <Button size="sm">Dashboard</Button>
@@ -326,6 +330,22 @@ export function LandingPage() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-sm">
             <div className="px-4 py-3 space-y-3">
+              <Link href="/about">
+                <span 
+                  className="block text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  About
+                </span>
+              </Link>
+              <Link href="/documentation">
+                <span 
+                  className="block text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Documentation
+                </span>
+              </Link>
               <a 
                 href="#events" 
                 className="block text-gray-600 hover:text-gray-900 transition-colors"
@@ -341,25 +361,11 @@ export function LandingPage() {
                 Features
               </a>
               <a 
-                href="#benefits" 
-                className="block text-gray-600 hover:text-gray-900 transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Benefits
-              </a>
-              <a 
                 href="#pricing" 
                 className="block text-gray-600 hover:text-gray-900 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Pricing
-              </a>
-              <a 
-                href="#contact" 
-                className="block text-gray-600 hover:text-gray-900 transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Contact
               </a>
               <div className="pt-2 border-t border-gray-200">
                 {isAuthenticated ? (
@@ -393,10 +399,37 @@ export function LandingPage() {
             Stop Event Fraud.
             <span className="text-gradient block mt-2">Start Smart Validation.</span>
           </h1>
-          <p className="hero-subtitle text-xl md:text-2xl text-medium-contrast mb-12 max-w-4xl mx-auto leading-relaxed">
+          <p className="hero-subtitle text-xl md:text-2xl text-medium-contrast mb-8 max-w-4xl mx-auto leading-relaxed">
             EventValidate eliminates unauthorized event access with AI-powered QR validation, 
             real-time attendance tracking, and comprehensive member verification for organizations.
           </p>
+
+          {/* Mission & Objectives */}
+          <div className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl p-6 max-w-5xl mx-auto border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              <div className="space-y-2">
+                <div className="mx-auto w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                  <Target className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg">Our Mission</h3>
+                <p className="text-sm text-gray-600">Empower African organizations with intelligent, secure event management solutions</p>
+              </div>
+              <div className="space-y-2">
+                <div className="mx-auto w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <Globe className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg">Our Vision</h3>
+                <p className="text-sm text-gray-600">Become Africa's leading event technology platform with global standards</p>
+              </div>
+              <div className="space-y-2">
+                <div className="mx-auto w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center">
+                  <Zap className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg">Our Goal</h3>
+                <p className="text-sm text-gray-600">Serve 10,000+ organizations with 99.9% platform reliability by 2027</p>
+              </div>
+            </div>
+          </div>
           
           {/* Clear Value Proposition */}
           <div className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl p-8 max-w-4xl mx-auto border border-gray-200">
