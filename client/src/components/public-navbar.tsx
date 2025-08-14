@@ -25,9 +25,51 @@ export function PublicNavbar() {
             <Link href="/documentation">
               <span className="text-sm lg:text-base text-gray-600 hover:text-gray-900 transition-colors cursor-pointer whitespace-nowrap">Documentation</span>
             </Link>
-            <a href="/#events" className="text-sm lg:text-base text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap">Events</a>
-            <a href="/#features" className="text-sm lg:text-base text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap">Features</a>
-            <a href="/#pricing" className="text-sm lg:text-base text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap">Pricing</a>
+            <Link href="/">
+              <span 
+                className="text-sm lg:text-base text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap cursor-pointer"
+                onClick={() => {
+                  setTimeout(() => {
+                    const eventsSection = document.getElementById('events');
+                    if (eventsSection) {
+                      eventsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }, 100);
+                }}
+              >
+                Events
+              </span>
+            </Link>
+            <Link href="/">
+              <span 
+                className="text-sm lg:text-base text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap cursor-pointer"
+                onClick={() => {
+                  setTimeout(() => {
+                    const featuresSection = document.getElementById('features');
+                    if (featuresSection) {
+                      featuresSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }, 100);
+                }}
+              >
+                Features
+              </span>
+            </Link>
+            <Link href="/">
+              <span 
+                className="text-sm lg:text-base text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap cursor-pointer"
+                onClick={() => {
+                  setTimeout(() => {
+                    const pricingSection = document.getElementById('pricing');
+                    if (pricingSection) {
+                      pricingSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }, 100);
+                }}
+              >
+                Pricing
+              </span>
+            </Link>
             {isAuthenticated ? (
               <Link href="/dashboard">
                 <Button size="sm" className="whitespace-nowrap">Dashboard</Button>
@@ -72,27 +114,54 @@ export function PublicNavbar() {
                 Documentation
               </span>
             </Link>
-            <a 
-              href="/#events" 
-              className="block text-gray-600 hover:text-gray-900 transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Events
-            </a>
-            <a 
-              href="/#features" 
-              className="block text-gray-600 hover:text-gray-900 transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Features
-            </a>
-            <a 
-              href="/#pricing" 
-              className="block text-gray-600 hover:text-gray-900 transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Pricing
-            </a>
+            <Link href="/">
+              <span 
+                className="block text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setTimeout(() => {
+                    const eventsSection = document.getElementById('events');
+                    if (eventsSection) {
+                      eventsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }, 100);
+                }}
+              >
+                Events
+              </span>
+            </Link>
+            <Link href="/">
+              <span 
+                className="block text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setTimeout(() => {
+                    const featuresSection = document.getElementById('features');
+                    if (featuresSection) {
+                      featuresSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }, 100);
+                }}
+              >
+                Features
+              </span>
+            </Link>
+            <Link href="/">
+              <span 
+                className="block text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setTimeout(() => {
+                    const pricingSection = document.getElementById('pricing');
+                    if (pricingSection) {
+                      pricingSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }, 100);
+                }}
+              >
+                Pricing
+              </span>
+            </Link>
             <div className="pt-2 border-t border-gray-200">
               {isAuthenticated ? (
                 <Link href="/dashboard">
