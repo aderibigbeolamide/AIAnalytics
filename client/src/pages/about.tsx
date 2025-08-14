@@ -76,7 +76,7 @@ export function AboutPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <PublicNavbar />
       {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
+      <section className="relative py-12 sm:py-16 md:py-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -84,13 +84,13 @@ export function AboutPage() {
               <Heart className="h-4 w-4 mr-2" />
               About EventValidate
             </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
               Transforming Event
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent block mt-2">
                 Management in Africa
               </span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8">
+            <p className="text-lg sm:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-8 px-2">
               We're on a mission to revolutionize how organizations across Africa manage their events, 
               validate members, and create seamless experiences through cutting-edge AI technology and 
               user-centric design.
@@ -113,9 +113,9 @@ export function AboutPage() {
       </section>
 
       {/* Mission, Vision & Goals */}
-      <section className="py-20 bg-white">
+      <section className="py-12 sm:py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Mission */}
             <Card className="text-center border-0 shadow-xl bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-2xl transition-all duration-300">
               <CardHeader className="pb-4">

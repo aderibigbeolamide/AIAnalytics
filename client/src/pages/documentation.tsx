@@ -270,17 +270,17 @@ export function DocumentationPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <PublicNavbar />
       {/* Header */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">
+      <section className="py-12 sm:py-16 bg-gradient-to-r from-blue-600 to-purple-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-white">
             <Badge className="mb-4 bg-white/20 text-white border-white/30">
               <BookOpen className="h-4 w-4 mr-2" />
               Documentation
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
               Complete Platform Guide
             </h1>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed px-2">
               Everything you need to know about using EventValidate to manage your events, 
               validate members, and grow your organization.
             </p>
@@ -288,32 +288,33 @@ export function DocumentationPage() {
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-8">
           {/* Navigation Tabs */}
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-6 h-auto p-1 bg-white shadow-lg rounded-xl">
-            <TabsTrigger value="getting-started" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-3 px-4 text-sm font-medium">
-              <Play className="h-4 w-4 mr-2" />
-              Getting Started
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 h-auto p-1 bg-white shadow-lg rounded-xl">
+            <TabsTrigger value="getting-started" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium">
+              <Play className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Getting Started</span>
+              <span className="sm:hidden">Start</span>
             </TabsTrigger>
-            <TabsTrigger value="features" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-3 px-4 text-sm font-medium">
-              <Zap className="h-4 w-4 mr-2" />
+            <TabsTrigger value="features" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium">
+              <Zap className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Features
             </TabsTrigger>
-            <TabsTrigger value="pricing" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-3 px-4 text-sm font-medium">
-              <CreditCard className="h-4 w-4 mr-2" />
+            <TabsTrigger value="pricing" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium">
+              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Pricing
             </TabsTrigger>
-            <TabsTrigger value="api" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-3 px-4 text-sm font-medium">
-              <Database className="h-4 w-4 mr-2" />
+            <TabsTrigger value="api" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium">
+              <Database className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               API
             </TabsTrigger>
-            <TabsTrigger value="support" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-3 px-4 text-sm font-medium">
-              <MessageSquare className="h-4 w-4 mr-2" />
+            <TabsTrigger value="support" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium">
+              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Support
             </TabsTrigger>
-            <TabsTrigger value="faq" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-3 px-4 text-sm font-medium">
-              <HelpCircle className="h-4 w-4 mr-2" />
+            <TabsTrigger value="faq" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-lg py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium">
+              <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               FAQ
             </TabsTrigger>
           </TabsList>
