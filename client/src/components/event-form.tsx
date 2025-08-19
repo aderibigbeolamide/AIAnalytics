@@ -28,6 +28,7 @@ const eventSchema = z.object({
   registrationEndDate: z.string().min(1, "Registration end date is required"),
   eligibleAuxiliaryBodies: z.array(z.string()).min(1, "At least one auxiliary body must be selected"),
   allowGuests: z.boolean().default(false),
+  allowInvitees: z.boolean().default(false),
   requiresPayment: z.boolean().default(false),
   paymentAmount: z.string().optional(),
   eventImage: z.string().optional(),
@@ -96,6 +97,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
       registrationEndDate: event?.registrationEndDate ? new Date(event.registrationEndDate).toISOString().slice(0, 16) : "",
       eligibleAuxiliaryBodies: event?.eligibleAuxiliaryBodies || [],
       allowGuests: event?.allowGuests || false,
+      allowInvitees: event?.allowInvitees || false,
       requiresPayment: event?.requiresPayment || false,
       paymentAmount: event?.paymentAmount || "",
       eventImage: event?.eventImage || "",
@@ -131,6 +133,8 @@ export function EventForm({ onClose, event }: EventFormProps) {
         endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
         registrationStartDate: new Date(data.registrationStartDate).toISOString(),
         registrationEndDate: new Date(data.registrationEndDate).toISOString(),
+        // Convert paymentAmount from string to number if it exists
+        paymentAmount: data.paymentAmount && data.paymentAmount.trim() ? parseFloat(data.paymentAmount) : undefined,
       };
 
       const response = await fetch("/api/events", {
@@ -681,6 +685,26 @@ export function EventForm({ onClose, event }: EventFormProps) {
               <div className="space-y-1 leading-none">
                 <FormLabel>
                   Allow Guests
+                </FormLabel>
+              </div>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="allowInvitees"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>
+                  Allow Invitees
                 </FormLabel>
               </div>
             </FormItem>
