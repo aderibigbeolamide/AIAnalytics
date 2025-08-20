@@ -90,8 +90,8 @@ export default function Events() {
   };
 
   const filteredEvents = events.filter((event: any) => {
-    const matchesSearch = event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (event.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || getEventStatus(event) === statusFilter;
     
