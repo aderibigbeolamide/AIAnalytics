@@ -8,6 +8,7 @@ import { registerRegistrationRoutes } from "./routes/registration-routes";
 import { registerPaymentRoutes } from "./routes/payment-routes";
 import { registerOrganizationRoutes } from "./routes/organization-routes";
 import { registerEmailRoutes } from "./routes/email-routes";
+import { registerFaceRecognitionRoutes } from "./routes/face-recognition-routes";
 
 // Legacy routes (to be migrated)
 import { registerMongoSuperAdminRoutes } from "./mongo-super-admin-routes";
@@ -72,6 +73,7 @@ app.use((req, res, next) => {
   registerPaymentRoutes(app);
   registerOrganizationRoutes(app);
   registerEmailRoutes(app);
+  registerFaceRecognitionRoutes(app);
   
   // Register legacy routes (to be migrated)
   registerMongoSuperAdminRoutes(app);

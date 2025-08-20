@@ -46,6 +46,7 @@ import EventRemindersPage from "@/pages/event-reminders";
 import { FacialRecognitionDemo } from "@/pages/FacialRecognitionDemo";
 import { AboutPage } from "@/pages/about";
 import { DocumentationPage } from "@/pages/documentation";
+import FaceRecognitionTestPage from "@/pages/face-recognition-test";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage, initializeSessionManagement } = useAuthStore();
@@ -111,6 +112,7 @@ function Router() {
       
       {/* Demo routes - accessible to everyone */}
       <Route path="/facial-recognition-demo" component={FacialRecognitionDemo} />
+      <Route path="/face-recognition-test" component={FaceRecognitionTestPage} />
       
       {/* Protected routes - only accessible to authenticated users */}
       <Route path="/dashboard">
