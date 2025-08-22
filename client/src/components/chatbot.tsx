@@ -573,6 +573,7 @@ export default function ChatbotComponent() {
 
         // Handle support requests specially
         if (data.supportRequest) {
+          console.log("Support request detected, showing email input");
           setAdminOnlineStatus(data.adminOnline || false);
           setShowEmailInput(true);
           
@@ -1008,10 +1009,10 @@ export default function ChatbotComponent() {
             </div>
           )}
 
-          {/* Email Input */}
+          {/* Email Input - Debug: {showEmailInput ? 'VISIBLE' : 'HIDDEN'} */}
           {showEmailInput && (
-            <div className="p-4 border-t bg-gray-50">
-              <div className="text-sm font-medium mb-2">Your Email (for follow-up)</div>
+            <div className="p-4 border-t bg-yellow-100 border-yellow-300">
+              <div className="text-sm font-medium mb-2 text-gray-800">📧 Your Email (for follow-up support)</div>
               <div className="flex gap-2">
                 <Input
                   type="email"
@@ -1024,10 +1025,12 @@ export default function ChatbotComponent() {
                   onClick={escalateToAdmin}
                   disabled={isLoading || !userEmail}
                   size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
                 >
-                  Connect
+                  {isLoading ? "Connecting..." : "Connect"}
                 </Button>
               </div>
+              <div className="text-xs text-gray-600 mt-1">We'll use this to follow up on your support request</div>
             </div>
           )}
 
