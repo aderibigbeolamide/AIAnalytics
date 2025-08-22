@@ -514,7 +514,23 @@ export function setupChatbotRoutes(app: Express) {
         // Force reload from database to ensure sync
         const updatedSession = await ChatSessionModel.findOne({ sessionId });
         if (updatedSession) {
-          chatSessions.set(sessionId, updatedSession);
+          const sessionData = {
+            id: updatedSession.sessionId,
+            userEmail: updatedSession.userEmail || '',
+            isEscalated: updatedSession.isEscalated,
+            adminId: updatedSession.adminId || undefined,
+            status: updatedSession.status as 'active' | 'resolved' | 'pending_admin',
+            messages: updatedSession.messages.map(msg => ({
+              id: msg.id || '',
+              text: msg.text || '',
+              sender: msg.sender as 'bot' | 'user' | 'admin',
+              timestamp: msg.timestamp || new Date(),
+              type: (msg.type as 'text' | 'quick_reply' | 'escalation') || 'text'
+            })),
+            createdAt: updatedSession.createdAt,
+            lastActivity: updatedSession.lastActivity
+          };
+          chatSessions.set(sessionId, sessionData);
           console.log(`🔄 Session ${sessionId} reloaded from database for sync`);
         }
       } catch (dbError) {
@@ -574,33 +590,58 @@ export function setupChatbotRoutes(app: Express) {
   });
 }
 
-// Fallback response function
+// Enhanced fallback response function
 function generateFallbackResponse(message: string): string {
   const lowerMessage = message.toLowerCase();
   
-  if (lowerMessage.includes('register') && lowerMessage.includes('organization')) {
+  // Check for support requests first
+  if (lowerMessage.includes('support') || lowerMessage.includes('customer service') || 
+      lowerMessage.includes('help me') || lowerMessage.includes('contact') ||
+      lowerMessage.includes('speak to someone') || lowerMessage.includes('talk to admin') ||
+      lowerMessage.includes('technical issue') || lowerMessage.includes('problem')) {
+    return "I'll be happy to connect you with our customer support team! They can help with:\n\n• Account and login issues\n• Technical problems\n• Payment questions\n• Organization approval status\n• Specific troubleshooting\n\nTo get personalized help, would you like me to escalate this to a live support agent?";
+  }
+  
+  // Organization-related questions
+  if (lowerMessage.includes('register') && (lowerMessage.includes('organization') || lowerMessage.includes('company') || lowerMessage.includes('business'))) {
     return KNOWLEDGE_BASE.organization_register;
   }
   
-  if (lowerMessage.includes('register') || lowerMessage.includes('event')) {
+  if (lowerMessage.includes('create event') || lowerMessage.includes('make event') || lowerMessage.includes('host event')) {
+    return "Creating events on EventValidate:\n\n1. First register your organization and get approved\n2. Login to your organization dashboard\n3. Click 'Events' → 'Create Event'\n4. Choose event type:\n   • Registration Event (for members with validation)\n   • Ticket Event (for public ticket sales)\n5. Fill in event details and publish\n\n🎯 Your event will appear on public listings immediately!\n\nNeed help with event configuration or registration?";
+  }
+  
+  // User registration and participation
+  if (lowerMessage.includes('register for') || lowerMessage.includes('join event') || lowerMessage.includes('attend event')) {
     return KNOWLEDGE_BASE.user_register;
   }
   
-  if (lowerMessage.includes('ticket') || lowerMessage.includes('buy')) {
+  if (lowerMessage.includes('ticket') || lowerMessage.includes('buy') || lowerMessage.includes('purchase')) {
     return KNOWLEDGE_BASE.buy_ticket;
   }
   
-  if (lowerMessage.includes('validate') || lowerMessage.includes('validation')) {
+  if (lowerMessage.includes('validate') || lowerMessage.includes('validation') || lowerMessage.includes('qr code') || lowerMessage.includes('entry')) {
     return KNOWLEDGE_BASE.validate_event;
   }
   
-  if (lowerMessage.includes('feature') || lowerMessage.includes('explore')) {
+  // Features and platform info
+  if (lowerMessage.includes('feature') || lowerMessage.includes('explore') || lowerMessage.includes('what can') || lowerMessage.includes('capabilities')) {
     return KNOWLEDGE_BASE.explore_features;
   }
   
-  if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('help')) {
-    return "Hello! I'm here to help you with EventValidate. I can assist you with:\n\n🏢 Organization registration\n🎫 Event registration\n🎟️ Ticket purchasing\n✅ Event validation\n🔍 Platform features\n📞 Customer support\n\nWhat would you like to know more about?";
+  if (lowerMessage.includes('payment') || lowerMessage.includes('cost') || lowerMessage.includes('price') || lowerMessage.includes('fee')) {
+    return "EventValidate payment system:\n\n💳 **Payment Methods:**\n• Secure online payments via Paystack\n• Manual verification at events\n• Organization bank accounts for direct routing\n\n💰 **Pricing:**\n• Platform fee: 2% of successful transactions\n• Organizations keep 98% of payments\n• No hidden charges or monthly fees\n\n🔒 **Security:**\n• Bank-level encryption (256-bit SSL)\n• PCI compliant processing\n• No card details stored on our servers\n\nQuestions about payments for a specific event?";
   }
   
-  return "I'd be happy to help! Here are some things I can assist you with:\n\n• Registering your organization\n• Joining and registering for events\n• Buying tickets\n• Understanding validation process\n• Exploring platform features\n\nCould you please be more specific about what you need help with?";
+  if (lowerMessage.includes('how') && (lowerMessage.includes('work') || lowerMessage.includes('use'))) {
+    return "EventValidate is an AI-powered event management platform:\n\n🏢 **For Organizations:**\n• Register and create events\n• Manage member databases\n• QR code validation systems\n• Payment processing integration\n• Real-time analytics\n\n👥 **For Users:**\n• Browse and join events\n• Secure registration process\n• Digital tickets with QR codes\n• Multiple validation methods\n\n🤖 **AI Features:**\n• Smart event recommendations\n• Seat availability heatmaps\n• Automated validation\n\nWhat specific aspect would you like to learn about?";
+  }
+  
+  // Greeting responses
+  if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey') || lowerMessage.includes('good morning') || lowerMessage.includes('good afternoon')) {
+    return "Hello! Welcome to EventValidate! 👋\n\nI'm here to help you with our event management platform. I can assist you with:\n\n🏢 Organization registration and setup\n🎫 Event creation and management\n👥 User registration for events\n🎟️ Ticket purchasing and validation\n💳 Payment and billing questions\n🔍 Platform features and capabilities\n\nWhat would you like to know more about?";
+  }
+  
+  // Default response for unclear questions
+  return "I'm here to help with EventValidate! Our platform offers:\n\n✅ **Event Management:** Create and manage events easily\n✅ **Member Validation:** QR codes, face recognition, CSV validation\n✅ **Payment Processing:** Secure payments via Paystack\n✅ **Ticket Sales:** Digital tickets with QR validation\n✅ **Analytics:** Real-time event insights\n\nCould you be more specific about what you need help with? For example:\n• \"How do I register my organization?\"\n• \"How do I buy tickets for an event?\"\n• \"How does validation work?\"\n• \"I need to speak to customer support\"";
 }

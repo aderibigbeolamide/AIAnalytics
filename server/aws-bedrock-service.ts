@@ -35,10 +35,8 @@ export class AWSBedrockService {
     const client = this.getClient();
     
     if (!client) {
-      return {
-        response: "I apologize, but AI chat functionality is currently unavailable. Please contact our support team for assistance with your request.",
-        suggestedActions: ["Contact Support", "Visit Help Center"]
-      };
+      // Instead of returning unavailable message, throw error to let routes handle fallback
+      throw new Error("AWS Bedrock not configured - falling back to knowledge base");
     }
 
     try {
