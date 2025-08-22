@@ -831,7 +831,7 @@ export default function ChatbotComponent() {
         <div className="flex items-center gap-3 sm:gap-2">
           <Bot className="h-6 w-6 sm:h-5 sm:w-5" />
           <div>
-            <div className="font-semibold text-base sm:text-sm">EventValidate Support</div>
+            <div className="font-semibold text-base sm:text-sm">Valie</div>
             {isEscalated && (
               <div className="text-sm sm:text-xs flex items-center gap-1">
                 <div className={cn(
