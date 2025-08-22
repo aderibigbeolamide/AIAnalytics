@@ -163,7 +163,7 @@ export function setupChatbotRoutes(app: Express) {
         });
       }
 
-      // Use OpenAI for complex questions
+      // Use AWS Bedrock (Claude) for EventValidate-specific questions
       try {
         const context = {
           userType: 'general' as const,
@@ -174,15 +174,16 @@ export function setupChatbotRoutes(app: Express) {
           currentIntent: 'general' as const
         };
 
-        const aiResponse = await OpenAIService.generateChatbotResponse(message, context);
+        const { AWSBedrockService } = await import('./aws-bedrock-service');
+        const aiResponse = await AWSBedrockService.generateChatbotResponse(message, context);
         
         res.json({
           response: aiResponse.response,
           suggestedActions: aiResponse.suggestedActions,
-          source: "ai"
+          source: "aws_bedrock"
         });
       } catch (aiError) {
-        console.error("AI service error:", aiError);
+        console.error("AWS Bedrock service error:", aiError);
         
         // Fallback to simple keyword matching
         const response = generateFallbackResponse(message);
