@@ -46,18 +46,14 @@ export class AWSBedrockService {
       const prompt = this.buildClaudePrompt(systemPrompt, userMessage, context.conversationHistory);
 
       const command = new InvokeModelCommand({
-        modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+        modelId: "amazon.titan-text-express-v1",
         body: JSON.stringify({
-          anthropic_version: "bedrock-2023-05-31",
-          max_tokens: 500,
-          messages: [
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.3,
-          system: systemPrompt
+          inputText: prompt,
+          textGenerationConfig: {
+            maxTokenCount: 500,
+            temperature: 0.3,
+            topP: 0.9
+          }
         }),
         contentType: "application/json",
         accept: "application/json",
@@ -66,22 +62,15 @@ export class AWSBedrockService {
       const response = await client.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
       
-      const aiResponse = responseBody.content[0]?.text || "I'm here to help with EventValidate questions. Could you please rephrase your question?";
+      const aiResponse = responseBody.results[0]?.outputText || "I'm here to help with EventValidate questions. Could you please rephrase your question?";
       
-      // Parse JSON response if formatted correctly
-      try {
-        const jsonResponse = JSON.parse(aiResponse);
-        return {
-          response: jsonResponse.response || aiResponse,
-          suggestedActions: jsonResponse.suggestedActions || this.getSuggestedActions(context.currentIntent)
-        };
-      } catch {
-        // If not JSON, return as plain text
-        return {
-          response: aiResponse,
-          suggestedActions: this.getSuggestedActions(context.currentIntent)
-        };
-      }
+      // Clean up the response and extract relevant parts
+      const cleanResponse = aiResponse.replace(/^(Assistant:|Human:)?\s*/i, '').trim();
+      
+      return {
+        response: cleanResponse,
+        suggestedActions: this.getSuggestedActions(context.currentIntent)
+      };
 
     } catch (error) {
       console.error("AWS Bedrock error:", error);
@@ -218,8 +207,8 @@ User intent: ${context.currentIntent || 'general'}`;
 
   static getStatus(): any {
     return {
-      service: 'AWS Bedrock (Claude)',
-      model: 'anthropic.claude-3-haiku-20240307-v1:0',
+      service: 'AWS Bedrock (Titan)',
+      model: 'amazon.titan-text-express-v1',
       region: process.env.AWS_REGION || 'us-east-1',
       configured: !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY),
     };
