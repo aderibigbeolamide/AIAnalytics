@@ -187,10 +187,41 @@ export function setupChatbotRoutes(app: Express) {
         
         // Fallback to simple keyword matching
         const response = generateFallbackResponse(message);
-        res.json({
-          response,
-          source: "fallback"
-        });
+        
+        // Handle support requests specially
+        if (response === "SUPPORT_REQUEST") {
+          // Check admin status for support availability
+          const superAdmins = await mongoStorage.getUsersByRole('super_admin');
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          let isAdminOnline = false;
+          
+          for (const admin of superAdmins) {
+            const adminId = admin._id?.toString();
+            if (adminId) {
+              const lastSeen = adminLastSeen.get(adminId);
+              if (lastSeen && lastSeen > fiveMinutesAgo) {
+                isAdminOnline = true;
+                break;
+              }
+            }
+          }
+          
+          const supportMessage = isAdminOnline 
+            ? "🟢 **Live Support Available!** I'll connect you with our customer support team right now.\n\nThey can help with:\n• Account and login issues\n• Technical problems\n• Payment questions\n• Organization approval status\n• Specific troubleshooting\n\nPlease provide your email address so our support team can follow up with you:"
+            : "🟡 **Support Team Offline** - I'll forward your message to our customer support team.\n\nThey can help with:\n• Account and login issues\n• Technical problems\n• Payment questions\n• Organization approval status\n• Specific troubleshooting\n\n⏰ **Response Time:** Within 24 hours via email\n\nPlease provide your email address for follow-up:";
+          
+          res.json({
+            response: supportMessage,
+            supportRequest: true,
+            adminOnline: isAdminOnline,
+            source: "support_escalation"
+          });
+        } else {
+          res.json({
+            response,
+            source: "fallback"
+          });
+        }
       }
 
     } catch (error) {
@@ -599,7 +630,7 @@ function generateFallbackResponse(message: string): string {
       lowerMessage.includes('help me') || lowerMessage.includes('contact') ||
       lowerMessage.includes('speak to someone') || lowerMessage.includes('talk to admin') ||
       lowerMessage.includes('technical issue') || lowerMessage.includes('problem')) {
-    return "I'll be happy to connect you with our customer support team! They can help with:\n\n• Account and login issues\n• Technical problems\n• Payment questions\n• Organization approval status\n• Specific troubleshooting\n\nTo get personalized help, would you like me to escalate this to a live support agent?";
+    return "SUPPORT_REQUEST";
   }
   
   // Organization-related questions

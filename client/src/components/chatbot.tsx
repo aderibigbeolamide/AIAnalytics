@@ -571,6 +571,26 @@ export default function ChatbotComponent() {
 
         setMessages(prev => [...prev, botMessage]);
 
+        // Handle support requests specially
+        if (data.supportRequest) {
+          setAdminOnlineStatus(data.adminOnline || false);
+          setShowEmailInput(true);
+          
+          // Show additional support status message
+          setTimeout(() => {
+            const statusMessage: Message = {
+              id: `msg_${Date.now() + 3}`,
+              text: data.adminOnline 
+                ? "✅ A support agent is online and ready to help you right now!" 
+                : "📧 No agents are currently online, but your message will be forwarded and they'll respond within 24 hours.",
+              sender: 'bot',
+              timestamp: new Date(),
+              type: 'text'
+            };
+            setMessages(prev => [...prev, statusMessage]);
+          }, 1000);
+        }
+
         // Add suggested actions if provided
         if (data.suggestedActions && data.suggestedActions.length > 0) {
           const suggestionsMessage: Message = {
