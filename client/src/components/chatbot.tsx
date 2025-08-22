@@ -72,7 +72,7 @@ const KNOWLEDGE_BASE = {
 };
 
 const PREDEFINED_RESPONSES = {
-  greeting: "Hello! Welcome to EventValidate! 👋 I'm here to help you understand our platform. Choose what you need help with:\n\n🏢 Organization registration and management\n🎫 Event registration and validation\n🎟️ Buying tickets for events\n💳 Payment and billing questions\n🔍 Exploring platform features\n📞 Speaking with customer support",
+  greeting: "Hello! I'm **Valie**, your EventValidate AI assistant! 👋\n\nI'm here to help you understand our platform and make your event experience smooth. Choose what you need help with:\n\n🏢 Organization registration and management\n🎫 Event registration and validation\n🎟️ Buying tickets for events\n💳 Payment and billing questions\n🔍 Exploring platform features\n📞 Speaking with customer support",
   
   organization_help: "Great! EventValidate helps organizations manage events efficiently. Here's what you can do:\n\n✅ Register your organization\n✅ Create and manage events\n✅ Set up QR code validation\n✅ Track member registrations\n✅ Handle payments through Paystack\n✅ Generate attendance reports\n✅ Multi-tenant organization support\n\nWould you like me to guide you through:\n• Organization registration process\n• Creating your first event\n• Setting up payment processing\n• Managing members and registrations",
   
@@ -155,7 +155,7 @@ export default function ChatbotComponent() {
       if (messages.length === 0) {
         const welcomeMessage: Message = {
           id: `msg_${Date.now()}`,
-          text: "👋 Hi! How can we help?",
+          text: "👋 Hi! I'm Valie, your EventValidate AI assistant. How can I help you today?",
           sender: 'bot',
           timestamp: new Date(),
           type: 'text'
