@@ -15,6 +15,7 @@ import { registerMongoSuperAdminRoutes } from "./mongo-super-admin-routes";
 import { registerMongoDashboardRoutes } from "./mongo-dashboard-routes";
 import { setupNotificationRoutes } from "./notification-routes";
 import { setupChatbotRoutes } from "./chatbot-routes";
+import { setupChatbotTestRoutes } from "./chatbot-test-route";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
 import { connectToMongoDB } from "./mongodb";
@@ -80,6 +81,7 @@ app.use((req, res, next) => {
   registerMongoDashboardRoutes(app);
   setupNotificationRoutes(app);
   setupChatbotRoutes(app);
+  setupChatbotTestRoutes(app);
   
   // Register event reminder routes
   const { registerEventReminderRoutes } = await import("./event-reminder-routes.js");

@@ -72,7 +72,7 @@ const KNOWLEDGE_BASE = {
 };
 
 const PREDEFINED_RESPONSES = {
-  greeting: "Hello! Welcome to EventValidate! 👋 I'm here to help you understand our platform. Choose what you need help with:\n\n🏢 Organization registration and management\n🎫 Event registration and validation\n🎟️ Buying tickets for events\n💳 Payment and billing questions\n🔍 Exploring platform features\n📞 Speaking with customer support",
+  greeting: "Hello! I'm **Valie**, your EventValidate AI assistant! 👋\n\nI'm here to help you understand our platform and make your event experience smooth. Choose what you need help with:\n\n🏢 Organization registration and management\n🎫 Event registration and validation\n🎟️ Buying tickets for events\n💳 Payment and billing questions\n🔍 Exploring platform features\n📞 Speaking with customer support",
   
   organization_help: "Great! EventValidate helps organizations manage events efficiently. Here's what you can do:\n\n✅ Register your organization\n✅ Create and manage events\n✅ Set up QR code validation\n✅ Track member registrations\n✅ Handle payments through Paystack\n✅ Generate attendance reports\n✅ Multi-tenant organization support\n\nWould you like me to guide you through:\n• Organization registration process\n• Creating your first event\n• Setting up payment processing\n• Managing members and registrations",
   
@@ -155,7 +155,7 @@ export default function ChatbotComponent() {
       if (messages.length === 0) {
         const welcomeMessage: Message = {
           id: `msg_${Date.now()}`,
-          text: "👋 Hi! How can we help?",
+          text: "👋 Hi! I'm Valie, your EventValidate AI assistant. How can I help you today?",
           sender: 'bot',
           timestamp: new Date(),
           type: 'text'
@@ -571,6 +571,27 @@ export default function ChatbotComponent() {
 
         setMessages(prev => [...prev, botMessage]);
 
+        // Handle support requests specially
+        if (data.supportRequest) {
+          console.log("Support request detected, showing email input");
+          setAdminOnlineStatus(data.adminOnline || false);
+          setShowEmailInput(true);
+          
+          // Show additional support status message
+          setTimeout(() => {
+            const statusMessage: Message = {
+              id: `msg_${Date.now() + 3}`,
+              text: data.adminOnline 
+                ? "✅ A support agent is online and ready to help you right now!" 
+                : "📧 No agents are currently online, but your message will be forwarded and they'll respond within 24 hours.",
+              sender: 'bot',
+              timestamp: new Date(),
+              type: 'text'
+            };
+            setMessages(prev => [...prev, statusMessage]);
+          }, 1000);
+        }
+
         // Add suggested actions if provided
         if (data.suggestedActions && data.suggestedActions.length > 0) {
           const suggestionsMessage: Message = {
@@ -810,7 +831,7 @@ export default function ChatbotComponent() {
         <div className="flex items-center gap-3 sm:gap-2">
           <Bot className="h-6 w-6 sm:h-5 sm:w-5" />
           <div>
-            <div className="font-semibold text-base sm:text-sm">EventValidate Support</div>
+            <div className="font-semibold text-base sm:text-sm">Valie</div>
             {isEscalated && (
               <div className="text-sm sm:text-xs flex items-center gap-1">
                 <div className={cn(
@@ -988,10 +1009,10 @@ export default function ChatbotComponent() {
             </div>
           )}
 
-          {/* Email Input */}
+          {/* Email Input - Debug: {showEmailInput ? 'VISIBLE' : 'HIDDEN'} */}
           {showEmailInput && (
-            <div className="p-4 border-t bg-gray-50">
-              <div className="text-sm font-medium mb-2">Your Email (for follow-up)</div>
+            <div className="p-4 border-t bg-yellow-100 border-yellow-300">
+              <div className="text-sm font-medium mb-2 text-gray-800">📧 Your Email (for follow-up support)</div>
               <div className="flex gap-2">
                 <Input
                   type="email"
@@ -1004,10 +1025,12 @@ export default function ChatbotComponent() {
                   onClick={escalateToAdmin}
                   disabled={isLoading || !userEmail}
                   size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
                 >
-                  Connect
+                  {isLoading ? "Connecting..." : "Connect"}
                 </Button>
               </div>
+              <div className="text-xs text-gray-600 mt-1">We'll use this to follow up on your support request</div>
             </div>
           )}
 
