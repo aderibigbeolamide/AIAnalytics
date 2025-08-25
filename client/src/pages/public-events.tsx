@@ -1,33 +1,89 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Calendar, Users, Search, Filter, ArrowRight, ArrowLeft } from "lucide-react";
+import { MapPin, Calendar, Users, Search, Filter, ArrowRight, ArrowLeft, Brain, Sparkles, TrendingUp, Star } from "lucide-react";
 import { EventImage } from "@/lib/event-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface Event {
+  id: string;
+  name: string;
+  description?: string;
+  location: string;
+  startDate: string;
+  endDate?: string;
+  eventType: 'registration' | 'ticket';
+  maxAttendees?: number;
+  eventImage?: string;
+  aiInsights?: {
+    textAnalysis?: {
+      sentiment: {
+        sentiment: string;
+        positiveScore: number;
+        negativeScore: number;
+        neutralScore: number;
+      };
+      keyPhrases: Array<{ text: string; confidence: number }>;
+      entities: Array<{ text: string; type: string; confidence: number }>;
+    };
+    imageAnalysis?: {
+      labels: Array<{ name: string; confidence: number; categories: string[] }>;
+      moderation: {
+        isAppropriate: boolean;
+        flags: Array<{ name: string; confidence: number }>;
+      };
+    };
+    aiTags: string[];
+    vibeScore: number;
+    recommendationReason: string;
+  };
+}
 
 export default function PublicEventsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
+  const [aiEnabled, setAiEnabled] = useState(true);
 
-  const { data: events = [], isLoading } = useQuery({
-    queryKey: ["/api/events/public"],
+  const { data: events = [], isLoading } = useQuery<Event[]>({
+    queryKey: ["/api/events/public", { search: searchTerm, includeAI: aiEnabled ? 'true' : 'false' }],
     refetchInterval: 5000, // Refresh every 5 seconds to show new events
   });
 
-  // Filter events based on search and type
-  const filteredEvents = events.filter(event => {
-    const matchesSearch = !searchTerm || 
-      event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filter events based on type (search is handled by backend AI)
+  const filteredEvents = useMemo(() => {
+    return events.filter(event => {
+      const matchesType = eventTypeFilter === "all" || event.eventType === eventTypeFilter;
+      return matchesType;
+    });
+  }, [events, eventTypeFilter]);
+
+  // Get AI-powered recommendations
+  const recommendedEvents = useMemo(() => {
+    if (!aiEnabled) return [];
+    return filteredEvents
+      .filter(event => event.aiInsights?.vibeScore && event.aiInsights.vibeScore > 0.7)
+      .sort((a, b) => (b.aiInsights?.vibeScore || 0) - (a.aiInsights?.vibeScore || 0))
+      .slice(0, 3);
+  }, [filteredEvents, aiEnabled]);
+
+  // Render vibe score indicator
+  const renderVibeScore = (score: number) => {
+    const percentage = Math.round(score * 100);
+    const color = score > 0.8 ? "bg-green-500" : score > 0.6 ? "bg-yellow-500" : "bg-gray-500";
     
-    const matchesType = eventTypeFilter === "all" || event.eventType === eventTypeFilter;
-    
-    return matchesSearch && matchesType;
-  });
+    return (
+      <div className="flex items-center gap-1">
+        <Sparkles className="h-3 w-3 text-yellow-500" />
+        <div className="text-xs font-medium">{percentage}% Vibe</div>
+        <div className="w-8 bg-gray-200 rounded-full h-1.5">
+          <div className={`${color} h-1.5 rounded-full`} style={{ width: `${percentage}%` }}></div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
@@ -36,34 +92,102 @@ export default function PublicEventsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">All Events</h1>
-              <p className="text-gray-600 mt-2">Discover and register for upcoming events</p>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-gray-900">All Events</h1>
+                {aiEnabled && (
+                  <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0">
+                    <Brain className="h-3 w-3 mr-1" />
+                    AI-Powered
+                  </Badge>
+                )}
+              </div>
+              <p className="text-gray-600 mt-2">
+                {aiEnabled ? "AI-enhanced discovery with smart insights and recommendations" : "Discover and register for upcoming events"}
+              </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => window.location.href = '/landing'}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Home
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                variant={aiEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setAiEnabled(!aiEnabled)}
+                className="flex items-center gap-2"
+              >
+                <Brain className="h-4 w-4" />
+                {aiEnabled ? "AI On" : "AI Off"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.location.href = '/landing'}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Home
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* AI Recommendations (if AI enabled and we have recommendations) */}
+        {aiEnabled && recommendedEvents.length > 0 && (
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 mb-8 border border-purple-200">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="h-5 w-5 text-purple-600" />
+              <h2 className="text-lg font-semibold text-gray-900">AI Recommendations</h2>
+              <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                Top Picks for You
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {recommendedEvents.map((event) => (
+                <Card 
+                  key={`rec-${event.id}`} 
+                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-purple-200"
+                  onClick={() => window.location.href = `/event-view/${event.id}`}
+                >
+                  <div className="relative h-32 overflow-hidden">
+                    <EventImage 
+                      event={event} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
+                    />
+                    <div className="absolute top-2 right-2">
+                      <Badge className="bg-purple-500 text-white border-0">
+                        <Star className="h-3 w-3 mr-1" />
+                        Recommended
+                      </Badge>
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-sm mb-2 line-clamp-1">{event.name}</h3>
+                    {event.aiInsights?.vibeScore && renderVibeScore(event.aiInsights.vibeScore)}
+                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                      {event.aiInsights?.recommendationReason}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search events by name, description, or location..."
+                  placeholder={aiEnabled ? "Try natural language: 'music events this weekend'" : "Search events by name, description, or location..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
+                {aiEnabled && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Brain className="h-4 w-4 text-purple-500" />
+                  </div>
+                )}
               </div>
             </div>
             <div className="md:w-48">
@@ -146,6 +270,12 @@ export default function PublicEventsPage() {
                     <Badge className="bg-white/90 text-gray-800 border-0 block">
                       {event.eventType === 'ticket' ? 'Ticketed' : 'Registration'}
                     </Badge>
+                    {aiEnabled && event.aiInsights?.vibeScore && event.aiInsights.vibeScore > 0.8 && (
+                      <Badge className="bg-yellow-500/90 text-white border-0 block">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        High Vibe
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <CardContent className="p-6 group-hover:bg-gradient-to-br group-hover:from-blue-50 group-hover:to-purple-50 transition-all duration-300">

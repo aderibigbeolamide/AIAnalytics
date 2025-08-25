@@ -3,6 +3,7 @@ import { authenticateToken, type AuthenticatedRequest } from "./auth-routes";
 import { EventService } from "../services/event-service";
 import { RegistrationService } from "../services/registration-service";
 import { notificationService } from "../services/notification-service";
+import { AWSAIService } from "../services/aws-ai-service";
 import multer from "multer";
 import { z } from "zod";
 import mongoose from "mongoose";
@@ -52,10 +53,28 @@ const eventCreateSchema = z.object({
 export function registerEventRoutes(app: Express) {
   // ================ PUBLIC ENDPOINTS ================
   
-  // Get public events (no authentication required)
+  // Get public events with AI enhancements (no authentication required)
   app.get("/api/events/public", async (req: Request, res: Response) => {
     try {
-      const events = await EventService.getPublicEvents();
+      const { search, includeAI } = req.query;
+      let events = await EventService.getPublicEvents();
+      
+      // Apply AI-enhanced search if search query provided
+      if (search && typeof search === 'string') {
+        events = await AWSAIService.enhancedSearch(search, events);
+      }
+      
+      // Add AI insights if requested
+      if (includeAI === 'true') {
+        events = await Promise.all(events.map(async (event) => {
+          const aiInsights = await AWSAIService.generateEventInsights(event);
+          return {
+            ...event,
+            aiInsights
+          };
+        }));
+      }
+      
       res.json(events);
     } catch (error) {
       console.error("Error getting public events:", error);
@@ -63,13 +82,23 @@ export function registerEventRoutes(app: Express) {
     }
   });
 
-  // Get public event by ID (no authentication required)
+  // Get public event by ID with AI insights (no authentication required)
   app.get("/api/events/:id/public", async (req: Request, res: Response) => {
     try {
+      const { includeAI } = req.query;
       const event = await EventService.getPublicEventById(req.params.id);
       
       if (!event) {
         return res.status(404).json({ message: "Event not found or not available" });
+      }
+
+      // Add AI insights if requested
+      if (includeAI === 'true') {
+        const aiInsights = await AWSAIService.generateEventInsights(event);
+        return res.json({
+          ...event,
+          aiInsights
+        });
       }
 
       res.json(event);
