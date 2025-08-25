@@ -53,11 +53,125 @@ const eventCreateSchema = z.object({
 export function registerEventRoutes(app: Express) {
   // ================ PUBLIC ENDPOINTS ================
   
+  // Get personalized event recommendations (no authentication required)
+  app.get("/api/events/recommendations", async (req: Request, res: Response) => {
+    try {
+      const { userId, sessionId, limit = 5 } = req.query;
+      console.log(`Getting recommendations for user: ${userId}, session: ${sessionId}`);
+      
+      if (!userId && !sessionId) {
+        return res.status(400).json({ message: "Either userId or sessionId is required" });
+      }
+      
+      const { IntelligentRecommendationService } = await import('../services/intelligent-recommendation-service.js');
+      
+      if (userId) {
+        // Get personalized recommendations for logged-in user
+        const events = await EventService.getPublicEvents();
+        const recommendations = await IntelligentRecommendationService.generatePersonalizedRecommendations(
+          parseInt(userId as string), 
+          events
+        );
+        
+        res.json({
+          type: 'personalized',
+          userId: parseInt(userId as string),
+          recommendations: recommendations.slice(0, parseInt(limit as string))
+        });
+      } else {
+        // Get proactive recommendations for anonymous user
+        const proactiveRecs = await IntelligentRecommendationService.getProactiveRecommendations(
+          0, // Anonymous user
+          parseInt(limit as string)
+        );
+        
+        res.json({
+          type: 'proactive',
+          sessionId,
+          recommendations: proactiveRecs
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error getting recommendations:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Track user event interaction
+  app.post("/api/events/track-interaction", async (req: Request, res: Response) => {
+    try {
+      const { 
+        userId, 
+        sessionId, 
+        eventId, 
+        interactionType, 
+        timeSpent, 
+        source, 
+        searchQuery,
+        deviceType,
+        scrollDepth,
+        clickPosition 
+      } = req.body;
+      
+      console.log(`Tracking interaction: ${interactionType} for event ${eventId}`);
+      
+      const { IntelligentRecommendationService } = await import('../services/intelligent-recommendation-service.js');
+      
+      await IntelligentRecommendationService.trackEventInteraction({
+        userId,
+        sessionId,
+        eventId,
+        interactionType,
+        timeSpent,
+        source,
+        searchQuery,
+        deviceType,
+        scrollDepth,
+        clickPosition
+      });
+      
+      res.json({ success: true, message: "Interaction tracked successfully" });
+      
+    } catch (error) {
+      console.error("Error tracking interaction:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Submit recommendation feedback
+  app.post("/api/events/recommendation-feedback", async (req: Request, res: Response) => {
+    try {
+      const { userId, eventId, feedbackType, feedbackReason } = req.body;
+      
+      if (!userId || !eventId || !feedbackType) {
+        return res.status(400).json({ message: "userId, eventId, and feedbackType are required" });
+      }
+      
+      console.log(`Processing feedback: ${feedbackType} for event ${eventId} from user ${userId}`);
+      
+      const { IntelligentRecommendationService } = await import('../services/intelligent-recommendation-service.js');
+      
+      await IntelligentRecommendationService.processFeedback({
+        userId,
+        eventId,
+        feedbackType,
+        feedbackReason
+      });
+      
+      res.json({ success: true, message: "Feedback processed successfully" });
+      
+    } catch (error) {
+      console.error("Error processing feedback:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Get public events with AI enhancements (no authentication required)
   app.get("/api/events/public", async (req: Request, res: Response) => {
     try {
-      const { search, includeAI } = req.query;
-      console.log(`AI Events Search - Query: "${search}", AI: ${includeAI}`);
+      const { search, includeAI, userId, sessionId } = req.query;
+      console.log(`AI Events Search - Query: "${search}", AI: ${includeAI}, User: ${userId}`);
       
       // Add cache-busting headers
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -70,7 +184,12 @@ export function registerEventRoutes(app: Express) {
       // Apply AI-enhanced search if search query provided
       if (search && typeof search === 'string' && search.trim().length > 0) {
         console.log(`Applying AI search for: "${search.trim()}"`);
-        events = await AWSAIService.enhancedSearch(search.trim(), events);
+        events = await AWSAIService.enhancedSearch(
+          search.trim(), 
+          events, 
+          userId ? parseInt(userId as string) : undefined,
+          sessionId as string
+        );
         console.log(`After AI search: ${events.length} events found`);
       }
       

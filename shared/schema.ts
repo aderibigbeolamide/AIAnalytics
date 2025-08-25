@@ -333,6 +333,80 @@ export const eventRecommendations = pgTable("event_recommendations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// User Behavior Tracking Tables for AI-Powered Recommendations
+export const userSearchHistory = pgTable("user_search_history", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  sessionId: text("session_id"), // Track anonymous users
+  searchQuery: text("search_query").notNull(),
+  resultsCount: integer("results_count").default(0),
+  clickedEventId: integer("clicked_event_id").references(() => events.id),
+  searchContext: jsonb("search_context").$type<{
+    location?: string;
+    timeOfDay: string;
+    dayOfWeek: string;
+    userAgent?: string;
+    referrer?: string;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const userEventInteractions = pgTable("user_event_interactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  sessionId: text("session_id"), // Track anonymous users  
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  interactionType: text("interaction_type").notNull(), // view, click, share, bookmark, register
+  timeSpent: integer("time_spent"), // seconds spent viewing
+  source: text("source"), // search, recommendation, direct, browse
+  deviceType: text("device_type"), // mobile, desktop, tablet
+  interactionContext: jsonb("interaction_context").$type<{
+    fromSearch?: boolean;
+    searchQuery?: string;
+    recommendationScore?: number;
+    scrollDepth?: number;
+    clickPosition?: number;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const userBehaviorPatterns = pgTable("user_behavior_patterns", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  patterns: jsonb("patterns").$type<{
+    preferredEventTypes: Array<{ type: string; weight: number }>;
+    preferredLocations: Array<{ location: string; weight: number }>;
+    preferredTimeSlots: Array<{ timeSlot: string; weight: number }>;
+    searchKeywords: Array<{ keyword: string; frequency: number }>;
+    attendanceHistory: Array<{ eventType: string; attended: boolean; rating?: number }>;
+    engagementScore: number; // 0-100 overall engagement
+    personalityProfile: {
+      explorationVsExploitation: number; // 0-100, how likely to try new vs familiar
+      pricesensitivity: number; // 0-100
+      socialPreference: number; // 0-100, prefers group vs solo events
+      planningHorizon: number; // 0-100, books events how far in advance
+    };
+  }>(),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const userRecommendationFeedback = pgTable("user_recommendation_feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  recommendationId: integer("recommendation_id").references(() => eventRecommendations.id).notNull(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  feedbackType: text("feedback_type").notNull(), // like, dislike, not_interested, report, registered
+  feedbackReason: text("feedback_reason"), // too_expensive, wrong_location, not_my_interest, etc.
+  implicitFeedback: jsonb("implicit_feedback").$type<{
+    timeToAction?: number; // ms from recommendation shown to action
+    viewDuration?: number; // seconds spent viewing recommendation
+    clickedThrough?: boolean;
+    shareAction?: boolean;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // New Ticket System Tables
 export const tickets = pgTable("tickets", {
   id: serial("id").primaryKey(),
@@ -606,3 +680,37 @@ export const insertEventRecommendationSchema = createInsertSchema(eventRecommend
 
 export type InsertEventRecommendation = z.infer<typeof insertEventRecommendationSchema>;
 export type EventRecommendation = typeof eventRecommendations.$inferSelect;
+
+// User Behavior Tracking schemas and types
+export const insertUserSearchHistorySchema = createInsertSchema(userSearchHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUserSearchHistory = z.infer<typeof insertUserSearchHistorySchema>;
+export type UserSearchHistory = typeof userSearchHistory.$inferSelect;
+
+export const insertUserEventInteractionSchema = createInsertSchema(userEventInteractions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUserEventInteraction = z.infer<typeof insertUserEventInteractionSchema>;
+export type UserEventInteraction = typeof userEventInteractions.$inferSelect;
+
+export const insertUserBehaviorPatternSchema = createInsertSchema(userBehaviorPatterns).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+
+export type InsertUserBehaviorPattern = z.infer<typeof insertUserBehaviorPatternSchema>;
+export type UserBehaviorPattern = typeof userBehaviorPatterns.$inferSelect;
+
+export const insertUserRecommendationFeedbackSchema = createInsertSchema(userRecommendationFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUserRecommendationFeedback = z.infer<typeof insertUserRecommendationFeedbackSchema>;
+export type UserRecommendationFeedback = typeof userRecommendationFeedback.$inferSelect;

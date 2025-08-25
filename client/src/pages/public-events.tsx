@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar, Users, Search, Filter, ArrowRight, ArrowLeft, Brain, Sparkles, TrendingUp, Star } from "lucide-react";
 import { EventImage } from "@/lib/event-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SmartRecommendations } from "@/components/smart-recommendations";
+import { useAuthStore } from "@/stores/auth-store";
 
 interface Event {
   id: string;
@@ -46,11 +48,38 @@ export default function PublicEventsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
   const [aiEnabled, setAiEnabled] = useState(true);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const { user } = useAuthStore();
+
+  // Track interaction mutation
+  const trackInteractionMutation = useMutation({
+    mutationFn: async (data: {
+      eventId: string;
+      interactionType: 'view' | 'click' | 'search';
+      timeSpent?: number;
+      searchQuery?: string;
+    }) => {
+      await fetch('/api/events/track-interaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          sessionId,
+          eventId: parseInt(data.eventId),
+          interactionType: data.interactionType,
+          timeSpent: data.timeSpent,
+          source: data.searchQuery ? 'search' : 'browse',
+          searchQuery: data.searchQuery,
+          deviceType: window.innerWidth < 768 ? 'mobile' : 'desktop'
+        }),
+      });
+    },
+  });
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
-    queryKey: ["/api/events/public", { search: searchTerm, includeAI: aiEnabled ? 'true' : 'false' }],
+    queryKey: ["/api/events/public", { search: searchTerm, includeAI: aiEnabled ? 'true' : 'false', userId: user?.id, sessionId }],
     queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey as [string, { search: string; includeAI: string }];
+      const [url, params] = queryKey as [string, { search: string; includeAI: string; userId?: number; sessionId: string }];
       const searchParams = new URLSearchParams();
       
       if (params.search && params.search.trim()) {
@@ -58,6 +87,12 @@ export default function PublicEventsPage() {
       }
       if (params.includeAI) {
         searchParams.append('includeAI', params.includeAI);
+      }
+      if (params.userId) {
+        searchParams.append('userId', params.userId.toString());
+      }
+      if (params.sessionId) {
+        searchParams.append('sessionId', params.sessionId);
       }
       
       const fullUrl = searchParams.toString() ? `${url}?${searchParams.toString()}` : url;
@@ -72,6 +107,21 @@ export default function PublicEventsPage() {
     refetchInterval: 5000, // Refresh every 5 seconds to show new events
     staleTime: 0, // Always refetch when search changes
   });
+
+  // Track search behavior when search term changes
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const timeoutId = setTimeout(() => {
+        trackInteractionMutation.mutate({
+          eventId: '0', // Generic search tracking
+          interactionType: 'search',
+          searchQuery: searchTerm.trim()
+        });
+      }, 1000); // Debounce search tracking
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [searchTerm]);
 
   // Filter events based on type (search is handled by backend AI)
   const filteredEvents = useMemo(() => {
@@ -150,45 +200,18 @@ export default function PublicEventsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* AI Recommendations (if AI enabled and we have recommendations) */}
-        {aiEnabled && recommendedEvents.length > 0 && (
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 mb-8 border border-purple-200">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="h-5 w-5 text-purple-600" />
-              <h2 className="text-lg font-semibold text-gray-900">AI Recommendations</h2>
-              <Badge className="bg-purple-100 text-purple-800 border-purple-200">
-                Top Picks for You
-              </Badge>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {recommendedEvents.map((event) => (
-                <Card 
-                  key={`rec-${event.id}`} 
-                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-purple-200"
-                  onClick={() => window.location.href = `/event-view/${event.id}`}
-                >
-                  <div className="relative h-32 overflow-hidden">
-                    <EventImage 
-                      event={event} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
-                    />
-                    <div className="absolute top-2 right-2">
-                      <Badge className="bg-purple-500 text-white border-0">
-                        <Star className="h-3 w-3 mr-1" />
-                        Recommended
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-sm mb-2 line-clamp-1">{event.name}</h3>
-                    {event.aiInsights?.vibeScore && renderVibeScore(event.aiInsights.vibeScore)}
-                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">
-                      {event.aiInsights?.recommendationReason}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+        {/* Smart AI-Powered Recommendations */}
+        {aiEnabled && (
+          <div className="mb-8">
+            <SmartRecommendations 
+              onEventClick={(eventId) => {
+                trackInteractionMutation.mutate({
+                  eventId,
+                  interactionType: 'click'
+                });
+                window.location.href = `/event-view/${eventId}`;
+              }}
+            />
           </div>
         )}
 
@@ -261,6 +284,14 @@ export default function PublicEventsPage() {
                 key={event.id} 
                 className="group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border-0 shadow-lg bg-white overflow-hidden cursor-pointer transform hover:scale-[1.02]"
                 style={{ animationDelay: `${index * 100}ms` }}
+                onClick={() => {
+                  trackInteractionMutation.mutate({
+                    eventId: event.id,
+                    interactionType: 'click',
+                    searchQuery: searchTerm || undefined
+                  });
+                  window.location.href = `/event-view/${event.id}`;
+                }}
               >
                 <div className="relative h-48 overflow-hidden">
                   <EventImage 

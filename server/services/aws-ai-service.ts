@@ -233,9 +233,9 @@ export class AWSAIService {
   }
 
   /**
-   * Smart search using natural language understanding
+   * Smart search using natural language understanding with behavioral learning
    */
-  static async enhancedSearch(query: string, events: any[]) {
+  static async enhancedSearch(query: string, events: any[], userId?: number, sessionId?: string) {
     try {
       console.log(`Enhanced search starting with query: "${query}"`);
       console.log(`Searching through ${events.length} events`);
@@ -307,6 +307,21 @@ export class AWSAIService {
         .map(item => item.event);
         
       console.log(`Enhanced search returning ${results.length} results`);
+      
+      // Track search behavior for learning
+      try {
+        const { IntelligentRecommendationService } = await import('./intelligent-recommendation-service.js');
+        await IntelligentRecommendationService.trackSearch({
+          userId,
+          sessionId,
+          searchQuery: query,
+          resultsCount: results.length,
+          clickedEventId: results.length > 0 ? results[0].id : undefined
+        });
+      } catch (error) {
+        console.error('Error tracking search behavior:', error);
+      }
+      
       return results;
         
     } catch (error) {
