@@ -104,14 +104,29 @@ export class EventService {
    * Create a new event
    */
   static async createEvent(userId: string, eventData: any, file?: any) {
-    const event = await mongoStorage.createEvent({
+    let finalEventData = {
       ...eventData,
       createdBy: userId,
       qrCode: nanoid(8),
       status: 'upcoming',
       createdAt: new Date(),
       updatedAt: new Date()
-    });
+    };
+
+    // Handle file upload if provided
+    if (file) {
+      try {
+        const { fileStorage } = await import('../storage-handler');
+        const uploadedFile = await fileStorage.saveFile(file, 'event-images');
+        finalEventData.eventImage = uploadedFile.url;
+        console.log('DEBUG: File uploaded successfully:', uploadedFile.url);
+      } catch (error) {
+        console.error('Error uploading event image:', error);
+        // Continue without image if upload fails
+      }
+    }
+
+    const event = await mongoStorage.createEvent(finalEventData);
 
     return {
       id: event._id?.toString(),

@@ -129,11 +129,8 @@ export function registerEventRoutes(app: Express) {
 
       const eventData = eventCreateSchema.parse(req.body);
       
-      // Debug logging
-      console.log("Event creation - User object:", req.user);
-      console.log("User ID:", req.user!.id, "Type:", typeof req.user!.id);
-      console.log("Organization ID:", req.user?.organizationId, "Type:", typeof req.user?.organizationId);
-      console.log("User role:", req.user?.role);
+      // Debug logging for super admin support
+      console.log("Event creation - User role:", req.user?.role, "Organization ID:", req.user?.organizationId);
       
       // Validate ObjectId strings before conversion
       if (!req.user!.id || !mongoose.Types.ObjectId.isValid(req.user!.id)) {

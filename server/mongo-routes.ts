@@ -357,49 +357,7 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
-  // Create event
-  app.post("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      console.log('Creating event with user:', req.user);
-      console.log('User ID:', req.user!.id, 'Org ID:', req.user?.organizationId);
-      console.log('DEBUG: Event creation request body:', JSON.stringify(req.body, null, 2));
-      console.log('DEBUG: eventImage from request:', req.body.eventImage);
-      
-      // Validate ObjectId strings before conversion
-      if (!req.user!.id || !mongoose.Types.ObjectId.isValid(req.user!.id)) {
-        return res.status(400).json({ message: "Invalid user ID" });
-      }
-      
-      if (!req.user?.organizationId || !mongoose.Types.ObjectId.isValid(req.user.organizationId)) {
-        return res.status(400).json({ message: "Invalid organization ID" });
-      }
-      
-      const eventData = {
-        ...req.body,
-        createdBy: new mongoose.Types.ObjectId(req.user!.id),
-        organizationId: new mongoose.Types.ObjectId(req.user.organizationId),
-        createdAt: new Date(),
-        status: req.body.status || 'upcoming'
-      };
-      
-      console.log('DEBUG: eventData before saving:', JSON.stringify(eventData, null, 2));
-      console.log('DEBUG: eventData.eventImage:', eventData.eventImage);
-
-      const event = await mongoStorage.createEvent(eventData);
-      console.log('DEBUG: Event created in database:', JSON.stringify(event.toObject(), null, 2));
-      console.log('DEBUG: Created event eventImage field:', event.eventImage);
-      
-      res.status(201).json({
-        id: event._id?.toString(),
-        ...event.toObject(),
-        organizationId: event.organizationId?.toString(),
-        createdBy: event.createdBy?.toString()
-      });
-    } catch (error) {
-      console.error("Error creating event:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
+  // Note: Event creation endpoint moved to server/routes/event-routes.ts with proper file upload handling
 
   // Update event
   app.put("/api/events/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
