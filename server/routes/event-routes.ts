@@ -43,6 +43,7 @@ const eventCreateSchema = z.object({
   requiresPayment: z.boolean(),
   paymentAmount: z.number().optional(),
   paymentCurrency: z.string().default("NGN"),
+  eventImage: z.string().optional(),
   paymentMethods: z.array(z.string()).optional(),
   paymentRecipient: z.string().default("platform"),
   ticketCategories: z.array(z.any()).optional(),
