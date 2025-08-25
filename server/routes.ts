@@ -651,7 +651,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
+  // Disabled PostgreSQL event creation - using MongoDB route instead for proper eventImage handling
+  // app.post("/api/events", authenticateToken, requireRole(["admin"]), async (req: AuthenticatedRequest, res) => {
     try {
       const { invitations, ...eventData } = req.body;
       

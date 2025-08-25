@@ -357,7 +357,41 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
-  // Note: Event creation endpoint moved to server/routes/event-routes.ts with proper file upload handling
+  // Create event
+  app.post("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const eventData = { ...req.body };
+      
+      // Ensure required fields
+      if (!eventData.name || !eventData.startDate) {
+        return res.status(400).json({ message: "Event name and start date are required" });
+      }
+
+      // Convert dates
+      eventData.startDate = new Date(eventData.startDate);
+      if (eventData.endDate) eventData.endDate = new Date(eventData.endDate);
+      if (eventData.registrationStartDate) eventData.registrationStartDate = new Date(eventData.registrationStartDate);
+      if (eventData.registrationEndDate) eventData.registrationEndDate = new Date(eventData.registrationEndDate);
+
+      // Set defaults
+      eventData.createdBy = req.user!.id;
+      eventData.organizationId = req.user!.organizationId;
+      eventData.status = 'upcoming';
+      
+      // Create event in MongoDB
+      const event = await mongoStorage.createEvent(eventData);
+      
+      res.status(201).json({
+        id: event._id.toString(),
+        ...event.toObject(),
+        organizationId: event.organizationId?.toString(),
+        createdBy: event.createdBy?.toString()
+      });
+    } catch (error) {
+      console.error("Error creating event:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   // Update event
   app.put("/api/events/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
