@@ -121,7 +121,7 @@ export function registerEventRoutes(app: Express) {
   });
 
   // Create new event
-  app.post("/api/events", authenticateToken, upload.single('eventImage'), async (req: AuthenticatedRequest, res: Response) => {
+  app.post("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -129,8 +129,6 @@ export function registerEventRoutes(app: Express) {
 
       const eventData = eventCreateSchema.parse(req.body);
       
-      // Debug logging for super admin support
-      console.log("Event creation - User role:", req.user?.role, "Organization ID:", req.user?.organizationId);
       
       // Validate ObjectId strings before conversion
       if (!req.user!.id || !mongoose.Types.ObjectId.isValid(req.user!.id)) {
@@ -173,7 +171,7 @@ export function registerEventRoutes(app: Express) {
         registrationEndDate: eventData.registrationEndDate ? new Date(eventData.registrationEndDate) : undefined,
       };
 
-      const event = await EventService.createEvent(req.user.id, fullEventData, req.file);
+      const event = await EventService.createEvent(req.user.id, fullEventData);
       
       // Schedule event reminders for future events
       if (event) {
