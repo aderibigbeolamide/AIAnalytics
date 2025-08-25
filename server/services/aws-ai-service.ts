@@ -237,61 +237,88 @@ export class AWSAIService {
    */
   static async enhancedSearch(query: string, events: any[]) {
     try {
+      console.log(`Enhanced search starting with query: "${query}"`);
+      console.log(`Searching through ${events.length} events`);
+      
       const queryAnalysis = await this.analyzeEventText(query);
       
+      // Fallback to basic search if AI analysis fails
       if (!queryAnalysis) {
-        return events.filter(event => 
+        console.log('AI analysis failed, using basic search');
+        const basicResults = events.filter(event => 
           event.name.toLowerCase().includes(query.toLowerCase()) ||
-          event.description?.toLowerCase().includes(query.toLowerCase())
+          event.description?.toLowerCase().includes(query.toLowerCase()) ||
+          event.location?.toLowerCase().includes(query.toLowerCase())
         );
+        console.log(`Basic search found ${basicResults.length} events`);
+        return basicResults;
       }
 
       // Extract search intent from key phrases and entities
       const searchTerms = new Set<string>();
+      searchTerms.add(query.toLowerCase()); // Always include the original query
       
       queryAnalysis.keyPhrases.forEach((phrase: any) => {
-        if (phrase.confidence > 0.7) {
+        if (phrase.confidence > 0.5) {
           searchTerms.add(phrase.text.toLowerCase());
         }
       });
 
       queryAnalysis.entities.forEach((entity: any) => {
-        if (entity.confidence > 0.7) {
+        if (entity.confidence > 0.5) {
           searchTerms.add(entity.text.toLowerCase());
         }
       });
 
+      console.log(`Search terms: ${Array.from(searchTerms).join(', ')}`);
+
       // Score events based on relevance
       const scoredEvents = events.map(event => {
         let score = 0;
-        const eventText = `${event.name} ${event.description || ''} ${event.location}`.toLowerCase();
+        const eventText = `${event.name} ${event.description || ''} ${event.location || ''}`.toLowerCase();
         
         searchTerms.forEach(term => {
-          if (eventText.includes(term)) {
-            score += 1;
+          // Exact match in name gets highest score
+          if (event.name.toLowerCase().includes(term)) {
+            score += 10;
+          }
+          // Match in description gets medium score
+          if (event.description?.toLowerCase().includes(term)) {
+            score += 5;
+          }
+          // Match in location gets lower score
+          if (event.location?.toLowerCase().includes(term)) {
+            score += 2;
           }
         });
 
-        // Boost score for exact matches
-        if (eventText.includes(query.toLowerCase())) {
-          score += 2;
+        // Boost score for exact matches in name
+        if (event.name.toLowerCase().includes(query.toLowerCase())) {
+          score += 20;
         }
 
+        console.log(`Event "${event.name}" scored: ${score}`);
         return { event, score };
       });
 
-      return scoredEvents
+      const results = scoredEvents
         .filter(item => item.score > 0)
         .sort((a, b) => b.score - a.score)
         .map(item => item.event);
         
+      console.log(`Enhanced search returning ${results.length} results`);
+      return results;
+        
     } catch (error) {
       console.error('Error in enhanced search:', error);
       // Fallback to basic search
-      return events.filter(event => 
+      const basicResults = events.filter(event => 
         event.name.toLowerCase().includes(query.toLowerCase()) ||
-        event.description?.toLowerCase().includes(query.toLowerCase())
+        event.description?.toLowerCase().includes(query.toLowerCase()) ||
+        event.location?.toLowerCase().includes(query.toLowerCase())
       );
+      console.log(`Fallback search found ${basicResults.length} events`);
+      return basicResults;
     }
   }
 }

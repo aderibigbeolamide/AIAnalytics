@@ -57,11 +57,21 @@ export function registerEventRoutes(app: Express) {
   app.get("/api/events/public", async (req: Request, res: Response) => {
     try {
       const { search, includeAI } = req.query;
+      console.log(`AI Events Search - Query: "${search}", AI: ${includeAI}`);
+      
+      // Add cache-busting headers
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       let events = await EventService.getPublicEvents();
+      console.log(`Found ${events.length} total events before search`);
       
       // Apply AI-enhanced search if search query provided
-      if (search && typeof search === 'string') {
-        events = await AWSAIService.enhancedSearch(search, events);
+      if (search && typeof search === 'string' && search.trim().length > 0) {
+        console.log(`Applying AI search for: "${search.trim()}"`);
+        events = await AWSAIService.enhancedSearch(search.trim(), events);
+        console.log(`After AI search: ${events.length} events found`);
       }
       
       // Add AI insights if requested
@@ -75,6 +85,7 @@ export function registerEventRoutes(app: Express) {
         }));
       }
       
+      console.log(`Returning ${events.length} events to frontend`);
       res.json(events);
     } catch (error) {
       console.error("Error getting public events:", error);
