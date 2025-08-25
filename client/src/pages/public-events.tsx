@@ -49,7 +49,28 @@ export default function PublicEventsPage() {
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events/public", { search: searchTerm, includeAI: aiEnabled ? 'true' : 'false' }],
+    queryFn: async ({ queryKey }) => {
+      const [url, params] = queryKey as [string, { search: string; includeAI: string }];
+      const searchParams = new URLSearchParams();
+      
+      if (params.search && params.search.trim()) {
+        searchParams.append('search', params.search.trim());
+      }
+      if (params.includeAI) {
+        searchParams.append('includeAI', params.includeAI);
+      }
+      
+      const fullUrl = searchParams.toString() ? `${url}?${searchParams.toString()}` : url;
+      console.log('Fetching events with URL:', fullUrl);
+      
+      const response = await fetch(fullUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
     refetchInterval: 5000, // Refresh every 5 seconds to show new events
+    staleTime: 0, // Always refetch when search changes
   });
 
   // Filter events based on type (search is handled by backend AI)

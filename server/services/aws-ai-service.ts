@@ -37,6 +37,12 @@ export class AWSAIService {
         return null;
       }
 
+      // Check if AWS credentials are properly configured
+      if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+        console.log('AWS credentials not configured, skipping text analysis');
+        return null;
+      }
+
       const [sentimentResult, keyPhrasesResult, entitiesResult] = await Promise.all([
         comprehendClient.send(new DetectSentimentCommand({
           Text: text,
