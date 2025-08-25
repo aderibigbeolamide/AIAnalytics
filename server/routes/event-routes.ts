@@ -5,6 +5,7 @@ import { RegistrationService } from "../services/registration-service";
 import { notificationService } from "../services/notification-service";
 import multer from "multer";
 import { z } from "zod";
+import mongoose from "mongoose";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -128,11 +129,20 @@ export function registerEventRoutes(app: Express) {
 
       const eventData = eventCreateSchema.parse(req.body);
       
+      // Validate ObjectId strings before conversion
+      if (!req.user!.id || !mongoose.Types.ObjectId.isValid(req.user!.id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      if (!req.user?.organizationId || !mongoose.Types.ObjectId.isValid(req.user.organizationId)) {
+        return res.status(400).json({ message: "Invalid organization ID" });
+      }
+      
       // Add organization context
       const fullEventData = {
         ...eventData,
-        organizationId: req.user.organizationId,
-        createdBy: req.user.id,
+        organizationId: new mongoose.Types.ObjectId(req.user.organizationId),
+        createdBy: new mongoose.Types.ObjectId(req.user.id),
         startDate: new Date(eventData.startDate),
         endDate: new Date(eventData.endDate),
         registrationStartDate: eventData.registrationStartDate ? new Date(eventData.registrationStartDate) : undefined,
