@@ -47,6 +47,7 @@ import { FacialRecognitionDemo } from "@/pages/FacialRecognitionDemo";
 import { AboutPage } from "@/pages/about";
 import { DocumentationPage } from "@/pages/documentation";
 import FaceRecognitionTestPage from "@/pages/face-recognition-test";
+import PublicEventsPage from "@/pages/public-events";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage, initializeSessionManagement } = useAuthStore();
@@ -109,6 +110,7 @@ function Router() {
       {/* Public information pages */}
       <Route path="/about" component={AboutPage} />
       <Route path="/documentation" component={DocumentationPage} />
+      <Route path="/events" component={PublicEventsPage} />
       
       {/* Demo routes - accessible to everyone */}
       <Route path="/facial-recognition-demo" component={FacialRecognitionDemo} />
@@ -125,7 +127,7 @@ function Router() {
           <Members />
         </ProtectedRoute>
       </Route>
-      <Route path="/events">
+      <Route path="/admin/events">
         <ProtectedRoute>
           <Events />
         </ProtectedRoute>
