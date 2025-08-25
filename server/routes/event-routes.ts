@@ -133,14 +133,33 @@ export function registerEventRoutes(app: Express) {
       console.log("Event creation - User object:", req.user);
       console.log("User ID:", req.user!.id, "Type:", typeof req.user!.id);
       console.log("Organization ID:", req.user?.organizationId, "Type:", typeof req.user?.organizationId);
+      console.log("User role:", req.user?.role);
       
       // Validate ObjectId strings before conversion
       if (!req.user!.id || !mongoose.Types.ObjectId.isValid(req.user!.id)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
-      // Convert organizationId to string if it's a number, then validate
-      const orgIdString = req.user?.organizationId?.toString();
+      let orgIdString: string;
+      
+      // Handle different user roles for organizationId
+      if (req.user.role === 'super_admin') {
+        // Super admin: use the first approved organization as default or require organizationId in request
+        if (req.body.organizationId) {
+          orgIdString = req.body.organizationId;
+        } else {
+          // Get the first approved organization
+          const organizations = await mongoStorage.getOrganizations({ status: 'approved' });
+          if (organizations.length === 0) {
+            return res.status(400).json({ message: "No approved organizations found. Please create an organization first." });
+          }
+          orgIdString = organizations[0]._id.toString();
+        }
+      } else {
+        // Regular admin: use their organization
+        orgIdString = req.user?.organizationId?.toString() || '';
+      }
+      
       if (!orgIdString || !mongoose.Types.ObjectId.isValid(orgIdString)) {
         console.log("Organization ID validation failed - orgIdString:", orgIdString);
         return res.status(400).json({ message: "Invalid organization ID" });
