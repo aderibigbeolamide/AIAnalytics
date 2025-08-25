@@ -362,6 +362,10 @@ export function registerMongoRoutes(app: Express) {
     try {
       const eventData = { ...req.body };
       
+      // Debug logging to track eventImage field
+      console.log("DEBUG: Received event data:", JSON.stringify(eventData, null, 2));
+      console.log("DEBUG: eventImage field:", eventData.eventImage);
+      
       // Ensure required fields
       if (!eventData.name || !eventData.startDate) {
         return res.status(400).json({ message: "Event name and start date are required" });
@@ -378,8 +382,12 @@ export function registerMongoRoutes(app: Express) {
       eventData.organizationId = req.user!.organizationId;
       eventData.status = 'upcoming';
       
+      console.log("DEBUG: Final event data before MongoDB save:", JSON.stringify(eventData, null, 2));
+      
       // Create event in MongoDB
       const event = await mongoStorage.createEvent(eventData);
+      
+      console.log("DEBUG: Created event object:", JSON.stringify(event.toObject(), null, 2));
       
       res.status(201).json({
         id: event._id.toString(),
