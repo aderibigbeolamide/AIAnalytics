@@ -129,19 +129,27 @@ export function registerEventRoutes(app: Express) {
 
       const eventData = eventCreateSchema.parse(req.body);
       
+      // Debug logging
+      console.log("Event creation - User object:", req.user);
+      console.log("User ID:", req.user!.id, "Type:", typeof req.user!.id);
+      console.log("Organization ID:", req.user?.organizationId, "Type:", typeof req.user?.organizationId);
+      
       // Validate ObjectId strings before conversion
       if (!req.user!.id || !mongoose.Types.ObjectId.isValid(req.user!.id)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
-      if (!req.user?.organizationId || !mongoose.Types.ObjectId.isValid(req.user.organizationId)) {
+      // Convert organizationId to string if it's a number, then validate
+      const orgIdString = req.user?.organizationId?.toString();
+      if (!orgIdString || !mongoose.Types.ObjectId.isValid(orgIdString)) {
+        console.log("Organization ID validation failed - orgIdString:", orgIdString);
         return res.status(400).json({ message: "Invalid organization ID" });
       }
       
       // Add organization context
       const fullEventData = {
         ...eventData,
-        organizationId: new mongoose.Types.ObjectId(req.user.organizationId),
+        organizationId: new mongoose.Types.ObjectId(orgIdString),
         createdBy: new mongoose.Types.ObjectId(req.user.id),
         startDate: new Date(eventData.startDate),
         endDate: new Date(eventData.endDate),
