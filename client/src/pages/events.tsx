@@ -26,7 +26,7 @@ export default function Events() {
   const queryClient = useQueryClient();
 
   const { data: rawEvents = [] } = useQuery({
-    queryKey: ["/api/events"],
+    queryKey: ["/api/events", new Date().getTime()], // Force refresh
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/events`);
       const data = await response.json();
@@ -38,18 +38,32 @@ export default function Events() {
       
       // Extract clean data from MongoDB objects
       const cleanEvents = data.map((event: any) => {
-        // If it's a MongoDB object, extract from _doc
-        const eventData = event._doc || event;
+        // Check if this is a MongoDB document with _doc property
+        let eventData = event;
+        
+        if (event._doc) {
+          console.log('Found _doc property, extracting data:', event._doc);
+          eventData = event._doc;
+        }
+        
+        // Log the extracted data for debugging
+        console.log('Extracted event data:', {
+          name: eventData.name,
+          location: eventData.location,
+          startDate: eventData.startDate,
+          eventImage: eventData.eventImage
+        });
+        
         return {
           id: eventData._id?.toString() || event.id,
-          name: eventData.name,
-          description: eventData.description,
-          location: eventData.location,
+          name: eventData.name || 'Unnamed Event',
+          description: eventData.description || '',
+          location: eventData.location || 'TBD',
           startDate: eventData.startDate,
           endDate: eventData.endDate,
           eventImage: eventData.eventImage,
-          eventType: eventData.eventType,
-          status: eventData.status,
+          eventType: eventData.eventType || 'registration',
+          status: eventData.status || 'active',
           organizationId: eventData.organizationId?.toString(),
           totalRegistrations: event.totalRegistrations || eventData.totalRegistrations || 0,
           memberRegistrations: event.memberRegistrations || eventData.memberRegistrations || 0,
