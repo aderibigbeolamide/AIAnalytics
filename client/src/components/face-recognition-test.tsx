@@ -1,274 +1,232 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, Eye, Users } from 'lucide-react';
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { getAuthHeaders } from "@/lib/auth";
+import { Camera, Check, X, Upload } from "lucide-react";
 
-export function FaceRecognitionTest() {
+interface FaceRecognitionTestProps {
+  eventId: string;
+}
+
+interface ValidationResult {
+  isValid: boolean;
+  member?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    auxiliaryBody: string;
+  };
+  confidence?: number;
+  message: string;
+  validationStatus: "valid" | "invalid" | "error";
+}
+
+export function FaceRecognitionTest({ eventId }: FaceRecognitionTestProps) {
+  const { toast } = useToast();
+  const [memberName, setMemberName] = useState("");
+  const [email, setEmail] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<ValidationResult | null>(null);
+
+  const validateMutation = useMutation({
+    mutationFn: async ({ file, memberName, email }: { file: File; memberName: string; email: string }) => {
+      const formData = new FormData();
+      formData.append("faceImage", file);
+      formData.append("memberName", memberName);
+      formData.append("email", email);
+      formData.append("eventId", eventId);
+
+      const authHeaders = getAuthHeaders();
+      const response = await fetch("/api/validate-face", {
+        method: "POST",
+        headers: {
+          ...authHeaders,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      return data;
+    },
+    onSuccess: (data) => {
+      setResult(data);
+      if (data.validationStatus === "valid") {
+        toast({
+          title: "Validation Successful",
+          description: data.message,
+        });
+      } else {
+        toast({
+          title: "Validation Failed",
+          description: data.message,
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      console.error("Face validation error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to validate face. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Error",
+          description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
       setSelectedFile(file);
-      setError(null);
       setResult(null);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
-  const testDetectFaces = async () => {
-    if (!selectedFile) return;
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const formData = new FormData();
-      formData.append('image', selectedFile);
-      
-      const response = await fetch('/api/face-recognition/detect', {
-        method: 'POST',
-        body: formData,
+  const handleValidate = () => {
+    if (!selectedFile || !memberName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please select an image and enter member name",
+        variant: "destructive",
       });
-      
-      const data = await response.json();
-      setResult(data);
-    } catch (err) {
-      setError('Failed to detect faces');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+      return;
     }
+
+    validateMutation.mutate({
+      file: selectedFile,
+      memberName: memberName.trim(),
+      email: email.trim(),
+    });
   };
 
-  const testValidateImage = async () => {
-    if (!selectedFile) return;
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const formData = new FormData();
-      formData.append('image', selectedFile);
-      
-      const response = await fetch('/api/face-recognition/validate-image', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await response.json();
-      setResult(data);
-    } catch (err) {
-      setError('Failed to validate image');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const checkServiceStatus = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const response = await fetch('/api/face-recognition/status');
-      const data = await response.json();
-      setResult(data);
-    } catch (err) {
-      setError('Failed to check service status');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+  const getResultCardClasses = () => {
+    if (result?.validationStatus === 'valid') {
+      return 'border-2 border-green-500 bg-green-50';
+    } else if (result?.validationStatus === 'invalid') {
+      return 'border-2 border-red-500 bg-red-50';
+    } else {
+      return 'border-2 border-orange-500 bg-orange-50';
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            AWS Face Recognition Test
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          
-          {/* Service Status */}
-          <div className="flex gap-4">
-            <Button 
-              onClick={checkServiceStatus} 
-              disabled={isLoading}
-              variant="outline"
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Check Service Status
-            </Button>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Camera className="h-5 w-5" />
+          Test Face Recognition
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Test face recognition by uploading a photo and entering member details. 
+            The system will compare against registered face photos.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="member-name">Member Name *</Label>
+            <Input
+              id="member-name"
+              type="text"
+              placeholder="e.g., Aderibigbe Olamide"
+              value={memberName}
+              onChange={(e) => setMemberName(e.target.value)}
+              disabled={validateMutation.isPending}
+            />
           </div>
 
-          {/* File Upload */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <label htmlFor="face-upload" className="cursor-pointer">
-                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors">
-                  <Upload className="h-4 w-4" />
-                  Upload Image
-                </div>
-                <input
-                  id="face-upload"
-                  type="file"
-                  accept="image/jpeg,image/png,image/jpg"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-              </label>
-              
-              {selectedFile && (
-                <Badge variant="secondary">
-                  {selectedFile.name}
-                </Badge>
-              )}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email (optional)</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="e.g., member@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={validateMutation.isPending}
+            />
+          </div>
 
-            {/* Image Preview */}
-            {imagePreview && (
-              <div className="border rounded-lg p-4">
-                <img 
-                  src={imagePreview} 
-                  alt="Preview" 
-                  className="max-w-xs max-h-64 object-contain mx-auto"
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="face-image">Face Image *</Label>
+            <Input
+              id="face-image"
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              disabled={validateMutation.isPending}
+            />
+            {selectedFile && (
+              <p className="text-sm text-muted-foreground">
+                Selected: {selectedFile.name}
+              </p>
             )}
           </div>
 
-          {/* Test Buttons */}
-          {selectedFile && (
-            <div className="flex flex-wrap gap-4">
-              <Button 
-                onClick={testDetectFaces} 
-                disabled={isLoading}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Detect Faces
-              </Button>
+          <Button
+            onClick={handleValidate}
+            disabled={!selectedFile || !memberName.trim() || validateMutation.isPending}
+            className="w-full"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {validateMutation.isPending ? "Validating..." : "Test Face Recognition"}
+          </Button>
+        </div>
+
+        {result && (
+          <Card className={getResultCardClasses()}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                {result.validationStatus === 'valid' ? (
+                  <Check className="h-5 w-5 text-green-600" />
+                ) : (
+                  <X className="h-5 w-5 text-red-600" />
+                )}
+                <h4 className="font-medium">
+                  {result.validationStatus === 'valid' ? 'Validation Success' : 'Validation Failed'}
+                </h4>
+              </div>
               
-              <Button 
-                onClick={testValidateImage} 
-                disabled={isLoading}
-                variant="outline"
-              >
-                <Camera className="h-4 w-4 mr-2" />
-                Validate Image Quality
-              </Button>
-            </div>
-          )}
-
-          {/* Loading */}
-          {isLoading && (
-            <Alert>
-              <AlertDescription>
-                Processing... This may take a few seconds.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Error */}
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Results */}
-          {result && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Results</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-gray-100 p-4 rounded-lg overflow-auto text-sm">
-                  {JSON.stringify(result, null, 2)}
-                </pre>
-                
-                {/* Formatted Results for Face Detection */}
-                {result.success && result.faceCount !== undefined && (
-                  <div className="mt-4 space-y-2">
-                    <p className="font-medium">
-                      Found {result.faceCount} face(s) in the image
-                    </p>
-                    {result.faces?.map((face: any, index: number) => (
-                      <div key={index} className="bg-blue-50 p-3 rounded-md">
-                        <p><strong>Face {index + 1}:</strong></p>
-                        <p>Confidence: {face.confidence?.toFixed(1)}%</p>
-                        {face.ageRange && (
-                          <p>Age: {face.ageRange.Low} - {face.ageRange.High} years</p>
-                        )}
-                        {face.gender && (
-                          <p>Gender: {face.gender.Value} ({face.gender.Confidence?.toFixed(1)}%)</p>
-                        )}
-                        {face.emotions && face.emotions.length > 0 && (
-                          <p>Top Emotion: {face.emotions[0].Type} ({face.emotions[0].Confidence?.toFixed(1)}%)</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Service Status Display */}
-                {result.service && (
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={result.configured ? "default" : "secondary"}>
-                        {result.configured ? "Configured" : "Not Configured"}
-                      </Badge>
-                    </div>
-                    <p><strong>Service:</strong> {result.service}</p>
-                    <p><strong>Region:</strong> {result.region}</p>
-                    <p><strong>Collection:</strong> {result.collectionId}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Instructions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <strong>1. Check Service Status:</strong> First, check if AWS credentials are configured
-              </div>
-              <div>
-                <strong>2. Upload Image:</strong> Choose a JPEG or PNG image with clear faces
-              </div>
-              <div>
-                <strong>3. Detect Faces:</strong> Test AWS face detection capabilities
-              </div>
-              <div>
-                <strong>4. Validate Quality:</strong> Check if image is suitable for face recognition
-              </div>
-              <div className="mt-4 p-3 bg-yellow-50 rounded-md">
-                <strong>Note:</strong> If service shows "Not Configured", you need to add AWS credentials to your environment variables.
-                See the AWS_FACE_RECOGNITION_SETUP.md guide for details.
-              </div>
+              <p className="text-sm mb-3">{result.message}</p>
+              
+              {result.member && (
+                <div className="space-y-1 text-sm">
+                  <p><strong>Name:</strong> {result.member.firstName} {result.member.lastName}</p>
+                  <p><strong>Email:</strong> {result.member.email}</p>
+                  <p><strong>Auxiliary Body:</strong> {result.member.auxiliaryBody}</p>
+                  {result.confidence && (
+                    <p><strong>Confidence:</strong> {Math.round(result.confidence * 100)}%</p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p><strong>How to test:</strong></p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>Enter the member name exactly as registered (e.g., "Aderibigbe Olamide")</li>
+            <li>Upload a clear face photo for comparison</li>
+            <li>The system will search for matching registrations and compare faces</li>
+            <li>Results show validation status and confidence level</li>
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

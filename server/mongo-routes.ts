@@ -483,8 +483,8 @@ export function registerMongoRoutes(app: Express) {
         return res.status(404).json({ message: "Event not found" });
       }
 
-      // Convert to plain object and format properly
-      const eventObj = event.toObject();
+      // Properly serialize Mongoose document to plain object
+      const plainEvent = JSON.parse(JSON.stringify(event));
       
       // Disable caching for event details to always get fresh data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -492,35 +492,35 @@ export function registerMongoRoutes(app: Express) {
       res.set('Expires', '0');
       
       res.json({
-        id: eventObj._id.toString(),
-        name: eventObj.name,
-        description: eventObj.description,
-        location: eventObj.location,
-        startDate: eventObj.startDate,
-        endDate: eventObj.endDate,
-        registrationStartDate: eventObj.registrationStartDate,
-        registrationEndDate: eventObj.registrationEndDate,
-        eventType: eventObj.eventType,
-        status: eventObj.status,
-        eventImage: eventObj.eventImage,
-        eligibleAuxiliaryBodies: eventObj.eligibleAuxiliaryBodies || [],
-        allowGuests: eventObj.allowGuests || false,
-        allowInvitees: eventObj.allowInvitees || false,
-        customRegistrationFields: eventObj.customRegistrationFields || [],
-        paymentSettings: eventObj.paymentSettings || {},
-        faceRecognitionSettings: eventObj.faceRecognitionSettings || {},
-        reminderSettings: eventObj.reminderSettings || {},
-        ticketCategories: eventObj.ticketCategories || [],
-        tags: eventObj.tags || [],
-        requiresPayment: eventObj.requiresPayment || false,
-        paymentAmount: eventObj.paymentAmount,
-        paymentCurrency: eventObj.paymentCurrency || 'NGN',
-        paymentMethods: eventObj.paymentMethods || [],
-        isPrivate: eventObj.isPrivate || false,
-        organizationId: eventObj.organizationId?.toString(),
-        createdBy: eventObj.createdBy?.toString(),
-        createdAt: eventObj.createdAt,
-        updatedAt: eventObj.updatedAt
+        id: plainEvent._id || event.id,
+        name: plainEvent.name,
+        description: plainEvent.description,
+        location: plainEvent.location,
+        startDate: plainEvent.startDate,
+        endDate: plainEvent.endDate,
+        registrationStartDate: plainEvent.registrationStartDate,
+        registrationEndDate: plainEvent.registrationEndDate,
+        eventType: plainEvent.eventType,
+        status: plainEvent.status,
+        eventImage: plainEvent.eventImage,
+        eligibleAuxiliaryBodies: plainEvent.eligibleAuxiliaryBodies || [],
+        allowGuests: plainEvent.allowGuests || false,
+        allowInvitees: plainEvent.allowInvitees || false,
+        customRegistrationFields: plainEvent.customRegistrationFields || [],
+        paymentSettings: plainEvent.paymentSettings || {},
+        faceRecognitionSettings: plainEvent.faceRecognitionSettings || {},
+        reminderSettings: plainEvent.reminderSettings || {},
+        ticketCategories: plainEvent.ticketCategories || [],
+        tags: plainEvent.tags || [],
+        requiresPayment: plainEvent.requiresPayment || false,
+        paymentAmount: plainEvent.paymentAmount,
+        paymentCurrency: plainEvent.paymentCurrency || 'NGN',
+        paymentMethods: plainEvent.paymentMethods || [],
+        isPrivate: plainEvent.isPrivate || false,
+        organizationId: plainEvent.organizationId,
+        createdBy: plainEvent.createdBy,
+        createdAt: plainEvent.createdAt,
+        updatedAt: plainEvent.updatedAt
       });
     } catch (error) {
       console.error("Error getting event:", error);

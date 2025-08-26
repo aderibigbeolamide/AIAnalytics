@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CsvValidation } from "@/components/csv-validation";
 import { FaceRecognition } from "@/components/face-recognition";
+import { FaceRecognitionTest } from "@/components/face-recognition-test";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { Navbar } from "@/components/navbar";
 import { EventImage } from "@/lib/event-utils";
@@ -463,7 +464,7 @@ export default function EventDetail() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="csv" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="csv" className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   CSV Validation
@@ -471,6 +472,10 @@ export default function EventDetail() {
                 <TabsTrigger value="face" className="flex items-center gap-2">
                   <Camera className="h-4 w-4" />
                   Face Recognition
+                </TabsTrigger>
+                <TabsTrigger value="test" className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Test Face Recognition
                 </TabsTrigger>
                 <TabsTrigger value="reports" className="flex items-center gap-2">
                   <Share className="h-4 w-4" />
@@ -484,6 +489,10 @@ export default function EventDetail() {
               
               <TabsContent value="face" className="mt-4">
                 <FaceRecognition eventId={id!} />
+              </TabsContent>
+
+              <TabsContent value="test" className="mt-4">
+                <FaceRecognitionTest eventId={id!} />
               </TabsContent>
               
               <TabsContent value="reports" className="mt-4">
