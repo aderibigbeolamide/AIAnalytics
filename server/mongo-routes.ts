@@ -238,7 +238,43 @@ export function registerMongoRoutes(app: Express) {
         memberRegistrations: eventsWithStats[0].memberRegistrations
       } : 'No events');
       
-      res.json(eventsWithStats);
+      // Ensure we send clean JSON data, not MongoDB objects
+      const cleanEvents = eventsWithStats.map(event => {
+        if (event && typeof event === 'object') {
+          // Convert MongoDB document to plain object if needed
+          const plainEvent = event.toObject ? event.toObject() : event;
+          return {
+            id: plainEvent.id || plainEvent._id?.toString(),
+            name: plainEvent.name,
+            description: plainEvent.description,
+            location: plainEvent.location,
+            startDate: plainEvent.startDate,
+            endDate: plainEvent.endDate,
+            eventImage: plainEvent.eventImage,
+            eventType: plainEvent.eventType,
+            status: plainEvent.status,
+            organizationId: plainEvent.organizationId?.toString() || plainEvent.organizationId,
+            totalRegistrations: plainEvent.totalRegistrations || 0,
+            memberRegistrations: plainEvent.memberRegistrations || 0,
+            guestRegistrations: plainEvent.guestRegistrations || 0,
+            inviteeRegistrations: plainEvent.inviteeRegistrations || 0,
+            attendanceRate: plainEvent.attendanceRate || 0,
+            maxAttendees: plainEvent.maxAttendees,
+            allowGuests: plainEvent.allowGuests,
+            allowInvitees: plainEvent.allowInvitees,
+            ticketCategories: plainEvent.ticketCategories || [],
+            paymentSettings: plainEvent.paymentSettings,
+            createdAt: plainEvent.createdAt,
+            updatedAt: plainEvent.updatedAt
+          };
+        }
+        return event;
+      });
+      
+      console.log('*** SENDING CLEAN EVENTS:', cleanEvents.length);
+      console.log('*** SAMPLE CLEAN EVENT:', cleanEvents[0]);
+      
+      res.json(cleanEvents);
     } catch (error) {
       console.error("Error getting events:", error);
       res.status(500).json({ message: "Internal server error" });

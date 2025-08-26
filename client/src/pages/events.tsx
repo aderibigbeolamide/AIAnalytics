@@ -25,24 +25,58 @@ export default function Events() {
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  const { data: events = [] } = useQuery({
-    queryKey: ["/api/events", Date.now()], // Force cache invalidation
+  const { data: rawEvents = [] } = useQuery({
+    queryKey: ["/api/events"],
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/events?_t=${Date.now()}`);
+      const response = await apiRequest("GET", `/api/events`);
       const data = await response.json();
-      console.log('Events data received:', data);
+      console.log('Raw events data received:', data);
       if (data.length > 0) {
-        console.log('Sample event full data:', JSON.stringify(data[0], null, 2));
-        console.log('Sample event startDate:', data[0].startDate, 'type:', typeof data[0].startDate);
-        console.log('Sample event totalRegistrations:', data[0].totalRegistrations);
-        console.log('Sample event eventImage:', data[0].eventImage);
+        console.log('Sample event _doc data:', data[0]._doc);
         console.log('Sample event properties:', Object.keys(data[0]));
       }
-      return data;
+      
+      // Extract clean data from MongoDB objects
+      const cleanEvents = data.map((event: any) => {
+        // If it's a MongoDB object, extract from _doc
+        const eventData = event._doc || event;
+        return {
+          id: eventData._id?.toString() || event.id,
+          name: eventData.name,
+          description: eventData.description,
+          location: eventData.location,
+          startDate: eventData.startDate,
+          endDate: eventData.endDate,
+          eventImage: eventData.eventImage,
+          eventType: eventData.eventType,
+          status: eventData.status,
+          organizationId: eventData.organizationId?.toString(),
+          totalRegistrations: event.totalRegistrations || eventData.totalRegistrations || 0,
+          memberRegistrations: event.memberRegistrations || eventData.memberRegistrations || 0,
+          guestRegistrations: event.guestRegistrations || eventData.guestRegistrations || 0,
+          inviteeRegistrations: event.inviteeRegistrations || eventData.inviteeRegistrations || 0,
+          attendanceRate: event.attendanceRate || eventData.attendanceRate || 0,
+          maxAttendees: eventData.maxAttendees,
+          allowGuests: eventData.allowGuests,
+          allowInvitees: eventData.allowInvitees,
+          ticketCategories: eventData.ticketCategories || [],
+          paymentSettings: eventData.paymentSettings,
+          createdAt: eventData.createdAt,
+          updatedAt: eventData.updatedAt
+        };
+      });
+      
+      console.log('Processed clean events:', cleanEvents);
+      if (cleanEvents.length > 0) {
+        console.log('Sample clean event:', cleanEvents[0]);
+      }
+      
+      return cleanEvents;
     },
-    staleTime: 0, // Don't use stale data
-    cacheTime: 0, // Don't cache
   });
+
+  // Use the processed events
+  const events = rawEvents;
 
   const exportAttendance = useMutation({
     mutationFn: async (eventId: number) => {
