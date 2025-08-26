@@ -35,7 +35,7 @@ export function Navbar() {
     const adminItems = [
       { href: "/dashboard", label: "Dashboard", roles: ["admin"] },
       { href: "/members", label: "Members", roles: ["admin"] },
-      { href: "/events", label: "Events", roles: ["admin"] },
+      { href: "/admin/events", label: "Events", roles: ["admin"] },
       { href: "/scanner", label: "Scan QR", roles: ["admin"] },
       { href: "/reports", label: "Reports", roles: ["admin"] },
     ];
