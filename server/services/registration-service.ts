@@ -27,7 +27,29 @@ export class RegistrationService {
 
     return {
       id: registration._id?.toString(),
-      ...registration,
+      eventId: registration.eventId?.toString(),
+      memberId: registration.memberId?.toString(),
+      registrationType: registration.registrationType || 'member',
+      firstName: registration.firstName || 'Guest',
+      lastName: registration.lastName || '',
+      email: registration.email,
+      phoneNumber: registration.phoneNumber,
+      auxiliaryBody: registration.auxiliaryBody || '—',
+      qrCode: registration.qrCode,
+      uniqueId: registration.uniqueId,
+      status: registration.status,
+      registrationData: registration.registrationData,
+      paymentStatus: registration.paymentStatus,
+      paymentReference: registration.paymentReference,
+      paymentMethod: registration.paymentMethod,
+      paymentAmount: registration.paymentAmount,
+      ticketNumber: registration.ticketNumber,
+      validatedAt: registration.validatedAt,
+      validatedBy: registration.validatedBy?.toString(),
+      facePhotoPath: registration.facePhotoPath,
+      receiptPath: registration.receiptPath,
+      createdAt: registration.createdAt,
+      updatedAt: registration.updatedAt,
       qrCodeImage: qrCode
     };
   }
@@ -44,7 +66,29 @@ export class RegistrationService {
 
     return {
       id: registration._id?.toString(),
-      ...registration
+      eventId: registration.eventId?.toString(),
+      memberId: registration.memberId?.toString(),
+      registrationType: registration.registrationType || 'member',
+      firstName: registration.firstName || 'Guest',
+      lastName: registration.lastName || '',
+      email: registration.email,
+      phoneNumber: registration.phoneNumber,
+      auxiliaryBody: registration.auxiliaryBody || '—',
+      qrCode: registration.qrCode,
+      uniqueId: registration.uniqueId,
+      status: registration.status,
+      registrationData: registration.registrationData,
+      paymentStatus: registration.paymentStatus,
+      paymentReference: registration.paymentReference,
+      paymentMethod: registration.paymentMethod,
+      paymentAmount: registration.paymentAmount,
+      ticketNumber: registration.ticketNumber,
+      validatedAt: registration.validatedAt,
+      validatedBy: registration.validatedBy?.toString(),
+      facePhotoPath: registration.facePhotoPath,
+      receiptPath: registration.receiptPath,
+      createdAt: registration.createdAt,
+      updatedAt: registration.updatedAt
     };
   }
 
@@ -60,7 +104,29 @@ export class RegistrationService {
 
     return {
       id: registration._id?.toString(),
-      ...registration
+      eventId: registration.eventId?.toString(),
+      memberId: registration.memberId?.toString(),
+      registrationType: registration.registrationType || 'member',
+      firstName: registration.firstName || 'Guest',
+      lastName: registration.lastName || '',
+      email: registration.email,
+      phoneNumber: registration.phoneNumber,
+      auxiliaryBody: registration.auxiliaryBody || '—',
+      qrCode: registration.qrCode,
+      uniqueId: registration.uniqueId,
+      status: registration.status,
+      registrationData: registration.registrationData,
+      paymentStatus: registration.paymentStatus,
+      paymentReference: registration.paymentReference,
+      paymentMethod: registration.paymentMethod,
+      paymentAmount: registration.paymentAmount,
+      ticketNumber: registration.ticketNumber,
+      validatedAt: registration.validatedAt,
+      validatedBy: registration.validatedBy?.toString(),
+      facePhotoPath: registration.facePhotoPath,
+      receiptPath: registration.receiptPath,
+      createdAt: registration.createdAt,
+      updatedAt: registration.updatedAt
     };
   }
 
@@ -125,7 +191,29 @@ export class RegistrationService {
     
     return registrations.map(registration => ({
       id: registration._id?.toString(),
-      ...registration
+      eventId: registration.eventId?.toString(),
+      memberId: registration.memberId?.toString(),
+      registrationType: registration.registrationType || 'member',
+      firstName: registration.firstName || 'Guest',
+      lastName: registration.lastName || '',
+      email: registration.email,
+      phoneNumber: registration.phoneNumber,
+      auxiliaryBody: registration.auxiliaryBody || '—',
+      qrCode: registration.qrCode,
+      uniqueId: registration.uniqueId,
+      status: registration.status,
+      registrationData: registration.registrationData,
+      paymentStatus: registration.paymentStatus,
+      paymentReference: registration.paymentReference,
+      paymentMethod: registration.paymentMethod,
+      paymentAmount: registration.paymentAmount,
+      ticketNumber: registration.ticketNumber,
+      validatedAt: registration.validatedAt,
+      validatedBy: registration.validatedBy?.toString(),
+      facePhotoPath: registration.facePhotoPath,
+      receiptPath: registration.receiptPath,
+      createdAt: registration.createdAt,
+      updatedAt: registration.updatedAt
     }));
   }
 

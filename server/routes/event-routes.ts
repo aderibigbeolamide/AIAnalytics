@@ -4,10 +4,12 @@ import { EventService } from "../services/event-service";
 import { RegistrationService } from "../services/registration-service";
 import { notificationService } from "../services/notification-service";
 import { AWSAIService } from "../services/aws-ai-service";
+import { faceRecognitionService } from "../services/face-recognition-service";
 import { mongoStorage } from "../mongodb-storage";
 import multer from "multer";
 import { z } from "zod";
 import mongoose from "mongoose";
+import { v2 as cloudinary } from "cloudinary";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -447,6 +449,114 @@ export function registerEventRoutes(app: Express) {
     } catch (error) {
       console.error("Error checking registration eligibility:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Register for event with file uploads (face photo, payment receipt)
+  app.post("/api/events/:id/register", upload.fields([
+    { name: 'facePhoto', maxCount: 1 },
+    { name: 'paymentReceipt', maxCount: 1 }
+  ]), async (req: Request, res: Response) => {
+    try {
+      const eventId = req.params.id;
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      // Get the uploaded files
+      const facePhoto = files?.facePhoto?.[0];
+      const paymentReceipt = files?.paymentReceipt?.[0];
+      
+      // Process registration data
+      const registrationData: any = {
+        eventId,
+        registrationType: req.body.registrationType || 'member',
+        firstName: req.body.firstName || req.body.FirstName || '',
+        lastName: req.body.lastName || req.body.LastName || '',
+        email: req.body.email || req.body.Email || '',
+        phoneNumber: req.body.phoneNumber || req.body.PhoneNumber,
+        auxiliaryBody: req.body.auxiliaryBody || req.body.AuxiliaryBody,
+        paymentMethod: req.body.paymentMethod,
+        paymentAmount: req.body.paymentAmount,
+        customFieldData: {}, // Will be populated from other fields
+        registrationData: {} // Will contain all form data
+      };
+
+      // Collect all custom field data
+      Object.keys(req.body).forEach(key => {
+        if (!['eventId', 'registrationType', 'firstName', 'lastName', 'email', 'phoneNumber', 'auxiliaryBody', 'paymentMethod', 'paymentAmount', 'FirstName', 'LastName', 'Email', 'PhoneNumber', 'AuxiliaryBody'].includes(key)) {
+          registrationData.customFieldData[key] = req.body[key];
+          registrationData.registrationData[key] = req.body[key];
+        }
+      });
+
+      // Add all form data to registrationData field
+      registrationData.registrationData = { ...registrationData.registrationData, ...req.body };
+
+      // Handle face photo upload
+      if (facePhoto) {
+        // Store face photo using Cloudinary
+        const facePhotoResult = await cloudinary.uploader.upload(
+          `data:${facePhoto.mimetype};base64,${facePhoto.buffer.toString('base64')}`,
+          {
+            folder: 'event-faces',
+            public_id: `face_${eventId}_${Date.now()}`,
+            overwrite: true,
+            resource_type: 'image'
+          }
+        );
+        registrationData.facePhotoPath = facePhotoResult.secure_url;
+        
+        // Also store face in AWS Rekognition collection for face recognition
+        try {
+          const faceRecognitionResult = await faceRecognitionService.indexFace(
+            facePhoto.buffer,
+            `${registrationData.firstName}_${registrationData.lastName}_${Date.now()}`
+          );
+          console.log("Face indexed in AWS Rekognition:", faceRecognitionResult);
+        } catch (faceIndexError) {
+          console.warn("Failed to index face in AWS Rekognition:", faceIndexError);
+          // Don't fail registration if face indexing fails
+        }
+      }
+
+      // Handle payment receipt upload
+      if (paymentReceipt) {
+        const receiptResult = await cloudinary.uploader.upload(
+          `data:${paymentReceipt.mimetype};base64,${paymentReceipt.buffer.toString('base64')}`,
+          {
+            folder: 'payment-receipts',
+            public_id: `receipt_${eventId}_${Date.now()}`,
+            overwrite: true,
+            resource_type: 'auto'
+          }
+        );
+        registrationData.receiptPath = receiptResult.secure_url;
+      }
+
+      // Create the registration
+      const registration = await RegistrationService.createRegistration(eventId, registrationData);
+
+      // Get event details for notification
+      const event = await mongoStorage.getEvent(eventId);
+      
+      // Send registration confirmation email
+      if (event) {
+        await notificationService.notifyRegistrationSuccess({
+          registration,
+          event,
+          qrCode: registration.qrCodeImage
+        });
+      }
+      
+      res.status(201).json({
+        message: "Registration created successfully",
+        registration,
+        qrImageBase64: registration.qrCodeImage,
+        facePhotoUploaded: !!facePhoto,
+        receiptUploaded: !!paymentReceipt
+      });
+    } catch (error: any) {
+      console.error("Error creating event registration:", error);
+      res.status(500).json({ message: "Internal server error", details: error.message });
     }
   });
 }
