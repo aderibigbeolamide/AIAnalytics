@@ -398,7 +398,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Validation Successful",
-        description: `${data.registration.guestName || (data.member?.firstName + ' ' + data.member?.lastName)} validated for ${data.event.name}`,
+        description: `${data.registration.firstName} ${data.registration.lastName} validated for ${data.event.name}`,
       });
       setManualId("");
       setShowManualInput(false);
