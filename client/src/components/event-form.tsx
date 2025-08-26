@@ -36,13 +36,13 @@ const eventSchema = z.object({
     requiresPayment: z.boolean().default(false),
     amount: z.string().optional(),
     currency: z.string().default("NGN"),
-    paymentMethods: z.array(z.string()).default(["paystack", "manual_receipt"]),
+    paymentMethods: z.array(z.string()).default(["paystack"]),
     paymentRules: z.object({
       member: z.boolean().default(false),
       guest: z.boolean().default(false),
       invitee: z.boolean().default(false),
     }).default({ member: false, guest: false, invitee: false }),
-    allowManualReceipt: z.boolean().default(true),
+    allowManualReceipt: z.boolean().default(false),
     paymentDescription: z.string().optional(),
   }).optional(),
   customRegistrationFields: z.array(z.any()).min(1, "At least one registration field is required"),
@@ -105,9 +105,9 @@ export function EventForm({ onClose, event }: EventFormProps) {
         requiresPayment: false,
         amount: "",
         currency: "NGN",
-        paymentMethods: ["paystack", "manual_receipt"],
+        paymentMethods: ["paystack"],
         paymentRules: { member: false, guest: false, invitee: false },
-        allowManualReceipt: true,
+        allowManualReceipt: false,
         paymentDescription: "",
       },
       customRegistrationFields: event?.customRegistrationFields || [],
@@ -398,7 +398,7 @@ export function EventForm({ onClose, event }: EventFormProps) {
               <FormLabel>Event Image (Optional)</FormLabel>
               <FormControl>
                 <div className="space-y-4">
-                  {console.log('DEBUG: Rendering with imagePreview:', imagePreview)}
+{/* Event image preview */}
                   {imagePreview ? (
                     <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
                       <img 

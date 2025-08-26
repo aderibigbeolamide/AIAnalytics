@@ -119,13 +119,12 @@ const createDynamicSchema = (registrationType: string, event: any) => {
   }
 
   // Add payment fields if payment is required for this registration type
-  if (event.requiresPayment && event.paymentAmount && event.paymentAmount > 0) {
-    schemaFields.paymentMethod = z.enum(["paystack", "manual_receipt"], {
+  if ((event.requiresPayment || event.paymentSettings?.requiresPayment) && 
+      (event.paymentAmount || event.paymentSettings?.amount) && 
+      (event.paymentAmount > 0 || parseFloat(event.paymentSettings?.amount || '0') > 0)) {
+    schemaFields.paymentMethod = z.enum(["paystack"], {
       required_error: "Please select a payment method"
-    });
-    
-    // Payment receipt is required only when manual receipt method is selected
-    schemaFields.paymentReceipt = z.any().optional();
+    }).default("paystack");
   }
 
   return z.object(schemaFields);
@@ -151,8 +150,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
     resolver: zodResolver(createDynamicSchema(registrationType, event)),
     defaultValues: {
       registrationType: registrationType,
-      paymentMethod: "",
-      paymentReceipt: null,
+      paymentMethod: "paystack",
       ...event.customRegistrationFields?.reduce((acc: any, field: any) => {
         acc[field.name] = field.defaultValue || "";
         return acc;
@@ -577,25 +575,13 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                             value={field.value}
                             className="grid grid-cols-1 gap-3"
                           >
-                            {(event.paymentMethods?.includes("paystack") || event.paymentSettings?.paymentMethods?.includes("paystack")) && (
-                              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                                <RadioGroupItem value="paystack" id="paystack" />
-                                <div className="flex-1">
-                                  <Label htmlFor="paystack" className="font-medium">Pay Online (Paystack)</Label>
-                                  <p className="text-xs text-gray-600">Secure online payment with card or bank transfer</p>
-                                </div>
+                            <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                              <RadioGroupItem value="paystack" id="paystack" />
+                              <div className="flex-1">
+                                <Label htmlFor="paystack" className="font-medium">Pay Online (Paystack)</Label>
+                                <p className="text-xs text-gray-600">Secure online payment with card or bank transfer</p>
                               </div>
-                            )}
-
-                            {(event.paymentMethods?.includes("manual_receipt") || event.paymentSettings?.paymentMethods?.includes("manual_receipt") || event.paymentSettings?.allowManualReceipt) && (
-                              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                                <RadioGroupItem value="manual_receipt" id="manual_receipt" />
-                                <div className="flex-1">
-                                  <Label htmlFor="manual_receipt" className="font-medium">Upload Payment Receipt</Label>
-                                  <p className="text-xs text-gray-600">Upload a receipt of your payment for verification</p>
-                                </div>
-                              </div>
-                            )}
+                            </div>
 
                           </RadioGroup>
                         </FormControl>
@@ -604,33 +590,6 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                     )}
                   />
 
-                  {/* Receipt Upload Field - only show if manual receipt is selected */}
-                  {form.watch("paymentMethod") === "manual_receipt" && (
-                    <FormField
-                      control={form.control}
-                      name="paymentReceiptFile"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Payment Receipt *</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="file"
-                              accept=".jpg,.jpeg,.png,.pdf"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                field.onChange(file);
-                              }}
-                              className="cursor-pointer"
-                            />
-                          </FormControl>
-                          <p className="text-sm text-gray-600">
-                            Upload a clear image or PDF of your payment receipt (max 5MB)
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
 
                 </div>
               )}
@@ -640,7 +599,6 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                   (event.paymentAmount || event.paymentSettings?.amount) && 
                   (event.paymentAmount > 0 || parseFloat(event.paymentSettings?.amount || '0') > 0);
                 const isPaystackSelected = form.watch("paymentMethod") === "paystack";
-                const isManualReceiptSelected = form.watch("paymentMethod") === "manual_receipt";
                 
                 if (requiresPayment && isPaystackSelected) {
                   if (!paymentIntentConfirmed) {
@@ -680,16 +638,6 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                       </div>
                     );
                   }
-                } else if (requiresPayment && isManualReceiptSelected) {
-                  return (
-                    <Button
-                      type="submit"
-                      className="w-full bg-orange-600 hover:bg-orange-700"
-                      disabled={registrationMutation.isPending}
-                    >
-                      {registrationMutation.isPending ? "Submitting..." : "Submit Registration with Receipt"}
-                    </Button>
-                  );
                 } else {
                   return (
                     <Button

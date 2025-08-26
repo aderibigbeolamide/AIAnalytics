@@ -883,12 +883,7 @@ export function registerMongoRoutes(app: Express) {
         registrationData.paymentAmount = event.paymentAmount;
         registrationData.paymentMethod = formData.paymentMethod || 'pending';
         
-        // Handle payment receipt upload
-        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-        if (files?.paymentReceipt?.[0] && formData.paymentMethod === 'manual_receipt') {
-          registrationData.receiptPath = files.paymentReceipt[0].path;
-          registrationData.paymentStatus = 'pending_verification';
-        }
+        // Only online payment (Paystack) is supported - no manual receipt upload
       }
 
       // Handle face photo upload and AWS registration
