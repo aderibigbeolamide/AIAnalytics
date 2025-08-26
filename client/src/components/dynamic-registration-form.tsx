@@ -284,21 +284,66 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
     };
     
     try {
-      const response = await fetch(`/api/payment/initialize`, {
+      // First, create the registration (it will be in pending state)
+      const formData = new FormData();
+      
+      // Add all form fields
+      Object.entries(submissionData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          // Handle file uploads specially
+          if (key === 'facePhoto' && value instanceof File) {
+            formData.append(key, value);
+          } else if (key === 'paymentReceipt' && value instanceof File) {
+            formData.append(key, value);
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      
+      formData.append("eventId", eventId);
+      formData.append("requiresPayment", "true"); // Mark as payment pending
+      
+      // Use fetch to create registration first
+      const token = localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const registrationResponse = await fetch(`/api/events/${eventId}/register`, {
+        method: "POST",
+        headers,
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!registrationResponse.ok) {
+        const text = await registrationResponse.text();
+        throw new Error(`Registration failed: ${registrationResponse.status}: ${text}`);
+      }
+
+      const registrationResult = await registrationResponse.json();
+      console.log("Registration created:", registrationResult);
+
+      // Now initialize payment with the registration ID
+      const paymentResponse = await fetch(`/api/payment/initialize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          eventId: eventId,
-          email: submissionData.email || submissionData.Email || 'user@example.com',
-          registrationData: submissionData
+          registrationId: registrationResult.registration.id || registrationResult.registration._id,
+          email: submissionData.email || submissionData.Email,
+          amount: event.paymentAmount || event.paymentSettings?.amount
         })
       });
       
-      const paymentData = await response.json();
+      const paymentData = await paymentResponse.json();
+      console.log("Payment initialization result:", paymentData);
       
-      if (paymentData.success && paymentData.data.authorization_url) {
+      if (paymentData.success && paymentData.data?.authorization_url) {
         // Redirect to Paystack for payment
         window.location.href = paymentData.data.authorization_url;
       } else {
@@ -309,9 +354,10 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
         });
       }
     } catch (error) {
+      console.error("Payment initiation error:", error);
       toast({
         title: "Payment Error",
-        description: "Failed to initialize payment. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to initialize payment. Please try again.",
         variant: "destructive"
       });
     }
@@ -319,10 +365,12 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
 
   const onSubmit = (data: any) => {
     // Check if payment is required for this registration type
-    const requiresPayment = event.requiresPayment && event.paymentAmount && event.paymentAmount > 0;
+    const requiresPayment = (event.requiresPayment || event.paymentSettings?.requiresPayment) && 
+      (event.paymentAmount || event.paymentSettings?.amount) && 
+      (event.paymentAmount > 0 || parseFloat(event.paymentSettings?.amount || '0') > 0);
     
     if (requiresPayment && data.paymentMethod === 'paystack') {
-      // Initiate payment first
+      // Initiate payment flow (creates registration + initializes payment)
       initiatePayment(data);
     } else {
       // Proceed with normal registration (no payment or manual receipt)

@@ -171,8 +171,15 @@ export function registerAuthRoutes(app: Express) {
       let organizationInfo = null;
       if (user.role !== 'super_admin' && user.organizationId) {
         try {
-          const orgId = typeof user.organizationId === 'string' ? user.organizationId : user.organizationId.toString();
-          organizationInfo = await mongoStorage.getOrganization(orgId);
+          // Check if organizationId is already populated (an object) or just an ID
+          if (typeof user.organizationId === 'object' && user.organizationId._id) {
+            // Already populated, use the populated data
+            organizationInfo = user.organizationId;
+          } else {
+            // It's just an ID string, fetch the organization
+            const orgId = typeof user.organizationId === 'string' ? user.organizationId : user.organizationId.toString();
+            organizationInfo = await mongoStorage.getOrganization(orgId);
+          }
         } catch (orgError) {
           console.error('Error fetching organization info:', orgError);
           // Continue without organization info
