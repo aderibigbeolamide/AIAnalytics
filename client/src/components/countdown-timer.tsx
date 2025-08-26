@@ -47,8 +47,35 @@ export function CountdownTimer({
   useEffect(() => {
     const calculateTimeRemaining = () => {
       const now = new Date().getTime();
+      
+      // Validate dates
+      if (!event.startDate || !event.endDate) {
+        setEventStatus('upcoming');
+        setTimeRemaining({
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          total: 0
+        });
+        return;
+      }
+      
       const startTime = new Date(event.startDate).getTime();
       const endTime = new Date(event.endDate).getTime();
+      
+      // Check if dates are valid
+      if (isNaN(startTime) || isNaN(endTime)) {
+        setEventStatus('upcoming');
+        setTimeRemaining({
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          total: 0
+        });
+        return;
+      }
       
       if (now < startTime) {
         // Event hasn't started
