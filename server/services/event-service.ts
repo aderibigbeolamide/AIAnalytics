@@ -30,6 +30,7 @@ export class EventService {
         ticketCategories: event.ticketCategories || [],
         customRegistrationFields: event.customRegistrationFields,
         paymentSettings: event.paymentSettings,
+        faceRecognitionSettings: event.faceRecognitionSettings,
         organizationId: event.organizationId?.toString()
       }));
   }
@@ -63,6 +64,7 @@ export class EventService {
       ticketCategories: event.ticketCategories || [],
       customRegistrationFields: event.customRegistrationFields,
       paymentSettings: event.paymentSettings,
+      faceRecognitionSettings: event.faceRecognitionSettings,
       organizationId: event.organizationId?.toString()
     };
   }

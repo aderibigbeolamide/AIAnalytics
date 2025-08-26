@@ -97,6 +97,7 @@ export function registerMongoRoutes(app: Express) {
         customFields: event.customFields,
         customRegistrationFields: event.customRegistrationFields,
         paymentSettings: event.paymentSettings,
+        faceRecognitionSettings: event.faceRecognitionSettings,
         organizationId: event.organizationId?.toString()
       };
 
@@ -3536,6 +3537,30 @@ export function registerMongoRoutes(app: Express) {
         success: false, 
         message: "Failed to add verification codes" 
       });
+    }
+  });
+
+  // Temporary route to fix face recognition settings for existing events
+  app.patch("/api/events/:id/fix-face-recognition", async (req: Request, res: Response) => {
+    try {
+      const eventId = req.params.id;
+      
+      const updatedEvent = await mongoStorage.updateEvent(eventId, {
+        faceRecognitionSettings: {
+          enabled: false,
+          required: false,
+          description: "",
+        }
+      });
+      
+      if (!updatedEvent) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      res.json({ message: "Face recognition settings added successfully", event: updatedEvent });
+    } catch (error) {
+      console.error("Error fixing face recognition settings:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 }
