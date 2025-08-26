@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
 import { FormFieldBuilder } from "@/components/form-field-builder";
-import { Plus, X, CreditCard, Receipt, Upload, Image as ImageIcon } from "lucide-react";
+import { Plus, X, CreditCard, Receipt, Upload, Image as ImageIcon, Camera } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -69,6 +69,11 @@ const eventSchema = z.object({
     inAppEnabled: z.boolean().default(true),
     reminderTitle: z.string().optional(),
   }).optional(),
+  faceRecognitionSettings: z.object({
+    enabled: z.boolean().default(false),
+    required: z.boolean().default(false),
+    description: z.string().optional(),
+  }).optional(),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -121,6 +126,11 @@ export function EventForm({ onClose, event }: EventFormProps) {
         emailEnabled: true,
         inAppEnabled: true,
         reminderTitle: "",
+      },
+      faceRecognitionSettings: event?.faceRecognitionSettings || {
+        enabled: false,
+        required: false,
+        description: "",
       },
     },
   });
@@ -1288,6 +1298,91 @@ export function EventForm({ onClose, event }: EventFormProps) {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Face Recognition Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5" />
+              Face Recognition
+            </CardTitle>
+            <CardDescription>
+              Enable face recognition for enhanced event security and validation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="faceRecognitionSettings.enabled"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Enable face recognition
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Participants can upload photos during registration for AI-powered validation
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            {form.watch("faceRecognitionSettings.enabled") && (
+              <div className="space-y-4 pl-6 border-l-2 border-gray-200">
+                <FormField
+                  control={form.control}
+                  name="faceRecognitionSettings.required"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Make face photo required
+                        </FormLabel>
+                        <p className="text-xs text-muted-foreground">
+                          Participants must upload a face photo to complete registration
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="faceRecognitionSettings.description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instructions for participants (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="e.g., Please upload a clear photo of your face for event check-in. Ensure good lighting and look directly at the camera."
+                          rows={3}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Custom instructions to help participants take better photos
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             )}
           </CardContent>

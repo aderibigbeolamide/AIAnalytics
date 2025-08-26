@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { QrCode, Users, UserPlus, Mail, Calendar, Clock, CheckCircle, XCircle } from "lucide-react";
+import { QrCode, Users, UserPlus, Mail, Calendar, Clock, CheckCircle, XCircle, Camera } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RegistrationCard } from "@/components/registration-card";
 import { CountdownTimer } from "@/components/countdown-timer";
@@ -127,6 +127,17 @@ const createDynamicSchema = (registrationType: string, event: any) => {
     }).default("paystack");
   }
 
+  // Add face photo field if face recognition is enabled
+  if (event.faceRecognitionSettings?.enabled) {
+    if (event.faceRecognitionSettings?.required) {
+      schemaFields.facePhoto = z.any().refine((file) => file instanceof File, {
+        message: "Face photo is required"
+      });
+    } else {
+      schemaFields.facePhoto = z.any().optional();
+    }
+  }
+
   return z.object(schemaFields);
 };
 
@@ -198,7 +209,14 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
       // Add all form fields
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          formData.append(key, String(value));
+          // Handle file uploads specially
+          if (key === 'facePhoto' && value instanceof File) {
+            formData.append(key, value);
+          } else if (key === 'paymentReceipt' && value instanceof File) {
+            formData.append(key, value);
+          } else {
+            formData.append(key, String(value));
+          }
         }
       });
       
@@ -543,6 +561,57 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                   )}
                 />
               ))}
+
+              {/* Face Photo Upload */}
+              {event.faceRecognitionSettings?.enabled && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                      <Camera className="h-4 w-4" />
+                      Face Recognition Photo
+                    </h4>
+                    {event.faceRecognitionSettings?.description && (
+                      <p className="text-sm text-blue-700 mb-3">
+                        {event.faceRecognitionSettings.description}
+                      </p>
+                    )}
+                    <p className="text-sm text-blue-700">
+                      {event.faceRecognitionSettings?.required ? 
+                        'Please upload a clear photo of your face to complete registration.' :
+                        'Optionally upload a photo for faster check-in at the event.'
+                      }
+                    </p>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="facePhoto"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Face Photo {event.faceRecognitionSettings?.required && <span className="text-red-500">*</span>}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                field.onChange(file);
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Upload a clear photo of your face. Accepted formats: JPEG, JPG, PNG, WebP (Max size: 5MB)
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
 
               {/* Payment Information - conditional based on registration type */}
               {/* Payment Section */}

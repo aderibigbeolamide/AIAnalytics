@@ -264,6 +264,12 @@ export interface IEvent extends Document {
     inAppEnabled: boolean;
     reminderTitle?: string;
   };
+  // Face recognition settings
+  faceRecognitionSettings?: {
+    enabled: boolean;
+    required: boolean;
+    description?: string;
+  };
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -308,6 +314,11 @@ const EventSchema = new Schema<IEvent>({
     emailEnabled: { type: Boolean, default: true },
     inAppEnabled: { type: Boolean, default: true },
     reminderTitle: { type: String },
+  },
+  faceRecognitionSettings: {
+    enabled: { type: Boolean, default: false },
+    required: { type: Boolean, default: false },
+    description: { type: String },
   },
   deletedAt: { type: Date },
 }, { timestamps: true });
