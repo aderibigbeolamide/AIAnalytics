@@ -4,6 +4,7 @@ import { EventService } from "../services/event-service";
 import { RegistrationService } from "../services/registration-service";
 import { notificationService } from "../services/notification-service";
 import { AWSAIService } from "../services/aws-ai-service";
+import { mongoStorage } from "../mongodb-storage";
 import multer from "multer";
 import { z } from "zod";
 import mongoose from "mongoose";
@@ -308,7 +309,7 @@ export function registerEventRoutes(app: Express) {
           if (organizations.length === 0) {
             return res.status(400).json({ message: "No approved organizations found. Please create an organization first." });
           }
-          orgIdString = organizations[0]._id.toString();
+          orgIdString = (organizations[0]._id as any)?.toString();
         }
       } else {
         // Regular admin: use their organization

@@ -114,7 +114,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Generate JWT token
       const token = generateToken({
-        id: user._id.toString(),
+        id: (user._id as any)?.toString(),
         username: user.username,
         email: user.email,
         role: user.role,
@@ -125,7 +125,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Return user info without password
       const userResponse = {
-        id: user._id.toString(),
+        id: (user._id as any)?.toString(),
         username: user.username,
         email: user.email,
         role: user.role,
@@ -133,7 +133,7 @@ export function registerAuthRoutes(app: Express) {
         firstName: user.firstName,
         lastName: user.lastName,
         organization: organizationInfo ? {
-          id: organizationInfo._id.toString(),
+          id: (organizationInfo._id as any)?.toString(),
           name: organizationInfo.name,
           isVerified: organizationInfo.isVerified
         } : null
@@ -174,7 +174,7 @@ export function registerAuthRoutes(app: Express) {
       }
 
       const userResponse = {
-        id: user._id.toString(),
+        id: (user._id as any)?.toString(),
         username: user.username,
         email: user.email,
         role: user.role,
@@ -182,7 +182,7 @@ export function registerAuthRoutes(app: Express) {
         firstName: user.firstName,
         lastName: user.lastName,
         organization: organizationInfo ? {
-          id: organizationInfo._id.toString(),
+          id: (organizationInfo._id as any)?.toString(),
           name: organizationInfo.name,
           isVerified: organizationInfo.isVerified
         } : null
