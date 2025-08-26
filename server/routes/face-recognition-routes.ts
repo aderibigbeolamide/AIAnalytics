@@ -268,7 +268,7 @@ export function registerFaceRecognitionRoutes(app: Express) {
         return res.json({
           success: true,
           validated: false,
-          message: "No matching face found in registered members",
+          message: "No matching face found in registered members. Please ensure you registered for this event with a face photo.",
           ...searchResult
         });
       }
@@ -276,19 +276,89 @@ export function registerFaceRecognitionRoutes(app: Express) {
       // Get the best match
       const bestMatch = searchResult.matches[0];
       
-      // Here you would typically:
-      // 1. Check if the user is registered for this event
-      // 2. Mark attendance in your database
-      // 3. Update registration status
-      
-      res.json({
-        success: true,
-        validated: true,
-        message: `Face recognized: ${bestMatch.userId}`,
-        match: bestMatch,
-        eventId,
-        validatedAt: new Date().toISOString(),
-      });
+      try {
+        // Import MongoDB storage to check registration
+        const { mongoStorage } = await import('../mongodb-storage');
+        
+        // Parse the user ID to extract information (format: eventId_firstName_lastName_timestamp)
+        const userIdParts = bestMatch.userId.split('_');
+        const matchedEventId = userIdParts[0];
+        const matchedFirstName = userIdParts[1];
+        const matchedLastName = userIdParts[2];
+        
+        // Check if the matched face is registered for this event
+        if (matchedEventId !== eventId) {
+          return res.json({
+            success: true,
+            validated: false,
+            message: `Face recognized but user is registered for a different event. Please check your registration.`,
+            confidence: bestMatch.confidence
+          });
+        }
+        
+        // Get all registrations for this event to find the specific registration
+        const eventRegistrations = await mongoStorage.getEventRegistrations(eventId);
+        const matchingRegistration = eventRegistrations.find(reg => 
+          reg.faceUserId === bestMatch.userId ||
+          (reg.firstName?.toLowerCase() === matchedFirstName?.toLowerCase() && 
+           reg.lastName?.toLowerCase() === matchedLastName?.toLowerCase())
+        );
+        
+        if (!matchingRegistration) {
+          return res.json({
+            success: true,
+            validated: false,
+            message: `Face recognized but no registration found for this event. Please contact support.`,
+            confidence: bestMatch.confidence
+          });
+        }
+        
+        // Check registration status
+        if (matchingRegistration.status === 'inactive' || matchingRegistration.status === 'cancelled') {
+          return res.json({
+            success: true,
+            validated: false,
+            message: `Registration is ${matchingRegistration.status}. Please contact support.`,
+            registrationInfo: {
+              name: `${matchingRegistration.firstName} ${matchingRegistration.lastName}`,
+              status: matchingRegistration.status
+            }
+          });
+        }
+        
+        // Mark attendance
+        await mongoStorage.updateEventRegistration(matchingRegistration._id.toString(), {
+          'attendance.attended': true,
+          'attendance.attendedAt': new Date(),
+          'attendance.validatedBy': req.user?.id,
+          'attendance.validationMethod': 'face_recognition'
+        });
+        
+        res.json({
+          success: true,
+          validated: true,
+          message: `Welcome ${matchingRegistration.firstName} ${matchingRegistration.lastName}! Attendance marked successfully.`,
+          registrationInfo: {
+            id: matchingRegistration._id.toString(),
+            name: `${matchingRegistration.firstName} ${matchingRegistration.lastName}`,
+            email: matchingRegistration.email,
+            registrationType: matchingRegistration.registrationType,
+            uniqueId: matchingRegistration.uniqueId
+          },
+          match: bestMatch,
+          eventId,
+          validatedAt: new Date().toISOString(),
+        });
+        
+      } catch (dbError) {
+        console.error("Database error during validation:", dbError);
+        res.json({
+          success: true,
+          validated: false,
+          message: `Face recognized but unable to verify registration. Please try again or use QR code validation.`,
+          confidence: bestMatch.confidence
+        });
+      }
 
     } catch (error) {
       console.error("Error validating attendance:", error);

@@ -701,7 +701,10 @@ export function registerMongoRoutes(app: Express) {
   // ================ EVENT REGISTRATION ================
   
   // Register for event with custom fields and validation
-  app.post("/api/events/:eventId/register", upload.single('paymentReceipt'), async (req: Request, res: Response) => {
+  app.post("/api/events/:eventId/register", upload.fields([
+    { name: 'paymentReceipt', maxCount: 1 },
+    { name: 'facePhoto', maxCount: 1 }
+  ]), async (req: Request, res: Response) => {
     try {
       const eventId = req.params.eventId;
       
@@ -880,9 +883,50 @@ export function registerMongoRoutes(app: Express) {
         registrationData.paymentMethod = formData.paymentMethod || 'pending';
         
         // Handle payment receipt upload
-        if (req.file && formData.paymentMethod === 'manual_receipt') {
-          registrationData.receiptPath = req.file.path;
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        if (files?.paymentReceipt?.[0] && formData.paymentMethod === 'manual_receipt') {
+          registrationData.receiptPath = files.paymentReceipt[0].path;
           registrationData.paymentStatus = 'pending_verification';
+        }
+      }
+
+      // Handle face photo upload and AWS registration
+      let faceRegistrationData = null;
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      if (files?.facePhoto?.[0]) {
+        try {
+          // Import face recognition service
+          const { faceRecognitionService } = await import('../routes/face-recognition-routes');
+          
+          // Generate unique user ID for face recognition (combination of registration data)
+          const faceUserId = `${eventId}_${firstName}_${lastName}_${Date.now()}`.replace(/\s+/g, '_');
+          
+          // Register face with AWS
+          const faceResult = await faceRecognitionService.registerFace(
+            files.facePhoto[0].buffer, 
+            faceUserId,
+            {
+              eventId,
+              firstName,
+              lastName,
+              email: formData.email || formData.Email || '',
+              registrationTime: new Date().toISOString()
+            }
+          );
+          
+          if (faceResult.success) {
+            registrationData.facePhotoPath = files.facePhoto[0].path;
+            registrationData.awsFaceId = faceResult.faceId;
+            registrationData.faceUserId = faceUserId;
+            faceRegistrationData = faceResult;
+            console.log(`Face registered successfully for ${firstName} ${lastName} with ID: ${faceUserId}`);
+          } else {
+            console.error('Face registration failed:', faceResult.error);
+            // Don't fail registration if face upload fails, just log it
+          }
+        } catch (faceError) {
+          console.error('Error processing face photo:', faceError);
+          // Continue with registration even if face processing fails
         }
       }
 

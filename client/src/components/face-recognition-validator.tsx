@@ -27,17 +27,19 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isUsingCamera, setIsUsingCamera] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [checkingRegistration, setCheckingRegistration] = useState(false);
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
 
   const validateFaceMutation = useMutation({
     mutationFn: async ({ file, memberName, email }: { file: File; memberName: string; email: string }) => {
       const authHeaders = getAuthHeaders();
       const formData = new FormData();
-      formData.append('faceImage', file);
+      formData.append('image', file);
       formData.append('eventId', eventId);
       formData.append('memberName', memberName);
       if (email) formData.append('email', email);
 
-      const response = await fetch('/api/validate-face', {
+      const response = await fetch('/api/face-recognition/validate-attendance', {
         method: 'POST',
         headers: {
           ...authHeaders,
