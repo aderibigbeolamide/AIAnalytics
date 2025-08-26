@@ -25,16 +25,12 @@ export default function Events() {
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  const { data: rawEvents = [] } = useQuery({
-    queryKey: ["/api/events", new Date().getTime()], // Force refresh
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["/api/events"],
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/events`);
       const data = await response.json();
-      console.log('Raw events data received:', data);
-      if (data.length > 0) {
-        console.log('Sample event _doc data:', data[0]._doc);
-        console.log('Sample event properties:', Object.keys(data[0]));
-      }
+      console.log('Fetching events:', data.length, 'received');
       
       // Extract clean data from MongoDB objects
       const cleanEvents = data.map((event: any) => {
@@ -42,17 +38,8 @@ export default function Events() {
         let eventData = event;
         
         if (event._doc) {
-          console.log('Found _doc property, extracting data:', event._doc);
           eventData = event._doc;
         }
-        
-        // Log the extracted data for debugging
-        console.log('Extracted event data:', {
-          name: eventData.name,
-          location: eventData.location,
-          startDate: eventData.startDate,
-          eventImage: eventData.eventImage
-        });
         
         return {
           id: eventData._id?.toString() || event.id,
@@ -80,17 +67,11 @@ export default function Events() {
         };
       });
       
-      console.log('Processed clean events:', cleanEvents);
-      if (cleanEvents.length > 0) {
-        console.log('Sample clean event:', cleanEvents[0]);
-      }
-      
       return cleanEvents;
     },
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 300000, // Keep in cache for 5 minutes
   });
-
-  // Use the processed events
-  const events = rawEvents;
 
   const exportAttendance = useMutation({
     mutationFn: async (eventId: number) => {
@@ -317,9 +298,38 @@ export default function Events() {
               </div>
             </div>
 
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading events...</p>
+                </div>
+              </div>
+            )}
+
+            {/* No Events Message */}
+            {!isLoading && filteredEvents.length === 0 && (
+              <div className="text-center py-12">
+                <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No events found</h3>
+                <p className="text-gray-600 mb-6">
+                  {searchTerm || statusFilter !== 'all' 
+                    ? 'Try adjusting your search or filter criteria.' 
+                    : 'Get started by creating your first event.'
+                  }
+                </p>
+                <Button onClick={() => setIsEventModalOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Create Event
+                </Button>
+              </div>
+            )}
+
             {/* Events Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredEvents.map((event: any) => (
+            {!isLoading && filteredEvents.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredEvents.map((event: any) => (
                 <Card key={event.id} className="hover:shadow-lg transition-shadow overflow-hidden">
                   {/* Event Image */}
                   <div className="h-48 overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative">
@@ -527,12 +537,7 @@ export default function Events() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-            
-            {filteredEvents.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No events found matching your criteria.</p>
+                ))}
               </div>
             )}
           </CardContent>
