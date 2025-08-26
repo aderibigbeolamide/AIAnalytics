@@ -1311,6 +1311,7 @@ export function registerMongoRoutes(app: Express) {
           paymentReference,
           metadata,
           organization?.paystackSubaccountCode || undefined,
+          undefined, // splitConfig - not needed for basic payments
           platformFeeRate // Dynamic platform fee from settings
         );
 
