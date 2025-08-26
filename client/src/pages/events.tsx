@@ -29,7 +29,13 @@ export default function Events() {
     queryKey: ["/api/events"],
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/events`);
-      return response.json();
+      const data = await response.json();
+      console.log('Events data received:', data);
+      if (data.length > 0) {
+        console.log('Sample event:', data[0]);
+        console.log('Sample event startDate:', data[0].startDate, 'type:', typeof data[0].startDate);
+      }
+      return data;
     },
   });
 
@@ -72,7 +78,22 @@ export default function Events() {
   const getEventStatus = (event: any) => {
     const now = new Date();
     const start = new Date(event.startDate);
-    const end = new Date(event.endDate);
+    const end = event.endDate ? new Date(event.endDate) : new Date(event.startDate);
+    
+    // If dates are invalid, return a default status
+    if (isNaN(start.getTime())) return 'upcoming';
+    
+    // Check if event is cancelled
+    if (event.status === 'cancelled') return 'cancelled';
+    
+    // For events without end date, consider them as single-day events
+    if (!event.endDate) {
+      const eventDate = new Date(start);
+      eventDate.setHours(23, 59, 59); // End of day
+      if (now < start) return 'upcoming';
+      if (now >= start && now <= eventDate) return 'ongoing';
+      return 'ended';
+    }
     
     if (now < start) return 'upcoming';
     if (now >= start && now <= end) return 'ongoing';
@@ -282,7 +303,14 @@ export default function Events() {
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">Date:</span>
                           <span className="font-medium">
-                            {new Date(event.startDate).toLocaleDateString()}
+                            {event.startDate && !isNaN(new Date(event.startDate).getTime()) 
+                              ? new Date(event.startDate).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })
+                              : 'Invalid Date'
+                            }
                           </span>
                         </div>
                       </div>
