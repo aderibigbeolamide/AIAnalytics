@@ -548,12 +548,14 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
 
               {/* Payment Information - conditional based on registration type */}
               {/* Payment Section */}
-              {event.requiresPayment && event.paymentAmount && event.paymentAmount > 0 && (
+              {(event.requiresPayment || event.paymentSettings?.requiresPayment) && (event.paymentAmount || event.paymentSettings?.amount) && (
+                event.paymentAmount > 0 || parseFloat(event.paymentSettings?.amount || '0') > 0
+              ) && (
                 <div className="space-y-4">
                   <div className="bg-yellow-50 p-4 rounded-lg">
                     <h4 className="font-medium text-yellow-900 mb-2">Payment Required</h4>
                     <p className="text-sm text-yellow-700">
-                      This event requires a payment of {event.paymentCurrency || 'NGN'} {event.paymentAmount} for {registrationType}s.
+                      This event requires a payment of {event.paymentCurrency || event.paymentSettings?.currency || 'NGN'} {event.paymentAmount || event.paymentSettings?.amount} for {registrationType}s.
                     </p>
                     {event.description && (
                       <p className="text-sm text-yellow-700 mt-2">
@@ -575,12 +577,22 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                             value={field.value}
                             className="grid grid-cols-1 gap-3"
                           >
-                            {event.paymentMethods?.includes("paystack") && (
+                            {(event.paymentMethods?.includes("paystack") || event.paymentSettings?.paymentMethods?.includes("paystack")) && (
                               <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
                                 <RadioGroupItem value="paystack" id="paystack" />
                                 <div className="flex-1">
                                   <Label htmlFor="paystack" className="font-medium">Pay Online (Paystack)</Label>
                                   <p className="text-xs text-gray-600">Secure online payment with card or bank transfer</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {(event.paymentMethods?.includes("manual_receipt") || event.paymentSettings?.paymentMethods?.includes("manual_receipt") || event.paymentSettings?.allowManualReceipt) && (
+                              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                                <RadioGroupItem value="manual_receipt" id="manual_receipt" />
+                                <div className="flex-1">
+                                  <Label htmlFor="manual_receipt" className="font-medium">Upload Payment Receipt</Label>
+                                  <p className="text-xs text-gray-600">Upload a receipt of your payment for verification</p>
                                 </div>
                               </div>
                             )}
@@ -592,13 +604,43 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                     )}
                   />
 
+                  {/* Receipt Upload Field - only show if manual receipt is selected */}
+                  {form.watch("paymentMethod") === "manual_receipt" && (
+                    <FormField
+                      control={form.control}
+                      name="paymentReceiptFile"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Receipt *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="file"
+                              accept=".jpg,.jpeg,.png,.pdf"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                field.onChange(file);
+                              }}
+                              className="cursor-pointer"
+                            />
+                          </FormControl>
+                          <p className="text-sm text-gray-600">
+                            Upload a clear image or PDF of your payment receipt (max 5MB)
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                 </div>
               )}
 
               {(() => {
-                const requiresPayment = event.requiresPayment && event.paymentAmount && event.paymentAmount > 0;
+                const requiresPayment = (event.requiresPayment || event.paymentSettings?.requiresPayment) && 
+                  (event.paymentAmount || event.paymentSettings?.amount) && 
+                  (event.paymentAmount > 0 || parseFloat(event.paymentSettings?.amount || '0') > 0);
                 const isPaystackSelected = form.watch("paymentMethod") === "paystack";
+                const isManualReceiptSelected = form.watch("paymentMethod") === "manual_receipt";
                 
                 if (requiresPayment && isPaystackSelected) {
                   if (!paymentIntentConfirmed) {
@@ -609,7 +651,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                         disabled={registrationMutation.isPending}
                         onClick={() => setPaymentIntentConfirmed(true)}
                       >
-                        Pay Online - {event.paymentCurrency || 'NGN'} {event.paymentAmount || 0}
+                        Pay Online - {event.paymentCurrency || event.paymentSettings?.currency || 'NGN'} {event.paymentAmount || event.paymentSettings?.amount || 0}
                       </Button>
                     );
                   } else {
@@ -617,7 +659,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                       <div className="space-y-3">
                         <div className="bg-green-50 p-3 rounded-lg">
                           <p className="text-sm text-green-700 text-center">
-                            Ready to proceed with payment of {event.paymentCurrency || 'NGN'} {event.paymentAmount || 0}
+                            Ready to proceed with payment of {event.paymentCurrency || event.paymentSettings?.currency || 'NGN'} {event.paymentAmount || event.paymentSettings?.amount || 0}
                           </p>
                         </div>
                         <Button
@@ -638,6 +680,16 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                       </div>
                     );
                   }
+                } else if (requiresPayment && isManualReceiptSelected) {
+                  return (
+                    <Button
+                      type="submit"
+                      className="w-full bg-orange-600 hover:bg-orange-700"
+                      disabled={registrationMutation.isPending}
+                    >
+                      {registrationMutation.isPending ? "Submitting..." : "Submit Registration with Receipt"}
+                    </Button>
+                  );
                 } else {
                   return (
                     <Button
