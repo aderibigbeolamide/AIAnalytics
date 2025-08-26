@@ -486,6 +486,11 @@ export function registerMongoRoutes(app: Express) {
       // Convert to plain object and format properly
       const eventObj = event.toObject();
       
+      // Disable caching for event details to always get fresh data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json({
         id: eventObj._id.toString(),
         name: eventObj.name,
@@ -1033,13 +1038,33 @@ export function registerMongoRoutes(app: Express) {
       
       const registrations = await mongoStorage.getEventRegistrations(eventId);
       
-      const formattedRegistrations = registrations.map(reg => ({
-        id: reg._id.toString(),
-        ...reg.toObject(),
-        eventId: reg.eventId?.toString(),
-        memberId: reg.memberId?.toString()
-      }));
+      const formattedRegistrations = registrations.map(reg => {
+        const regObj = reg.toObject();
+        return {
+          id: regObj._id.toString(),
+          eventId: regObj.eventId?.toString(),
+          registrationType: regObj.registrationType || 'member',
+          firstName: regObj.firstName,
+          lastName: regObj.lastName,
+          email: regObj.email,
+          auxiliaryBody: regObj.auxiliaryBody,
+          status: regObj.status || 'registered',
+          paymentStatus: regObj.paymentStatus || 'not_required',
+          paymentAmount: regObj.paymentAmount,
+          paymentReceiptUrl: regObj.paymentReceiptUrl,
+          uniqueId: regObj.uniqueId,
+          qrCode: regObj.qrCode,
+          customData: regObj.customData || {},
+          createdAt: regObj.createdAt,
+          memberId: regObj.memberId?.toString()
+        };
+      });
 
+      // Disable caching for registrations to always get fresh data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(formattedRegistrations);
     } catch (error) {
       console.error("Error getting event registrations:", error);
