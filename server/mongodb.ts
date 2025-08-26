@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
-// Use environment variable for MongoDB URI
-const MONGODB_URI = process.env.DATABASE_URL || process.env.MONGODB_URI;
+// Use environment variable for MongoDB URI - but make it optional for migration
+const MONGODB_URI = process.env.MONGODB_URI;
 
-console.log("Connecting to MongoDB...");
+console.log("MongoDB service - checking connection...");
 
 let isConnected = false;
 
@@ -14,8 +14,8 @@ export const connectToMongoDB = async () => {
   }
 
   if (!MONGODB_URI) {
-    console.error("❌ MONGODB_URI environment variable is not set");
-    console.log("⚠️  Running in development mode without MongoDB - some features may be limited");
+    console.log("⚠️  MongoDB not configured - running with PostgreSQL only");
+    console.log("🔄 Some legacy MongoDB features may be unavailable during migration");
     return;
   }
 
@@ -24,8 +24,9 @@ export const connectToMongoDB = async () => {
     isConnected = true;
     console.log("✅ MongoDB connected successfully");
   } catch (error) {
-    console.error("❌ MongoDB connection failed:", error);
-    throw error;
+    console.warn("⚠️  MongoDB connection failed, continuing with PostgreSQL:", error instanceof Error ? error.message : String(error));
+    // Don't throw error - allow app to continue with PostgreSQL
+    return;
   }
 };
 
