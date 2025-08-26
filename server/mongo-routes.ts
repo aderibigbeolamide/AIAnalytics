@@ -1048,7 +1048,7 @@ export function registerMongoRoutes(app: Express) {
           firstName: regObj.firstName,
           lastName: regObj.lastName,
           email: regObj.email,
-          auxiliaryBody: regObj.auxiliaryBody,
+          auxiliaryBody: regObj.auxiliaryBody || regObj.registrationData?.auxiliaryBody || regObj.registrationData?.AuxiliaryBody || regObj.registrationData?.Gender || regObj.registrationData?.gender || regObj.registrationData?.Student || regObj.registrationData?.student || '',
           status: regObj.status || 'registered',
           paymentStatus: regObj.paymentStatus || 'not_required',
           paymentAmount: regObj.paymentAmount,
