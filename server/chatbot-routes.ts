@@ -103,29 +103,27 @@ export async function getChatSessionFromDB(sessionId: string): Promise<ChatSessi
 
 async function loadChatSessions() {
   try {
-    // MongoDB chat sessions temporarily disabled for Replit migration
-    console.log('Chat sessions loading disabled during MongoDB -> PostgreSQL migration');
-    // const sessions = await ChatSessionModel.find({ status: { $ne: 'resolved' } });
-    // console.log(`Loaded ${sessions.length} chat sessions from database`);
+    const sessions = await ChatSessionModel.find({ status: { $ne: 'resolved' } });
+    console.log(`Loaded ${sessions.length} chat sessions from database`);
     
-    // sessions.forEach(session => {
-    //   chatSessions.set(session.sessionId, {
-    //     id: session.sessionId,
-    //     userEmail: session.userEmail || '',
-    //     isEscalated: session.isEscalated,
-    //     adminId: session.adminId || undefined,
-    //     status: session.status as 'active' | 'resolved' | 'pending_admin',
-    //     messages: session.messages.map(msg => ({
-    //       id: msg.id || '',
-    //       text: msg.text || '',
-    //       sender: msg.sender as 'bot' | 'user' | 'admin',
-    //       timestamp: msg.timestamp || new Date(),
-    //       type: (msg.type as 'text' | 'quick_reply' | 'escalation') || 'text'
-    //     })),
-    //     createdAt: session.createdAt,
-    //     lastActivity: session.lastActivity
-    //   });
-    // });
+    sessions.forEach(session => {
+      chatSessions.set(session.sessionId, {
+        id: session.sessionId,
+        userEmail: session.userEmail || '',
+        isEscalated: session.isEscalated,
+        adminId: session.adminId || undefined,
+        status: session.status as 'active' | 'resolved' | 'pending_admin',
+        messages: session.messages.map(msg => ({
+          id: msg.id || '',
+          text: msg.text || '',
+          sender: msg.sender as 'bot' | 'user' | 'admin',
+          timestamp: msg.timestamp || new Date(),
+          type: (msg.type as 'text' | 'quick_reply' | 'escalation') || 'text'
+        })),
+        createdAt: session.createdAt,
+        lastActivity: session.lastActivity
+      });
+    });
   } catch (error) {
     console.error('Error loading chat sessions:', error);
   }
