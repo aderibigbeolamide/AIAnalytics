@@ -717,6 +717,7 @@ export function registerMongoRoutes(app: Express) {
       // Extract form data (multipart/form-data or JSON)
       const formData = req.body;
       console.log("Registration form data:", formData);
+      console.log("Registration type being processed:", formData.registrationType);
 
       // Validate required base fields
       if (!formData.registrationType) {

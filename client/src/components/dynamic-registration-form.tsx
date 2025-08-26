@@ -119,7 +119,7 @@ const createDynamicSchema = (registrationType: string, event: any) => {
   }
 
   // Add payment fields if payment is required for this registration type
-  if (event.paymentSettings?.requiresPayment && event.paymentSettings?.paymentRules?.[registrationType]) {
+  if (event.requiresPayment && event.paymentAmount && event.paymentAmount > 0) {
     schemaFields.paymentMethod = z.enum(["paystack", "manual_receipt"], {
       required_error: "Please select a payment method"
     });
@@ -303,8 +303,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
 
   const onSubmit = (data: any) => {
     // Check if payment is required for this registration type
-    const requiresPayment = event.paymentSettings?.requiresPayment && 
-                           event.paymentSettings?.paymentRules?.[registrationType];
+    const requiresPayment = event.requiresPayment && event.paymentAmount && event.paymentAmount > 0;
     
     if (requiresPayment && data.paymentMethod === 'paystack') {
       // Initiate payment first
@@ -317,6 +316,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
       };
       
       console.log("Submitting registration with data:", submissionData);
+      console.log("Registration type being submitted:", submissionData.registrationType);
       registrationMutation.mutate(submissionData);
     }
   };
@@ -548,17 +548,16 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
 
               {/* Payment Information - conditional based on registration type */}
               {/* Payment Section */}
-              {event.paymentSettings?.requiresPayment && 
-               event.paymentSettings?.paymentRules?.[registrationType] && (
+              {event.requiresPayment && event.paymentAmount && event.paymentAmount > 0 && (
                 <div className="space-y-4">
                   <div className="bg-yellow-50 p-4 rounded-lg">
                     <h4 className="font-medium text-yellow-900 mb-2">Payment Required</h4>
                     <p className="text-sm text-yellow-700">
-                      This event requires a payment of {event.paymentSettings.currency} {event.paymentSettings.amount} for {registrationType}s.
+                      This event requires a payment of {event.paymentCurrency || 'NGN'} {event.paymentAmount} for {registrationType}s.
                     </p>
-                    {event.paymentSettings.paymentDescription && (
+                    {event.description && (
                       <p className="text-sm text-yellow-700 mt-2">
-                        {event.paymentSettings.paymentDescription}
+                        {event.description}
                       </p>
                     )}
                   </div>
@@ -576,7 +575,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                             value={field.value}
                             className="grid grid-cols-1 gap-3"
                           >
-                            {event.paymentSettings.paymentMethods?.includes("paystack") && (
+                            {event.paymentMethods?.includes("paystack") && (
                               <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
                                 <RadioGroupItem value="paystack" id="paystack" />
                                 <div className="flex-1">
@@ -598,8 +597,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
               )}
 
               {(() => {
-                const requiresPayment = event.paymentSettings?.requiresPayment && 
-                                       event.paymentSettings?.paymentRules?.[registrationType];
+                const requiresPayment = event.requiresPayment && event.paymentAmount && event.paymentAmount > 0;
                 const isPaystackSelected = form.watch("paymentMethod") === "paystack";
                 
                 if (requiresPayment && isPaystackSelected) {
@@ -611,7 +609,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                         disabled={registrationMutation.isPending}
                         onClick={() => setPaymentIntentConfirmed(true)}
                       >
-                        Pay Online - {event.paymentSettings?.currency || 'NGN'} {event.paymentSettings?.amount || 0}
+                        Pay Online - {event.paymentCurrency || 'NGN'} {event.paymentAmount || 0}
                       </Button>
                     );
                   } else {
@@ -619,7 +617,7 @@ export function DynamicRegistrationForm({ eventId, event }: DynamicRegistrationF
                       <div className="space-y-3">
                         <div className="bg-green-50 p-3 rounded-lg">
                           <p className="text-sm text-green-700 text-center">
-                            Ready to proceed with payment of {event.paymentSettings?.currency || 'NGN'} {event.paymentSettings?.amount || 0}
+                            Ready to proceed with payment of {event.paymentCurrency || 'NGN'} {event.paymentAmount || 0}
                           </p>
                         </div>
                         <Button
