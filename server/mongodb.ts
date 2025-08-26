@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 // Use environment variable for MongoDB URI
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.DATABASE_URL || process.env.MONGODB_URI;
 
 console.log("Connecting to MongoDB...");
 
