@@ -2983,9 +2983,12 @@ export function registerMongoRoutes(app: Express) {
 
       // Check if already validated - provide better feedback
       if (registration.status === "online" || registration.status === "attended") {
+        const firstName = registration.firstName || registration.registrationData?.FirstName || registration.registrationData?.firstName || 'Unknown';
+        const lastName = registration.lastName || registration.registrationData?.LastName || registration.registrationData?.lastName || 'User';
+        
         return res.status(200).json({ 
           success: false,
-          message: `${registration.firstName} ${registration.lastName} has already been validated for this event`,
+          message: `${firstName} ${lastName} has already been validated for this event`,
           validationStatus: "already_validated",
           registration: {
             id: registration._id?.toString(),
@@ -3023,11 +3026,14 @@ export function registerMongoRoutes(app: Express) {
         validatedBy: new mongoose.Types.ObjectId(req.user!.id)
       });
 
-      console.log(`Successfully validated registration for ${registration.firstName} ${registration.lastName}`);
+      const firstName = registration.firstName || registration.registrationData?.FirstName || registration.registrationData?.firstName || 'Unknown';
+      const lastName = registration.lastName || registration.registrationData?.LastName || registration.registrationData?.lastName || 'User';
+      
+      console.log(`Successfully validated registration for ${firstName} ${lastName}`);
 
       res.json({
         success: true,
-        message: "Validation successful",
+        message: `${firstName} ${lastName} validated successfully for ${event.name}`,
         validationStatus: "valid",
         registration: {
           id: registration._id?.toString(),
