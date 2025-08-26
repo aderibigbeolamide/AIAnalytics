@@ -50,7 +50,9 @@ export class FaceRecognitionService {
       }
     } catch (error) {
       console.error('❌ Error initializing face collection:', error);
-      throw new Error('Failed to initialize face recognition service');
+      console.log('⚠️  AWS Face Recognition will be disabled due to configuration issues');
+      // Don't throw error - make it optional
+      this.client = null;
     }
   }
 
