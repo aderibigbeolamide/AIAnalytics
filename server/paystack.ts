@@ -2,18 +2,47 @@ import { Request, Response } from 'express';
 
 // Helper function to get the correct app domain
 function getAppDomain(): string {
-  // Check if running on Replit
+  // Priority 1: Check if APP_DOMAIN is explicitly set (production deployments)
+  if (process.env.APP_DOMAIN && process.env.APP_DOMAIN !== 'http://localhost:5000') {
+    console.log(`Using APP_DOMAIN: ${process.env.APP_DOMAIN}`);
+    return process.env.APP_DOMAIN;
+  }
+  
+  // Priority 2: Check if running on Replit deployment
   if (process.env.REPLIT_DOMAINS) {
     return `https://${process.env.REPLIT_DOMAINS}`;
   }
   
-  // Check if APP_DOMAIN is explicitly set
-  if (process.env.APP_DOMAIN) {
-    return process.env.APP_DOMAIN;
+  // Priority 3: Check for Render.com deployment
+  if (process.env.RENDER_EXTERNAL_URL) {
+    return process.env.RENDER_EXTERNAL_URL;
   }
   
-  // Fallback to localhost for local development
-  return 'http://localhost:5000';
+  // Priority 4: Check for Vercel deployment
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // Priority 5: Check for Netlify deployment
+  if (process.env.NETLIFY) {
+    return process.env.URL || `https://${process.env.DEPLOY_PRIME_URL}`;
+  }
+  
+  // Priority 6: Check for Heroku deployment
+  if (process.env.DYNO) {
+    return `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`;
+  }
+  
+  // Priority 7: Check NODE_ENV for production with fallback
+  if (process.env.NODE_ENV === 'production') {
+    // If in production but no specific domain found, this might be an issue
+    console.warn('Running in production but no production domain detected. Using localhost fallback.');
+  }
+  
+  // Final fallback to localhost for local development
+  const fallbackDomain = 'http://localhost:5000';
+  console.log(`Using fallback domain: ${fallbackDomain}`);
+  return fallbackDomain;
 }
 
 // Paystack payment initialization with subaccount support
