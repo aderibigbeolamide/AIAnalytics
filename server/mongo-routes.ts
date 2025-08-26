@@ -1253,7 +1253,7 @@ export function registerMongoRoutes(app: Express) {
         }
 
         // Get event details
-        const event = await mongoStorage.getEvent(registration.eventId.toString());
+        const event = await mongoStorage.getEvent(registration.eventId);
         if (!event) {
           return res.status(404).json({ message: "Event not found" });
         }
@@ -1271,7 +1271,7 @@ export function registerMongoRoutes(app: Express) {
         const paymentReference = `REG_${Date.now()}_${nanoid(8)}`;
 
         // Get organization to check for subaccount
-        const organization = await mongoStorage.getOrganization(event.organizationId.toString());
+        const organization = await mongoStorage.getOrganization(event.organizationId);
         
         // Prepare metadata for Paystack
         const metadata = {

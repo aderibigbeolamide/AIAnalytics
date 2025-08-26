@@ -91,7 +91,7 @@ export interface IMongoStorage {
 
 export class MongoStorage implements IMongoStorage {
   // Organizations
-  async getOrganization(id: string): Promise<IOrganization | null> {
+  async getOrganization(id: string | mongoose.Types.ObjectId): Promise<IOrganization | null> {
     try {
       return await Organization.findById(id);
     } catch (error) {
@@ -327,7 +327,7 @@ export class MongoStorage implements IMongoStorage {
   }
 
   // Events
-  async getEvent(id: string): Promise<IEvent | null> {
+  async getEvent(id: string | mongoose.Types.ObjectId): Promise<IEvent | null> {
     try {
       return await Event.findById(id);
     } catch (error) {
