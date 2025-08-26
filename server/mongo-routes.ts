@@ -1061,6 +1061,19 @@ export function registerMongoRoutes(app: Express) {
         };
       });
 
+      // Add logging to debug auxiliary body extraction
+      console.log('Sample registration auxiliary body extraction:');
+      if (formattedRegistrations.length > 0) {
+        const sampleReg = registrations[0];
+        const regObj = sampleReg.toObject();
+        console.log('Sample registration:', {
+          name: `${regObj.firstName} ${regObj.lastName}`,
+          directAuxiliaryBody: regObj.auxiliaryBody,
+          registrationDataKeys: Object.keys(regObj.registrationData || {}),
+          extractedAuxiliaryBody: regObj.auxiliaryBody || regObj.registrationData?.auxiliaryBody || regObj.registrationData?.AuxiliaryBody || regObj.registrationData?.Gender || regObj.registrationData?.gender || regObj.registrationData?.Student || regObj.registrationData?.student || ''
+        });
+      }
+
       // Disable caching for registrations to always get fresh data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
