@@ -15,7 +15,8 @@ export const connectToMongoDB = async () => {
 
   if (!MONGODB_URI) {
     console.error("❌ MONGODB_URI environment variable is not set");
-    throw new Error("MONGODB_URI environment variable is required");
+    console.log("⚠️  Running in development mode without MongoDB - some features may be limited");
+    return;
   }
 
   try {
