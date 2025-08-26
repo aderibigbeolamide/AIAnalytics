@@ -11,18 +11,162 @@ const paymentVerifySchema = z.object({
 });
 
 export function registerPaymentRoutes(app: Express) {
-  // Verify payment and send confirmation
+  // Verify payment by reference (GET route for callback)
+  app.get("/api/payment/verify/:reference", async (req: Request, res: Response) => {
+    try {
+      const { reference } = req.params;
+      console.log(`Verifying payment for reference: ${reference}`);
+      
+      // Import Paystack verification function
+      const { verifyPaystackPayment } = await import('../paystack');
+      
+      // Actually verify with Paystack API
+      const paystackResponse = await verifyPaystackPayment(reference);
+      console.log(`Paystack verification response:`, JSON.stringify(paystackResponse, null, 2));
+      
+      if (!paystackResponse.status || paystackResponse.data.status !== 'success') {
+        return res.status(400).json({ 
+          status: 'failed',
+          message: "Payment verification failed",
+          details: paystackResponse.message || "Payment was not successful"
+        });
+      }
+      
+      // Get registration details from metadata
+      const metadata = paystackResponse.data.metadata;
+      console.log(`Payment metadata:`, JSON.stringify(metadata, null, 2));
+      
+      let registration = null;
+      let event = null;
+      
+      // First try to get registration directly
+      if (metadata && metadata.registrationId) {
+        console.log(`Looking up registration with ID: ${metadata.registrationId}`);
+        try {
+          registration = await mongoStorage.getEventRegistration(metadata.registrationId);
+          console.log(`Registration found:`, registration ? 'Yes' : 'No');
+          
+          if (registration) {
+            console.log(`Registration eventId:`, registration.eventId);
+            console.log(`Looking up event with ID: ${registration.eventId}`);
+            
+            // Try to find the event using the eventId from registration
+            try {
+              event = await mongoStorage.getEvent(registration.eventId);
+              console.log(`Event found:`, event ? 'Yes' : 'No');
+            } catch (eventError) {
+              console.error(`Error finding event with registration.eventId:`, eventError);
+              
+              // Try to extract event ID from the stringified metadata as backup
+              if (metadata.eventId) {
+                const eventIdMatch = metadata.eventId.match(/new ObjectId\('([^']+)'\)/);
+                if (eventIdMatch) {
+                  const actualEventId = eventIdMatch[1];
+                  console.log(`Trying extracted eventId: ${actualEventId}`);
+                  event = await mongoStorage.getEvent(actualEventId);
+                  console.log(`Event found with extracted ID:`, event ? 'Yes' : 'No');
+                }
+              }
+            }
+          }
+        } catch (registrationError) {
+          console.error(`Error finding registration:`, registrationError);
+        }
+      }
+      
+      // If still no registration or event, try to extract eventId from the stringified object in metadata
+      if ((!registration || !event) && metadata && metadata.eventId) {
+        console.log(`Trying to extract eventId from stringified object...`);
+        // Extract the actual ObjectId from the stringified event object
+        const eventIdMatch = metadata.eventId.match(/new ObjectId\('([^']+)'\)/);
+        if (eventIdMatch) {
+          const actualEventId = eventIdMatch[1];
+          console.log(`Extracted eventId: ${actualEventId}`);
+          event = await mongoStorage.getEvent(actualEventId);
+          console.log(`Event found with extracted ID:`, event ? 'Yes' : 'No');
+          
+          // If we have an event, try to find the registration by registrationId
+          if (event && metadata.registrationId) {
+            registration = await mongoStorage.getEventRegistration(metadata.registrationId);
+            console.log(`Registration found with event context:`, registration ? 'Yes' : 'No');
+          }
+        }
+      }
+      
+      if (!registration || !event) {
+        console.log(`Missing - Registration: ${registration ? 'Found' : 'Missing'}, Event: ${event ? 'Found' : 'Missing'}`);
+        return res.status(404).json({ 
+          status: 'failed',
+          message: "Registration or event not found" 
+        });
+      }
+
+      // Update registration with payment info
+      await mongoStorage.updateEventRegistration(metadata.registrationId, {
+        paymentStatus: 'paid',
+        paymentReference: reference,
+        paymentAmount: (paystackResponse.data.amount / 100).toString(), // Convert from kobo to naira
+        paymentCurrency: paystackResponse.data.currency,
+        paymentVerifiedAt: new Date()
+      });
+
+      // Send payment success notification
+      await notificationService.notifyPaymentSuccess({
+        registration,
+        event,
+        payment: {
+          reference,
+          amount: (paystackResponse.data.amount / 100).toString(),
+          currency: paystackResponse.data.currency
+        }
+      });
+
+      res.json({
+        status: 'success',
+        message: "Payment verified successfully",
+        data: {
+          payment: {
+            reference,
+            amount: (paystackResponse.data.amount / 100).toString(),
+            currency: paystackResponse.data.currency,
+            verifiedAt: new Date()
+          },
+          registration,
+          event
+        }
+      });
+    } catch (error: any) {
+      console.error("Error verifying payment:", error);
+      res.status(500).json({ 
+        status: 'failed',
+        message: "Internal server error" 
+      });
+    }
+  });
+
+  // Verify payment and send confirmation (POST route for manual verification)
   app.post("/api/payment/verify", async (req: Request, res: Response) => {
     try {
       const { reference, registrationId, eventId } = paymentVerifySchema.parse(req.body);
       
-      // Here you would typically verify with Paystack API
-      // For now, we'll simulate a successful payment
+      // Import Paystack verification function
+      const { verifyPaystackPayment } = await import('../paystack');
+      
+      // Actually verify with Paystack API
+      const paystackResponse = await verifyPaystackPayment(reference);
+      
+      if (!paystackResponse.status || paystackResponse.data.status !== 'success') {
+        return res.status(400).json({ 
+          message: "Payment verification failed",
+          details: paystackResponse.message || "Payment was not successful"
+        });
+      }
+      
       const paymentData = {
         reference,
         status: 'success',
-        amount: '5000', // This would come from Paystack
-        currency: 'NGN',
+        amount: (paystackResponse.data.amount / 100).toString(), // Convert from kobo to naira
+        currency: paystackResponse.data.currency,
         verifiedAt: new Date()
       };
 

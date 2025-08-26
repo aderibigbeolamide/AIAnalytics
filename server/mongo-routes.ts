@@ -1276,7 +1276,7 @@ export function registerMongoRoutes(app: Express) {
         // Prepare metadata for Paystack
         const metadata = {
           registrationId: registration._id.toString(),
-          eventId: registration.eventId.toString(),
+          eventId: event._id.toString(),
           registrationType: registration.registrationType,
           type: 'existing_registration_payment',
           eventName: event.name,
@@ -1531,6 +1531,11 @@ export function registerMongoRoutes(app: Express) {
       );
 
       if (paymentResponse.status) {
+        // Update registration with payment reference
+        await mongoStorage.updateEventRegistration(registration._id.toString(), {
+          paymentReference: paymentReference
+        });
+        
         res.json({
           success: true,
           data: {
@@ -1562,7 +1567,8 @@ export function registerMongoRoutes(app: Express) {
 
 
 
-  // Verify payment for event registration
+  // Payment verification route commented out - now handled in payment-routes.ts
+  /*
   app.get("/api/payment/verify/:reference", async (req: Request, res: Response) => {
     try {
       const { reference } = req.params;
@@ -1655,6 +1661,7 @@ export function registerMongoRoutes(app: Express) {
       });
     }
   });
+  */
 
   // Initialize ticket purchase payment
   app.post("/api/tickets/initialize-payment", async (req: Request, res: Response) => {
