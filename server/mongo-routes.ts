@@ -845,7 +845,8 @@ export function registerMongoRoutes(app: Express) {
         auxiliaryBody: formData.auxiliaryBody || formData.AuxiliaryBody || formData.auxiliary_body || 
                        formData.Gender || formData.gender || formData.Student || formData.student || 
                        (Array.isArray(formData.Gender) ? formData.Gender[0] : '') || 
-                       (Array.isArray(formData.Student) ? formData.Student[0] : '') || '',
+                       (Array.isArray(formData.Student) ? formData.Student[0] : '') || 
+                       formData.auxiliaryBodySelection || formData.group || formData.category || '',
         // Store all custom field data
         registrationData: formData
       };
@@ -3254,6 +3255,19 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
+      // Enhanced logging for debugging
+      console.log(`Face validation for ${memberName}:`, {
+        registrationsFound: memberRegistrations.length,
+        registrationsWithFacePhotos: memberRegistrations.filter(r => r.facePhotoPath).length,
+        highestConfidence,
+        registrationDetails: memberRegistrations.map(r => ({
+          id: r._id,
+          name: `${r.firstName} ${r.lastName}`,
+          hasFacePhoto: !!r.facePhotoPath,
+          auxiliaryBody: r.auxiliaryBody
+        }))
+      });
+
       // If no face photos available, try with basic member data validation
       if (!bestMatch && memberRegistrations.length > 0) {
         const registration = memberRegistrations[0];
@@ -3320,14 +3334,25 @@ export function registerMongoRoutes(app: Express) {
         });
       }
 
-      // No match found
+      // No match found - provide better error message
+      const noFacePhotoCount = memberRegistrations.filter(r => !r.facePhotoPath).length;
+      let message = `No matching face found in registered members`;
+      
+      if (noFacePhotoCount > 0) {
+        message += `. ${noFacePhotoCount} registration(s) found for this member but no face photos were uploaded during registration. Please register again with a face photo for face recognition to work.`;
+      } else {
+        message += ` (${Math.round(highestConfidence * 100)}% confidence). Please ensure you registered for this event with a clear face photo.`;
+      }
+      
       return res.json({
         validationStatus: "face_mismatch",
-        message: `Face does not match any registered member for this event (${Math.round(highestConfidence * 100)}% confidence)`,
+        message,
         details: {
           confidence: Math.round(highestConfidence * 100),
           memberName,
-          eventName: event.name
+          eventName: event.name,
+          registrationsFound: memberRegistrations.length,
+          registrationsWithPhotos: memberRegistrations.filter(r => r.facePhotoPath).length
         }
       });
 
