@@ -18,10 +18,11 @@ export function registerMongoDashboardRoutes(app: Express) {
       const registrations = await mongoStorage.getEventRegistrations();
       
       // Filter registrations by organization events
-      const orgEventIds = events.map(e => e._id.toString());
-      const orgRegistrations = registrations.filter(r => 
-        orgEventIds.includes(r.eventId.toString())
-      );
+      const orgEventIds = events.map(e => e._id ? e._id.toString() : e.id?.toString() || '');
+      const orgRegistrations = registrations.filter(r => {
+        const eventId = r.eventId ? r.eventId.toString() : '';
+        return orgEventIds.includes(eventId);
+      });
       
       // Basic statistics
       const totalEvents = events.length;

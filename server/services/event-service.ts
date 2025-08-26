@@ -177,7 +177,33 @@ export class EventService {
 
     return {
       id: event._id?.toString(),
-      ...event
+      name: event.name,
+      description: event.description,
+      location: event.location,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      registrationStartDate: event.registrationStartDate,
+      registrationEndDate: event.registrationEndDate,
+      status: event.status,
+      maxAttendees: event.maxAttendees,
+      eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
+      allowGuests: event.allowGuests,
+      allowInvitees: event.allowInvitees,
+      eventType: event.eventType,
+      eventImage: event.eventImage,
+      ticketCategories: event.ticketCategories || [],
+      customRegistrationFields: event.customRegistrationFields,
+      paymentSettings: event.paymentSettings,
+      faceRecognitionSettings: event.faceRecognitionSettings,
+      organizationId: event.organizationId?.toString(),
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt,
+      createdBy: event.createdBy,
+      requiresPayment: event.requiresPayment,
+      paymentAmount: event.paymentAmount,
+      paymentCurrency: event.paymentCurrency,
+      paymentMethods: event.paymentMethods,
+      paymentRecipient: event.paymentRecipient
     };
   }
 
