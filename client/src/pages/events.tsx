@@ -32,8 +32,10 @@ export default function Events() {
       const data = await response.json();
       console.log('Events data received:', data);
       if (data.length > 0) {
-        console.log('Sample event:', data[0]);
+        console.log('Sample event full data:', JSON.stringify(data[0], null, 2));
         console.log('Sample event startDate:', data[0].startDate, 'type:', typeof data[0].startDate);
+        console.log('Sample event totalRegistrations:', data[0].totalRegistrations);
+        console.log('Sample event eventImage:', data[0].eventImage);
       }
       return data;
     },
