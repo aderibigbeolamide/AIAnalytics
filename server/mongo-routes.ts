@@ -2379,7 +2379,46 @@ export function registerMongoRoutes(app: Express) {
             paymentVerifiedAt: new Date()
           });
 
-          // Get event details for notification
+          // Generate QR code for the registration if not already present
+          let qrImageBase64 = registration.qrCodeImage;
+          if (!qrImageBase64) {
+            const qrCodeData = JSON.stringify({
+              registrationId: registration._id.toString(),
+              eventId,
+              uniqueId: registration.uniqueId,
+              timestamp: Date.now()
+            });
+            
+            const QRCode = await import('qrcode');
+            qrImageBase64 = await QRCode.toDataURL(qrCodeData, {
+              width: 200,
+              margin: 2,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              }
+            });
+
+            // Update registration with QR code
+            await mongoStorage.updateEventRegistration(registrationId, {
+              qrCodeImage: qrImageBase64
+            });
+          }
+
+          // Generate manual verification code if not already present
+          let shortCode = registration.manualVerificationCode;
+          if (!shortCode) {
+            shortCode = Array.from({length: 6}, () => 
+              String.fromCharCode(65 + Math.floor(Math.random() * 26))
+            ).join('');
+            
+            // Update registration with short verification code
+            await mongoStorage.updateEventRegistration(registrationId, {
+              manualVerificationCode: shortCode
+            });
+          }
+
+          // Get event details for notification and redirect
           const event = await mongoStorage.getEvent(eventId);
           if (event) {
             // Send payment notification to organization admin
@@ -2393,8 +2432,13 @@ export function registerMongoRoutes(app: Express) {
             );
           }
 
-          // Redirect to registration success page
-          const successUrl = `/payment/success?type=registration&registrationId=${registrationId}&eventId=${eventId}&uniqueId=${encodeURIComponent(registration.uniqueId)}&firstName=${encodeURIComponent(registration.firstName)}&lastName=${encodeURIComponent(registration.lastName)}&email=${encodeURIComponent(registration.email)}`;
+          // Prepare event data for redirect (same format as other registration success redirects)
+          const eventName = event ? encodeURIComponent(event.name) : '';
+          const eventLocation = event ? encodeURIComponent(event.location || 'TBD') : '';
+          const eventDate = event ? event.startDate?.toISOString() : '';
+
+          // Redirect to registration success page with complete data
+          const successUrl = `/payment/success?type=registration&registrationId=${registrationId}&eventId=${eventId}&uniqueId=${encodeURIComponent(registration.uniqueId)}&firstName=${encodeURIComponent(registration.firstName)}&lastName=${encodeURIComponent(registration.lastName)}&email=${encodeURIComponent(registration.email)}&qrCodeImage=${encodeURIComponent(qrImageBase64)}&shortCode=${shortCode}&eventName=${eventName}&eventLocation=${eventLocation}&eventDate=${encodeURIComponent(eventDate)}`;
           return res.redirect(successUrl);
         }
       }
