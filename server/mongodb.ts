@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 // Use environment variable for MongoDB URI
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.DATABASE_URL || process.env.MONGODB_URI;
 
 console.log("Connecting to MongoDB...");
 
@@ -14,8 +14,8 @@ export const connectToMongoDB = async () => {
   }
 
   if (!MONGODB_URI) {
-    console.error("❌ MONGODB_URI environment variable is not set");
-    throw new Error("MONGODB_URI environment variable is required");
+    console.error("❌ DATABASE_URL environment variable is not set");
+    throw new Error("DATABASE_URL environment variable is required");
   }
 
   try {
