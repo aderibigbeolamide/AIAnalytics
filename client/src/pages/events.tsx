@@ -26,9 +26,9 @@ export default function Events() {
   const queryClient = useQueryClient();
 
   const { data: events = [] } = useQuery({
-    queryKey: ["/api/events"],
+    queryKey: ["/api/events", Date.now()], // Force cache invalidation
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/events`);
+      const response = await apiRequest("GET", `/api/events?_t=${Date.now()}`);
       const data = await response.json();
       console.log('Events data received:', data);
       if (data.length > 0) {
@@ -36,9 +36,12 @@ export default function Events() {
         console.log('Sample event startDate:', data[0].startDate, 'type:', typeof data[0].startDate);
         console.log('Sample event totalRegistrations:', data[0].totalRegistrations);
         console.log('Sample event eventImage:', data[0].eventImage);
+        console.log('Sample event properties:', Object.keys(data[0]));
       }
       return data;
     },
+    staleTime: 0, // Don't use stale data
+    cacheTime: 0, // Don't cache
   });
 
   const exportAttendance = useMutation({
@@ -271,11 +274,23 @@ export default function Events() {
               {filteredEvents.map((event: any) => (
                 <Card key={event.id} className="hover:shadow-lg transition-shadow overflow-hidden">
                   {/* Event Image */}
-                  <div className="h-48 overflow-hidden">
-                    <EventImage 
-                      event={event} 
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    />
+                  <div className="h-48 overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative">
+                    {event.eventImage ? (
+                      <img 
+                        src={event.eventImage} 
+                        alt={event.name}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          console.log('Image failed to load:', event.eventImage);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="text-white text-center p-4">
+                        <Calendar className="h-12 w-12 mx-auto mb-2 opacity-70" />
+                        <p className="text-sm font-medium opacity-90">{event.name}</p>
+                      </div>
+                    )}
                   </div>
                   
                   <CardHeader className="pb-2">
@@ -305,14 +320,22 @@ export default function Events() {
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">Date:</span>
                           <span className="font-medium">
-                            {event.startDate && !isNaN(new Date(event.startDate).getTime()) 
-                              ? new Date(event.startDate).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })
-                              : 'Invalid Date'
-                            }
+                            {(() => {
+                              try {
+                                const date = new Date(event.startDate);
+                                if (!isNaN(date.getTime())) {
+                                  return date.toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  });
+                                }
+                                return 'No Date Set';
+                              } catch (error) {
+                                console.log('Date parsing error for event:', event.name, 'startDate:', event.startDate);
+                                return 'Invalid Date';
+                              }
+                            })()}
                           </span>
                         </div>
                       </div>
@@ -321,20 +344,28 @@ export default function Events() {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">Total Registrations:</span>
-                          <span className="font-bold text-blue-600">{event.totalRegistrations || 0}</span>
+                          <span className="font-bold text-blue-600">
+                            {event.totalRegistrations !== undefined ? event.totalRegistrations : 0}
+                          </span>
                         </div>
                         
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <div className="text-center">
-                            <div className="font-medium text-green-600">{event.memberRegistrations || 0}</div>
+                            <div className="font-medium text-green-600">
+                              {event.memberRegistrations !== undefined ? event.memberRegistrations : 0}
+                            </div>
                             <div className="text-gray-500">Members</div>
                           </div>
                           <div className="text-center">
-                            <div className="font-medium text-blue-600">{event.guestRegistrations || 0}</div>
+                            <div className="font-medium text-blue-600">
+                              {event.guestRegistrations !== undefined ? event.guestRegistrations : 0}
+                            </div>
                             <div className="text-gray-500">Guests</div>
                           </div>
                           <div className="text-center">
-                            <div className="font-medium text-purple-600">{event.inviteeRegistrations || 0}</div>
+                            <div className="font-medium text-purple-600">
+                              {event.inviteeRegistrations !== undefined ? event.inviteeRegistrations : 0}
+                            </div>
                             <div className="text-gray-500">Invitees</div>
                           </div>
                         </div>
