@@ -170,7 +170,13 @@ export function registerAuthRoutes(app: Express) {
       // Get organization info if user is not a super admin
       let organizationInfo = null;
       if (user.role !== 'super_admin' && user.organizationId) {
-        organizationInfo = await mongoStorage.getOrganization(user.organizationId.toString());
+        try {
+          const orgId = typeof user.organizationId === 'string' ? user.organizationId : user.organizationId.toString();
+          organizationInfo = await mongoStorage.getOrganization(orgId);
+        } catch (orgError) {
+          console.error('Error fetching organization info:', orgError);
+          // Continue without organization info
+        }
       }
 
       const userResponse = {

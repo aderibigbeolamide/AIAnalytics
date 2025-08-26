@@ -68,15 +68,94 @@ export class EventService {
   }
 
   /**
-   * Get organization events
+   * Get organization events with registration statistics
    */
   static async getOrganizationEvents(filters: any = {}) {
     const events = await mongoStorage.getEvents(filters);
     
-    return events.map(event => ({
-      id: event._id?.toString(),
-      ...event
+    // Enrich events with registration statistics
+    const enrichedEvents = await Promise.all(events.map(async (event) => {
+      try {
+        // Get registration statistics for this event
+        const registrations = await mongoStorage.getEventRegistrations(event._id?.toString());
+        
+        const totalRegistrations = registrations.length;
+        const memberRegistrations = registrations.filter(r => r.memberType === 'member').length;
+        const guestRegistrations = registrations.filter(r => r.memberType === 'guest').length;
+        const inviteeRegistrations = registrations.filter(r => r.memberType === 'invitee').length;
+        
+        // Calculate attendance rate
+        const attendedRegistrations = registrations.filter(r => r.attendance?.attended === true).length;
+        const attendanceRate = totalRegistrations > 0 ? Math.round((attendedRegistrations / totalRegistrations) * 100) : 0;
+        
+        return {
+          id: (event._id as any)?.toString(),
+          name: event.name,
+          description: event.description,
+          location: event.location,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          registrationStartDate: event.registrationStartDate,
+          registrationEndDate: event.registrationEndDate,
+          status: event.status,
+          eventType: event.eventType,
+          maxAttendees: event.maxAttendees,
+          eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
+          allowGuests: event.allowGuests,
+          allowInvitees: event.allowInvitees,
+          eventImage: event.eventImage,
+          ticketCategories: event.ticketCategories || [],
+          customRegistrationFields: event.customRegistrationFields,
+          paymentSettings: event.paymentSettings,
+          organizationId: (event.organizationId as any)?.toString(),
+          createdAt: event.createdAt,
+          updatedAt: event.updatedAt,
+          // Add statistics
+          totalRegistrations,
+          memberRegistrations,
+          guestRegistrations,
+          inviteeRegistrations,
+          attendanceRate,
+          attendedCount: attendedRegistrations,
+          qrCode: event.qrCode
+        };
+      } catch (error) {
+        console.error(`Error enriching event ${event._id}:`, error);
+        // Return basic event data if enrichment fails
+        return {
+          id: (event._id as any)?.toString(),
+          name: event.name || 'Unnamed Event',
+          description: event.description || '',
+          location: event.location || 'TBD',
+          startDate: event.startDate,
+          endDate: event.endDate,
+          registrationStartDate: event.registrationStartDate,
+          registrationEndDate: event.registrationEndDate,
+          status: event.status || 'active',
+          eventType: event.eventType || 'registration',
+          maxAttendees: event.maxAttendees,
+          eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies || [],
+          allowGuests: event.allowGuests || false,
+          allowInvitees: event.allowInvitees || false,
+          eventImage: event.eventImage,
+          ticketCategories: event.ticketCategories || [],
+          customRegistrationFields: event.customRegistrationFields || [],
+          paymentSettings: event.paymentSettings,
+          organizationId: (event.organizationId as any)?.toString(),
+          createdAt: event.createdAt,
+          updatedAt: event.updatedAt,
+          totalRegistrations: 0,
+          memberRegistrations: 0,
+          guestRegistrations: 0,
+          inviteeRegistrations: 0,
+          attendanceRate: 0,
+          attendedCount: 0,
+          qrCode: event.qrCode
+        };
+      }
     }));
+    
+    return enrichedEvents;
   }
 
   /**
