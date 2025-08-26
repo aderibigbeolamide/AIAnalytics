@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 // Use environment variable for MongoDB URI - but make it optional for migration
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.DATABASE_URL;
 
 console.log("MongoDB service - checking connection...");
 
