@@ -483,11 +483,39 @@ export function registerMongoRoutes(app: Express) {
         return res.status(404).json({ message: "Event not found" });
       }
 
+      // Convert to plain object and format properly
+      const eventObj = event.toObject();
+      
       res.json({
-        id: event._id.toString(),
-        ...event.toObject(),
-        organizationId: event.organizationId?.toString(),
-        createdBy: event.createdBy?.toString()
+        id: eventObj._id.toString(),
+        name: eventObj.name,
+        description: eventObj.description,
+        location: eventObj.location,
+        startDate: eventObj.startDate,
+        endDate: eventObj.endDate,
+        registrationStartDate: eventObj.registrationStartDate,
+        registrationEndDate: eventObj.registrationEndDate,
+        eventType: eventObj.eventType,
+        status: eventObj.status,
+        eventImage: eventObj.eventImage,
+        eligibleAuxiliaryBodies: eventObj.eligibleAuxiliaryBodies || [],
+        allowGuests: eventObj.allowGuests || false,
+        allowInvitees: eventObj.allowInvitees || false,
+        customRegistrationFields: eventObj.customRegistrationFields || [],
+        paymentSettings: eventObj.paymentSettings || {},
+        faceRecognitionSettings: eventObj.faceRecognitionSettings || {},
+        reminderSettings: eventObj.reminderSettings || {},
+        ticketCategories: eventObj.ticketCategories || [],
+        tags: eventObj.tags || [],
+        requiresPayment: eventObj.requiresPayment || false,
+        paymentAmount: eventObj.paymentAmount,
+        paymentCurrency: eventObj.paymentCurrency || 'NGN',
+        paymentMethods: eventObj.paymentMethods || [],
+        isPrivate: eventObj.isPrivate || false,
+        organizationId: eventObj.organizationId?.toString(),
+        createdBy: eventObj.createdBy?.toString(),
+        createdAt: eventObj.createdAt,
+        updatedAt: eventObj.updatedAt
       });
     } catch (error) {
       console.error("Error getting event:", error);
