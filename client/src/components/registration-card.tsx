@@ -47,7 +47,10 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
     'Guest';
   
   // Get auxiliary body from registration
-  const auxiliaryBody = registration.guestAuxiliaryBody || 'N/A';
+  const auxiliaryBody = registration.auxiliaryBody || registration.guestAuxiliaryBody || 
+    (customFormData && (customFormData.auxiliaryBody || customFormData.AuxiliaryBody || 
+     customFormData.auxiliary_body || customFormData.Gender || customFormData.gender || 
+     customFormData.Student || customFormData.student)) || 'N/A';
   
   // Get email from registration
   const email = registration.guestEmail || registration.email || 'N/A';
