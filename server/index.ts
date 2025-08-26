@@ -18,8 +18,9 @@ import { setupChatbotRoutes } from "./chatbot-routes";
 import { setupChatbotTestRoutes } from "./chatbot-test-route";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
-import { connectToMongoDB } from "./mongodb";
-import { mongoAutoSeed } from "./mongo-auto-seed";
+// MongoDB temporarily disabled for Replit migration
+// import { connectToMongoDB } from "./mongodb";
+// import { mongoAutoSeed } from "./mongo-auto-seed";
 import { WebSocketChatServer } from "./websocket-chat";
 import path from "path";
 
@@ -61,11 +62,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Connect to MongoDB
-  await connectToMongoDB();
-  
-  // Run auto-seeding before starting the server
-  await mongoAutoSeed();
+  // MongoDB temporarily disabled for Replit migration - using PostgreSQL instead
+  // await connectToMongoDB();
+  // await mongoAutoSeed();
   
   // Register new organized routes
   registerAuthRoutes(app);
