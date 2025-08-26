@@ -1305,14 +1305,15 @@ export function registerMongoRoutes(app: Express) {
         const platformFeeRate = platformSettings.platformFee || 2;
 
         // Initialize payment with Paystack
+        // Temporarily disable subaccount to fix split configuration error
         const paymentResponse = await initializePaystackPayment(
           email,
           amountInKobo,
           paymentReference,
           metadata,
-          organization?.paystackSubaccountCode || undefined,
-          undefined, // splitConfig - not needed for basic payments
-          platformFeeRate // Dynamic platform fee from settings
+          undefined, // subaccountCode - disabled temporarily
+          undefined, // splitConfig - not needed for basic payments  
+          undefined  // platformFeePercentage - disabled temporarily
         );
 
         if (paymentResponse.status) {
@@ -1518,14 +1519,15 @@ export function registerMongoRoutes(app: Express) {
       const platformFeeRate = platformSettings.platformFee || 2;
 
       // Initialize payment with Paystack (same pattern as ticket purchase)
+      // Temporarily disable subaccount to fix split configuration error
       const paymentResponse = await initializePaystackPayment(
         userEmail,
         amountInKobo,
         paymentReference,
         metadata,
-        organization?.paystackSubaccountCode || undefined,
+        undefined, // subaccountCode - disabled temporarily
         undefined, // splitConfig - not needed for basic payments
-        platformFeeRate // Dynamic platform fee from settings
+        undefined  // platformFeePercentage - disabled temporarily
       );
 
       if (paymentResponse.status) {

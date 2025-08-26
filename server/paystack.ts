@@ -22,12 +22,12 @@ export async function initializePaystackPayment(
     // Add subaccount for direct payment to organizer with platform fee
     if (subaccountCode) {
       requestBody.subaccount = subaccountCode;
-      // If platform fee is specified, set the charge bearer
+      
+      // If platform fee is specified, use percentage charge instead of transaction charge
       if (platformFeePercentage && platformFeePercentage > 0) {
-        requestBody.bearer = 'subaccount'; // Subaccount bears transaction fees
-        // Calculate platform fee as transaction charge
+        // Use percentage charge for subaccounts instead of fixed transaction charge
+        // This is more reliable with Paystack's API
         const platformFeeAmount = Math.round((amount * platformFeePercentage) / 100);
-        requestBody.transaction_charge = platformFeeAmount;
         
         // Add platform fee info to metadata
         metadata.platformFee = {
