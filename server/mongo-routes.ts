@@ -2359,6 +2359,43 @@ export function registerMongoRoutes(app: Express) {
 
           // Redirect to registration success page
           return res.redirect(`/payment/success?type=registration&registrationId=${registration._id.toString()}&eventId=${eventId}`);
+        } else if (metadata.type === 'existing_registration_payment') {
+          // Handle existing registration payment
+          const registrationId = metadata.registrationId;
+          const eventId = metadata.eventId;
+          
+          // Get the existing registration
+          const registration = await mongoStorage.getEventRegistration(registrationId);
+          if (!registration) {
+            return res.redirect("/payment/failed?error=registration_not_found");
+          }
+
+          // Update registration payment status
+          await mongoStorage.updateEventRegistration(registrationId, {
+            paymentStatus: 'paid',
+            paymentReference: paymentReference as string,
+            paymentAmount: amount.toString(),
+            paymentCurrency: 'NGN',
+            paymentVerifiedAt: new Date()
+          });
+
+          // Get event details for notification
+          const event = await mongoStorage.getEvent(eventId);
+          if (event) {
+            // Send payment notification to organization admin
+            await NotificationService.createPaymentNotification(
+              event.organizationId.toString(),
+              eventId,
+              amount,
+              'NGN',
+              `${registration.firstName} ${registration.lastName}`,
+              'existing_registration_payment'
+            );
+          }
+
+          // Redirect to registration success page
+          const successUrl = `/payment/success?type=registration&registrationId=${registrationId}&eventId=${eventId}&uniqueId=${encodeURIComponent(registration.uniqueId)}&firstName=${encodeURIComponent(registration.firstName)}&lastName=${encodeURIComponent(registration.lastName)}&email=${encodeURIComponent(registration.email)}`;
+          return res.redirect(successUrl);
         }
       }
 

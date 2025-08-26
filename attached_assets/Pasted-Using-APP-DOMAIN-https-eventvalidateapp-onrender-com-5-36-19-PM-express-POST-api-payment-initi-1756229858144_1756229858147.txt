@@ -1,0 +1,111 @@
+Using APP_DOMAIN: https://eventvalidateapp.onrender.com
+5:36:19 PM [express] POST /api/payment/initialize 200 in 668ms :: {"success":true,"data":{"authoriza…
+Verifying payment with Paystack for reference: REG_1756229778917_14t3UySW
+Using secret key: Available
+Paystack API response status: 200
+Paystack API response data: {
+  "status": true,
+  "message": "Verification successful",
+  "data": {
+    "id": 5277305445,
+    "domain": "test",
+    "status": "success",
+    "reference": "REG_1756229778917_14t3UySW",
+    "receipt_number": null,
+    "amount": 300000,
+    "message": null,
+    "gateway_response": "Successful",
+    "paid_at": "2025-08-26T17:36:27.000Z",
+    "created_at": "2025-08-26T17:36:19.000Z",
+    "channel": "card",
+    "currency": "NGN",
+    "ip_address": "102.91.78.242",
+    "metadata": {
+      "registrationId": "68adf0925dff283445c224d5",
+      "eventId": "68acdfae1db767e5bab1dde4",
+      "registrationType": "member",
+      "type": "existing_registration_payment",
+      "eventName": "Award",
+      "userEmail": "aderibigbeolamide56@gmail.com",
+      "firstName": "MUSODIQ",
+      "lastName": "ADERIBIGBE",
+      "custom_fields": [
+        {
+          "display_name": "Event",
+          "variable_name": "event_name",
+          "value": "Award"
+        },
+        {
+          "display_name": "Registration Type",
+          "variable_name": "registration_type",
+          "value": "member"
+        }
+      ],
+      "referrer": "https://eventvalidateapp.onrender.com/"
+    },
+    "log": {
+      "start_time": 1756229783,
+      "time_spent": 5,
+      "attempts": 1,
+      "errors": 0,
+      "success": true,
+      "mobile": false,
+      "input": [],
+      "history": [
+        {
+          "type": "action",
+          "message": "Attempted to pay with card",
+          "time": 4
+        },
+        {
+          "type": "success",
+          "message": "Successfully paid with card",
+          "time": 5
+        }
+      ]
+    },
+    "fees": 14500,
+    "fees_split": null,
+    "authorization": {
+      "authorization_code": "AUTH_ykunbh563t",
+      "bin": "408408",
+      "last4": "4081",
+      "exp_month": "12",
+      "exp_year": "2030",
+      "channel": "card",
+      "card_type": "visa ",
+      "bank": "TEST BANK",
+      "country_code": "NG",
+      "brand": "visa",
+      "reusable": true,
+      "signature": "SIG_3Xvc56OXuR7IwIxCN9Bw",
+      "account_name": null,
+      "receiver_bank_account_number": null,
+      "receiver_bank": null
+    },
+    "customer": {
+      "id": 293426059,
+      "first_name": null,
+      "last_name": null,
+      "email": "aderibigbeolamide56@gmail.com",
+      "customer_code": "CUS_x5tfe6mimtv9rze",
+      "phone": null,
+      "metadata": null,
+      "risk_action": "default",
+      "international_format_phone": null
+    },
+    "plan": null,
+    "split": {},
+    "order_id": null,
+    "paidAt": "2025-08-26T17:36:27.000Z",
+    "createdAt": "2025-08-26T17:36:19.000Z",
+    "requested_amount": 300000,
+    "pos_transaction_data": null,
+    "source": null,
+    "fees_breakdown": null,
+    "connect": null,
+    "transaction_date": "2025-08-26T17:36:19.000Z",
+    "plan_object": {},
+    "subaccount": {}
+  }
+}
