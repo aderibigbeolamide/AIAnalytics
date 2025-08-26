@@ -1,5 +1,21 @@
 import { Request, Response } from 'express';
 
+// Helper function to get the correct app domain
+function getAppDomain(): string {
+  // Check if running on Replit
+  if (process.env.REPLIT_DOMAINS) {
+    return `https://${process.env.REPLIT_DOMAINS}`;
+  }
+  
+  // Check if APP_DOMAIN is explicitly set
+  if (process.env.APP_DOMAIN) {
+    return process.env.APP_DOMAIN;
+  }
+  
+  // Fallback to localhost for local development
+  return 'http://localhost:5000';
+}
+
 // Paystack payment initialization with subaccount support
 export async function initializePaystackPayment(
   email: string,
@@ -16,7 +32,7 @@ export async function initializePaystackPayment(
       amount,
       reference,
       metadata,
-      callback_url: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/payment/callback`,
+      callback_url: `${getAppDomain()}/payment/callback`,
     };
 
     // Add subaccount for direct payment to organizer with platform fee
