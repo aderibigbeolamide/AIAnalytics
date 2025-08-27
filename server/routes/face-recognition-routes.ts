@@ -265,12 +265,31 @@ export function registerFaceRecognitionRoutes(app: Express) {
       }
 
       if (!searchResult.matchFound) {
-        return res.json({
-          success: true,
-          validated: false,
-          message: "No matching face found in registered members. Please ensure you registered for this event with a face photo.",
-          ...searchResult
-        });
+        try {
+          // Import MongoDB storage to get event details for better error messaging
+          const { mongoStorage } = await import('../mongodb-storage');
+          const event = await mongoStorage.getEvent(eventId);
+          
+          return res.json({
+            success: true,
+            validated: false,
+            validationStatus: "invalid",
+            message: "No matching face found in registered members. Please ensure you registered for this event with a face photo.",
+            memberName: req.body.memberName || "Unknown",
+            event: event ? { name: event.name, id: eventId } : { name: "Event", id: eventId },
+            ...searchResult
+          });
+        } catch (error) {
+          return res.json({
+            success: true,
+            validated: false,
+            validationStatus: "invalid",
+            message: "No matching face found in registered members. Please ensure you registered for this event with a face photo.",
+            memberName: req.body.memberName || "Unknown",
+            event: { name: "Event", id: eventId },
+            ...searchResult
+          });
+        }
       }
 
       // Get the best match
@@ -299,7 +318,7 @@ export function registerFaceRecognitionRoutes(app: Express) {
         // Get all registrations for this event to find the specific registration
         const eventRegistrations = await mongoStorage.getEventRegistrations(eventId);
         const matchingRegistration = eventRegistrations.find(reg => 
-          reg.faceUserId === bestMatch.userId ||
+          (reg.registrationData?.faceUserId === bestMatch.userId) ||
           (reg.firstName?.toLowerCase() === matchedFirstName?.toLowerCase() && 
            reg.lastName?.toLowerCase() === matchedLastName?.toLowerCase())
         );
@@ -327,19 +346,26 @@ export function registerFaceRecognitionRoutes(app: Express) {
         }
         
         // Mark attendance
-        await mongoStorage.updateEventRegistration(matchingRegistration._id.toString(), {
-          'attendance.attended': true,
-          'attendance.attendedAt': new Date(),
-          'attendance.validatedBy': req.user?.id,
-          'attendance.validationMethod': 'face_recognition'
+        await mongoStorage.updateEventRegistration((matchingRegistration._id as any).toString(), {
+          status: 'attended',
+          validatedAt: new Date(),
+          validatedBy: req.user?.id,
+          validationMethod: 'face_recognition'
         });
+        
+        // Get event details
+        const event = await mongoStorage.getEvent(eventId);
         
         res.json({
           success: true,
           validated: true,
+          validationStatus: "valid",
           message: `Welcome ${matchingRegistration.firstName} ${matchingRegistration.lastName}! Attendance marked successfully.`,
+          memberName: `${matchingRegistration.firstName} ${matchingRegistration.lastName}`,
+          event: event ? { name: event.name, id: eventId } : { name: "Event", id: eventId },
+          confidence: Math.round(bestMatch.similarity || 0),
           registrationInfo: {
-            id: matchingRegistration._id.toString(),
+            id: (matchingRegistration._id as any).toString(),
             name: `${matchingRegistration.firstName} ${matchingRegistration.lastName}`,
             email: matchingRegistration.email,
             registrationType: matchingRegistration.registrationType,
