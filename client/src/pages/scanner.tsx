@@ -76,7 +76,6 @@ export default function Scanner() {
 
         {validationMethod === "face" ? (
           <FaceRecognitionValidator
-            eventId={selectedEventId}
             onValidationSuccess={handleValidationSuccess}
             onClose={() => setValidationMethod("qr")}
           />

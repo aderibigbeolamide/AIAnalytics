@@ -283,7 +283,7 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg text-left space-y-2">
                     <p><strong>Member:</strong> {validationResult.memberName || memberName || 'N/A'}</p>
-                    <p><strong>Event:</strong> {validationResult.event?.name || events.find(e => e.id === selectedEventId)?.name || 'N/A'}</p>
+                    <p><strong>Event:</strong> {validationResult.event?.name || events.find((e: any) => e.id === selectedEventId)?.name || 'N/A'}</p>
                     <p><strong>Status:</strong> Validated</p>
                     <p><strong>Method:</strong> AI Face Recognition</p>
                     {validationResult.confidence && (
