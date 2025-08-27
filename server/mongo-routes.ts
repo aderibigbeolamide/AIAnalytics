@@ -924,15 +924,25 @@ export function registerMongoRoutes(app: Express) {
       // Handle face photo upload and AWS registration
       let faceRegistrationData = null;
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      console.log('🔍 Checking for face photo upload...', {
+        hasFiles: !!files,
+        hasFacePhoto: !!files?.facePhoto?.[0],
+        filesKeys: files ? Object.keys(files) : 'no files'
+      });
+      
       if (files?.facePhoto?.[0]) {
         try {
+          console.log('📸 Face photo found, starting registration process...');
+          
           // Import face recognition service
           const { faceRecognitionService } = await import('../routes/face-recognition-routes');
           
           // Generate unique user ID for face recognition (combination of registration data)
           const faceUserId = `${eventId}_${firstName}_${lastName}_${Date.now()}`.replace(/\s+/g, '_');
+          console.log('🆔 Generated faceUserId:', faceUserId);
           
           // Register face with AWS
+          console.log('☁️ Registering face with AWS Rekognition...');
           const faceResult = await faceRecognitionService.registerFace(
             files.facePhoto[0].buffer, 
             faceUserId,
@@ -945,20 +955,26 @@ export function registerMongoRoutes(app: Express) {
             }
           );
           
+          console.log('📊 Face registration result:', faceResult);
+          
           if (faceResult.success) {
-            registrationData.facePhotoPath = files.facePhoto[0].path;
+            registrationData.facePhotoPath = files.facePhoto[0].path || 'uploaded';
             registrationData.awsFaceId = faceResult.faceId;
             registrationData.faceUserId = faceUserId;
             faceRegistrationData = faceResult;
-            console.log(`Face registered successfully for ${firstName} ${lastName} with ID: ${faceUserId}`);
+            console.log(`✅ Face registered successfully for ${firstName} ${lastName} with ID: ${faceUserId}`);
+            console.log(`✅ AWS FaceId: ${faceResult.faceId}`);
           } else {
-            console.error('Face registration failed:', faceResult.error);
+            console.error('❌ Face registration failed:', faceResult.error);
             // Don't fail registration if face upload fails, just log it
           }
         } catch (faceError) {
-          console.error('Error processing face photo:', faceError);
+          console.error('💥 Error processing face photo:', faceError);
+          console.error('💥 Stack trace:', faceError.stack);
           // Continue with registration even if face processing fails
         }
+      } else {
+        console.log('❌ No face photo found in uploaded files');
       }
 
       // Create registration
