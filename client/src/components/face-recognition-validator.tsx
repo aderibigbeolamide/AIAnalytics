@@ -1,15 +1,17 @@
 import { useState, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 import { Camera, Upload, User, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 interface FaceRecognitionValidatorProps {
-  eventId: string;
+  eventId?: string;
   onValidationSuccess?: (result: any) => void;
   onClose: () => void;
 }
@@ -19,6 +21,7 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
   const queryClient = useQueryClient();
   const [memberName, setMemberName] = useState("");
   const [email, setEmail] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState(eventId || "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -30,12 +33,23 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
   const [checkingRegistration, setCheckingRegistration] = useState(false);
   const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
 
+  // Fetch events for selection
+  const { data: eventsData } = useQuery({
+    queryKey: ["/api/events"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/events");
+      return response.json();
+    },
+  });
+
+  const events = eventsData || [];
+
   const validateFaceMutation = useMutation({
     mutationFn: async ({ file, memberName, email }: { file: File; memberName: string; email: string }) => {
       const authHeaders = getAuthHeaders();
       const formData = new FormData();
       formData.append('image', file);
-      formData.append('eventId', eventId);
+      formData.append('eventId', selectedEventId);
       formData.append('memberName', memberName);
       if (email) formData.append('email', email);
 
@@ -57,11 +71,13 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
     onSuccess: (data) => {
       setValidationResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      toast({
-        title: "Validation Successful",
-        description: `${data.memberName} has been validated for ${data.event?.name}`,
-      });
-      onValidationSuccess?.(data);
+      if (data.validationStatus === "valid") {
+        toast({
+          title: "Validation Successful",
+          description: `${data.memberName || memberName} has been validated for ${data.event?.name || 'the event'}`,
+        });
+        onValidationSuccess?.(data);
+      }
     },
     onError: (error: Error) => {
       setValidationResult({ validationStatus: "invalid", message: error.message });
@@ -218,10 +234,10 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
   };
 
   const handleValidation = () => {
-    if (!selectedFile || !memberName.trim()) {
+    if (!selectedFile || !memberName.trim() || !selectedEventId) {
       toast({
         title: "Missing Information",
-        description: "Please provide a face image and member name",
+        description: "Please provide a face image, member name, and select an event",
         variant: "destructive",
       });
       return;
@@ -237,6 +253,7 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
   const resetForm = () => {
     setMemberName("");
     setEmail("");
+    if (!eventId) setSelectedEventId(""); // Don't reset if eventId was passed as prop
     setSelectedFile(null);
     setPreviewUrl("");
     setValidationResult(null);
@@ -265,8 +282,8 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
                     <h3 className="text-xl font-semibold">Validation Successful</h3>
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg text-left space-y-2">
-                    <p><strong>Member:</strong> {validationResult.memberName}</p>
-                    <p><strong>Event:</strong> {validationResult.event?.name}</p>
+                    <p><strong>Member:</strong> {validationResult.memberName || memberName || 'N/A'}</p>
+                    <p><strong>Event:</strong> {validationResult.event?.name || events.find(e => e.id === selectedEventId)?.name || 'N/A'}</p>
                     <p><strong>Status:</strong> Validated</p>
                     <p><strong>Method:</strong> AI Face Recognition</p>
                     {validationResult.confidence && (
@@ -330,6 +347,24 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
                     className="mt-1"
                   />
                 </div>
+                {/* Event Selection - Only show if eventId wasn't passed as prop */}
+                {!eventId && (
+                  <div>
+                    <Label htmlFor="eventSelect">Select Event *</Label>
+                    <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Choose an event to validate for" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {events.map((event: any) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               {/* Face Image Capture */}
@@ -423,7 +458,7 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
               <div className="flex gap-2">
                 <Button
                   onClick={handleValidation}
-                  disabled={!selectedFile || !memberName.trim() || validateFaceMutation.isPending}
+                  disabled={!selectedFile || !memberName.trim() || (!eventId && !selectedEventId) || validateFaceMutation.isPending}
                   className="flex-1"
                 >
                   {validateFaceMutation.isPending ? (
