@@ -268,7 +268,17 @@ export function registerFaceRecognitionRoutes(app: Express) {
         try {
           // Import MongoDB storage to get event details for better error messaging
           const { mongoStorage } = await import('../mongodb-storage');
-          const event = await mongoStorage.getEvent(eventId);
+          let event = null;
+          
+          // Handle both ObjectId and string eventId formats
+          try {
+            event = await mongoStorage.getEvent(eventId);
+          } catch (eventError) {
+            console.log(`Could not fetch event details for eventId: ${eventId}`, eventError.message);
+            // Try to get event list and find by string ID if ObjectId fails
+            const events = await mongoStorage.getEvents();
+            event = events.find(e => e._id.toString() === eventId || e.id === eventId);
+          }
           
           return res.json({
             success: true,
@@ -280,6 +290,7 @@ export function registerFaceRecognitionRoutes(app: Express) {
             ...searchResult
           });
         } catch (error) {
+          console.error('Error in face validation no-match handler:', error);
           return res.json({
             success: true,
             validated: false,
@@ -353,8 +364,16 @@ export function registerFaceRecognitionRoutes(app: Express) {
           validationMethod: 'face_recognition'
         });
         
-        // Get event details
-        const event = await mongoStorage.getEvent(eventId);
+        // Get event details - handle both ObjectId and string formats
+        let event = null;
+        try {
+          event = await mongoStorage.getEvent(eventId);
+        } catch (eventError) {
+          console.log(`Could not fetch event details for eventId: ${eventId}`, eventError.message);
+          // Try to get event list and find by string ID if ObjectId fails
+          const events = await mongoStorage.getEvents();
+          event = events.find(e => e._id.toString() === eventId || e.id === eventId);
+        }
         
         res.json({
           success: true,
