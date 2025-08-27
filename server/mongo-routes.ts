@@ -935,7 +935,7 @@ export function registerMongoRoutes(app: Express) {
           console.log('📸 Face photo found, starting registration process...');
           
           // Import face recognition service
-          const { faceRecognitionService } = await import('../routes/face-recognition-routes');
+          const { faceRecognitionService } = await import('../services/face-recognition-service');
           
           // Generate unique user ID for face recognition (combination of registration data)
           const faceUserId = `${eventId}_${firstName}_${lastName}_${Date.now()}`.replace(/\s+/g, '_');
