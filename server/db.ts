@@ -4,9 +4,19 @@ import ws from "ws";
 import * as schema from "@shared/schema";
 import { env } from "../config/environment";
 
-neonConfig.webSocketConstructor = ws;
+// Only use PostgreSQL if DATABASE_URL is a PostgreSQL connection string
+const isPostgresUrl = env.DATABASE_URL.startsWith('postgresql://') || env.DATABASE_URL.startsWith('postgres://');
 
-console.log("Using database URL:", env.DATABASE_URL.replace(/:\/\/[^@]+@/, "://***:***@"));
+let pool: Pool | null = null;
+let db: any = null;
 
-export const pool = new Pool({ connectionString: env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+if (isPostgresUrl) {
+  neonConfig.webSocketConstructor = ws;
+  console.log("Using PostgreSQL database URL:", env.DATABASE_URL.replace(/:\/\/[^@]+@/, "://***:***@"));
+  pool = new Pool({ connectionString: env.DATABASE_URL });
+  db = drizzle({ client: pool, schema });
+} else {
+  console.log("DATABASE_URL is not PostgreSQL format - using MongoDB only");
+}
+
+export { pool, db };
