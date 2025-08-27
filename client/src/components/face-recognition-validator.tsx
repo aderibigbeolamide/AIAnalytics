@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,79 +110,28 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
       // Try different camera configurations
       let stream;
       try {
-        console.log("Trying back camera...");
+        console.log("Trying front camera...");
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             width: { ideal: 640 }, 
             height: { ideal: 480 },
-            facingMode: 'environment' // Back camera first
-          } 
-        });
-        console.log("Back camera successful");
-      } catch (backCameraError) {
-        console.log("Back camera failed, trying front camera...");
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            width: { ideal: 640 }, 
-            height: { ideal: 480 },
-            facingMode: 'user' // Front camera fallback
+            facingMode: 'user' // Front camera for face recognition
           } 
         });
         console.log("Front camera successful");
+      } catch (frontCameraError) {
+        console.log("Front camera failed, trying back camera...");
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: { ideal: 640 }, 
+            height: { ideal: 480 },
+            facingMode: 'environment' // Back camera fallback
+          } 
+        });
+        console.log("Back camera successful");
       }
 
       setCameraStream(stream);
-      
-      if (videoRef.current) {
-        console.log("Checking video ref after render:", !!videoRef.current);
-        console.log("Setting video source object");
-        videoRef.current.srcObject = stream;
-        
-        // Add event listeners to debug video loading
-        videoRef.current.onloadstart = () => console.log("Video load started");
-        videoRef.current.onloadedmetadata = () => {
-          console.log("Video metadata loaded");
-          console.log("Video metadata loaded, dimensions:", videoRef.current?.videoWidth, "x", videoRef.current?.videoHeight);
-        };
-        videoRef.current.oncanplay = () => console.log("Video can play");
-        videoRef.current.onplay = () => console.log("Video is playing");
-        videoRef.current.onplaying = () => console.log("Video started playing successfully");
-        videoRef.current.onsuspend = () => console.log("Video suspended");
-        
-        console.log("Video immediately after setting srcObject:", {
-          srcObject: !!videoRef.current.srcObject,
-          readyState: videoRef.current.readyState,
-          videoWidth: videoRef.current.videoWidth,
-          videoHeight: videoRef.current.videoHeight
-        });
-        
-        // Force play
-        await videoRef.current.play();
-        
-        // Additional timeout to ensure video is playing
-        setTimeout(() => {
-          console.log("Force playing video after timeout");
-          if (videoRef.current) {
-            console.log("Video element state after 1s:", {
-              srcObject: !!videoRef.current.srcObject,
-              readyState: videoRef.current.readyState,
-              paused: videoRef.current.paused,
-              width: videoRef.current.videoWidth,
-              height: videoRef.current.videoHeight,
-              currentTime: videoRef.current.currentTime,
-              duration: videoRef.current.duration,
-              played: videoRef.current.played.length > 0,
-              stream: !!stream,
-              tracks: stream.getTracks().map(track => ({
-                kind: track.kind,
-                enabled: track.enabled,
-                readyState: track.readyState
-              }))
-            });
-          }
-        }, 1000);
-      }
-      
       setIsUsingCamera(true);
       
       toast({
@@ -200,6 +149,27 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
       setIsUsingCamera(false);
     }
   };
+
+  // Set up camera stream when video element becomes available
+  useEffect(() => {
+    if (isUsingCamera && cameraStream && videoRef.current) {
+      console.log("Setting up video stream...");
+      const video = videoRef.current;
+      video.srcObject = cameraStream;
+      
+      // Add event listeners
+      video.onloadedmetadata = () => {
+        console.log("Video metadata loaded, dimensions:", video.videoWidth, "x", video.videoHeight);
+      };
+      video.oncanplay = () => console.log("Video can play");
+      video.onplaying = () => console.log("Video started playing");
+      
+      // Play the video
+      video.play().catch(err => {
+        console.error("Error playing video:", err);
+      });
+    }
+  }, [isUsingCamera, cameraStream]);
 
   const stopCamera = () => {
     if (cameraStream) {
@@ -405,18 +375,26 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
                 {/* Camera View */}
                 {isUsingCamera && (
                   <div className="space-y-4">
-                    <div className="relative">
+                    <div className="relative bg-black rounded-lg overflow-hidden">
                       <video
                         ref={videoRef}
-                        className="w-full rounded-lg border"
+                        className="w-full h-80 object-cover rounded-lg"
                         autoPlay
                         muted
                         playsInline
+                        style={{ transform: 'scaleX(-1)' }} // Mirror the video for better UX
                       />
                       <canvas ref={canvasRef} className="hidden" />
+                      {/* Loading indicator while camera initializes */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                        <div className="text-white text-center">
+                          <Camera className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm opacity-75">Initializing camera...</p>
+                        </div>
+                      </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={capturePhoto} className="flex-1">
+                      <Button onClick={capturePhoto} className="flex-1" disabled={!videoRef.current}>
                         <Camera className="h-4 w-4 mr-2" />
                         Capture Photo
                       </Button>
