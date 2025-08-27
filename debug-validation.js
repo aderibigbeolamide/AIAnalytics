@@ -1,45 +1,87 @@
-// Debug script to test validation directly in MongoDB
-const { mongoStorage } = require('./server/mongodb-storage');
+import mongoose from 'mongoose';
+import { faceRecognitionService } from './server/services/face-recognition-service.ts';
 
-async function testValidation() {
-    try {
-        console.log('Testing validation system...');
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.DATABASE_URL);
+    console.log('MongoDB connected successfully');
+
+    // Simulate the validation process with your face
+    console.log('🔍 Testing face search...');
+    const searchResult = await faceRecognitionService.searchFace('./uploads/face_photos_musodiq_test.jpeg', 85);
+    
+    if (searchResult.success && searchResult.matchFound) {
+      console.log('\n=== Face Search Results ===');
+      const bestMatch = searchResult.matches[0];
+      console.log('Best Match:', {
+        userId: bestMatch.userId,
+        faceId: bestMatch.faceId,
+        similarity: bestMatch.similarity
+      });
+
+      // Parse the user ID
+      const userIdParts = bestMatch.userId.split('_');
+      const matchedEventId = userIdParts[0];
+      const matchedFirstName = userIdParts[1]; 
+      const matchedLastName = userIdParts[2];
+      
+      console.log('\n=== Parsed User ID ===');
+      console.log('Matched Event ID:', matchedEventId);
+      console.log('Matched First Name:', matchedFirstName);
+      console.log('Matched Last Name:', matchedLastName);
+
+      // Now check different possible event IDs that might be sent
+      const possibleEventIds = [
+        '68acdfae1db767e5bab1dde4', // String format
+        new mongoose.Types.ObjectId('68acdfae1db767e5bab1dde4'), // ObjectId format
+      ];
+
+      for (const testEventId of possibleEventIds) {
+        console.log(`\n=== Testing Event ID: ${testEventId} (${typeof testEventId}) ===`);
+        console.log('Comparison result:', matchedEventId !== testEventId.toString());
+        console.log('String comparison:', matchedEventId !== testEventId.toString());
+        console.log('Direct comparison:', matchedEventId !== testEventId);
         
-        // Get all registrations
-        const registrations = await mongoStorage.getEventRegistrations();
-        console.log('Total registrations:', registrations.length);
-        
-        if (registrations.length > 0) {
-            // Show first few registrations with their unique IDs
-            registrations.slice(0, 5).forEach(reg => {
-                console.log(`Registration: ${reg.firstName} ${reg.lastName}`);
-                console.log(`  - Unique ID: ${reg.uniqueId}`);
-                console.log(`  - QR Code: ${reg.qrCode}`);
-                console.log(`  - Status: ${reg.status}`);
-                console.log(`  - Event ID: ${reg.eventId}`);
-                console.log('---');
+        // Get registrations for this event
+        try {
+          const eventRegistrations = await mongoose.connection.db.collection('eventregistrations')
+            .find({ eventId: new mongoose.Types.ObjectId(testEventId.toString()) })
+            .toArray();
+          
+          console.log(`Found ${eventRegistrations.length} registrations for this event`);
+          
+          // Look for matching registration
+          const matchingRegistration = eventRegistrations.find(reg => {
+            const faceUserIdMatch = reg.registrationData?.faceUserId === bestMatch.userId;
+            const nameMatch = reg.firstName?.toLowerCase() === matchedFirstName?.toLowerCase() && 
+                            reg.lastName?.toLowerCase() === matchedLastName?.toLowerCase();
+            
+            return faceUserIdMatch || nameMatch;
+          });
+          
+          if (matchingRegistration) {
+            console.log('✅ Found matching registration:', {
+              id: matchingRegistration._id,
+              name: `${matchingRegistration.firstName} ${matchingRegistration.lastName}`,
+              email: matchingRegistration.email,
+              faceUserId: matchingRegistration.registrationData?.faceUserId,
+              status: matchingRegistration.status
             });
-            
-            // Test validation with first registration
-            const testReg = registrations[0];
-            console.log(`\nTesting validation with ID: ${testReg.uniqueId}`);
-            
-            const foundReg = await mongoStorage.getEventRegistrationByUniqueId(testReg.uniqueId);
-            if (foundReg) {
-                console.log('✅ Registration found by unique ID');
-                console.log(`  Name: ${foundReg.firstName} ${foundReg.lastName}`);
-                console.log(`  Status: ${foundReg.status}`);
-                console.log(`  Event: ${foundReg.eventId}`);
-            } else {
-                console.log('❌ Registration NOT found by unique ID');
-            }
-        } else {
-            console.log('No registrations found');
+          } else {
+            console.log('❌ No matching registration found');
+          }
+          
+        } catch (error) {
+          console.log(`Error checking registrations:`, error.message);
         }
-        
-    } catch (error) {
-        console.error('Error testing validation:', error);
+      }
     }
-}
 
-testValidation();
+    process.exit(0);
+  } catch (error) {
+    console.error('Error:', error);
+    process.exit(1);
+  }
+};
+
+connectDB();

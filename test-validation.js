@@ -1,46 +1,49 @@
-// Test validation by injecting into browser console
-console.log('Testing QR validation system...');
+import mongoose from 'mongoose';
+import fs from 'fs';
+import FormData from 'form-data';
 
-// Simulate QR code validation with a test ID
-async function testValidation(uniqueId) {
+const testValidation = async () => {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error('No authentication token found');
-      return;
-    }
-
-    console.log(`Testing validation with ID: ${uniqueId}`);
+    // Test the validation endpoint directly
+    const formData = new FormData();
+    const imageBuffer = fs.readFileSync('./uploads/face_photos_musodiq_test.jpeg');
     
-    const response = await fetch('/api/validate-id', {
+    formData.append('image', imageBuffer, {
+      filename: 'test-face.jpg',
+      contentType: 'image/jpeg'
+    });
+    formData.append('eventId', '68acdfae1db767e5bab1dde4');
+
+    console.log('🧪 Testing face validation endpoint...');
+    console.log('Event ID being sent:', '68acdfae1db767e5bab1dde4');
+    console.log('Image size:', imageBuffer.length, 'bytes');
+
+    // Make the API call
+    const response = await fetch('http://localhost:5000/api/face-recognition/validate-attendance', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ODYyYmZlMWU3ZjgxZTFhNmM3YzA1MSIsInVzZXJuYW1lIjoiYWRtaW4iLCJlbWFpbCI6InN1cGVyYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiYWRtaW4iLCJvcmdhbml6YXRpb25JZCI6IjY4ODYyYzNmMWU3ZjgxZTFhNmM3YzA1NSIsImlhdCI6MTc1NjI2NzAzOCwiZXhwIjoxNzU2MjcwNjM4fQ.jjcOWZKOTb5b-FQnVYLKqnZr3MrwJ1fNGpLsm6e-aWQ',
+        ...formData.getHeaders()
       },
-      body: JSON.stringify({ uniqueId: uniqueId })
+      body: formData
     });
-    
+
     const result = await response.json();
-    console.log('Validation result:', result);
     
-    if (response.ok) {
-      console.log('✅ Validation successful!');
-      console.log('Details:', result);
-    } else {
-      console.log('❌ Validation failed:', result.message);
+    console.log('\n=== API Response ===');
+    console.log('Status:', response.status);
+    console.log('Response:', JSON.stringify(result, null, 2));
+
+    if (result.debug) {
+      console.log('\n=== Debug Info ===');
+      console.log('Matched Event ID:', result.debug.matchedEventId);
+      console.log('Requested Event ID:', result.debug.requestedEventId);
+      console.log('Matched User:', result.debug.matchedUser);
     }
-    
-    return result;
+
   } catch (error) {
-    console.error('Error during validation:', error);
+    console.error('Test failed:', error);
   }
-}
+};
 
-// Test with some common unique ID patterns
-const testIds = ['ABCDEF', 'YXNJYM', 'CBQFNZ'];
-console.log('Available test IDs:', testIds);
-console.log('Usage: testValidation("UNIQUE_ID")');
-
-// Make function available globally
-window.testValidation = testValidation;
+testValidation();

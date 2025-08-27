@@ -317,12 +317,19 @@ export function registerFaceRecognitionRoutes(app: Express) {
         const matchedLastName = userIdParts[2];
         
         // Check if the matched face is registered for this event
-        if (matchedEventId !== eventId) {
+        // Ensure both IDs are compared as strings
+        if (matchedEventId !== eventId.toString()) {
+          console.log(`Event ID mismatch: matched=${matchedEventId}, requested=${eventId.toString()}`);
           return res.json({
             success: true,
             validated: false,
             message: `Face recognized but user is registered for a different event. Please check your registration.`,
-            confidence: bestMatch.confidence
+            confidence: bestMatch.similarity,
+            debug: {
+              matchedEventId,
+              requestedEventId: eventId.toString(),
+              matchedUser: `${matchedFirstName} ${matchedLastName}`
+            }
           });
         }
         
@@ -339,7 +346,7 @@ export function registerFaceRecognitionRoutes(app: Express) {
             success: true,
             validated: false,
             message: `Face recognized but no registration found for this event. Please contact support.`,
-            confidence: bestMatch.confidence
+            confidence: bestMatch.similarity || bestMatch.confidence || 0
           });
         }
         
@@ -349,6 +356,7 @@ export function registerFaceRecognitionRoutes(app: Express) {
             success: true,
             validated: false,
             message: `Registration is ${matchingRegistration.status}. Please contact support.`,
+            confidence: bestMatch.similarity || bestMatch.confidence || 0,
             registrationInfo: {
               name: `${matchingRegistration.firstName} ${matchingRegistration.lastName}`,
               status: matchingRegistration.status
@@ -382,7 +390,7 @@ export function registerFaceRecognitionRoutes(app: Express) {
           message: `Welcome ${matchingRegistration.firstName} ${matchingRegistration.lastName}! Attendance marked successfully.`,
           memberName: `${matchingRegistration.firstName} ${matchingRegistration.lastName}`,
           event: event ? { name: event.name, id: eventId } : { name: "Event", id: eventId },
-          confidence: Math.round(bestMatch.similarity || 0),
+          confidence: bestMatch.similarity || bestMatch.confidence || 0,
           registrationInfo: {
             id: (matchingRegistration._id as any).toString(),
             name: `${matchingRegistration.firstName} ${matchingRegistration.lastName}`,
@@ -401,7 +409,7 @@ export function registerFaceRecognitionRoutes(app: Express) {
           success: true,
           validated: false,
           message: `Face recognized but unable to verify registration. Please try again or use QR code validation.`,
-          confidence: bestMatch.confidence
+          confidence: bestMatch.similarity || bestMatch.confidence || 0
         });
       }
 
