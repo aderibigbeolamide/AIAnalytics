@@ -112,25 +112,42 @@ export default function Events() {
   const getEventStatus = (event: any) => {
     const now = new Date();
     const start = new Date(event.startDate);
-    const end = event.endDate ? new Date(event.endDate) : new Date(event.startDate);
     
-    // If dates are invalid, return a default status
+    // If start date is invalid, return a default status
     if (isNaN(start.getTime())) return 'upcoming';
     
     // Check if event is cancelled
     if (event.status === 'cancelled') return 'cancelled';
     
-    // For events without end date, consider them as single-day events
-    if (!event.endDate) {
-      const eventDate = new Date(start);
-      eventDate.setHours(23, 59, 59); // End of day
+    // For events with end date
+    if (event.endDate) {
+      const end = new Date(event.endDate);
+      if (isNaN(end.getTime())) {
+        // Invalid end date, treat as single day event
+        const eventEndTime = new Date(start);
+        eventEndTime.setHours(23, 59, 59, 999); // End of start day
+        
+        if (now < start) return 'upcoming';
+        if (now >= start && now <= eventEndTime) return 'ongoing';
+        return 'ended';
+      }
+      
+      // Set end time to end of day if no time specified
+      if (end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0) {
+        end.setHours(23, 59, 59, 999);
+      }
+      
       if (now < start) return 'upcoming';
-      if (now >= start && now <= eventDate) return 'ongoing';
+      if (now >= start && now <= end) return 'ongoing';
       return 'ended';
     }
     
+    // For events without end date (single-day events)
+    const eventEndTime = new Date(start);
+    eventEndTime.setHours(23, 59, 59, 999); // End of day
+    
     if (now < start) return 'upcoming';
-    if (now >= start && now <= end) return 'ongoing';
+    if (now >= start && now <= eventEndTime) return 'ongoing';
     return 'ended';
   };
 

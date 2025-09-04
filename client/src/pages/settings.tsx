@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings, User, Shield, Palette, Database } from "lucide-react";
+import { Settings, User, Shield, Palette, Database, Trash2 } from "lucide-react";
+import { EventCleanupManager } from "@/components/event-cleanup-manager";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
 import { Navbar } from "@/components/navbar";
@@ -158,6 +159,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Event Cleanup Manager */}
+          <EventCleanupManager />
         </div>
       </div>
     </div>

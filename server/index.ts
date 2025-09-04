@@ -9,6 +9,7 @@ import { registerPaymentRoutes } from "./routes/payment-routes";
 import { registerOrganizationRoutes } from "./routes/organization-routes";
 import { registerEmailRoutes } from "./routes/email-routes";
 import { registerFaceRecognitionRoutes } from "./routes/face-recognition-routes";
+import { cleanupRouter } from "./routes/cleanup-routes.js";
 
 // Legacy routes (to be migrated)
 import { registerMongoSuperAdminRoutes } from "./mongo-super-admin-routes";
@@ -21,6 +22,7 @@ import { fileStorage } from "./storage-handler";
 import { connectToMongoDB } from "./mongodb";
 import { mongoAutoSeed } from "./mongo-auto-seed";
 import { WebSocketChatServer } from "./websocket-chat";
+import { CleanupScheduler } from "./services/cleanup-scheduler.js";
 import path from "path";
 
 const app = express();
@@ -76,6 +78,9 @@ app.use((req, res, next) => {
   registerEmailRoutes(app);
   registerFaceRecognitionRoutes(app);
   
+  // Register cleanup routes
+  app.use('/api/cleanup', cleanupRouter);
+  
   // Register legacy routes (to be migrated)
   registerMongoSuperAdminRoutes(app);
   registerMongoDashboardRoutes(app);
@@ -100,6 +105,9 @@ app.use((req, res, next) => {
   
   // Initialize WebSocket chat server
   const chatServer = new WebSocketChatServer(server);
+  
+  // Start cleanup scheduler
+  CleanupScheduler.start();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
