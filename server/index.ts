@@ -19,8 +19,8 @@ import { setupChatbotRoutes } from "./chatbot-routes";
 import { setupChatbotTestRoutes } from "./chatbot-test-route";
 import { setupVite, serveStatic, log } from "./vite";
 import { fileStorage } from "./storage-handler";
-// import { connectToMongoDB } from "./mongodb";
-// import { mongoAutoSeed } from "./mongo-auto-seed";
+import { connectToMongoDB } from "./mongodb";
+import { mongoAutoSeed } from "./mongo-auto-seed";
 import { WebSocketChatServer } from "./websocket-chat";
 import { CleanupScheduler } from "./services/cleanup-scheduler.js";
 import path from "path";
@@ -63,9 +63,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Skip MongoDB connection for Replit migration - using PostgreSQL only
-  // await connectToMongoDB();
-  // await mongoAutoSeed();
+  // Connect to MongoDB
+  await connectToMongoDB();
+  
+  // Run auto-seeding before starting the server
+  await mongoAutoSeed();
   
   // Register new organized routes
   registerAuthRoutes(app);
@@ -79,12 +81,12 @@ app.use((req, res, next) => {
   // Register cleanup routes
   app.use('/api/cleanup', cleanupRouter);
   
-  // Legacy MongoDB routes disabled during migration
-  // registerMongoSuperAdminRoutes(app);
-  // registerMongoDashboardRoutes(app);
-  // setupNotificationRoutes(app);
-  // setupChatbotRoutes(app);
-  // setupChatbotTestRoutes(app);
+  // Register legacy routes
+  registerMongoSuperAdminRoutes(app);
+  registerMongoDashboardRoutes(app);
+  setupNotificationRoutes(app);
+  setupChatbotRoutes(app);
+  setupChatbotTestRoutes(app);
   
   // Register event reminder routes
   const { registerEventReminderRoutes } = await import("./event-reminder-routes.js");
@@ -94,9 +96,9 @@ app.use((req, res, next) => {
   const { registerAnalyticsRoutes } = await import("./mongo-analytics-routes.js");
   registerAnalyticsRoutes(app);
   
-  // MongoDB routes disabled during migration
-  // const { registerMongoRoutes } = await import("./mongo-routes.js");
-  // registerMongoRoutes(app);
+  // Register MongoDB routes (includes ticket lookup)
+  const { registerMongoRoutes } = await import("./mongo-routes.js");
+  registerMongoRoutes(app);
   
   // Create HTTP server directly since legacy routes disabled
   const server = createServer(app);
