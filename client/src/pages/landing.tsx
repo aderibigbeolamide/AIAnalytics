@@ -66,7 +66,7 @@ export function LandingPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentAnimationFrame((prev) => (prev + 1) % 3);
-    }, 3000); // Change frame every 3 seconds
+    }, 5000); // Change frame every 5 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -507,13 +507,6 @@ export function LandingPage() {
                   ][currentAnimationFrame]}
                   className="w-full h-auto transition-all duration-1000 transform"
                   style={{ maxHeight: '400px', objectFit: 'contain' }}
-                  onError={(e) => {
-                    console.error('Image failed to load:', e.target.src);
-                    e.target.style.display = 'none';
-                  }}
-                  onLoad={() => {
-                    console.log('Image loaded successfully:', [animationFrame1, animationFrame2, animationFrame3][currentAnimationFrame]);
-                  }}
                 />
                 
                 {/* Fallback content if images don't load */}
@@ -552,7 +545,7 @@ export function LandingPage() {
               
               <div className="text-center mt-6">
                 <p className="text-sm text-gray-600 font-medium">
-                  🔄 Animation cycles every 3 seconds • Click dots to view specific steps
+                  🔄 Animation cycles every 5 seconds • Click dots to view specific steps
                 </p>
               </div>
             </div>
