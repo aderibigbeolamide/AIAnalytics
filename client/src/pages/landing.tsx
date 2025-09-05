@@ -32,6 +32,13 @@ import {
 import ChatbotComponent from "@/components/chatbot";
 import { EventImage } from "@/lib/event-utils";
 // Logo image placed in public folder for proper asset handling
+import mobileQRImage from "@assets/generated_images/Mobile_QR_scanning_interface_b03c5eb3.png";
+import eventCheckinImage from "@assets/generated_images/Event_check-in_QR_scanning_f73d3b61.png";
+import dashboardImage from "@assets/generated_images/Admin_dashboard_interface_90c21f99.png";
+import conferenceVenueImage from "@assets/generated_images/Conference_venue_with_audience_a8e74952.png";
+import mohammedHeadshot from "@assets/generated_images/Mohammed_Rahman_professional_headshot_7e78c2ea.png";
+import aishaHeadshot from "@assets/generated_images/Aisha_Johnson_professional_headshot_6238ff87.png";
+import davidHeadshot from "@assets/generated_images/David_Martinez_professional_headshot_7b3465b9.png";
 
 export function LandingPage() {
   const [activeTab, setActiveTab] = useState("features");
@@ -465,6 +472,43 @@ export function LandingPage() {
             </div>
           </div>
 
+          {/* Product Visual Showcase */}
+          <div className="flex flex-col lg:flex-row items-center gap-12 mb-12">
+            <div className="lg:w-1/2 text-left">
+              <h3 className="text-2xl font-bold text-high-contrast mb-4">Mobile-First QR Validation</h3>
+              <p className="text-lg text-medium-contrast mb-6 leading-relaxed">
+                Your attendees simply scan QR codes with their mobile devices for instant, secure event registration. 
+                Our AI-powered validation ensures only authorized members can access your events.
+              </p>
+              <div className="space-y-3 text-medium-contrast">
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                  <span>Instant QR code scanning and validation</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                  <span>Works on any smartphone or tablet</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                  <span>Real-time fraud detection and prevention</span>
+                </div>
+              </div>
+            </div>
+            <div className="lg:w-1/2 flex justify-center">
+              <div className="relative">
+                <img 
+                  src={mobileQRImage} 
+                  alt="Mobile QR scanning interface" 
+                  className="w-80 h-auto rounded-2xl shadow-2xl transform hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute -top-4 -right-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold animate-pulse">
+                  Live Demo
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Enhanced CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Button 
@@ -674,13 +718,21 @@ export function LandingPage() {
           {publicEvents.length > 0 && (
             <div className="text-center mt-12">
               <Button 
-                variant="outline" 
                 size="lg"
-                className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-8 py-3"
+                className="btn-primary text-white font-semibold px-8 py-4 text-lg mr-4"
                 onClick={() => window.location.href = '/events'}
               >
                 View All Events
                 <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
+              <Button 
+                variant="outline"
+                size="lg"
+                className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-8 py-4 text-lg"
+                onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+              >
+                <Target className="h-5 w-5 mr-2" />
+                Get Free Demo
               </Button>
             </div>
           )}
@@ -704,6 +756,47 @@ export function LandingPage() {
               that ensure your events are secure, efficient, and professionally managed.
             </p>
           </div>
+          {/* Dashboard Preview */}
+          <div className="mb-16 bg-white/90 backdrop-blur-sm rounded-3xl p-8 border border-gray-200">
+            <div className="text-center mb-8">
+              <h3 className="text-3xl font-bold text-high-contrast mb-4">Powerful Admin Dashboard</h3>
+              <p className="text-lg text-medium-contrast max-w-2xl mx-auto">
+                Get real-time insights, manage events, and track attendance with our comprehensive admin interface
+              </p>
+            </div>
+            <div className="relative max-w-5xl mx-auto">
+              <img 
+                src={dashboardImage} 
+                alt="EventValidate admin dashboard interface" 
+                className="w-full rounded-2xl shadow-2xl border border-gray-200"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-2xl"></div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <BarChart3 className="h-6 w-6 text-blue-600" />
+                </div>
+                <h4 className="font-semibold text-high-contrast mb-2">Live Analytics</h4>
+                <p className="text-medium-contrast text-sm">Real-time attendance tracking and event metrics</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+                <h4 className="font-semibold text-high-contrast mb-2">Member Management</h4>
+                <p className="text-medium-contrast text-sm">Comprehensive member database and validation</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Shield className="h-6 w-6 text-purple-600" />
+                </div>
+                <h4 className="font-semibold text-high-contrast mb-2">Security Controls</h4>
+                <p className="text-medium-contrast text-sm">Advanced security settings and fraud prevention</p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <Card key={index} className="group hover:shadow-xl transition-all duration-500 border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:bg-white">
@@ -760,7 +853,7 @@ export function LandingPage() {
       {/* Benefits Section */}
       <section id="benefits" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
+          <div className="text-center mb-12">
             <Badge className="mb-4 bg-green-100 text-green-800 border-green-200">
               <BarChart3 className="h-4 w-4 mr-2" />
               Proven Results
@@ -773,6 +866,31 @@ export function LandingPage() {
               Join hundreds of organizations that have transformed their event security 
               and achieved measurable improvements in efficiency and fraud prevention.
             </p>
+          </div>
+
+          {/* Real-World Event Context */}
+          <div className="mb-16">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <img 
+                  src={eventCheckinImage} 
+                  alt="Professional event check-in with QR code scanning" 
+                  className="w-full rounded-2xl shadow-2xl"
+                />
+              </div>
+              <div>
+                <img 
+                  src={conferenceVenueImage} 
+                  alt="Professional conference venue with attendees" 
+                  className="w-full rounded-2xl shadow-2xl"
+                />
+              </div>
+            </div>
+            <div className="text-center mt-8">
+              <p className="text-lg text-medium-contrast font-medium">
+                From intimate gatherings to large conferences - EventValidate scales with your needs
+              </p>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, index) => (
@@ -813,9 +931,11 @@ export function LandingPage() {
                     and reduced check-in time by 75%. The QR validation is incredibly reliable."
                   </p>
                   <div className="flex items-center">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-                      <span className="text-blue-600 font-semibold">MR</span>
-                    </div>
+                    <img 
+                      src={mohammedHeadshot} 
+                      alt="Mohammed Rahman headshot" 
+                      className="w-12 h-12 rounded-full mr-4 object-cover border-2 border-blue-200"
+                    />
                     <div>
                       <p className="font-semibold text-high-contrast">Mohammed Rahman</p>
                       <p className="text-medium-contrast text-sm">Event Coordinator, Islamic Center</p>
@@ -836,9 +956,11 @@ export function LandingPage() {
                     We can now verify members instantly and prevent duplicate registrations."
                   </p>
                   <div className="flex items-center">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                      <span className="text-green-600 font-semibold">AJ</span>
-                    </div>
+                    <img 
+                      src={aishaHeadshot} 
+                      alt="Aisha Johnson headshot" 
+                      className="w-12 h-12 rounded-full mr-4 object-cover border-2 border-green-200"
+                    />
                     <div>
                       <p className="font-semibold text-high-contrast">Aisha Johnson</p>
                       <p className="text-medium-contrast text-sm">IT Director, Community Organization</p>
@@ -859,9 +981,11 @@ export function LandingPage() {
                     EventValidate pays for itself with the efficiency gains alone."
                   </p>
                   <div className="flex items-center">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
-                      <span className="text-purple-600 font-semibold">DM</span>
-                    </div>
+                    <img 
+                      src={davidHeadshot} 
+                      alt="David Martinez headshot" 
+                      className="w-12 h-12 rounded-full mr-4 object-cover border-2 border-purple-200"
+                    />
                     <div>
                       <p className="font-semibold text-high-contrast">David Martinez</p>
                       <p className="text-medium-contrast text-sm">Operations Manager, Conference Center</p>
@@ -1163,14 +1287,23 @@ export function LandingPage() {
               </CardContent>
             </Card>
           </div>
-          <div className="text-center mt-12">
+          <div className="text-center mt-12 space-y-4">
             <Button 
               size="lg" 
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Consultation Request&body=Hello,%0D%0A%0D%0AI would like to request a free consultation about EventValidate for my organization.%0D%0A%0D%0APlease let me know:%0D%0A- Available consultation times%0D%0A- What information I should prepare%0D%0A- Expected duration%0D%0A%0D%0AOrganization: [Your organization name]%0D%0AContact: [Your phone number]%0D%0A%0D%0AThank you!`, '_blank')}
+              className="btn-primary text-white font-semibold px-8 py-4 text-lg mr-4"
+              onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
             >
-              <Mail className="h-5 w-5 mr-2" />
-              Get Free Consultation
+              <Target className="h-5 w-5 mr-2" />
+              Get Free Demo
+            </Button>
+            <Button 
+              variant="outline"
+              size="lg" 
+              className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-8 py-4 text-lg"
+              onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss EventValidate for my organization.', '_blank')}
+            >
+              <Phone className="h-5 w-5 mr-2" />
+              Schedule Call
             </Button>
           </div>
         </div>
