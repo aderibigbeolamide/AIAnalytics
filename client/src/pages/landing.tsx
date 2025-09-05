@@ -485,48 +485,75 @@ export function LandingPage() {
           </div>
 
           {/* Animated System Demo */}
-          <div className="mb-16">
+          <div className="mb-16 bg-gradient-to-br from-blue-50 to-purple-50 p-8 rounded-3xl">
             <div className="text-center mb-8">
-              <h3 className="text-3xl font-bold text-high-contrast mb-4">See EventValidate in Action</h3>
-              <p className="text-lg text-medium-contrast max-w-3xl mx-auto leading-relaxed">
+              <Badge className="mb-4 bg-blue-100 text-blue-800 border-blue-200">
+                <Star className="h-4 w-4 mr-2" />
+                Live System Demo
+              </Badge>
+              <h3 className="text-4xl font-bold text-high-contrast mb-4">See EventValidate in Action</h3>
+              <p className="text-xl text-medium-contrast max-w-3xl mx-auto leading-relaxed">
                 Watch how attendees scan QR codes and admins see real-time updates instantly
               </p>
             </div>
-            <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl p-8 border border-gray-200 shadow-2xl">
-              <div className="relative overflow-hidden rounded-2xl">
-                {(() => {
-                  const frames = [animationFrame1, animationFrame2, animationFrame3];
-                  const frameLabels = [
+            <div className="relative bg-white rounded-3xl p-8 border-2 border-blue-200 shadow-2xl max-w-6xl mx-auto">
+              <div className="relative overflow-hidden rounded-2xl bg-gray-100 min-h-[400px] flex items-center justify-center">
+                <img 
+                  src={[animationFrame1, animationFrame2, animationFrame3][currentAnimationFrame]} 
+                  alt={[
                     "1. Attendee scans QR code at entrance",
                     "2. System validates and grants access", 
                     "3. Admin dashboard updates in real-time"
-                  ];
-                  return (
-                    <>
-                      <img 
-                        src={frames[currentAnimationFrame]} 
-                        alt={frameLabels[currentAnimationFrame]}
-                        className="w-full h-auto transition-opacity duration-500"
-                      />
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full">
-                        <p className="text-sm font-medium">{frameLabels[currentAnimationFrame]}</p>
-                      </div>
-                      <div className="absolute top-4 right-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold animate-pulse">
-                        ▶ Live Demo
-                      </div>
-                    </>
-                  );
-                })()}
+                  ][currentAnimationFrame]}
+                  className="w-full h-auto transition-all duration-1000 transform"
+                  style={{ maxHeight: '400px', objectFit: 'contain' }}
+                  onError={(e) => {
+                    console.error('Image failed to load:', e.target.src);
+                    e.target.style.display = 'none';
+                  }}
+                  onLoad={() => {
+                    console.log('Image loaded successfully:', [animationFrame1, animationFrame2, animationFrame3][currentAnimationFrame]);
+                  }}
+                />
+                
+                {/* Fallback content if images don't load */}
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold opacity-20">
+                  EventValidate Demo - Frame {currentAnimationFrame + 1}
+                </div>
+                
+                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-8 py-4 rounded-full shadow-lg">
+                  <p className="text-base font-medium">
+                    {[
+                      "🔍 Step 1: Attendee scans QR code at entrance",
+                      "✅ Step 2: System validates and grants access", 
+                      "📊 Step 3: Admin dashboard updates in real-time"
+                    ][currentAnimationFrame]}
+                  </p>
+                </div>
+                
+                <div className="absolute top-6 right-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full text-base font-bold animate-pulse shadow-lg">
+                  ▶ Live Demo - Frame {currentAnimationFrame + 1}/3
+                </div>
               </div>
-              <div className="flex justify-center mt-6 space-x-2">
+              
+              <div className="flex justify-center mt-8 space-x-3">
                 {[0, 1, 2].map((index) => (
-                  <div
+                  <button
                     key={index}
-                    className={`w-3 h-3 rounded-full transition-colors duration-300 ${
-                      currentAnimationFrame === index ? 'bg-blue-600' : 'bg-gray-300'
+                    onClick={() => setCurrentAnimationFrame(index)}
+                    className={`w-4 h-4 rounded-full transition-all duration-300 ${
+                      currentAnimationFrame === index 
+                        ? 'bg-blue-600 scale-125 shadow-lg' 
+                        : 'bg-gray-300 hover:bg-gray-400 cursor-pointer'
                     }`}
                   />
                 ))}
+              </div>
+              
+              <div className="text-center mt-6">
+                <p className="text-sm text-gray-600 font-medium">
+                  🔄 Animation cycles every 3 seconds • Click dots to view specific steps
+                </p>
               </div>
             </div>
           </div>
