@@ -167,7 +167,7 @@ class EmailService {
               ${data.loginUrl ? `<a href="${data.loginUrl}" class="button">Access Your Dashboard</a>` : ''}
               
               <p><strong>Need help getting started?</strong></p>
-              <p>Our team is here to help! Contact us at ${data.adminEmail || 'support@eventvalidate.com'} or check our documentation.</p>
+              <p>Our team is here to help! Contact us at ${data.adminEmail || 'admin@eventifyai.com'} or check our documentation.</p>
               
               <p>Welcome to the future of event management!</p>
             </div>
@@ -204,7 +204,7 @@ class EmailService {
               
               ${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ''}
               
-              <p>If you have questions or would like to reapply in the future, please contact us at ${data.adminEmail || 'support@eventvalidate.com'}.</p>
+              <p>If you have questions or would like to reapply in the future, please contact us at ${data.adminEmail || 'admin@eventifyai.com'}.</p>
               
               <p>Thank you for considering EventValidate.</p>
             </div>

@@ -13,7 +13,7 @@ Add these to your `.env` file (see `.env.example` for template):
 MAILER_SERVICE="smtp.zoho.eu"
 MAILER_HOST="smtp.zoho.eu"
 MAILER_PORT=587
-MAILER_USER="admin@letbud.com"
+MAILER_USER="admin@eventifyai.com"
 MAILER_PASS="JCrSaUVGCnyD"
 ```
 

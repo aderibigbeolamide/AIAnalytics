@@ -15,12 +15,12 @@ async function testEmailService() {
 
   // Email configuration
   const config = {
-    host: process.env.MAILER_HOST || 'smtp.zoho.eu',
-    port: parseInt(process.env.MAILER_PORT || '587'),
+    host: process.env.SMTP_HOST || 'smtp.zoho.eu',
+    port: parseInt(process.env.SMTP_PORT || '587'),
     secure: false, // true for 465, false for other ports
     auth: {
-      user: process.env.MAILER_USER || 'admin@letbud.com',
-      pass: process.env.MAILER_PASS || 'JCrSaUVGCnyD',
+      user: process.env.SMTP_USER || 'admin@eventifyai.com',
+      pass: process.env.SMTP_PASS,
     },
     tls: {
       rejectUnauthorized: false

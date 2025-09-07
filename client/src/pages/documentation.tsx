@@ -608,7 +608,7 @@ export function DocumentationPage() {
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Email Support</h3>
                       <p className="text-gray-600 mb-4">Get help via email with response within 24 hours</p>
                       <Button variant="outline" className="w-full">
-                        support@eventvalidate.com
+                        admin@eventifyai.com
                       </Button>
                     </CardContent>
                   </Card>
