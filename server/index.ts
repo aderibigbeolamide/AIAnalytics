@@ -29,6 +29,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Health check endpoint for Docker
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
 // Serve uploaded files statically
 app.use('/uploads', express.static(fileStorage.getUploadDirectory()));
 
@@ -81,7 +86,7 @@ app.use((req, res, next) => {
   // Register cleanup routes
   app.use('/api/cleanup', cleanupRouter);
   
-  // Register legacy routes (to be migrated)
+  // Register legacy routes
   registerMongoSuperAdminRoutes(app);
   registerMongoDashboardRoutes(app);
   setupNotificationRoutes(app);

@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, ArrowLeft, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { Loader2, Building2, ArrowLeft, Eye, EyeOff, AlertTriangle, Lock, Shield } from "lucide-react";
 
 export default function OrganizationLogin() {
   const [, setLocation] = useLocation();
@@ -65,12 +65,16 @@ export default function OrganizationLogin() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center items-center mb-6">
-            <div className="p-3 bg-blue-600 rounded-full">
-              <Building2 className="h-8 w-8 text-white" />
+            <div className="p-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full shadow-lg">
+              <Building2 className="h-10 w-10 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Organization Login</h1>
-          <p className="text-gray-600">Sign in to manage your events and members</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">EventValidate</h1>
+          <p className="text-gray-600 text-lg">Organization Portal</p>
+          <div className="flex items-center justify-center mt-3 text-green-600 text-sm">
+            <Shield className="h-4 w-4 mr-1" />
+            <span>Secure Login</span>
+          </div>
         </div>
         
         {/* Login Card */}
@@ -102,20 +106,29 @@ export default function OrganizationLogin() {
                   placeholder="Enter your username or email"
                   className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                   required
+                  autoComplete="username"
+                  aria-describedby="username-help"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-700">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-gray-700">Password</Label>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Lock className="h-3 w-3 mr-1" />
+                    <span>Encrypted</span>
+                  </div>
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder="Enter your secure password"
                     className="bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
                     required
+                    autoComplete="current-password"
                   />
                   <Button
                     type="button"
@@ -123,6 +136,7 @@ export default function OrganizationLogin() {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-400 hover:text-gray-600"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
@@ -131,18 +145,18 @@ export default function OrganizationLogin() {
               
               <Button 
                 type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 font-medium py-3"
                 disabled={loading}
               >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    Signing in securely...
                   </>
                 ) : (
                   <>
-                    <Building2 className="mr-2 h-4 w-4" />
-                    Sign In
+                    <Lock className="mr-2 h-4 w-4" />
+                    Sign In Securely
                   </>
                 )}
               </Button>
@@ -153,20 +167,29 @@ export default function OrganizationLogin() {
               <p className="text-gray-600 text-sm">
                 Don't have an organization account?{" "}
                 <Link href="/register">
-                  <Button variant="link" className="p-0 h-auto text-blue-600 hover:text-blue-800">
-                    Register here
+                  <Button variant="link" className="p-0 h-auto text-blue-600 hover:text-blue-800 font-medium">
+                    Create an Organization Account
                   </Button>
                 </Link>
+              </p>
+            </div>
+            
+            {/* Security Notice */}
+            <div className="mt-4 text-center">
+              <p className="text-xs text-gray-500 flex items-center justify-center">
+                <Shield className="h-3 w-3 mr-1" />
+                Your data is protected with enterprise-grade security
               </p>
             </div>
           </CardContent>
         </Card>
         
         {/* Status Badge */}
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-2">
           <Badge variant="outline" className="border-green-200 text-green-700 bg-green-50">
-            Organization Portal
+            ✅ Trusted by 500+ Organizations
           </Badge>
+          <p className="text-xs text-gray-400">EventValidate - AI-Powered Member Validation</p>
         </div>
       </div>
     </div>
