@@ -100,9 +100,12 @@ RUN mkdir -p uploads
 EXPOSE 5000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+# Install curl
+RUN apk add --no-cache curl
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5000/api/health || exit 1
+  
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
