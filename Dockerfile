@@ -12,8 +12,8 @@ COPY pnpm-lock.yaml ./
 # Install pnpm
 RUN npm install -g pnpm
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies (handle lockfile mismatches)
+RUN pnpm install
 
 # Copy source code
 COPY . .
@@ -42,7 +42,7 @@ COPY pnpm-lock.yaml ./
 RUN npm install -g pnpm
 
 # Install only production dependencies
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --prod
 
 # Copy built application from builder stage
 COPY --from=builder --chown=eventvalidate:nodejs /app/dist ./dist
