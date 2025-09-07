@@ -593,7 +593,7 @@ export function LandingPage() {
             <Button 
               size="lg" 
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-12 py-5 text-xl rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300 mb-4"
-              onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+              onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
             >
               <Target className="h-6 w-6 mr-3" />
               Get Free Demo - Start Securing Your Events
@@ -825,7 +825,7 @@ export function LandingPage() {
               <p className="text-gray-500 mb-6">Check back soon for exciting new events!</p>
               <Button 
                 variant="outline" 
-                onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Event Inquiry&body=Hello,%0D%0A%0D%0AI would like to inquire about upcoming events on EventValidate.%0D%0A%0D%0AThank you!`, '_blank')}
+                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Event Inquiry&body=Hello,%0D%0A%0D%0AI would like to inquire about upcoming events on EventValidate.%0D%0A%0D%0AThank you!`, '_blank')}
               >
                 <Mail className="h-4 w-4 mr-2" />
                 Get Notified of New Events
@@ -847,7 +847,7 @@ export function LandingPage() {
                 variant="outline"
                 size="lg"
                 className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-8 py-4 text-lg"
-                onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
               >
                 <Target className="h-5 w-5 mr-2" />
                 Get Free Demo
@@ -1004,7 +1004,7 @@ export function LandingPage() {
               <Button 
                 size="lg"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
-                onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
               >
                 <Target className="h-5 w-5 mr-2" />
                 Start Your Free Demo
@@ -1208,7 +1208,7 @@ export function LandingPage() {
                         window.open(`https://wa.me/2348107183206?text=Hi! I'm interested in the ${plan.name} plan for EventValidate. Can you provide more details?`, '_blank');
                       } else {
                         // Open email for standard plans
-                        window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate ${plan.name} Inquiry&body=Hello,%0D%0A%0D%0AI'm interested in the ${plan.name} plan (${plan.price}/${plan.period}) for EventValidate.%0D%0A%0D%0APlease provide more information about:%0D%0A- Setup process%0D%0A- Payment options%0D%0A- Implementation timeline%0D%0A%0D%0AThank you!`, '_blank');
+                        window.open(`mailto:admin@eventifyai.com?subject=EventValidate ${plan.name} Inquiry&body=Hello,%0D%0A%0D%0AI'm interested in the ${plan.name} plan (${plan.price}/${plan.period}) for EventValidate.%0D%0A%0D%0APlease provide more information about:%0D%0A- Setup process%0D%0A- Payment options%0D%0A- Implementation timeline%0D%0A%0D%0AThank you!`, '_blank');
                       }
                     }}
                   >
@@ -1420,8 +1420,7 @@ export function LandingPage() {
                 <CardTitle>Email</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p>hafiztech56@gmail.com</p>
-                <p>aderibigbeolamide56@gmail.com</p>
+                <p>admin@eventifyai.com</p>
               </CardContent>
             </Card>
 
@@ -1455,7 +1454,7 @@ export function LandingPage() {
             <Button 
               size="lg" 
               className="btn-primary text-white font-semibold px-8 py-4 text-lg mr-4"
-              onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+              onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
             >
               <Target className="h-5 w-5 mr-2" />
               Get Free Demo
@@ -1488,7 +1487,7 @@ export function LandingPage() {
               <Button 
                 size="lg"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-10 py-4 text-lg rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300"
-                onClick={() => window.open(`mailto:hafiztech56@gmail.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
               >
                 <Target className="h-6 w-6 mr-2" />
                 Get Free Demo Now
