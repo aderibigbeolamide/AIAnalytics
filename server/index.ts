@@ -29,6 +29,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Health check endpoint for Docker
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
 // Serve uploaded files statically
 app.use('/uploads', express.static(fileStorage.getUploadDirectory()));
 

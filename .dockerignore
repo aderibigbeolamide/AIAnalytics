@@ -1,0 +1,92 @@
+# Node modules
+node_modules
+npm-debug.log
+
+# Build outputs (will be copied from builder stage)
+dist
+client/dist
+
+# Development files
+.env
+.env.local
+.env.development
+.env.production
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+
+# Dependency directories
+.npm
+.eslintcache
+
+# Optional npm cache directory
+.npm
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# Replit files
+.replit
+replit.nix
+.replit.md
+
+# Local development
+.local
+
+# Test files
+test
+tests
+*.test.js
+*.test.ts
+
+# Documentation
+*.md
+!README.md
+
+# Temporary files
+tmp
+temp
