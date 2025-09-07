@@ -57,7 +57,7 @@ export interface RegistrationConfirmationEmailData {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
+  private transporter!: nodemailer.Transporter;
   private isConfigured: boolean = false;
 
   constructor() {
@@ -67,12 +67,12 @@ class EmailService {
   private setupTransporter() {
     try {
       const config = {
-        host: process.env.MAILER_HOST,
-        port: parseInt(process.env.MAILER_PORT || '587'),
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587'),
         secure: false, // true for 465, false for other ports
         auth: {
-          user: process.env.MAILER_USER,
-          pass: process.env.MAILER_PASS,
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
         },
         tls: {
           rejectUnauthorized: false
@@ -84,7 +84,7 @@ class EmailService {
         return;
       }
 
-      this.transporter = nodemailer.createTransporter(config);
+      this.transporter = nodemailer.createTransport(config);
       this.isConfigured = true;
 
       // Verify connection
@@ -110,7 +110,7 @@ class EmailService {
 
     try {
       const mailOptions = {
-        from: `"EventValidate" <${process.env.MAILER_USER}>`,
+        from: `"EventValidate" <${process.env.SMTP_USER}>`,
         to: Array.isArray(config.to) ? config.to.join(', ') : config.to,
         subject: config.subject,
         text: config.text,
