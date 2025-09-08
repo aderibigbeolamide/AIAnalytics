@@ -284,7 +284,7 @@ export function registerAuthRoutes(app: Express) {
       if (existingOrg) {
         return res.status(400).json({ 
           success: false, 
-          message: "Organization name already exists" 
+          message: `The organization name "${organizationName}" is already taken. Please choose a different name for your organization.` 
         });
       }
 

@@ -907,6 +907,31 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       
       console.log(`Organization ${updatedOrg.name} status updated to ${status}. Updated ${updatedUsers.length} user(s) to ${userStatus} status.`);
       
+      // Send approval/rejection email notification if status is approved or rejected
+      if (status === 'approved' || status === 'rejected') {
+        try {
+          // Get the admin user for this organization to send email
+          const adminUser = orgUsers.find(user => user.role === 'admin');
+          if (adminUser) {
+            const { emailService } = await import('../services/email-service');
+            await emailService.sendOrganizationApprovalEmail(adminUser.email, {
+              organizationName: updatedOrg.name,
+              contactPerson: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.username,
+              status: status as 'approved' | 'rejected',
+              reason: status === 'rejected' ? 'Your organization application has been reviewed.' : undefined,
+              loginUrl: status === 'approved' ? `${process.env.APP_DOMAIN || 'http://localhost:5000'}/login` : undefined,
+              adminEmail: 'admin@eventifyai.com'
+            });
+            console.log(`📧 ${status === 'approved' ? 'Approval' : 'Rejection'} email sent to:`, adminUser.email);
+          } else {
+            console.warn('⚠️ No admin user found for organization, skipping email notification');
+          }
+        } catch (emailError) {
+          console.error(`❌ Failed to send ${status} email:`, emailError);
+          // Don't fail the approval process if email fails
+        }
+      }
+      
       res.json({ 
         message: "Organization status updated successfully",
         organization: {
