@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Building2, User, Mail, Phone, Globe, MapPin, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { OTPVerificationDialog } from "@/components/ui/otp-verification-dialog";
+import { Building2, User, Mail, Phone, Globe, MapPin, CheckCircle, AlertCircle, Clock, Shield } from "lucide-react";
 import { useLocation } from "wouter";
 
 const registrationSchema = z.object({
@@ -34,6 +35,12 @@ export default function OrganizationRegistration() {
   const [registrationStatus, setRegistrationStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState("");
   const [successData, setSuccessData] = useState<any>(null);
+  
+  // Email verification states
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isOTPDialogOpen, setIsOTPDialogOpen] = useState(false);
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
+  const [otpError, setOtpError] = useState("");
 
   const form = useForm<RegistrationForm>({
     resolver: zodResolver(registrationSchema),
@@ -52,7 +59,60 @@ export default function OrganizationRegistration() {
     },
   });
 
+  const handleSendOTP = async () => {
+    const contactEmail = form.getValues("contactEmail");
+    const organizationName = form.getValues("organizationName");
+    
+    if (!contactEmail) {
+      setOtpError("Please enter your contact email first");
+      return;
+    }
+
+    if (!contactEmail.includes('@')) {
+      setOtpError("Please enter a valid email address");
+      return;
+    }
+
+    setIsSendingOTP(true);
+    setOtpError("");
+
+    try {
+      const response = await fetch("/api/otp/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: contactEmail,
+          organizationName: organizationName || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsOTPDialogOpen(true);
+      } else {
+        setOtpError(data.message || "Failed to send verification code");
+      }
+    } catch (error) {
+      setOtpError("Failed to send verification code. Please try again.");
+    } finally {
+      setIsSendingOTP(false);
+    }
+  };
+
+  const handleEmailVerified = () => {
+    setIsEmailVerified(true);
+    setOtpError("");
+  };
+
   const onSubmit = async (data: RegistrationForm) => {
+    if (!isEmailVerified) {
+      setErrorMessage("Please verify your contact email before submitting");
+      return;
+    }
+
     setIsSubmitting(true);
     setRegistrationStatus('idle');
     setErrorMessage("");
@@ -227,12 +287,69 @@ export default function OrganizationRegistration() {
                     <FormItem>
                       <FormLabel>Contact Email *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="email" 
-                          placeholder="contact@yourorganization.org"
-                          {...field} 
-                        />
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input 
+                              type="email" 
+                              placeholder="contact@yourorganization.org"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                // Reset verification status if email changes
+                                if (isEmailVerified) {
+                                  setIsEmailVerified(false);
+                                }
+                                setOtpError("");
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant={isEmailVerified ? "default" : "outline"}
+                              size="sm"
+                              onClick={handleSendOTP}
+                              disabled={isSendingOTP || !field.value || isEmailVerified}
+                              className="min-w-[120px]"
+                            >
+                              {isSendingOTP ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-1"></div>
+                                  Sending...
+                                </>
+                              ) : isEmailVerified ? (
+                                <>
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Verified
+                                </>
+                              ) : (
+                                <>
+                                  <Shield className="w-3 h-3 mr-1" />
+                                  Verify Email
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          
+                          {isEmailVerified && (
+                            <div className="flex items-center gap-2 text-sm text-green-600">
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Email verified successfully</span>
+                            </div>
+                          )}
+                          
+                          {otpError && (
+                            <div className="flex items-center gap-2 text-sm text-red-600">
+                              <AlertCircle className="w-4 h-4" />
+                              <span>{otpError}</span>
+                            </div>
+                          )}
+                        </div>
                       </FormControl>
+                      <FormDescription>
+                        {isEmailVerified 
+                          ? "Your contact email has been verified"
+                          : "You must verify your email before submitting the registration"
+                        }
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -434,6 +551,14 @@ export default function OrganizationRegistration() {
           </Button>
         </p>
       </div>
+
+      {/* OTP Verification Dialog */}
+      <OTPVerificationDialog
+        isOpen={isOTPDialogOpen}
+        onClose={() => setIsOTPDialogOpen(false)}
+        email={form.getValues("contactEmail")}
+        onVerificationSuccess={handleEmailVerified}
+      />
     </div>
   );
 }
