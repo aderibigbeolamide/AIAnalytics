@@ -39,7 +39,7 @@ export class AWSAIService {
 
       // Check if AWS credentials are properly configured
       if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-        console.log('AWS credentials not configured, skipping text analysis');
+        console.log('⚠️  AWS credentials not configured, skipping text analysis');
         return null;
       }
 
@@ -76,7 +76,13 @@ export class AWSAIService {
           confidence: entity.Score
         })) || []
       };
-    } catch (error) {
+    } catch (error: any) {
+      // Handle AWS subscription errors gracefully
+      if (error.__type === 'SubscriptionRequiredException' || error.name === 'SubscriptionRequiredException') {
+        console.log('⚠️  AWS Comprehend service requires subscription, skipping AI analysis');
+        return null;
+      }
+      
       console.error('Error analyzing event text:', error);
       return null;
     }
@@ -87,6 +93,12 @@ export class AWSAIService {
    */
   static async analyzeEventImage(imageUrl: string) {
     try {
+      // Check if AWS credentials are properly configured
+      if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+        console.log('⚠️  AWS credentials not configured, skipping image analysis');
+        return null;
+      }
+
       // Download image and convert to buffer
       const response = await fetch(imageUrl);
       if (!response.ok) {
@@ -122,7 +134,13 @@ export class AWSAIService {
           })) || []
         }
       };
-    } catch (error) {
+    } catch (error: any) {
+      // Handle AWS subscription errors gracefully
+      if (error.__type === 'SubscriptionRequiredException' || error.name === 'SubscriptionRequiredException') {
+        console.log('⚠️  AWS Rekognition service requires subscription, skipping image analysis');
+        return null;
+      }
+      
       console.error('Error analyzing event image:', error);
       return null;
     }

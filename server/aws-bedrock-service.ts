@@ -44,14 +44,17 @@ export class AWSBedrockService {
       const prompt = this.buildClaudePrompt(systemPrompt, userMessage, context.conversationHistory);
 
       const command = new InvokeModelCommand({
-        modelId: "amazon.titan-text-express-v1",
+        modelId: "anthropic.claude-3-haiku-20240307-v1:0",
         body: JSON.stringify({
-          inputText: prompt,
-          textGenerationConfig: {
-            maxTokenCount: 500,
-            temperature: 0.3,
-            topP: 0.9
-          }
+          anthropic_version: "bedrock-2023-05-31",
+          max_tokens: 500,
+          temperature: 0.3,
+          messages: [
+            {
+              role: "user",
+              content: prompt
+            }
+          ]
         }),
         contentType: "application/json",
         accept: "application/json",
@@ -60,7 +63,7 @@ export class AWSBedrockService {
       const response = await client.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
       
-      const aiResponse = responseBody.results[0]?.outputText || "I'm here to help with EventValidate questions. Could you please rephrase your question?";
+      const aiResponse = responseBody.content?.[0]?.text || "I'm here to help with EventValidate questions. Could you please rephrase your question?";
       
       // Clean up the response and extract relevant parts
       const cleanResponse = aiResponse.replace(/^(Assistant:|Human:)?\s*/i, '').trim();
@@ -84,7 +87,7 @@ export class AWSBedrockService {
     userMessage: string, 
     conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>
   ): string {
-    let prompt = `Based on the EventValidate platform information provided, please answer this question: "${userMessage}"\n\n`;
+    let prompt = `You are Valie, the EventValidate AI assistant. Based on the EventValidate platform information provided, please answer this question: "${userMessage}"\n\n`;
     
     if (conversationHistory.length > 0) {
       prompt += "Previous conversation context:\n";
@@ -94,11 +97,16 @@ export class AWSBedrockService {
       prompt += "\n";
     }
 
-    prompt += `IMPORTANT: Only answer questions about EventValidate platform features, services, and functionality. If the question is not related to EventValidate, politely redirect the user to ask about EventValidate features.
+    prompt += `IMPORTANT: 
+- You are Valie, the friendly EventValidate AI assistant
+- Only answer questions about EventValidate platform features, services, and functionality
+- Be helpful, conversational, and use the EventValidate knowledge base
+- If the question is not related to EventValidate, politely redirect the user to ask about EventValidate features
+- Always provide practical, actionable guidance
 
 Please respond in JSON format:
 {
-  "response": "Your helpful response here",
+  "response": "Your helpful response as Valie here",
   "suggestedActions": ["Action 1", "Action 2"]
 }`;
 
@@ -106,7 +114,7 @@ Please respond in JSON format:
   }
 
   private static buildEventValidateKnowledgeBase(context: EventValidateContext): string {
-    return `You are an AI assistant for EventValidate, a comprehensive AI-powered member validation system. You can ONLY answer questions about EventValidate platform features and services.
+    return `You are Valie, the friendly AI assistant for EventValidate, a comprehensive AI-powered member validation system. You can ONLY answer questions about EventValidate platform features and services.
 
 EVENTVALIDATE PLATFORM KNOWLEDGE BASE:
 
