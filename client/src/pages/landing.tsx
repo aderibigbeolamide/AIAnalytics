@@ -823,26 +823,40 @@ export function LandingPage() {
               </div>
               <h3 className="text-2xl font-bold text-gray-600 mb-2">No Upcoming Events</h3>
               <p className="text-gray-500 mb-6">Check back soon for exciting new events!</p>
-              <Button 
-                variant="outline" 
-                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Event Inquiry&body=Hello,%0D%0A%0D%0AI would like to inquire about upcoming events on EventValidate.%0D%0A%0D%0AThank you!`, '_blank')}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Get Notified of New Events
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  size="lg"
+                  className="btn-primary text-white font-semibold px-8 py-4 text-lg"
+                  onClick={() => window.location.href = '/events'}
+                >
+                  View All Events
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  className="border-2 font-semibold px-8 py-4 text-lg"
+                  onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Event Inquiry&body=Hello,%0D%0A%0D%0AI would like to inquire about upcoming events on EventValidate.%0D%0A%0D%0AThank you!`, '_blank')}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Get Notified of New Events
+                </Button>
+              </div>
             </div>
           )}
 
-          {publicEvents.length > 0 && (
-            <div className="text-center mt-12">
-              <Button 
-                size="lg"
-                className="btn-primary text-white font-semibold px-8 py-4 text-lg mr-4"
-                onClick={() => window.location.href = '/events'}
-              >
-                View All Events
-                <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
+          <div className="text-center mt-12">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {publicEvents.length > 0 && (
+                <Button 
+                  size="lg"
+                  className="btn-primary text-white font-semibold px-8 py-4 text-lg"
+                  onClick={() => window.location.href = '/events'}
+                >
+                  View All Events
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+              )}
               <Button 
                 variant="outline"
                 size="lg"
@@ -853,7 +867,7 @@ export function LandingPage() {
                 Get Free Demo
               </Button>
             </div>
-          )}
+          </div>
         </div>
       </section>
 
