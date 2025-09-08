@@ -1001,7 +1001,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           const adminUser = orgUsers.find(user => user.role === 'admin');
           if (adminUser) {
             console.log(`👤 Found admin user: ${adminUser.email}, sending ${status} email...`);
-            const { emailService } = await import('../services/email-service');
+            const { emailService } = await import('./services/email-service.js');
             await emailService.sendOrganizationApprovalEmail(adminUser.email, {
               organizationName: updatedOrg.name,
               contactPerson: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.username,
@@ -1395,7 +1395,7 @@ export function registerMongoSuperAdminRoutes(app: Express) {
           const adminUser = orgUsers.find(user => user.role === 'admin');
           if (adminUser) {
             console.log(`👤 Found admin user: ${adminUser.email}, sending ${status} email...`);
-            const { emailService } = await import('../services/email-service');
+            const { emailService } = await import('./services/email-service.js');
             await emailService.sendOrganizationApprovalEmail(adminUser.email, {
               organizationName: result.name,
               contactPerson: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.username,
