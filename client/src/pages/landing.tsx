@@ -1539,6 +1539,19 @@ export function LandingPage() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center">
+            <div className="mb-4">
+              <p className="text-sm text-gray-400">
+                Powered by{' '}
+                <a 
+                  href="https://technurture.onrender.com/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+                >
+                  Technurture
+                </a>
+              </p>
+            </div>
             <p>&copy; 2025 EventValidate. All rights reserved. Empowering secure events worldwide.</p>
           </div>
         </div>
