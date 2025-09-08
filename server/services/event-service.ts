@@ -28,7 +28,22 @@ export class EventService {
    * Get public events (no authentication required)
    */
   static async getPublicEvents() {
-    const events = await mongoStorage.getEvents();
+    const rawEvents = await mongoStorage.getEvents();
+    console.log(`EventService: Retrieved ${rawEvents.length} events from MongoDB`);
+    
+    // Convert Mongoose documents to plain JavaScript objects
+    const events = rawEvents.map(event => event.toObject ? event.toObject() : event);
+    
+    if (events.length > 0) {
+      console.log('EventService: Sample event structure after conversion:', {
+        id: events[0]._id,
+        name: events[0].name,
+        hasLocation: !!events[0].location,
+        hasDescription: !!events[0].description,
+        eventType: events[0].eventType,
+        fields: Object.keys(events[0]).slice(0, 10)
+      });
+    }
     
     return events
       .map(event => {

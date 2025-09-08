@@ -199,11 +199,17 @@ export function registerEventRoutes(app: Express) {
       // Add AI insights if requested
       if (includeAI === 'true') {
         events = await Promise.all(events.map(async (event) => {
-          const aiInsights = await AWSAIService.generateEventInsights(event);
-          return {
-            ...event,
-            aiInsights
-          };
+          try {
+            const aiInsights = await AWSAIService.generateEventInsights(event);
+            return {
+              ...event,
+              aiInsights
+            };
+          } catch (error) {
+            console.error(`Error generating AI insights for event ${event.id}:`, error);
+            // Return event without AI insights if AI processing fails
+            return event;
+          }
         }));
       }
       
