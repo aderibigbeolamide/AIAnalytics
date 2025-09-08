@@ -588,6 +588,65 @@ class EmailService {
     });
   }
 
+  // OTP verification email
+  async sendOTPVerificationEmail(email: string, otp: string, organizationName?: string): Promise<boolean> {
+    const subject = `Verify Your Email - OTP Code`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .otp-box { background: #f0f9ff; border: 2px solid #4F46E5; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+            .otp-code { font-size: 36px; font-weight: bold; color: #4F46E5; letter-spacing: 8px; margin: 10px 0; font-family: monospace; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔐 Email Verification</h1>
+            </div>
+            <div class="content">
+              <h2>Verify Your Email Address</h2>
+              <p>Thank you for starting your organization registration${organizationName ? ` for <strong>${organizationName}</strong>` : ''}. Please use the verification code below to confirm your email address.</p>
+              
+              <div class="otp-box">
+                <h3>Your Verification Code</h3>
+                <div class="otp-code">${otp}</div>
+                <p style="margin: 10px 0; color: #666; font-size: 14px;">This code will expire in 10 minutes</p>
+              </div>
+              
+              <p><strong>Security Notice:</strong></p>
+              <ul>
+                <li>This code is valid for 10 minutes only</li>
+                <li>Do not share this code with anyone</li>
+                <li>If you didn't request this verification, please ignore this email</li>
+              </ul>
+              
+              <p>Need help? Contact our support team at admin@eventifyai.com</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>Secure email verification for organization registration</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject,
+      html
+    });
+  }
+
   // General notification email
   async sendNotificationEmail(email: string, subject: string, message: string, isHtml = false): Promise<boolean> {
     const emailContent = isHtml ? message : `
