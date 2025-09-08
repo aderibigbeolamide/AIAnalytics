@@ -44,14 +44,17 @@ export class AWSBedrockService {
       const prompt = this.buildClaudePrompt(systemPrompt, userMessage, context.conversationHistory);
 
       const command = new InvokeModelCommand({
-        modelId: "amazon.titan-text-express-v1",
+        modelId: "anthropic.claude-3-haiku-20240307-v1:0",
         body: JSON.stringify({
-          inputText: prompt,
-          textGenerationConfig: {
-            maxTokenCount: 500,
-            temperature: 0.3,
-            topP: 0.9
-          }
+          anthropic_version: "bedrock-2023-05-31",
+          max_tokens: 500,
+          temperature: 0.3,
+          messages: [
+            {
+              role: "user",
+              content: prompt
+            }
+          ]
         }),
         contentType: "application/json",
         accept: "application/json",
@@ -60,7 +63,7 @@ export class AWSBedrockService {
       const response = await client.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
       
-      const aiResponse = responseBody.results[0]?.outputText || "I'm here to help with EventValidate questions. Could you please rephrase your question?";
+      const aiResponse = responseBody.content?.[0]?.text || "I'm here to help with EventValidate questions. Could you please rephrase your question?";
       
       // Clean up the response and extract relevant parts
       const cleanResponse = aiResponse.replace(/^(Assistant:|Human:)?\s*/i, '').trim();
