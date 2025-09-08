@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
+import { OTPVerificationDialog } from "@/components/ui/otp-verification-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, ArrowLeft, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Building2, ArrowLeft, CheckCircle, AlertTriangle, Shield } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function OrganizationRegister() {
@@ -15,6 +16,12 @@ export default function OrganizationRegister() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  
+  // Email verification states
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isOTPDialogOpen, setIsOTPDialogOpen] = useState(false);
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
+  const [otpError, setOtpError] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
@@ -26,6 +33,7 @@ export default function OrganizationRegister() {
     adminFirstName: "",
     adminLastName: "",
     adminUsername: "",
+    adminEmail: "",
     adminPassword: "",
     adminPasswordConfirm: ""
   });
@@ -35,12 +43,70 @@ export default function OrganizationRegister() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Reset verification status if contact email changes
+    if (name === 'contactEmail' && isEmailVerified) {
+      setIsEmailVerified(false);
+    }
+    setOtpError("");
+  };
+
+  const handleSendOTP = async () => {
+    if (!formData.contactEmail) {
+      setOtpError("Please enter your contact email first");
+      return;
+    }
+
+    if (!formData.contactEmail.includes('@')) {
+      setOtpError("Please enter a valid email address");
+      return;
+    }
+
+    setIsSendingOTP(true);
+    setOtpError("");
+
+    try {
+      const response = await fetch("/api/otp/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.contactEmail,
+          organizationName: formData.name || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsOTPDialogOpen(true);
+      } else {
+        setOtpError(data.message || "Failed to send verification code");
+      }
+    } catch (error) {
+      setOtpError("Failed to send verification code. Please try again.");
+    } finally {
+      setIsSendingOTP(false);
+    }
+  };
+
+  const handleEmailVerified = () => {
+    setIsEmailVerified(true);
+    setOtpError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Email verification check
+    if (!isEmailVerified) {
+      setError("Please verify your contact email before submitting");
+      setLoading(false);
+      return;
+    }
 
     // Validation
     if (formData.adminPassword !== formData.adminPasswordConfirm) {
@@ -49,8 +115,21 @@ export default function OrganizationRegister() {
       return;
     }
 
-    if (formData.adminPassword.length < 8) {
-      setError("Admin password must be at least 8 characters long");
+    if (formData.adminPassword.length < 6) {
+      setError("Admin password must be at least 6 characters long");
+      setLoading(false);
+      return;
+    }
+
+    // Check that admin email is different from contact email
+    if (formData.adminEmail && formData.contactEmail === formData.adminEmail) {
+      setError("Admin email must be different from organization contact email");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.adminEmail) {
+      setError("Admin email is required");
       setLoading(false);
       return;
     }
@@ -64,7 +143,7 @@ export default function OrganizationRegister() {
         website: formData.website || "",
         description: formData.description || "",
         adminUsername: formData.adminUsername,
-        adminEmail: formData.contactEmail, // Use contact email as admin email
+        adminEmail: formData.adminEmail,
         adminPassword: formData.adminPassword,
         adminFirstName: formData.adminFirstName,
         adminLastName: formData.adminLastName
@@ -191,15 +270,63 @@ export default function OrganizationRegister() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="contactEmail">Contact Email *</Label>
-                    <Input
-                      id="contactEmail"
-                      name="contactEmail"
-                      type="email"
-                      value={formData.contactEmail}
-                      onChange={handleInputChange}
-                      placeholder="contact@organization.com"
-                      required
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="contactEmail"
+                        name="contactEmail"
+                        type="email"
+                        value={formData.contactEmail}
+                        onChange={handleInputChange}
+                        placeholder="contact@organization.com"
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant={isEmailVerified ? "default" : "outline"}
+                        size="sm"
+                        onClick={handleSendOTP}
+                        disabled={isSendingOTP || !formData.contactEmail || isEmailVerified}
+                        className="min-w-[120px]"
+                      >
+                        {isSendingOTP ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Sending...
+                          </>
+                        ) : isEmailVerified ? (
+                          <>
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Verified
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="w-3 h-3 mr-1" />
+                            Verify
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {isEmailVerified && (
+                      <div className="flex items-center gap-2 text-sm text-green-600">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Email verified successfully</span>
+                      </div>
+                    )}
+                    
+                    {otpError && (
+                      <div className="flex items-center gap-2 text-sm text-red-600">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span>{otpError}</span>
+                      </div>
+                    )}
+                    
+                    <p className="text-sm text-gray-600">
+                      {isEmailVerified 
+                        ? "Your contact email has been verified"
+                        : "You must verify your email before submitting"
+                      }
+                    </p>
                   </div>
                 </div>
 
@@ -283,16 +410,32 @@ export default function OrganizationRegister() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="adminUsername">Admin Username *</Label>
-                  <Input
-                    id="adminUsername"
-                    name="adminUsername"
-                    value={formData.adminUsername}
-                    onChange={handleInputChange}
-                    placeholder="Choose a username"
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="adminUsername">Admin Username *</Label>
+                    <Input
+                      id="adminUsername"
+                      name="adminUsername"
+                      value={formData.adminUsername}
+                      onChange={handleInputChange}
+                      placeholder="Choose a username"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="adminEmail">Admin Email *</Label>
+                    <Input
+                      id="adminEmail"
+                      name="adminEmail"
+                      type="email"
+                      value={formData.adminEmail}
+                      onChange={handleInputChange}
+                      placeholder="admin@organization.com"
+                      required
+                    />
+                    <p className="text-xs text-gray-500">Must be different from organization contact email</p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -304,7 +447,7 @@ export default function OrganizationRegister() {
                       type="password"
                       value={formData.adminPassword}
                       onChange={handleInputChange}
-                      placeholder="Minimum 8 characters"
+                      placeholder="Minimum 6 characters"
                       required
                     />
                   </div>
@@ -356,6 +499,14 @@ export default function OrganizationRegister() {
             </div>
           </CardContent>
         </Card>
+
+        {/* OTP Verification Dialog */}
+        <OTPVerificationDialog
+          isOpen={isOTPDialogOpen}
+          onClose={() => setIsOTPDialogOpen(false)}
+          email={formData.contactEmail}
+          onVerificationSuccess={handleEmailVerified}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { Request, Response, Express } from 'express';
 import { z } from 'zod';
 import { otpService } from '../services/otp-service.js';
+import { mongoStorage } from '../mongodb-storage.js';
 
 const sendOTPSchema = z.object({
   email: z.string().email('Valid email is required'),
@@ -19,6 +20,15 @@ export function registerOTPRoutes(app: Express) {
       const { email, organizationName } = sendOTPSchema.parse(req.body);
 
       console.log(`OTP requested for email: ${email}${organizationName ? ` (Organization: ${organizationName})` : ''}`);
+
+      // Check if organization with this email already exists
+      const existingOrg = await mongoStorage.getOrganizationByEmail(email);
+      if (existingOrg) {
+        return res.status(400).json({
+          success: false,
+          message: "An organization with this email already exists. Please use a different email or contact support if this is your organization."
+        });
+      }
 
       const result = await otpService.sendOTP(email, organizationName);
 

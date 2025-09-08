@@ -23,8 +23,15 @@ const registrationSchema = z.object({
   adminUsername: z.string().min(3, "Username must be at least 3 characters"),
   adminEmail: z.string().email("Valid admin email is required"),
   adminPassword: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Please confirm your password"),
   adminFirstName: z.string().min(1, "First name is required"),
   adminLastName: z.string().min(1, "Last name is required"),
+}).refine((data) => data.adminPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+}).refine((data) => data.contactEmail !== data.adminEmail, {
+  message: "Admin email must be different from organization contact email",
+  path: ["adminEmail"],
 });
 
 type RegistrationForm = z.infer<typeof registrationSchema>;
@@ -54,6 +61,7 @@ export default function OrganizationRegistration() {
       adminUsername: "",
       adminEmail: "",
       adminPassword: "",
+      confirmPassword: "",
       adminFirstName: "",
       adminLastName: "",
     },
@@ -217,6 +225,12 @@ export default function OrganizationRegistration() {
   return (
     <div className="container mx-auto py-12 max-w-4xl">
       <div className="text-center mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="outline" onClick={() => setLocation("/")} className="flex items-center gap-2">
+            ← Back to Home
+          </Button>
+          <div className="flex-1" />
+        </div>
         <h1 className="text-3xl font-bold mb-2">Register Your Organization</h1>
         <p className="text-muted-foreground">
           Join EventValidate to manage your organization's events and member validation
@@ -497,6 +511,23 @@ export default function OrganizationRegistration() {
                       </FormControl>
                       <FormDescription>
                         Minimum 6 characters
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password *</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Re-enter your password to confirm
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
