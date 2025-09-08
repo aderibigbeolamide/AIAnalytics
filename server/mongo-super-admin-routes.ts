@@ -992,8 +992,8 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       
       console.log(`Organization ${updatedOrg.name} status updated to ${status}. Updated ${updatedUsers.length} user(s) to ${userStatus} status.`);
       
-      // Send approval/rejection email notification if status is approved or rejected
-      if (status === 'approved' || status === 'rejected') {
+      // Send email notification for status changes that affect users
+      if (['approved', 'suspended', 'rejected'].includes(status)) {
         try {
           console.log(`🔍 Looking for admin user among ${orgUsers.length} users:`, orgUsers.map(u => ({ email: u.email, role: u.role })));
           
@@ -1005,12 +1005,13 @@ export function registerMongoSuperAdminRoutes(app: Express) {
             await emailService.sendOrganizationApprovalEmail(adminUser.email, {
               organizationName: updatedOrg.name,
               contactPerson: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.username,
-              status: status as 'approved' | 'rejected',
-              reason: status === 'rejected' ? 'Your organization application has been reviewed.' : undefined,
+              status: status as 'approved' | 'rejected' | 'suspended',
+              reason: status === 'rejected' ? 'Your organization application has been reviewed.' : 
+                     status === 'suspended' ? 'Your organization account has been suspended due to policy violations or administrative reasons.' : undefined,
               loginUrl: status === 'approved' ? `${process.env.APP_DOMAIN || 'http://localhost:5000'}/login` : undefined,
               adminEmail: 'admin@eventifyai.com'
             });
-            console.log(`📧 ${status === 'approved' ? 'Approval' : 'Rejection'} email sent to:`, adminUser.email);
+            console.log(`📧 ${status} email sent to:`, adminUser.email);
           } else {
             console.warn('⚠️ No admin user found for organization, skipping email notification');
             console.warn('Available user roles:', orgUsers.map(u => ({ email: u.email, role: u.role })));
