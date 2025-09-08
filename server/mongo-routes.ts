@@ -3744,6 +3744,88 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Demo Face Recognition Validation (Public Endpoint)
+  app.post("/api/face-recognition/demo-validate", upload.single('faceImage'), async (req: Request, res: Response) => {
+    try {
+      const { memberName, email } = req.body;
+      
+      if (!req.file) {
+        return res.status(400).json({ 
+          message: "Face image is required",
+          validationStatus: "invalid" 
+        });
+      }
+
+      if (!memberName) {
+        return res.status(400).json({ 
+          message: "Member name is required",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Convert uploaded image to base64 for comparison
+      const uploadedImageBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+      // Validate image quality first
+      const qualityCheck = FaceRecognitionService.validateImageQuality(uploadedImageBase64);
+      if (!qualityCheck.isValid) {
+        return res.status(400).json({ 
+          message: qualityCheck.message,
+          validationStatus: "invalid" 
+        });
+      }
+
+      // For demo purposes, simulate different validation results based on name
+      const lowerName = memberName.toLowerCase().trim();
+      
+      if (lowerName.includes('john') || lowerName.includes('doe')) {
+        return res.json({
+          validationStatus: "valid",
+          message: `Face successfully validated! Welcome ${memberName}.`,
+          isValid: true,
+          member: {
+            firstName: "John",
+            lastName: "Doe",
+            email: email || "john.doe@example.com",
+            auxiliaryBody: "Demo Member"
+          },
+          confidence: 92
+        });
+      } else if (lowerName.includes('test') || lowerName.includes('demo')) {
+        return res.json({
+          validationStatus: "valid",
+          message: `Demo validation successful for ${memberName}! This is a simulated result.`,
+          isValid: true,
+          member: {
+            firstName: "Demo",
+            lastName: "User",
+            email: email || "demo@example.com",
+            auxiliaryBody: "Test Member"
+          },
+          confidence: 88
+        });
+      } else {
+        return res.json({
+          validationStatus: "invalid",
+          message: `Face validation failed for ${memberName}. This is a demo - try using 'John Doe' or 'Test User' as the name to see successful validation.`,
+          isValid: false,
+          confidence: 45,
+          details: {
+            isDemo: true,
+            suggestion: "Try names like 'John Doe' or 'Test User' to see successful validation"
+          }
+        });
+      }
+
+    } catch (error) {
+      console.error("Demo face validation error:", error);
+      res.status(500).json({ 
+        message: "Face validation failed",
+        validationStatus: "error" 
+      });
+    }
+  });
+
   // Temporary route to fix face recognition settings for existing events
   app.patch("/api/events/:id/fix-face-recognition", async (req: Request, res: Response) => {
     try {

@@ -1,4 +1,7 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Use environment variable for MongoDB URI - but make it optional for migration
 const MONGODB_URI = process.env.DATABASE_URL;
