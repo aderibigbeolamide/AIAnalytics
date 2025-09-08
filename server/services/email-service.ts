@@ -23,6 +23,13 @@ export interface OrganizationApprovalEmailData {
   adminEmail?: string;
 }
 
+export interface OrganizationRegistrationEmailData {
+  organizationName: string;
+  contactPerson: string;
+  contactEmail: string;
+  adminUsername: string;
+}
+
 export interface EventReminderEmailData {
   eventName: string;
   eventDate: string;
@@ -469,6 +476,70 @@ class EmailService {
       subject,
       html,
       attachments
+    });
+  }
+
+  // Organization registration confirmation email
+  async sendOrganizationRegistrationEmail(email: string, data: OrganizationRegistrationEmailData): Promise<boolean> {
+    const subject = `Registration Received - ${data.organizationName}`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .status-box { background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📝 Registration Received</h1>
+            </div>
+            <div class="content">
+              <h2>Thank you ${data.contactPerson}!</h2>
+              <p>We have received your organization registration request for <strong>${data.organizationName}</strong>.</p>
+              
+              <div class="status-box">
+                <h3>⏳ What happens next?</h3>
+                <ul>
+                  <li>Your application is currently being reviewed by our team</li>
+                  <li>We'll notify you via email once the review is complete</li>
+                  <li>This process typically takes 1-2 business days</li>
+                  <li>Once approved, you'll receive login credentials and access to your dashboard</li>
+                </ul>
+              </div>
+              
+              <p><strong>Registration Details:</strong></p>
+              <ul>
+                <li><strong>Organization:</strong> ${data.organizationName}</li>
+                <li><strong>Admin Username:</strong> ${data.adminUsername}</li>
+                <li><strong>Contact Email:</strong> ${data.contactEmail}</li>
+              </ul>
+              
+              <p><strong>Questions?</strong> Our support team is here to help! Contact us at admin@eventifyai.com</p>
+              
+              <p>Thank you for choosing EventValidate!</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>Transform your events with AI-powered validation</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject,
+      html
     });
   }
 

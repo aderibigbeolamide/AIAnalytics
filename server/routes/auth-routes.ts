@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { mongoStorage } from "../mongodb-storage";
 import { notificationService } from "../services/notification-service";
+import { emailService } from "../services/email-service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -339,6 +340,20 @@ export function registerAuthRoutes(app: Express) {
       });
 
       console.log('Admin user created:', adminUser.username);
+
+      // Send registration confirmation email
+      try {
+        await emailService.sendOrganizationRegistrationEmail(adminEmail, {
+          organizationName,
+          contactPerson: `${adminFirstName} ${adminLastName}`,
+          contactEmail: adminEmail,
+          adminUsername
+        });
+        console.log('📧 Registration confirmation email sent to:', adminEmail);
+      } catch (emailError) {
+        console.error('❌ Failed to send registration confirmation email:', emailError);
+        // Don't fail the registration if email fails
+      }
 
       res.status(201).json({
         success: true,
