@@ -23,6 +23,13 @@ export interface OrganizationApprovalEmailData {
   adminEmail?: string;
 }
 
+export interface OrganizationRegistrationEmailData {
+  organizationName: string;
+  contactPerson: string;
+  contactEmail: string;
+  adminUsername: string;
+}
+
 export interface EventReminderEmailData {
   eventName: string;
   eventDate: string;
@@ -57,7 +64,7 @@ export interface RegistrationConfirmationEmailData {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
+  private transporter!: nodemailer.Transporter;
   private isConfigured: boolean = false;
 
   constructor() {
@@ -67,12 +74,12 @@ class EmailService {
   private setupTransporter() {
     try {
       const config = {
-        host: process.env.MAILER_HOST,
-        port: parseInt(process.env.MAILER_PORT || '587'),
-        secure: false, // true for 465, false for other ports
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: parseInt(process.env.SMTP_PORT || '587') === 465, // true for 465, false for other ports
         auth: {
-          user: process.env.MAILER_USER,
-          pass: process.env.MAILER_PASS,
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
         },
         tls: {
           rejectUnauthorized: false
@@ -84,7 +91,7 @@ class EmailService {
         return;
       }
 
-      this.transporter = nodemailer.createTransporter(config);
+      this.transporter = nodemailer.createTransport(config);
       this.isConfigured = true;
 
       // Verify connection
@@ -110,7 +117,7 @@ class EmailService {
 
     try {
       const mailOptions = {
-        from: `"EventValidate" <${process.env.MAILER_USER}>`,
+        from: `"EventValidate" <${process.env.SMTP_USER}>`,
         to: Array.isArray(config.to) ? config.to.join(', ') : config.to,
         subject: config.subject,
         text: config.text,
@@ -131,6 +138,8 @@ class EmailService {
   async sendOrganizationApprovalEmail(email: string, data: OrganizationApprovalEmailData): Promise<boolean> {
     const subject = data.status === 'approved' 
       ? `Welcome to EventValidate - ${data.organizationName} Approved!`
+      : data.status === 'suspended'
+      ? `Account Suspended - ${data.organizationName}`
       : `EventValidate Application Update - ${data.organizationName}`;
 
     const html = data.status === 'approved' ? `
@@ -167,13 +176,56 @@ class EmailService {
               ${data.loginUrl ? `<a href="${data.loginUrl}" class="button">Access Your Dashboard</a>` : ''}
               
               <p><strong>Need help getting started?</strong></p>
-              <p>Our team is here to help! Contact us at ${data.adminEmail || 'support@eventvalidate.com'} or check our documentation.</p>
+              <p>Our team is here to help! Contact us at ${data.adminEmail || 'admin@eventifyai.com'} or check our documentation.</p>
               
               <p>Welcome to the future of event management!</p>
             </div>
             <div class="footer">
               <p>&copy; 2025 EventValidate. All rights reserved.</p>
               <p>Transform your events with AI-powered validation</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    ` : data.status === 'suspended' ? `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #F59E0B; color: white; padding: 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>⚠️ Account Suspended</h1>
+            </div>
+            <div class="content">
+              <h2>Hello ${data.contactPerson},</h2>
+              <p>We are writing to inform you that your organization, <strong>${data.organizationName}</strong>, has been suspended on EventValidate.</p>
+              
+              ${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ''}
+              
+              <p><strong>What this means:</strong></p>
+              <ul>
+                <li>All users associated with ${data.organizationName} will have their accounts suspended</li>
+                <li>You will not be able to access your organization's dashboard</li>
+                <li>Event creation and management services are temporarily restricted</li>
+                <li>Existing events may be affected</li>
+              </ul>
+              
+              <p><strong>To appeal this decision or understand the reason for suspension:</strong></p>
+              <p>Please contact our support team at ${data.adminEmail || 'admin@eventifyai.com'} for assistance.</p>
+              
+              <p>We apologize for any inconvenience this may cause.</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2025 EventValidate. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -204,7 +256,7 @@ class EmailService {
               
               ${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ''}
               
-              <p>If you have questions or would like to reapply in the future, please contact us at ${data.adminEmail || 'support@eventvalidate.com'}.</p>
+              <p>If you have questions or would like to reapply in the future, please contact us at ${data.adminEmail || 'admin@eventifyai.com'}.</p>
               
               <p>Thank you for considering EventValidate.</p>
             </div>
@@ -469,6 +521,129 @@ class EmailService {
       subject,
       html,
       attachments
+    });
+  }
+
+  // Organization registration confirmation email
+  async sendOrganizationRegistrationEmail(email: string, data: OrganizationRegistrationEmailData): Promise<boolean> {
+    const subject = `Registration Received - ${data.organizationName}`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .status-box { background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📝 Registration Received</h1>
+            </div>
+            <div class="content">
+              <h2>Thank you ${data.contactPerson}!</h2>
+              <p>We have received your organization registration request for <strong>${data.organizationName}</strong>.</p>
+              
+              <div class="status-box">
+                <h3>⏳ What happens next?</h3>
+                <ul>
+                  <li>Your application is currently being reviewed by our team</li>
+                  <li>We'll notify you via email once the review is complete</li>
+                  <li>This process typically takes 1-2 business days</li>
+                  <li>Once approved, you'll receive login credentials and access to your dashboard</li>
+                </ul>
+              </div>
+              
+              <p><strong>Registration Details:</strong></p>
+              <ul>
+                <li><strong>Organization:</strong> ${data.organizationName}</li>
+                <li><strong>Admin Username:</strong> ${data.adminUsername}</li>
+                <li><strong>Contact Email:</strong> ${data.contactEmail}</li>
+              </ul>
+              
+              <p><strong>Questions?</strong> Our support team is here to help! Contact us at admin@eventifyai.com</p>
+              
+              <p>Thank you for choosing EventValidate!</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>Transform your events with AI-powered validation</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject,
+      html
+    });
+  }
+
+  // OTP verification email
+  async sendOTPVerificationEmail(email: string, otp: string, organizationName?: string): Promise<boolean> {
+    const subject = `Verify Your Email - OTP Code`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .otp-box { background: #f0f9ff; border: 2px solid #4F46E5; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+            .otp-code { font-size: 36px; font-weight: bold; color: #4F46E5; letter-spacing: 8px; margin: 10px 0; font-family: monospace; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔐 Email Verification</h1>
+            </div>
+            <div class="content">
+              <h2>Verify Your Email Address</h2>
+              <p>Thank you for starting your organization registration${organizationName ? ` for <strong>${organizationName}</strong>` : ''}. Please use the verification code below to confirm your email address.</p>
+              
+              <div class="otp-box">
+                <h3>Your Verification Code</h3>
+                <div class="otp-code">${otp}</div>
+                <p style="margin: 10px 0; color: #666; font-size: 14px;">This code will expire in 10 minutes</p>
+              </div>
+              
+              <p><strong>Security Notice:</strong></p>
+              <ul>
+                <li>This code is valid for 10 minutes only</li>
+                <li>Do not share this code with anyone</li>
+                <li>If you didn't request this verification, please ignore this email</li>
+              </ul>
+              
+              <p>Need help? Contact our support team at admin@eventifyai.com</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>Secure email verification for organization registration</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject,
+      html
     });
   }
 

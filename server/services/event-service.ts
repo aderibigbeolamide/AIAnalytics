@@ -4,13 +4,48 @@ import QRCode from "qrcode";
 
 export class EventService {
   /**
+   * Calculate dynamic event status based on current time
+   */
+  static calculateEventStatus(startDate: Date, endDate: Date, originalStatus?: string): string {
+    const now = new Date();
+    
+    // If event is manually cancelled, keep it cancelled
+    if (originalStatus === 'cancelled') {
+      return 'cancelled';
+    }
+    
+    // Calculate dynamic status based on time
+    if (now < startDate) {
+      return 'upcoming';
+    } else if (now >= startDate && now <= endDate) {
+      return 'ongoing';
+    } else {
+      return 'ended';
+    }
+  }
+
+  /**
    * Get public events (no authentication required)
    */
   static async getPublicEvents() {
-    const events = await mongoStorage.getEvents();
+    const rawEvents = await mongoStorage.getEvents();
+    
+    // Convert Mongoose documents to plain JavaScript objects
+    const events = rawEvents.map(event => event.toObject ? event.toObject() : event);
     
     return events
-      .filter(event => ['upcoming', 'active'].includes(event.status))
+      .map(event => {
+        // Calculate dynamic status
+        const startDate = new Date(event.startDate);
+        const endDate = new Date(event.endDate || event.startDate);
+        const dynamicStatus = this.calculateEventStatus(startDate, endDate, event.status);
+        
+        return {
+          ...event,
+          status: dynamicStatus
+        };
+      })
+      .filter(event => event.status !== 'cancelled') // Only filter out cancelled events
       .map(event => ({
         id: event._id?.toString(),
         name: event.name,
@@ -41,7 +76,17 @@ export class EventService {
   static async getPublicEventById(eventId: string) {
     const event = await mongoStorage.getEvent(eventId);
     
-    if (!event || !['upcoming', 'active'].includes(event.status)) {
+    if (!event) {
+      return null;
+    }
+
+    // Calculate dynamic status
+    const startDate = new Date(event.startDate);
+    const endDate = new Date(event.endDate || event.startDate);
+    const dynamicStatus = this.calculateEventStatus(startDate, endDate, event.status);
+    
+    // Don't return cancelled events
+    if (dynamicStatus === 'cancelled') {
       return null;
     }
 
@@ -54,7 +99,7 @@ export class EventService {
       endDate: event.endDate,
       registrationStartDate: event.registrationStartDate,
       registrationEndDate: event.registrationEndDate,
-      status: event.status,
+      status: dynamicStatus,
       maxAttendees: event.maxAttendees,
       eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
       allowGuests: event.allowGuests,

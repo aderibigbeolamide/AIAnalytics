@@ -139,7 +139,7 @@ export default function PaymentFailed() {
                   <li>Event or ticket you were trying to purchase</li>
                 </ul>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-3">
-                  Email: support@eventvalidate.com
+                  Email: admin@eventifyai.com
                 </p>
               </div>
             </div>

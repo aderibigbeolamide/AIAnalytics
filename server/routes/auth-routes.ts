@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { mongoStorage } from "../mongodb-storage";
 import { notificationService } from "../services/notification-service";
+import { emailService } from "../services/email-service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -98,7 +99,25 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      console.log(`Found user: ${user.username}, role: ${user.role}`);
+      console.log(`Found user: ${user.username}, role: ${user.role}, status: ${user.status}`);
+
+      // Check if user account is suspended
+      if (user.status === 'suspended') {
+        console.log(`Suspended user attempted login: ${username}`);
+        return res.status(403).json({ 
+          message: "Your account has been suspended. Please contact the administrator for assistance.",
+          suspended: true 
+        });
+      }
+
+      // Check if user account is pending approval
+      if (user.status !== 'active' && user.role !== 'super_admin') {
+        console.log(`Non-active user attempted login: ${username}, status: ${user.status}`);
+        return res.status(403).json({ 
+          message: "Your account is pending approval. Please wait for administrator confirmation.",
+          pending: true 
+        });
+      }
 
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
@@ -196,8 +215,8 @@ export function registerAuthRoutes(app: Express) {
         lastName: user.lastName,
         organization: organizationInfo ? {
           id: (organizationInfo._id as any)?.toString(),
-          name: organizationInfo.name,
-          isVerified: organizationInfo.isVerified
+          name: (organizationInfo as any).name,
+          isVerified: (organizationInfo as any).isVerified
         } : null
       };
 
@@ -231,7 +250,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Check if username is already taken
       const existingUser = await mongoStorage.getUserByUsername(username);
-      if (existingUser && existingUser._id.toString() !== req.user.id) {
+      if (existingUser && (existingUser._id as any)?.toString() !== req.user.id) {
         return res.status(400).json({ message: "Username is already taken" });
       }
 
@@ -283,7 +302,7 @@ export function registerAuthRoutes(app: Express) {
       if (existingOrg) {
         return res.status(400).json({ 
           success: false, 
-          message: "Organization name already exists" 
+          message: `The organization name "${organizationName}" is already taken. Please choose a different name for your organization.` 
         });
       }
 
@@ -311,15 +330,17 @@ export function registerAuthRoutes(app: Express) {
       // Create organization first
       const organization = await mongoStorage.createOrganization({
         name: organizationName,
-        type: organizationType || 'other',
+        contactEmail: adminEmail,
         description: description || '',
         website: website || '',
-        phone: phone || '',
+        contactPhone: phone || '',
         address: address || '',
-        isActive: true,
-        isVerified: false, // Requires super admin approval
-        createdAt: new Date(),
-        updatedAt: new Date()
+        status: 'pending', // Requires super admin approval
+        subscriptionPlan: 'basic',
+        subscriptionStatus: 'active',
+        maxEvents: 10,
+        maxMembers: 100,
+        settings: {}
       });
 
       console.log('Organization created:', organization.name);
@@ -332,21 +353,33 @@ export function registerAuthRoutes(app: Express) {
         role: 'admin',
         firstName: adminFirstName,
         lastName: adminLastName,
-        organizationId: organization._id,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        organizationId: (organization._id as any)?.toString(),
+        status: 'active'
       });
 
       console.log('Admin user created:', adminUser.username);
+
+      // Send registration confirmation email
+      try {
+        await emailService.sendOrganizationRegistrationEmail(adminEmail, {
+          organizationName,
+          contactPerson: `${adminFirstName} ${adminLastName}`,
+          contactEmail: adminEmail,
+          adminUsername
+        });
+        console.log('📧 Registration confirmation email sent to:', adminEmail);
+      } catch (emailError) {
+        console.error('❌ Failed to send registration confirmation email:', emailError);
+        // Don't fail the registration if email fails
+      }
 
       res.status(201).json({
         success: true,
         message: "Organization registration successful. Awaiting super admin approval.",
         data: {
-          organizationId: organization._id.toString(),
+          organizationId: (organization._id as any)?.toString(),
           organizationName: organization.name,
-          adminId: adminUser._id.toString(),
+          adminId: (adminUser._id as any)?.toString(),
           adminUsername: adminUser.username,
           isVerified: organization.isVerified
         }

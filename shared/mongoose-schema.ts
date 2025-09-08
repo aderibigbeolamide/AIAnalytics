@@ -473,6 +473,30 @@ export const Member = mongoose.model<IMember>('Member', MemberSchema);
 export const Event = mongoose.model<IEvent>('Event', EventSchema);
 export const EventRegistration = mongoose.model<IEventRegistration>('EventRegistration', EventRegistrationSchema);
 export const Notification = mongoose.model<INotification>('Notification', NotificationSchema);
+
+// Verification Token Schema  
+export interface IVerificationToken extends Document {
+  email: string;
+  token: string;
+  type: 'email_verification' | 'password_reset';
+  expiresAt: Date;
+  used: boolean;
+  createdAt: Date;
+}
+
+const VerificationTokenSchema = new Schema<IVerificationToken>({
+  email: { type: String, required: true },
+  token: { type: String, required: true },
+  type: { type: String, required: true, enum: ['email_verification', 'password_reset'] },
+  expiresAt: { type: Date, required: true },
+  used: { type: Boolean, required: true, default: false },
+}, { timestamps: true });
+
+// Index for performance
+VerificationTokenSchema.index({ email: 1, token: 1, type: 1 });
+VerificationTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+export const VerificationToken = mongoose.model<IVerificationToken>('VerificationToken', VerificationTokenSchema);
 export const Ticket = mongoose.model<ITicket>('Ticket', TicketSchema);
 
 // Zod schemas for validation

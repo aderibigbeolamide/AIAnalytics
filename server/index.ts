@@ -7,8 +7,10 @@ import { registerEventRoutes } from "./routes/event-routes";
 import { registerRegistrationRoutes } from "./routes/registration-routes";
 import { registerPaymentRoutes } from "./routes/payment-routes";
 import { registerOrganizationRoutes } from "./routes/organization-routes";
+import { registerVerificationRoutes } from "./routes/verification-routes";
 import { registerEmailRoutes } from "./routes/email-routes";
 import { registerFaceRecognitionRoutes } from "./routes/face-recognition-routes";
+import { registerOTPRoutes } from "./routes/otp-routes";
 import { cleanupRouter } from "./routes/cleanup-routes.js";
 
 // Legacy routes (to be migrated)
@@ -80,8 +82,10 @@ app.use((req, res, next) => {
   registerRegistrationRoutes(app);
   registerPaymentRoutes(app);
   registerOrganizationRoutes(app);
+  registerVerificationRoutes(app);
   registerEmailRoutes(app);
   registerFaceRecognitionRoutes(app);
+  registerOTPRoutes(app);
   
   // Register cleanup routes
   app.use('/api/cleanup', cleanupRouter);

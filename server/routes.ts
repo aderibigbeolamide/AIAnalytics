@@ -1113,7 +1113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (userEmail) {
         emailSent = await sendEmail({
           to: userEmail,
-          from: 'admin@letbud.com',
+          from: 'admin@eventifyai.com',
           subject: `Registration Confirmation - ${event.name}`,
           html: emailHtml,
           text: `Registration confirmed for ${event.name}. Your unique ID is: ${registration.uniqueId}`

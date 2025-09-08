@@ -17,6 +17,91 @@ function requireSuperAdmin(req: AuthenticatedRequest, res: Response, next: Funct
 }
 
 export function registerMongoSuperAdminRoutes(app: Express) {
+  // Emergency approval email endpoint (no auth required)
+  app.post("/api/emergency/send-approval-emails", async (req: Request, res: Response) => {
+    try {
+      console.log('🚨 Emergency approval email endpoint called');
+      
+      // Send emails to the two recently approved organizations
+      const emergencyOrgIds = ["68beee402f37190d09fceccd", "68bef1cc8b7f3259cae88cdd"];
+      console.log('📧 Sending approval emails to:', emergencyOrgIds);
+      
+      const results = [];
+      
+      for (const orgId of emergencyOrgIds) {
+        try {
+          console.log(`\n📧 Processing organization: ${orgId}`);
+          
+          // Get organization details
+          const organization = await mongoStorage.getOrganization(orgId);
+          if (!organization) {
+            results.push({ orgId, status: 'error', message: 'Organization not found' });
+            continue;
+          }
+          
+          console.log(`Found organization: ${organization.name} (status: ${organization.status})`);
+          
+          // Find admin user for this organization
+          const allUsers = await mongoStorage.getAllUsers();
+          const orgUsers = allUsers.filter(user => {
+            if (!user.organizationId) return false;
+            
+            let userOrgId;
+            if (typeof user.organizationId === 'object') {
+              userOrgId = user.organizationId._id ? user.organizationId._id.toString() : user.organizationId.toString();
+            } else {
+              userOrgId = user.organizationId.toString();
+            }
+            
+            return userOrgId === orgId;
+          });
+          
+          console.log(`Found ${orgUsers.length} users for organization:`, orgUsers.map(u => ({ email: u.email, role: u.role })));
+          
+          const adminUser = orgUsers.find(user => user.role === 'admin');
+          if (!adminUser) {
+            results.push({ orgId, status: 'error', message: 'No admin user found' });
+            continue;
+          }
+          
+          console.log(`👤 Found admin user: ${adminUser.email}`);
+          
+          // Send approval email
+          const { emailService } = await import('./services/email-service');
+          await emailService.sendOrganizationApprovalEmail(adminUser.email, {
+            organizationName: organization.name,
+            contactPerson: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.username,
+            status: 'approved',
+            loginUrl: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/login`,
+            adminEmail: 'admin@eventifyai.com'
+          });
+          
+          console.log(`✅ Approval email sent to ${adminUser.email} for ${organization.name}`);
+          results.push({ 
+            orgId, 
+            status: 'success', 
+            message: `Email sent to ${adminUser.email}`,
+            organizationName: organization.name,
+            adminEmail: adminUser.email
+          });
+          
+        } catch (orgError) {
+          console.error(`❌ Error processing organization ${orgId}:`, orgError);
+          results.push({ orgId, status: 'error', message: orgError.message });
+        }
+      }
+      
+      res.json({ 
+        message: "Emergency approval emails sent",
+        results 
+      });
+      
+    } catch (error) {
+      console.error("Error sending emergency approval emails:", error);
+      res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+  });
+
   // Get platform fee settings
   app.get("/api/super-admin/platform-fee", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -907,6 +992,36 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       
       console.log(`Organization ${updatedOrg.name} status updated to ${status}. Updated ${updatedUsers.length} user(s) to ${userStatus} status.`);
       
+      // Send email notification for status changes that affect users
+      if (['approved', 'suspended', 'rejected'].includes(status)) {
+        try {
+          console.log(`🔍 Looking for admin user among ${orgUsers.length} users:`, orgUsers.map(u => ({ email: u.email, role: u.role })));
+          
+          // Get the admin user for this organization to send email
+          const adminUser = orgUsers.find(user => user.role === 'admin');
+          if (adminUser) {
+            console.log(`👤 Found admin user: ${adminUser.email}, sending ${status} email...`);
+            const { emailService } = await import('./services/email-service.js');
+            await emailService.sendOrganizationApprovalEmail(adminUser.email, {
+              organizationName: updatedOrg.name,
+              contactPerson: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.username,
+              status: status as 'approved' | 'rejected' | 'suspended',
+              reason: status === 'rejected' ? 'Your organization application has been reviewed.' : 
+                     status === 'suspended' ? 'Your organization account has been suspended due to policy violations or administrative reasons.' : undefined,
+              loginUrl: status === 'approved' ? `${process.env.APP_DOMAIN || 'http://localhost:5000'}/login` : undefined,
+              adminEmail: 'admin@eventifyai.com'
+            });
+            console.log(`📧 ${status} email sent to:`, adminUser.email);
+          } else {
+            console.warn('⚠️ No admin user found for organization, skipping email notification');
+            console.warn('Available user roles:', orgUsers.map(u => ({ email: u.email, role: u.role })));
+          }
+        } catch (emailError) {
+          console.error(`❌ Failed to send ${status} email:`, emailError);
+          // Don't fail the approval process if email fails
+        }
+      }
+      
       res.json({ 
         message: "Organization status updated successfully",
         organization: {
@@ -918,6 +1033,99 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       });
     } catch (error) {
       console.error("Error updating organization status:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Send approval emails to recently approved organizations (emergency endpoint)
+  app.post("/api/super-admin/send-approval-emails", async (req: Request, res: Response) => {
+    try {
+      const { organizationIds } = req.body;
+      
+      console.log('🚨 Emergency approval email endpoint called');
+      
+      // Emergency endpoint - send emails to specific organizations
+      const emergencyOrgIds = organizationIds || ["68beee402f37190d09fceccd", "68bef1cc8b7f3259cae88cdd"];
+      
+      console.log('📧 Sending approval emails to:', emergencyOrgIds);
+      
+      const results = [];
+      
+      for (const orgId of emergencyOrgIds) {
+        try {
+          console.log(`\n📧 Processing organization: ${orgId}`);
+          
+          // Get organization details
+          const organization = await mongoStorage.getOrganization(orgId);
+          if (!organization) {
+            results.push({ orgId, status: 'error', message: 'Organization not found' });
+            continue;
+          }
+          
+          console.log(`Found organization: ${organization.name} (status: ${organization.status})`);
+          
+          if (organization.status !== 'approved') {
+            results.push({ orgId, status: 'skipped', message: `Not approved (status: ${organization.status})` });
+            continue;
+          }
+          
+          // Find admin user for this organization
+          const allUsers = await mongoStorage.getAllUsers();
+          const orgUsers = allUsers.filter(user => {
+            if (!user.organizationId) return false;
+            
+            let userOrgId;
+            if (typeof user.organizationId === 'object') {
+              userOrgId = user.organizationId._id ? user.organizationId._id.toString() : user.organizationId.toString();
+            } else {
+              userOrgId = user.organizationId.toString();
+            }
+            
+            return userOrgId === orgId;
+          });
+          
+          console.log(`Found ${orgUsers.length} users for organization:`, orgUsers.map(u => ({ email: u.email, role: u.role })));
+          
+          const adminUser = orgUsers.find(user => user.role === 'admin');
+          if (!adminUser) {
+            results.push({ orgId, status: 'error', message: 'No admin user found' });
+            continue;
+          }
+          
+          console.log(`👤 Found admin user: ${adminUser.email}`);
+          
+          // Send approval email
+          const { emailService } = await import('./services/email-service');
+          await emailService.sendOrganizationApprovalEmail(adminUser.email, {
+            organizationName: organization.name,
+            contactPerson: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.username,
+            status: 'approved',
+            loginUrl: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/login`,
+            adminEmail: 'admin@eventifyai.com'
+          });
+          
+          console.log(`✅ Approval email sent to ${adminUser.email} for ${organization.name}`);
+          results.push({ 
+            orgId, 
+            status: 'success', 
+            message: `Email sent to ${adminUser.email}`,
+            organizationName: organization.name,
+            adminEmail: adminUser.email
+          });
+          
+        } catch (orgError) {
+          console.error(`❌ Error processing organization ${orgId}:`, orgError);
+          results.push({ orgId, status: 'error', message: orgError.message });
+        }
+      }
+      
+      res.json({ 
+        message: "Approval emails processing completed",
+        results 
+      });
+      
+    } catch (error) {
+      console.error("Error sending approval emails:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1160,11 +1368,61 @@ export function registerMongoSuperAdminRoutes(app: Express) {
         });
       }
 
+      // Update users associated with this organization
+      const allUsers = await mongoStorage.getAllUsers();
+      const orgUsers = allUsers.filter(user => {
+        const userOrgId = user.organizationId ? (user.organizationId as any).toString() : null;
+        return userOrgId === orgId;
+      });
+      const updatedUsers = [];
+      
+      for (const user of orgUsers) {
+        console.log(`Updating user ${user.username} status from ${user.status} to ${status === 'approved' ? 'active' : status === 'suspended' ? 'suspended' : user.status}`);
+        const newUserStatus = status === 'approved' ? 'active' : status === 'suspended' ? 'suspended' : user.status;
+        const updatedUser = await mongoStorage.updateUser((user._id as any).toString(), { status: newUserStatus });
+        if (updatedUser) {
+          updatedUsers.push(updatedUser);
+        }
+      }
+
+      console.log(`Organization ${result.name} status updated to ${status}. Updated ${updatedUsers.length} user(s).`);
+
+      // Send email notification for status changes that affect users
+      if (['approved', 'suspended', 'rejected'].includes(status)) {
+        try {
+          console.log(`🔍 Looking for admin user among ${orgUsers.length} users:`, orgUsers.map(u => ({ email: u.email, role: u.role })));
+          
+          // Get the admin user for this organization to send email
+          const adminUser = orgUsers.find(user => user.role === 'admin');
+          if (adminUser) {
+            console.log(`👤 Found admin user: ${adminUser.email}, sending ${status} email...`);
+            const { emailService } = await import('./services/email-service.js');
+            await emailService.sendOrganizationApprovalEmail(adminUser.email, {
+              organizationName: result.name,
+              contactPerson: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.username,
+              status: status as 'approved' | 'rejected' | 'suspended',
+              reason: status === 'rejected' ? 'Your organization application has been reviewed.' : 
+                     status === 'suspended' ? 'Your organization account has been suspended due to policy violations or administrative reasons.' : undefined,
+              loginUrl: status === 'approved' ? `${process.env.APP_DOMAIN || 'http://localhost:5000'}/login` : undefined,
+              adminEmail: 'admin@eventifyai.com'
+            });
+            console.log(`📧 ${status} email sent to:`, adminUser.email);
+          } else {
+            console.warn('⚠️ No admin user found for organization, skipping email notification');
+            console.warn('Available user roles:', orgUsers.map(u => ({ email: u.email, role: u.role })));
+          }
+        } catch (emailError) {
+          console.error(`❌ Failed to send ${status} email:`, emailError);
+          // Don't fail the status update if email fails
+        }
+      }
+
       res.json({
         success: true,
         message: `Organization status updated to ${status}`,
         organizationId: orgId,
-        newStatus: status
+        newStatus: status,
+        usersUpdated: updatedUsers.length
       });
     } catch (error: any) {
       console.error("Update organization status error:", error);
