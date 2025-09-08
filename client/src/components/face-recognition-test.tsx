@@ -40,12 +40,8 @@ export function FaceRecognitionTest({ eventId }: FaceRecognitionTestProps) {
       formData.append("email", email);
       formData.append("eventId", eventId);
 
-      const authHeaders = getAuthHeaders();
-      const response = await fetch("/api/validate-face", {
+      const response = await fetch("/api/face-recognition/demo-validate", {
         method: "POST",
-        headers: {
-          ...authHeaders,
-        },
         body: formData,
       });
 
@@ -131,9 +127,16 @@ export function FaceRecognitionTest({ eventId }: FaceRecognitionTestProps) {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            Test face recognition by uploading a photo and entering member details. 
-            The system will compare against registered face photos.
+            Demo face recognition testing - upload any photo and try different names to see validation results.
           </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm font-medium text-blue-900">💡 Demo Tips:</p>
+            <ul className="text-xs text-blue-800 mt-1 space-y-1">
+              <li>• Try "John Doe" or "Test User" for successful validation</li>
+              <li>• Use any other name to see validation failure</li>
+              <li>• Any image will work - this is a demonstration</li>
+            </ul>
+          </div>
         </div>
 
         <div className="space-y-4">
