@@ -493,7 +493,6 @@ export default function OrganizationRegistration() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Must be different from organization contact email
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

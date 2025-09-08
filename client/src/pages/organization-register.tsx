@@ -434,7 +434,6 @@ export default function OrganizationRegister() {
                       placeholder="admin@organization.com"
                       required
                     />
-                    <p className="text-xs text-gray-500">Must be different from organization contact email</p>
                   </div>
                 </div>
 
