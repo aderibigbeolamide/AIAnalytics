@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 export interface IMongoStorage {
   // Organizations
   getOrganization(id: string): Promise<IOrganization | null>;
+  getOrganizationByName(name: string): Promise<IOrganization | null>;
   getOrganizationByEmail(email: string): Promise<IOrganization | null>;
   getOrganizations(filters?: { status?: string }): Promise<IOrganization[]>;
   createOrganization(organization: InsertOrganization): Promise<IOrganization>;
@@ -103,6 +104,15 @@ export class MongoStorage implements IMongoStorage {
       return await Organization.findById(id);
     } catch (error) {
       console.error('Error getting organization:', error);
+      return null;
+    }
+  }
+
+  async getOrganizationByName(name: string): Promise<IOrganization | null> {
+    try {
+      return await Organization.findOne({ name: name, deletedAt: { $exists: false } });
+    } catch (error) {
+      console.error('Error getting organization by name:', error);
       return null;
     }
   }

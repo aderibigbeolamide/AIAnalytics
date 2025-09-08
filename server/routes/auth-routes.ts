@@ -196,8 +196,8 @@ export function registerAuthRoutes(app: Express) {
         lastName: user.lastName,
         organization: organizationInfo ? {
           id: (organizationInfo._id as any)?.toString(),
-          name: organizationInfo.name,
-          isVerified: organizationInfo.isVerified
+          name: (organizationInfo as any).name,
+          isVerified: (organizationInfo as any).isVerified
         } : null
       };
 
@@ -231,7 +231,7 @@ export function registerAuthRoutes(app: Express) {
 
       // Check if username is already taken
       const existingUser = await mongoStorage.getUserByUsername(username);
-      if (existingUser && existingUser._id.toString() !== req.user.id) {
+      if (existingUser && (existingUser._id as any)?.toString() !== req.user.id) {
         return res.status(400).json({ message: "Username is already taken" });
       }
 
@@ -311,13 +311,17 @@ export function registerAuthRoutes(app: Express) {
       // Create organization first
       const organization = await mongoStorage.createOrganization({
         name: organizationName,
-        type: organizationType || 'other',
+        contactEmail: adminEmail,
         description: description || '',
         website: website || '',
-        phone: phone || '',
+        contactPhone: phone || '',
         address: address || '',
-        isActive: true,
-        isVerified: false, // Requires super admin approval
+        status: 'pending', // Requires super admin approval
+        subscriptionPlan: 'basic',
+        subscriptionStatus: 'active',
+        maxEvents: 10,
+        maxMembers: 100,
+        settings: {},
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -332,8 +336,8 @@ export function registerAuthRoutes(app: Express) {
         role: 'admin',
         firstName: adminFirstName,
         lastName: adminLastName,
-        organizationId: organization._id,
-        isActive: true,
+        organizationId: (organization._id as any)?.toString(),
+        status: 'active',
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -344,9 +348,9 @@ export function registerAuthRoutes(app: Express) {
         success: true,
         message: "Organization registration successful. Awaiting super admin approval.",
         data: {
-          organizationId: organization._id.toString(),
+          organizationId: (organization._id as any)?.toString(),
           organizationName: organization.name,
-          adminId: adminUser._id.toString(),
+          adminId: (adminUser._id as any)?.toString(),
           adminUsername: adminUser.username,
           isVerified: organization.isVerified
         }
