@@ -321,9 +321,7 @@ export function registerAuthRoutes(app: Express) {
         subscriptionStatus: 'active',
         maxEvents: 10,
         maxMembers: 100,
-        settings: {},
-        createdAt: new Date(),
-        updatedAt: new Date()
+        settings: {}
       });
 
       console.log('Organization created:', organization.name);
@@ -337,9 +335,7 @@ export function registerAuthRoutes(app: Express) {
         firstName: adminFirstName,
         lastName: adminLastName,
         organizationId: (organization._id as any)?.toString(),
-        status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        status: 'active'
       });
 
       console.log('Admin user created:', adminUser.username);
