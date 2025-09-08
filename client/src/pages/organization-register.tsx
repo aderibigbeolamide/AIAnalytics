@@ -102,6 +102,7 @@ export default function OrganizationRegister() {
               <CardContent className="p-6">
                 <h3 className="font-semibold text-gray-900 mb-3">What happens next?</h3>
                 <div className="space-y-2 text-sm text-gray-600">
+                  <p>• Check your email and verify your account</p>
                   <p>• Our team will review your organization details</p>
                   <p>• You'll receive an approval email within 24-48 hours</p>
                   <p>• Once approved, you can login and start managing events</p>

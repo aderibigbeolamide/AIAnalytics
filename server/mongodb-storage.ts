@@ -1,6 +1,6 @@
 import { 
-  Organization, User, Member, Event, EventRegistration, Ticket,
-  type IOrganization, type IUser, type IMember, type IEvent, type IEventRegistration, type ITicket,
+  Organization, User, Member, Event, EventRegistration, Ticket, VerificationToken,
+  type IOrganization, type IUser, type IMember, type IEvent, type IEventRegistration, type ITicket, type IVerificationToken,
   type InsertOrganization, type InsertUser, type InsertEvent
 } from "@shared/mongoose-schema";
 import mongoose from 'mongoose';
@@ -87,6 +87,13 @@ export interface IMongoStorage {
   // CSV Validation
   getMemberValidationCsv(eventId: string): Promise<any[]>;
   createMemberValidationCsv(csv: any): Promise<any>;
+
+  // Verification Tokens
+  createVerificationToken(token: Partial<IVerificationToken>): Promise<IVerificationToken>;
+  getVerificationToken(email: string, token: string, type: 'email_verification' | 'password_reset'): Promise<IVerificationToken | null>;
+  markVerificationTokenUsed(id: string): Promise<void>;
+  deleteVerificationTokens(email: string, type: 'email_verification' | 'password_reset'): Promise<void>;
+  deleteExpiredVerificationTokens(): Promise<void>;
 }
 
 export class MongoStorage implements IMongoStorage {
@@ -851,6 +858,61 @@ export class MongoStorage implements IMongoStorage {
       );
     } catch (error) {
       console.error('Error updating platform settings:', error);
+      throw error;
+    }
+  }
+
+  // Verification Token methods
+  async createVerificationToken(token: Partial<IVerificationToken>): Promise<IVerificationToken> {
+    try {
+      const newToken = new VerificationToken(token);
+      return await newToken.save();
+    } catch (error) {
+      console.error('Error creating verification token:', error);
+      throw error;
+    }
+  }
+
+  async getVerificationToken(email: string, token: string, type: 'email_verification' | 'password_reset'): Promise<IVerificationToken | null> {
+    try {
+      return await VerificationToken.findOne({ 
+        email, 
+        token, 
+        type, 
+        used: false,
+        expiresAt: { $gt: new Date() }
+      });
+    } catch (error) {
+      console.error('Error getting verification token:', error);
+      return null;
+    }
+  }
+
+  async markVerificationTokenUsed(id: string): Promise<void> {
+    try {
+      await VerificationToken.findByIdAndUpdate(id, { used: true });
+    } catch (error) {
+      console.error('Error marking verification token as used:', error);
+      throw error;
+    }
+  }
+
+  async deleteVerificationTokens(email: string, type: 'email_verification' | 'password_reset'): Promise<void> {
+    try {
+      await VerificationToken.deleteMany({ email, type });
+    } catch (error) {
+      console.error('Error deleting verification tokens:', error);
+      throw error;
+    }
+  }
+
+  async deleteExpiredVerificationTokens(): Promise<void> {
+    try {
+      await VerificationToken.deleteMany({ 
+        expiresAt: { $lte: new Date() }
+      });
+    } catch (error) {
+      console.error('Error deleting expired verification tokens:', error);
       throw error;
     }
   }

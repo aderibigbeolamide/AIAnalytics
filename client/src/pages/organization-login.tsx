@@ -161,6 +161,16 @@ export default function OrganizationLogin() {
                 )}
               </Button>
             </form>
+
+            <div className="mt-4 text-center">
+              <a 
+                href="/forgot-password" 
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                data-testid="link-forgot-password"
+              >
+                Forgot your password?
+              </a>
+            </div>
             
             {/* Register Link */}
             <div className="mt-6 text-center">

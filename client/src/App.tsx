@@ -39,6 +39,9 @@ import OrganizationRegistration from "@/pages/organization-registration";
 import OrganizationRegister from "@/pages/organization-register";
 import SuperAdminLogin from "@/pages/super-admin-login";
 import OrganizationLogin from "@/pages/organization-login";
+import VerifyEmail from "@/pages/verify-email";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import OrganizationProfile from "@/pages/organization-profile";
 import SuperAdminChat from "@/pages/super-admin-chat";
 import EventTickets from "@/pages/event-tickets";
@@ -100,6 +103,9 @@ function Router() {
       <Route path="/login" component={OrganizationLogin} />
       <Route path="/register" component={OrganizationRegister} />
       <Route path="/organization-register" component={OrganizationRegister} />
+      <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/super-admin-login" component={SuperAdminLogin} />
       <Route path="/register-organization" component={OrganizationRegistration} />
       

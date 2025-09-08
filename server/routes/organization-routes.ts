@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { authenticateToken, type AuthenticatedRequest } from "./auth-routes";
 import { notificationService } from "../services/notification-service";
+import { emailService } from "../services/email-service";
+import { verificationService } from "../services/verification-service";
 import { mongoStorage } from "../mongodb-storage";
 import bcrypt from "bcrypt";
 import { z } from "zod";
@@ -60,7 +62,7 @@ export function registerOrganizationRoutes(app: Express) {
       const hashedPassword = await bcrypt.hash(orgData.adminPassword, 10);
 
       // Create admin user for the organization
-      await mongoStorage.createUser({
+      const adminUser = await mongoStorage.createUser({
         username: orgData.adminUsername,
         email: orgData.email,
         password: hashedPassword,
@@ -68,16 +70,33 @@ export function registerOrganizationRoutes(app: Express) {
         lastName: orgData.adminLastName,
         role: 'admin',
         organizationId: organization._id?.toString(),
-        status: 'pending', // Will be activated when org is approved
+        status: 'pending_verification', // Will be activated when email is verified
         twoFactorEnabled: false,
         emailVerified: false,
         createdAt: new Date(),
         updatedAt: new Date()
       });
 
+      // Create email verification token
+      const verificationToken = await verificationService.createVerificationToken(orgData.email, 'email_verification');
+      
+      // Send verification email
+      const verificationUrl = `${process.env.APP_DOMAIN}/verify-email?email=${encodeURIComponent(orgData.email)}&token=${verificationToken.token}`;
+      
+      const emailSent = await verificationService.sendEmailVerification(
+        orgData.email,
+        orgData.name,
+        verificationUrl
+      );
+
+      if (!emailSent) {
+        console.error('Failed to send verification email during organization registration');
+      }
+
       res.status(201).json({
-        message: "Organization registration submitted successfully. Please wait for approval.",
-        organizationId: organization._id?.toString()
+        message: "Organization registration submitted successfully. Please check your email to verify your account before approval.",
+        organizationId: organization._id?.toString(),
+        requiresEmailVerification: true
       });
 
       // Notify super admin about new organization registration

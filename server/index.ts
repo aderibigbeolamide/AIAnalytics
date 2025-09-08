@@ -7,6 +7,7 @@ import { registerEventRoutes } from "./routes/event-routes";
 import { registerRegistrationRoutes } from "./routes/registration-routes";
 import { registerPaymentRoutes } from "./routes/payment-routes";
 import { registerOrganizationRoutes } from "./routes/organization-routes";
+import { registerVerificationRoutes } from "./routes/verification-routes";
 import { registerEmailRoutes } from "./routes/email-routes";
 import { registerFaceRecognitionRoutes } from "./routes/face-recognition-routes";
 import { cleanupRouter } from "./routes/cleanup-routes.js";
@@ -80,6 +81,7 @@ app.use((req, res, next) => {
   registerRegistrationRoutes(app);
   registerPaymentRoutes(app);
   registerOrganizationRoutes(app);
+  registerVerificationRoutes(app);
   registerEmailRoutes(app);
   registerFaceRecognitionRoutes(app);
   
