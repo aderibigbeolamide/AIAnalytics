@@ -185,7 +185,19 @@ export function setupChatbotRoutes(app: Express) {
       } catch (aiError) {
         console.error("AWS Bedrock service error:", aiError);
         
-        // Fallback to simple keyword matching
+        // Try OpenAI as fallback before using simple responses
+        try {
+          const openaiResponse = await OpenAIService.generateChatbotResponse(message, context);
+          return res.json({
+            response: openaiResponse.response,
+            suggestedActions: openaiResponse.suggestedActions,
+            source: "openai_fallback"
+          });
+        } catch (openaiError) {
+          console.error("OpenAI fallback error:", openaiError);
+        }
+        
+        // Final fallback to simple keyword matching
         const response = generateFallbackResponse(message);
         
         // Handle support requests specially
