@@ -146,13 +146,48 @@ export function setupChatbotRoutes(app: Express) {
   // Initialize chat sessions from database on startup
   loadChatSessions();
   
-  // AI-powered chat endpoint
+  // Helper function to detect greetings
+function isGreeting(message: string): boolean {
+  const greetingWords = [
+    'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening',
+    'how are you', 'what\'s up', 'greetings', 'salutation', 'howdy'
+  ];
+  const lowerMessage = message.toLowerCase().trim();
+  return greetingWords.some(greeting => lowerMessage.includes(greeting)) || 
+         lowerMessage.length < 10 && ['help', 'start', 'begin'].some(word => lowerMessage.includes(word));
+}
+
+// Helper function to generate greeting response with quick actions
+function generateGreetingResponse(): any {
+  const greetingResponse = {
+    response: "Hello! I'm **Valie**, your EventValidate AI assistant! 👋\n\nI'm here to help you understand our platform and make your event experience smooth.\n\nChoose what you need help with:",
+    quickActions: [
+      { id: "organization_register", text: "🏢 How to register my organization?", action: "organization_register" },
+      { id: "user_register", text: "🎫 How to register for an event?", action: "user_register" },
+      { id: "buy_ticket", text: "🎟️ How to buy a ticket?", action: "buy_ticket" },
+      { id: "validate_event", text: "✅ How to validate for an event?", action: "validate_event" },
+      { id: "explore_features", text: "🔍 How to explore platform features?", action: "explore_features" },
+      { id: "contact_support", text: "📞 Contact customer support", action: "contact_support" }
+    ],
+    showQuickActions: true,
+    source: "valie_greeting"
+  };
+  
+  return greetingResponse;
+}
+
+// AI-powered chat endpoint
   app.post("/api/chatbot/chat", async (req: Request, res: Response) => {
     try {
       const { message, sessionId, conversationHistory = [] } = req.body;
 
       if (!message) {
         return res.status(400).json({ message: "Message is required" });
+      }
+
+      // Check for greetings first and respond as Valie
+      if (isGreeting(message)) {
+        return res.json(generateGreetingResponse());
       }
 
       // Check if this is a quick action first
@@ -187,6 +222,14 @@ export function setupChatbotRoutes(app: Express) {
         
         // Try OpenAI as fallback before using simple responses
         try {
+          const context = {
+            userType: 'general' as const,
+            conversationHistory: conversationHistory.map((msg: any) => ({
+              role: msg.sender === 'user' ? 'user' : 'assistant',
+              content: msg.text
+            })),
+            currentIntent: 'general' as const
+          };
           const openaiResponse = await OpenAIService.generateChatbotResponse(message, context);
           return res.json({
             response: openaiResponse.response,

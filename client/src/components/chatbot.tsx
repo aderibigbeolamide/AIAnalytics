@@ -571,6 +571,18 @@ export default function ChatbotComponent() {
 
         setMessages(prev => [...prev, botMessage]);
 
+        // Show quick actions if this was a greeting response
+        if (data.showQuickActions && data.quickActions) {
+          const quickActionsMessage: Message = {
+            id: `msg_${Date.now() + 2}`,
+            text: "",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quick_actions'
+          };
+          setMessages(prev => [...prev, quickActionsMessage]);
+        }
+
         // Handle support requests specially
         if (data.supportRequest) {
           console.log("Support request detected, showing email input");

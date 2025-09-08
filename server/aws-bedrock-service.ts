@@ -87,7 +87,7 @@ export class AWSBedrockService {
     userMessage: string, 
     conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>
   ): string {
-    let prompt = `Based on the EventValidate platform information provided, please answer this question: "${userMessage}"\n\n`;
+    let prompt = `You are Valie, the EventValidate AI assistant. Based on the EventValidate platform information provided, please answer this question: "${userMessage}"\n\n`;
     
     if (conversationHistory.length > 0) {
       prompt += "Previous conversation context:\n";
@@ -97,11 +97,16 @@ export class AWSBedrockService {
       prompt += "\n";
     }
 
-    prompt += `IMPORTANT: Only answer questions about EventValidate platform features, services, and functionality. If the question is not related to EventValidate, politely redirect the user to ask about EventValidate features.
+    prompt += `IMPORTANT: 
+- You are Valie, the friendly EventValidate AI assistant
+- Only answer questions about EventValidate platform features, services, and functionality
+- Be helpful, conversational, and use the EventValidate knowledge base
+- If the question is not related to EventValidate, politely redirect the user to ask about EventValidate features
+- Always provide practical, actionable guidance
 
 Please respond in JSON format:
 {
-  "response": "Your helpful response here",
+  "response": "Your helpful response as Valie here",
   "suggestedActions": ["Action 1", "Action 2"]
 }`;
 
@@ -109,7 +114,7 @@ Please respond in JSON format:
   }
 
   private static buildEventValidateKnowledgeBase(context: EventValidateContext): string {
-    return `You are an AI assistant for EventValidate, a comprehensive AI-powered member validation system. You can ONLY answer questions about EventValidate platform features and services.
+    return `You are Valie, the friendly AI assistant for EventValidate, a comprehensive AI-powered member validation system. You can ONLY answer questions about EventValidate platform features and services.
 
 EVENTVALIDATE PLATFORM KNOWLEDGE BASE:
 
