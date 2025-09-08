@@ -109,6 +109,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/super-admin-login" component={SuperAdminLogin} />
       <Route path="/register-organization" component={OrganizationRegistration} />
+      <Route path="/organization-registration" component={OrganizationRegistration} />
       
       {/* Root and landing route always go to landing page */}
       <Route path="/" component={LandingPage} />
