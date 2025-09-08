@@ -138,6 +138,8 @@ class EmailService {
   async sendOrganizationApprovalEmail(email: string, data: OrganizationApprovalEmailData): Promise<boolean> {
     const subject = data.status === 'approved' 
       ? `Welcome to EventValidate - ${data.organizationName} Approved!`
+      : data.status === 'suspended'
+      ? `Account Suspended - ${data.organizationName}`
       : `EventValidate Application Update - ${data.organizationName}`;
 
     const html = data.status === 'approved' ? `
@@ -181,6 +183,49 @@ class EmailService {
             <div class="footer">
               <p>&copy; 2025 EventValidate. All rights reserved.</p>
               <p>Transform your events with AI-powered validation</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    ` : data.status === 'suspended' ? `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #F59E0B; color: white; padding: 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>⚠️ Account Suspended</h1>
+            </div>
+            <div class="content">
+              <h2>Hello ${data.contactPerson},</h2>
+              <p>We are writing to inform you that your organization, <strong>${data.organizationName}</strong>, has been suspended on EventValidate.</p>
+              
+              ${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ''}
+              
+              <p><strong>What this means:</strong></p>
+              <ul>
+                <li>All users associated with ${data.organizationName} will have their accounts suspended</li>
+                <li>You will not be able to access your organization's dashboard</li>
+                <li>Event creation and management services are temporarily restricted</li>
+                <li>Existing events may be affected</li>
+              </ul>
+              
+              <p><strong>To appeal this decision or understand the reason for suspension:</strong></p>
+              <p>Please contact our support team at ${data.adminEmail || 'admin@eventifyai.com'} for assistance.</p>
+              
+              <p>We apologize for any inconvenience this may cause.</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2025 EventValidate. All rights reserved.</p>
             </div>
           </div>
         </body>

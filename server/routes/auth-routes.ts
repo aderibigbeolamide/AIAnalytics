@@ -99,7 +99,25 @@ export function registerAuthRoutes(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      console.log(`Found user: ${user.username}, role: ${user.role}`);
+      console.log(`Found user: ${user.username}, role: ${user.role}, status: ${user.status}`);
+
+      // Check if user account is suspended
+      if (user.status === 'suspended') {
+        console.log(`Suspended user attempted login: ${username}`);
+        return res.status(403).json({ 
+          message: "Your account has been suspended. Please contact the administrator for assistance.",
+          suspended: true 
+        });
+      }
+
+      // Check if user account is pending approval
+      if (user.status !== 'active' && user.role !== 'super_admin') {
+        console.log(`Non-active user attempted login: ${username}, status: ${user.status}`);
+        return res.status(403).json({ 
+          message: "Your account is pending approval. Please wait for administrator confirmation.",
+          pending: true 
+        });
+      }
 
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {

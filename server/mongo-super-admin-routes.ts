@@ -1367,11 +1367,61 @@ export function registerMongoSuperAdminRoutes(app: Express) {
         });
       }
 
+      // Update users associated with this organization
+      const allUsers = await mongoStorage.getAllUsers();
+      const orgUsers = allUsers.filter(user => {
+        const userOrgId = user.organizationId ? (user.organizationId as any).toString() : null;
+        return userOrgId === orgId;
+      });
+      const updatedUsers = [];
+      
+      for (const user of orgUsers) {
+        console.log(`Updating user ${user.username} status from ${user.status} to ${status === 'approved' ? 'active' : status === 'suspended' ? 'suspended' : user.status}`);
+        const newUserStatus = status === 'approved' ? 'active' : status === 'suspended' ? 'suspended' : user.status;
+        const updatedUser = await mongoStorage.updateUser((user._id as any).toString(), { status: newUserStatus });
+        if (updatedUser) {
+          updatedUsers.push(updatedUser);
+        }
+      }
+
+      console.log(`Organization ${result.name} status updated to ${status}. Updated ${updatedUsers.length} user(s).`);
+
+      // Send email notification for status changes that affect users
+      if (['approved', 'suspended', 'rejected'].includes(status)) {
+        try {
+          console.log(`🔍 Looking for admin user among ${orgUsers.length} users:`, orgUsers.map(u => ({ email: u.email, role: u.role })));
+          
+          // Get the admin user for this organization to send email
+          const adminUser = orgUsers.find(user => user.role === 'admin');
+          if (adminUser) {
+            console.log(`👤 Found admin user: ${adminUser.email}, sending ${status} email...`);
+            const { emailService } = await import('../services/email-service');
+            await emailService.sendOrganizationApprovalEmail(adminUser.email, {
+              organizationName: result.name,
+              contactPerson: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || adminUser.username,
+              status: status as 'approved' | 'rejected' | 'suspended',
+              reason: status === 'rejected' ? 'Your organization application has been reviewed.' : 
+                     status === 'suspended' ? 'Your organization account has been suspended due to policy violations or administrative reasons.' : undefined,
+              loginUrl: status === 'approved' ? `${process.env.APP_DOMAIN || 'http://localhost:5000'}/login` : undefined,
+              adminEmail: 'admin@eventifyai.com'
+            });
+            console.log(`📧 ${status} email sent to:`, adminUser.email);
+          } else {
+            console.warn('⚠️ No admin user found for organization, skipping email notification');
+            console.warn('Available user roles:', orgUsers.map(u => ({ email: u.email, role: u.role })));
+          }
+        } catch (emailError) {
+          console.error(`❌ Failed to send ${status} email:`, emailError);
+          // Don't fail the status update if email fails
+        }
+      }
+
       res.json({
         success: true,
         message: `Organization status updated to ${status}`,
         organizationId: orgId,
-        newStatus: status
+        newStatus: status,
+        usersUpdated: updatedUsers.length
       });
     } catch (error: any) {
       console.error("Update organization status error:", error);
