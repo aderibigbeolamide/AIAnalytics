@@ -347,6 +347,53 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Update report status endpoint
+  app.put("/api/reports/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const reportId = req.params.id;
+      const { status, reviewNotes } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      const validStatuses = ['pending', 'reviewed', 'closed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      // First, verify the report belongs to the user's organization
+      const existingReport = await mongoStorage.getReportById(reportId);
+      if (!existingReport) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      // Check organization access
+      const userOrganizationId = req.user?.organizationId?.toString();
+      if (existingReport.organizationId?.toString() !== userOrganizationId) {
+        return res.status(403).json({ message: "Access denied: Report belongs to different organization" });
+      }
+      
+      const updates: any = { status };
+      if (reviewNotes) {
+        updates.reviewNotes = reviewNotes;
+      }
+      
+      console.log('Updating report with data:', { reportId, updates });
+      const updatedReport = await mongoStorage.updateEventReport(reportId, updates);
+      console.log('Update result:', updatedReport);
+      
+      if (!updatedReport) {
+        return res.status(500).json({ message: "Failed to update report" });
+      }
+      
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("Error updating report:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Event reports endpoints
   app.get("/api/events/:eventId/reports", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
