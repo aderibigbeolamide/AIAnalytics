@@ -269,21 +269,23 @@ export default function PaymentSuccess() {
                 </div>
               </div>
               {isTicket && (
-                <div className="flex items-center gap-2 text-sm">
-                  <CreditCard className="h-4 w-4 text-gray-400" />
-                  <span>Category: {data?.category || 'N/A'}</span>
-                  {isMultipleTickets ? (
-                    <span className="ml-4">Total: {currency} {amount}</span>
-                  ) : (
-                    <span className="ml-4">Price: {data?.currency} {data?.price || 0}</span>
-                  )}
-                </div>
-                {isMultipleTickets && ticketNumbers && (
+                <>
                   <div className="flex items-center gap-2 text-sm">
-                    <QrCode className="h-4 w-4 text-gray-400" />
-                    <span>Ticket Numbers: {ticketNumbers.split(',').join(', ')}</span>
+                    <CreditCard className="h-4 w-4 text-gray-400" />
+                    <span>Category: {data?.category || 'N/A'}</span>
+                    {isMultipleTickets ? (
+                      <span className="ml-4">Total: {currency} {amount}</span>
+                    ) : (
+                      <span className="ml-4">Price: {data?.currency} {data?.price || 0}</span>
+                    )}
                   </div>
-                )}
+                  {isMultipleTickets && ticketNumbers && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <QrCode className="h-4 w-4 text-gray-400" />
+                      <span>Ticket Numbers: {ticketNumbers.split(',').join(', ')}</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
