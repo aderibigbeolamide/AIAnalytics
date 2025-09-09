@@ -233,6 +233,8 @@ function Router() {
 function App() {
   // Initialize Google Analytics and Tag Manager
   useEffect(() => {
+    console.log('Initializing analytics...');
+    console.log('GA ID at runtime:', import.meta.env.VITE_GA_MEASUREMENT_ID);
     initAnalytics();
   }, []);
 
