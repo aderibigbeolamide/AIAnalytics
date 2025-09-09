@@ -63,7 +63,7 @@ export interface RegistrationConfirmationEmailData {
   eventUrl?: string;
 }
 
-class EmailService {
+export class EmailService {
   private transporter!: nodemailer.Transporter;
   private isConfigured: boolean = false;
 
