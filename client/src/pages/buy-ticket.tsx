@@ -43,6 +43,19 @@ export default function BuyTicket() {
     },
   });
 
+  // Fetch event details from public endpoint to ensure eventType is included
+  const { data: event, isLoading } = useQuery<any>({
+    queryKey: ["/api/events", eventId, "public"],
+    queryFn: async () => {
+      const response = await fetch(`/api/events/${eventId}/public`);
+      if (!response.ok) {
+        throw new Error("Event not found");
+      }
+      return response.json();
+    },
+    enabled: !!eventId,
+  });
+
   // Watch form values to calculate total
   const watchedValues = form.watch(["ticketCategoryId", "quantity"]);
   
@@ -58,19 +71,6 @@ export default function BuyTicket() {
       setTotalAmount(0);
     }
   }, [watchedValues, event?.ticketCategories]);
-
-  // Fetch event details from public endpoint to ensure eventType is included
-  const { data: event, isLoading } = useQuery<any>({
-    queryKey: ["/api/events", eventId, "public"],
-    queryFn: async () => {
-      const response = await fetch(`/api/events/${eventId}/public`);
-      if (!response.ok) {
-        throw new Error("Event not found");
-      }
-      return response.json();
-    },
-    enabled: !!eventId,
-  });
 
   const purchaseTicketMutation = useMutation({
     mutationFn: async (data: TicketPurchaseData) => {
