@@ -7,8 +7,8 @@ channel = "stable-25_05"
 packages = ["jq"]
 
 [deployment]
-deploymentTarget = "autoscale"
-run = ["npm", "run", "start"]
+deploymentTarget = "vm"
+run = ["npm"]
 build = ["npm", "run", "build"]
 
 [[ports]]
@@ -18,6 +18,10 @@ externalPort = 3000
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 24678
+externalPort = 3001
 
 [workflows]
 runButton = "Project"
@@ -35,9 +39,14 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
 
 [agent]
+integrations = ["javascript_sendgrid:1.0.0"]
+expertMode = true

@@ -14,8 +14,9 @@ import { FileText, Search, Eye, Clock, CheckCircle, XCircle, MessageSquare, User
 import { format } from "date-fns";
 
 interface Report {
-  id: number;
-  eventId: number;
+  _id: string;
+  id?: string; // For backward compatibility
+  eventId: string;
   reporterName: string;
   reporterEmail: string;
   reporterPhone: string;
@@ -23,8 +24,10 @@ interface Report {
   message: string;
   status: string;
   createdAt: string;
+  eventName?: string;
+  organizationId?: string;
   event?: {
-    id: number;
+    id: string;
     name: string;
   };
 }
@@ -48,19 +51,25 @@ export default function Reports() {
   });
 
   const updateReportMutation = useMutation({
-    mutationFn: async ({ reportId, status, notes }: { reportId: number; status: string; notes?: string }) => {
+    mutationFn: async ({ reportId, status, notes }: { reportId: string; status: string; notes?: string }) => {
+      console.log('Updating report:', { reportId, status, notes });
       const response = await apiRequest('PUT', `/api/reports/${reportId}`, {
         status,
         reviewNotes: notes
       });
-      return response.json();
+      const result = await response.json();
+      console.log('Update response:', result);
+      return result;
     },
     onSuccess: (data) => {
+      console.log('Update success callback, data:', data);
       toast({
         title: "Report updated",
-        description: `Report has been ${data.status}`,
+        description: `Report has been ${data.status || 'updated'}`,
       });
+      // Force cache refresh and component re-render
       queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
+      queryClient.refetchQueries({ queryKey: ['/api/reports'] });
       setShowReviewDialog(false);
       setSelectedReport(null);
       setReviewNotes("");
@@ -82,8 +91,10 @@ export default function Reports() {
 
   const handleStatusUpdate = (status: string) => {
     if (selectedReport) {
+      const reportId = selectedReport._id || selectedReport.id || '';
+      console.log('Handling status update:', { reportId, status, selectedReport });
       updateReportMutation.mutate({
-        reportId: selectedReport.id,
+        reportId,
         status,
         notes: reviewNotes
       });
@@ -223,7 +234,7 @@ export default function Reports() {
         ) : (
           <div className="space-y-4">
             {filteredReports.map((report) => (
-              <Card key={report.id} className="hover:shadow-md transition-shadow">
+              <Card key={report._id || report.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">

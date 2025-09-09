@@ -270,7 +270,7 @@ EventValidate Team
 
       const emailResult = await sendEmail({
         to: participant.email,
-        from: process.env.EMAIL_FROM || 'noreply@eventvalidate.com',
+        from: process.env.SMTP_USER || 'admin@eventifyai.com',
         subject,
         text: textContent,
         html: htmlContent

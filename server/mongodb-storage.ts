@@ -797,6 +797,35 @@ export class MongoStorage implements IMongoStorage {
     }
   }
 
+  async getReportsByOrganization(organizationId: string): Promise<any[]> {
+    try {
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Database connection not established');
+      }
+      const collection = db.collection('event_reports');
+      const query = { organizationId: organizationId };
+      return await collection.find(query).sort({ createdAt: -1 }).toArray();
+    } catch (error) {
+      console.error('Error getting reports by organization:', error);
+      return [];
+    }
+  }
+
+  async getReportById(id: string): Promise<any | null> {
+    try {
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Database connection not established');
+      }
+      const collection = db.collection('event_reports');
+      return await collection.findOne({ _id: new mongoose.Types.ObjectId(id) });
+    } catch (error) {
+      console.error('Error getting report by id:', error);
+      return null;
+    }
+  }
+
   async updateEventReport(id: string, updates: any): Promise<any | null> {
     try {
       const db = mongoose.connection.db;
@@ -809,7 +838,8 @@ export class MongoStorage implements IMongoStorage {
         { $set: { ...updates, updatedAt: new Date() } },
         { returnDocument: 'after' }
       );
-      return result ? result.value : null;
+      console.log('MongoDB update result:', result);
+      return result || null;
     } catch (error) {
       console.error('Error updating event report:', error);
       return null;

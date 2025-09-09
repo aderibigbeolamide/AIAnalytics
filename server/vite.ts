@@ -4,7 +4,8 @@ import path from "path";
 import { fileURLToPath } from "url"; // ✅ Add this
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
+// @ts-ignore - vite config is JS, not TS
+import viteConfig from "../vite.config.js";
 import { nanoid } from "nanoid";
 
 // ✅ Fix import.meta.dirname
@@ -27,7 +28,8 @@ export function log(message: string, source = "express") {
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    hmr: false, // Disable HMR for Replit environment
+    host: "0.0.0.0",
     allowedHosts: true as true,
   };
 

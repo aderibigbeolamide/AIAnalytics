@@ -1,13 +1,16 @@
 import nodemailer from 'nodemailer';
 
-// Create transporter for SMTP email sending
+// Create transporter for SMTP email sending using Zoho configuration
 const transporter = nodemailer.createTransport({
-  host: process.env.MAILER_HOST,
-  port: parseInt(process.env.MAILER_PORT || "587"),
-  secure: false, // true for 465, false for other ports
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || "465"),
+  secure: parseInt(process.env.SMTP_PORT || "465") === 465, // true for 465, false for other ports
   auth: {
-    user: process.env.MAILER_USER,
-    pass: process.env.MAILER_PASS
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 });
 

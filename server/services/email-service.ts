@@ -49,6 +49,8 @@ export interface PaymentSuccessEmailData {
   paymentDate: string;
   eventDate: string;
   eventLocation: string;
+  ticketCount?: number;
+  ticketNumbers?: string;
 }
 
 export interface RegistrationConfirmationEmailData {
@@ -63,7 +65,7 @@ export interface RegistrationConfirmationEmailData {
   eventUrl?: string;
 }
 
-class EmailService {
+export class EmailService {
   private transporter!: nodemailer.Transporter;
   private isConfigured: boolean = false;
 
@@ -682,6 +684,93 @@ class EmailService {
       to: email,
       subject,
       html: emailContent
+    });
+  }
+
+  // Payment success email with PDF attachments for multiple tickets
+  async sendPaymentSuccessEmailWithAttachments(email: string, data: PaymentSuccessEmailData, attachments: Array<{filename: string, content: Buffer, contentType: string}>): Promise<boolean> {
+    const subject = `Payment Confirmed - ${data.eventName} ${data.ticketCount ? `(${data.ticketCount} Tickets)` : 'Ticket'}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4F46E5; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
+            .success-badge { background: #10B981; color: white; padding: 10px 20px; border-radius: 20px; display: inline-block; margin: 20px 0; }
+            .ticket-info { background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
+            .highlight { color: #4F46E5; font-weight: bold; }
+            .attachment-note { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Payment Successful!</h1>
+            </div>
+            <div class="content">
+              <div class="success-badge">✅ Payment Confirmed</div>
+              
+              <h2>Hi ${data.participantName}!</h2>
+              <p>Great news! Your payment has been successfully processed and your ${data.ticketCount ? `${data.ticketCount} tickets have` : 'ticket has'} been confirmed.</p>
+              
+              <div class="ticket-info">
+                <h3>🎫 ${data.ticketCount ? 'Tickets' : 'Ticket'} Details</h3>
+                <p><strong>Event:</strong> ${data.eventName}</p>
+                <p><strong>Date:</strong> ${data.eventDate}</p>
+                <p><strong>Location:</strong> ${data.eventLocation}</p>
+                ${data.ticketCount ? `<p><strong>Number of Tickets:</strong> ${data.ticketCount}</p>` : ''}
+                ${data.ticketNumbers ? `<p><strong>Ticket Numbers:</strong> ${data.ticketNumbers}</p>` : ''}
+                <p><strong>Amount Paid:</strong> <span class="highlight">${data.currency} ${data.amount}</span></p>
+                <p><strong>Transaction ID:</strong> ${data.transactionId}</p>
+                <p><strong>Payment Date:</strong> ${data.paymentDate}</p>
+              </div>
+              
+              <div class="attachment-note">
+                <h4>📎 Your Ticket${data.ticketCount && data.ticketCount > 1 ? 's' : ''} ${data.ticketCount && data.ticketCount > 1 ? 'are' : 'is'} Attached!</h4>
+                <p>We've attached ${data.ticketCount ? `all ${data.ticketCount} of your tickets` : 'your ticket'} as PDF files to this email. Each ticket includes:</p>
+                <ul>
+                  <li>✅ Your unique QR code for entry</li>
+                  <li>📅 Complete event details</li>
+                  <li>🎫 Individual ticket numbers</li>
+                  <li>🔒 Security features for validation</li>
+                </ul>
+                <p><strong>Please save these tickets and bring them (digital or printed) to the event!</strong></p>
+              </div>
+
+              <h3>🎯 What's Next?</h3>
+              <ul>
+                <li>📱 Save your ticket PDFs to your phone or print them</li>
+                <li>🆔 Bring a valid ID that matches your ticket details</li>
+                <li>⏰ Arrive 15-20 minutes early for smooth check-in</li>
+                <li>📱 Present your QR code for quick entry</li>
+              </ul>
+
+              <p><strong>Important:</strong> Each ticket has a unique QR code. Make sure to bring ${data.ticketCount && data.ticketCount > 1 ? 'all tickets' : 'your ticket'} for entry validation.</p>
+              
+              <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
+              
+              <p>Thank you for choosing EventValidate!</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>For support: admin@eventifyai.com</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject,
+      html,
+      attachments
     });
   }
 }

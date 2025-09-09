@@ -347,6 +347,53 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Update report status endpoint
+  app.put("/api/reports/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const reportId = req.params.id;
+      const { status, reviewNotes } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      const validStatuses = ['pending', 'reviewed', 'closed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      // First, verify the report belongs to the user's organization
+      const existingReport = await mongoStorage.getReportById(reportId);
+      if (!existingReport) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      // Check organization access
+      const userOrganizationId = req.user?.organizationId?.toString();
+      if (existingReport.organizationId?.toString() !== userOrganizationId) {
+        return res.status(403).json({ message: "Access denied: Report belongs to different organization" });
+      }
+      
+      const updates: any = { status };
+      if (reviewNotes) {
+        updates.reviewNotes = reviewNotes;
+      }
+      
+      console.log('Updating report with data:', { reportId, updates });
+      const updatedReport = await mongoStorage.updateEventReport(reportId, updates);
+      console.log('Update result:', updatedReport);
+      
+      if (!updatedReport) {
+        return res.status(500).json({ message: "Failed to update report" });
+      }
+      
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("Error updating report:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Event reports endpoints
   app.get("/api/events/:eventId/reports", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -2046,10 +2093,15 @@ export function registerMongoRoutes(app: Express) {
   // Ticket Purchase API (MongoDB-based)
   app.post("/api/tickets/purchase", async (req: Request, res: Response) => {
     try {
-      const { eventId, ownerEmail, ownerPhone, ticketCategoryId, paymentMethod } = req.body;
+      const { eventId, ownerEmail, ownerPhone, ticketCategoryId, quantity = 1, paymentMethod } = req.body;
       
       if (!eventId || !ownerEmail || !ticketCategoryId || !paymentMethod) {
         return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Validate quantity
+      if (!quantity || quantity < 1 || quantity > 50) {
+        return res.status(400).json({ message: "Invalid quantity. Must be between 1 and 50" });
       }
 
       // Generate owner name from email if not provided (for privacy)
@@ -2088,48 +2140,60 @@ export function registerMongoRoutes(app: Express) {
         return res.status(400).json({ message: "This ticket category is no longer available" });
       }
 
-      // Generate ticket data
-      const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      
-      // Generate QR code data
-      const qrData = {
-        eventId,
-        ticketNumber,
-        ownerEmail,
-        issuedAt: new Date().toISOString()
-      };
+      // Calculate total amount for all tickets
+      const totalAmount = ticketCategory.price * quantity;
 
+      // Create multiple tickets if quantity > 1
+      const createdTickets = [];
       const QRCode = await import('qrcode');
-      const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData));
 
-      // Create ticket record
-      const ticketData = {
-        eventId: new mongoose.Types.ObjectId(eventId),
-        organizationId: new mongoose.Types.ObjectId(event.organizationId),
-        ownerEmail,
-        ownerPhone: ownerPhone || '',
-        ownerName,
-        ticketNumber,
-        category: ticketCategory.name,
-        price: ticketCategory.price,
-        currency: ticketCategory.currency,
-        status: "pending",
-        paymentStatus: paymentMethod === "manual" ? "pending" : "pending",
-        paymentMethod,
-        qrCode: qrCodeImage,
-        qrCodeImage: paymentMethod === "manual" ? qrCodeImage : undefined, // Provide QR image for manual payments immediately
-        transferHistory: []
-      };
+      for (let i = 0; i < quantity; i++) {
+        // Generate unique ticket data for each ticket
+        const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        
+        // Generate QR code data for this specific ticket
+        const qrData = {
+          eventId,
+          ticketNumber,
+          ownerEmail,
+          ticketIndex: i + 1,
+          totalTickets: quantity,
+          issuedAt: new Date().toISOString()
+        };
 
-      const ticket = await mongoStorage.createTicket(ticketData);
+        const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData));
 
-      if (paymentMethod === "paystack" && ticketCategory.price > 0) {
+        // Create individual ticket record
+        const ticketData = {
+          eventId: new mongoose.Types.ObjectId(eventId),
+          organizationId: new mongoose.Types.ObjectId(event.organizationId),
+          ownerEmail,
+          ownerPhone: ownerPhone || '',
+          ownerName,
+          ticketNumber,
+          category: ticketCategory.name,
+          price: ticketCategory.price,
+          currency: ticketCategory.currency,
+          status: "pending",
+          paymentStatus: paymentMethod === "manual" ? "pending" : "pending",
+          paymentMethod,
+          qrCode: qrCodeImage,
+          qrCodeImage: paymentMethod === "manual" ? qrCodeImage : undefined, // Provide QR image for manual payments immediately
+          transferHistory: []
+        };
+
+        const ticket = await mongoStorage.createTicket(ticketData);
+        createdTickets.push(ticket);
+      }
+
+      // Handle payment for all tickets
+      if (paymentMethod === "paystack" && totalAmount > 0) {
         // Initialize Paystack payment
         const { initializePaystackPayment } = await import('./paystack');
         const { nanoid } = await import('nanoid');
         
         const reference = `TKT_${Date.now()}_${nanoid(8)}`;
-        const amount = ticketCategory.price * 100; // Convert to kobo
+        const amount = totalAmount * 100; // Convert total amount to kobo
 
         try {
           const paymentData = await initializePaystackPayment(
@@ -2137,43 +2201,56 @@ export function registerMongoRoutes(app: Express) {
             amount,
             reference,
             {
-              ticketId: ticket._id.toString(),
+              ticketIds: createdTickets.map(t => t._id.toString()),
               eventId,
               ticketCategoryId,
-              ticketNumber,
+              quantity,
+              totalAmount,
               ownerName,
               eventName: event.name,
-              type: 'ticket_purchase'
+              type: 'ticket_purchase_multiple'
             }
           );
 
           if (paymentData.status) {
-            // Update ticket with payment reference
-            await mongoStorage.updateTicket(ticket._id.toString(), {
-              paymentReference: reference
-            });
+            // Update all tickets with payment reference
+            for (const ticket of createdTickets) {
+              await mongoStorage.updateTicket(ticket._id.toString(), {
+                paymentReference: reference
+              });
+            }
 
             res.json({
-              ticketId: ticket._id.toString(),
+              ticketIds: createdTickets.map(t => t._id.toString()),
+              quantity,
+              totalAmount,
               paymentUrl: paymentData.data.authorization_url,
               reference,
             });
           } else {
-            // Delete ticket if payment initialization failed
-            await mongoStorage.deleteTicket(ticket._id.toString());
+            // Delete all tickets if payment initialization failed
+            for (const ticket of createdTickets) {
+              await mongoStorage.deleteTicket(ticket._id.toString());
+            }
             res.status(400).json({ message: "Payment initialization failed" });
           }
         } catch (paymentError) {
-          // Delete ticket if payment initialization failed
-          await mongoStorage.deleteTicket(ticket._id.toString());
+          // Delete all tickets if payment initialization failed
+          for (const ticket of createdTickets) {
+            await mongoStorage.deleteTicket(ticket._id.toString());
+          }
           console.error("Payment initialization error:", paymentError);
           res.status(500).json({ message: "Payment initialization failed" });
         }
       } else {
         // For manual payment or free tickets
         res.json({
-          ticketId: ticket._id.toString(),
-          message: paymentMethod === "manual" ? "Ticket reserved. Complete payment to activate." : "Free ticket created successfully.",
+          ticketIds: createdTickets.map(t => t._id.toString()),
+          quantity,
+          totalAmount,
+          message: paymentMethod === "manual" 
+            ? `${quantity} ticket(s) reserved. Complete payment to activate.` 
+            : `${quantity} free ticket(s) created successfully.`,
         });
       }
     } catch (error) {
@@ -2196,7 +2273,28 @@ export function registerMongoRoutes(app: Express) {
       const { verifyPaystackPayment } = await import('./paystack');
       const verificationData = await verifyPaystackPayment(paymentReference as string);
 
-      if (verificationData.status && verificationData.data.status === 'success') {
+      console.log('Payment verification result:', JSON.stringify(verificationData, null, 2));
+
+      // More robust verification check - handle different status formats
+      const isVerificationSuccessful = (
+        verificationData && 
+        (
+          // Standard Paystack response format
+          (verificationData.status === true && verificationData.data?.status === 'success') ||
+          // Alternative status formats
+          (verificationData.status === 'success') ||
+          (verificationData.success === true && verificationData.data?.status === 'success') ||
+          // Check if payment was actually successful based on amount and gateway response
+          (verificationData.data?.gateway_response === 'Successful' && verificationData.data?.amount > 0)
+        )
+      );
+
+      console.log('Verification successful?', isVerificationSuccessful);
+      console.log('Verification data status:', verificationData?.status);
+      console.log('Verification data.status:', verificationData?.data?.status);
+      console.log('Gateway response:', verificationData?.data?.gateway_response);
+
+      if (isVerificationSuccessful) {
         const metadata = verificationData.data.metadata;
         const amount = verificationData.data.amount / 100; // Convert from kobo
 
@@ -2249,11 +2347,167 @@ export function registerMongoRoutes(app: Express) {
                 updatedTicket.ownerName,
                 'ticket_purchase'
               );
+
+              // Send email confirmation to ticket purchaser
+              try {
+                const { EmailService } = await import('./services/email-service');
+                const emailService = new EmailService();
+                
+                await emailService.sendPaymentSuccessEmail(updatedTicket.ownerEmail, {
+                  participantName: updatedTicket.ownerName,
+                  eventName: event.name,
+                  eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
+                  eventLocation: event.location || 'TBD',
+                  amount: amount.toString(),
+                  currency: updatedTicket.currency,
+                  transactionId: paymentReference as string,
+                  paymentDate: new Date().toLocaleDateString()
+                });
+                
+                console.log(`✅ Payment confirmation email sent to ${updatedTicket.ownerEmail}`);
+              } catch (emailError) {
+                console.error('❌ Failed to send payment confirmation email:', emailError);
+              }
             }
 
             // Redirect to ticket success page with QR code
             const encodedQRCode = encodeURIComponent(qrImageBase64);
             return res.redirect(`/payment/success?type=ticket&ticketId=${ticketId}&ticketNumber=${encodeURIComponent(updatedTicket.ticketNumber)}&qrCode=${encodedQRCode}&eventName=${encodeURIComponent(event?.name || 'Event')}&ownerName=${encodeURIComponent(updatedTicket.ownerName)}`);
+          }
+        } else if (metadata.type === 'ticket_purchase_multiple') {
+          // Handle multiple ticket purchase payment
+          const ticketIds = metadata.ticketIds;
+          
+          if (!ticketIds || !Array.isArray(ticketIds)) {
+            return res.redirect("/payment/failed?error=invalid_ticket_data");
+          }
+
+          console.log(`Processing multiple ticket payment for ${ticketIds.length} tickets`);
+          
+          // Process each ticket
+          const updatedTickets = [];
+          let event = null;
+          
+          for (const ticketId of ticketIds) {
+            // Get the ticket
+            const ticket = await mongoStorage.getTicketById(ticketId);
+            if (!ticket) {
+              console.error(`Ticket not found: ${ticketId}`);
+              continue;
+            }
+
+            // Generate QR code for each ticket
+            const qrCodeData = JSON.stringify({
+              ticketId: ticket._id.toString(),
+              ticketNumber: ticket.ticketNumber,
+              eventId: ticket.eventId.toString(),
+              timestamp: Date.now()
+            });
+            
+            const QRCode = await import('qrcode');
+            const qrImageBase64 = await QRCode.toDataURL(qrCodeData, {
+              width: 200,
+              margin: 2,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              }
+            });
+
+            // Update ticket payment status
+            const updatedTicket = await mongoStorage.updateTicket(ticketId, {
+              paymentStatus: 'paid',
+              paymentReference: paymentReference as string,
+              status: 'paid',
+              qrCodeImage: qrImageBase64
+            });
+
+            if (updatedTicket) {
+              updatedTickets.push(updatedTicket);
+              
+              // Get event details (same for all tickets)
+              if (!event) {
+                event = await mongoStorage.getEvent(updatedTicket.eventId.toString());
+              }
+            }
+          }
+
+          if (updatedTickets.length > 0 && event) {
+            // Send payment notification to organization admin
+            await NotificationService.createPaymentNotification(
+              event.organizationId.toString(),
+              event._id.toString(),
+              amount,
+              'NGN',
+              metadata.ownerName || 'Customer',
+              'ticket_purchase_multiple'
+            );
+
+            // Send email confirmation to ticket purchaser with PDF attachments
+            try {
+              const { EmailService } = await import('./services/email-service');
+              const { pdfService } = await import('./services/pdf-service');
+              const emailService = new EmailService();
+              
+              // Get first ticket for email address
+              const ownerEmail = updatedTickets[0].ownerEmail;
+              
+              // Generate PDF attachments for each ticket
+              const ticketPDFs = [];
+              for (const ticket of updatedTickets) {
+                try {
+                  const ticketData = {
+                    eventName: event.name,
+                    eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
+                    eventTime: event.startDate ? event.startDate.toLocaleTimeString() : 'TBD',
+                    eventLocation: event.location || 'TBD',
+                    participantName: ticket.ownerName,
+                    registrationId: ticket.ticketNumber,
+                    qrCodeData: JSON.stringify({
+                      ticketId: ticket._id.toString(),
+                      ticketNumber: ticket.ticketNumber,
+                      eventId: ticket.eventId.toString(),
+                      ownerEmail: ticket.ownerEmail,
+                      timestamp: Date.now()
+                    }),
+                    ticketType: ticket.category,
+                    organizationName: event.organizationName || 'EventValidate'
+                  };
+                  
+                  const pdfBuffer = await pdfService.generateEventTicket(ticketData);
+                  ticketPDFs.push({
+                    filename: `ticket-${ticket.ticketNumber}.pdf`,
+                    content: pdfBuffer,
+                    contentType: 'application/pdf'
+                  });
+                } catch (pdfError) {
+                  console.error(`❌ Failed to generate PDF for ticket ${ticket.ticketNumber}:`, pdfError);
+                }
+              }
+              
+              await emailService.sendPaymentSuccessEmailWithAttachments(ownerEmail, {
+                participantName: metadata.ownerName || 'Customer',
+                eventName: event.name,
+                eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
+                eventLocation: event.location || 'TBD',
+                amount: amount.toString(),
+                currency: 'NGN',
+                transactionId: paymentReference as string,
+                paymentDate: new Date().toLocaleDateString(),
+                ticketCount: updatedTickets.length,
+                ticketNumbers: updatedTickets.map(t => t.ticketNumber).join(', ')
+              }, ticketPDFs);
+              
+              console.log(`✅ Payment confirmation email with ${ticketPDFs.length} ticket PDFs sent to ${ownerEmail}`);
+            } catch (emailError) {
+              console.error('❌ Failed to send payment confirmation email:', emailError);
+            }
+
+            // Redirect to success page with multiple ticket data
+            const ticketNumbers = updatedTickets.map(t => t.ticketNumber).join(',');
+            const firstTicketQR = updatedTickets[0].qrCodeImage;
+            
+            return res.redirect(`/payment/success?type=ticket_multiple&ticketCount=${updatedTickets.length}&ticketNumbers=${encodeURIComponent(ticketNumbers)}&qrCode=${encodeURIComponent(firstTicketQR)}&eventName=${encodeURIComponent(event?.name || 'Event')}&ownerName=${encodeURIComponent(metadata.ownerName || 'Customer')}&amount=${amount}&currency=NGN`);
           }
         } else if (metadata.type === 'event_registration' && metadata.registrationId) {
           // Handle event registration payment

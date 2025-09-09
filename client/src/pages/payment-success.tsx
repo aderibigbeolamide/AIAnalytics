@@ -11,12 +11,21 @@ export default function PaymentSuccess() {
   const [, setLocation] = useLocation();
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   
-  const type = searchParams.get('type'); // 'ticket' or 'registration'
+  const type = searchParams.get('type'); // 'ticket', 'ticket_multiple', or 'registration'
   const ticketId = searchParams.get('ticketId');
   const registrationId = searchParams.get('registrationId');
   const eventId = searchParams.get('eventId');
+  
+  // Additional parameters for multiple tickets
+  const ticketCount = searchParams.get('ticketCount');
+  const ticketNumbers = searchParams.get('ticketNumbers');
+  const qrCode = searchParams.get('qrCode');
+  const eventName = searchParams.get('eventName');
+  const ownerName = searchParams.get('ownerName');
+  const amount = searchParams.get('amount');
+  const currency = searchParams.get('currency');
 
-  // Fetch ticket details if it's a ticket purchase
+  // Fetch individual ticket details if it's a single ticket purchase
   const { data: ticket, isLoading: ticketLoading } = useQuery<any>({
     queryKey: ["/api/tickets", ticketId],
     queryFn: async () => {
@@ -26,6 +35,22 @@ export default function PaymentSuccess() {
       return response.json();
     },
     enabled: !!ticketId && type === 'ticket',
+  });
+
+  // Fetch multiple ticket details if it's a multiple ticket purchase
+  const { data: multipleTickets, isLoading: multipleTicketsLoading } = useQuery<any[]>({
+    queryKey: ["/api/tickets/multiple", ticketNumbers],
+    queryFn: async () => {
+      if (!ticketNumbers) return [];
+      const numbers = ticketNumbers.split(',');
+      const ticketPromises = numbers.map(async (number) => {
+        const response = await fetch(`/api/tickets/${number.trim()}`);
+        if (!response.ok) throw new Error(`Failed to fetch ticket ${number}`);
+        return response.json();
+      });
+      return Promise.all(ticketPromises);
+    },
+    enabled: !!ticketNumbers && type === 'ticket_multiple',
   });
 
   // Get registration data from URL params (passed from payment verification)
@@ -85,7 +110,7 @@ export default function PaymentSuccess() {
     enabled: !!registrationId && type === 'registration' && !registrationData,
   });
 
-  const downloadTicketPDF = async () => {
+  const downloadTicketPDF = async (ticketData?: any, ticketIndex?: number) => {
     try {
       const { jsPDF } = await import('jspdf');
       const html2canvas = (await import('html2canvas')).default;
@@ -98,7 +123,7 @@ export default function PaymentSuccess() {
       ticketElement.style.padding = '20px';
       ticketElement.style.width = '400px';
       
-      const data = ticket || registration || registrationData;
+      const data = ticketData || ticket || registration || registrationData;
       
       ticketElement.innerHTML = `
         <div style="text-align: center; font-family: Arial, sans-serif;">
@@ -147,7 +172,10 @@ export default function PaymentSuccess() {
         heightLeft -= pageHeight;
       }
       
-      pdf.save(`${type === 'ticket' ? 'ticket' : 'registration'}-${data?.ticketNumber || data?.registrationId || data?.id || 'card'}.pdf`);
+      const filename = ticketIndex !== undefined 
+        ? `ticket-${data?.ticketNumber || 'unknown'}-${ticketIndex + 1}.pdf`
+        : `${type === 'ticket' ? 'ticket' : 'registration'}-${data?.ticketNumber || data?.registrationId || data?.id || 'card'}.pdf`;
+      pdf.save(filename);
       
       document.body.removeChild(ticketElement);
     } catch (error) {
@@ -155,7 +183,7 @@ export default function PaymentSuccess() {
     }
   };
 
-  if (ticketLoading || (registrationLoading && !registrationData)) {
+  if (ticketLoading || multipleTicketsLoading || (registrationLoading && !registrationData)) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -187,7 +215,8 @@ export default function PaymentSuccess() {
     }
   };
   
-  const isTicket = type === 'ticket';
+  const isTicket = type === 'ticket' || type === 'ticket_multiple';
+  const isMultipleTickets = type === 'ticket_multiple';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
@@ -199,131 +228,254 @@ export default function PaymentSuccess() {
             Payment Successful!
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Your {isTicket ? 'ticket has been purchased' : 'registration is confirmed'}
+            Your {isMultipleTickets ? `${ticketCount} tickets have been purchased` : isTicket ? 'ticket has been purchased' : 'registration is confirmed'}
           </p>
         </div>
 
-        {/* Main Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {isTicket ? <QrCode className="h-5 w-5" /> : <User className="h-5 w-5" />}
-              {isTicket ? 'Your Ticket' : 'Registration Card'}
-            </CardTitle>
-            <CardDescription>
-              {isTicket ? 'Your ticket details and QR code for event entry' : 'Your registration details and access card'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Event Details */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                {data?.event?.name || searchParams.get('eventName') || 'Event Details'}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                  <MapPin className="h-4 w-4" />
-                  <span>{data?.event?.location || searchParams.get('eventLocation') || 'Location TBD'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                  <Calendar className="h-4 w-4" />
-                  <span>{data?.event?.startDate ? new Date(data.event.startDate).toLocaleDateString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleDateString() : 'Date TBD'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Ticket/Registration Info */}  
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Registration ID completely removed as it serves no purpose */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                <div className="mt-1">
-                  <Badge variant="default" className="bg-green-600">
-                    {data?.paymentStatus === 'paid' ? 'Paid' : 'Confirmed'}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            {/* Owner Details */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 dark:text-white">Contact Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-400" />
-                  <span>{data?.ownerName || (data?.firstName && data?.lastName ? `${data.firstName} ${data.lastName}` : '') || (searchParams.get('firstName') && searchParams.get('lastName') ? `${searchParams.get('firstName')} ${searchParams.get('lastName')}` : '') || 'N/A'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span>{data?.ownerEmail || data?.email || searchParams.get('email') || 'N/A'}</span>
-                </div>
-              </div>
-              {isTicket && (
-                <div className="flex items-center gap-2 text-sm">
-                  <CreditCard className="h-4 w-4 text-gray-400" />
-                  <span>Category: {data?.category || 'N/A'}</span>
-                  <span className="ml-4">Price: {data?.currency} {data?.price || 0}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Manual Verification Code */}
-            {(data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId) && (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">Manual Verification Code</h4>
-                <div className="font-mono text-2xl font-bold text-yellow-800 dark:text-yellow-200">
-                  {data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId?.slice(-6) || 'N/A'}
-                </div>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
-                  Use this 6-digit code for manual verification if QR code scanning is not available
-                </p>
-              </div>
-            )}
-
-            {/* QR Code */}
-            <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-lg border">
-              <h4 className="font-medium mb-4">Your Registration QR Code</h4>
-              {(data?.qrCode || data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')) ? (
-                <img 
-                  src={data?.qrCode || data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')} 
-                  alt="QR Code" 
-                  className="w-48 h-48 mx-auto mb-4"
-                  onError={(e) => {
-                    console.error('QR Code image failed to load:', e);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-48 h-48 mx-auto mb-4 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded">
-                  <div className="text-center">
-                    <QrCode className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Loading QR Code...</p>
+        {/* Multiple Tickets - Individual Cards */}
+        {isMultipleTickets && multipleTickets && multipleTickets.length > 0 ? (
+          <div className="space-y-6">
+            {/* Event Details Header */}
+            <Card className="bg-blue-50 dark:bg-blue-900/20">
+              <CardContent className="pt-6">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-3 text-center">
+                  {multipleTickets[0]?.event?.name || eventName || 'Event Details'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 justify-center">
+                    <MapPin className="h-4 w-4" />
+                    <span>{multipleTickets[0]?.event?.location || 'Location TBD'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 justify-center">
+                    <Calendar className="h-4 w-4" />
+                    <span>{multipleTickets[0]?.event?.startDate ? new Date(multipleTickets[0].event.startDate).toLocaleDateString() : 'Date TBD'}</span>
                   </div>
                 </div>
+                <div className="text-center mt-3">
+                  <span className="text-sm font-medium">Total Amount: {currency} {amount}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Individual Ticket Cards */}
+            {multipleTickets.map((ticketData, index) => (
+              <Card key={ticketData.id || index} className="border-2 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <QrCode className="h-5 w-5" />
+                    Ticket #{index + 1}
+                  </CardTitle>
+                  <CardDescription>
+                    Ticket number: {ticketData.ticketNumber}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Ticket Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Owner</label>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-400" />
+                        <span>{ticketData.ownerName || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Category</label>
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-gray-400" />
+                        <span>{ticketData.category || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Price</label>
+                      <span className="block">{ticketData.currency} {ticketData.price || 0}</span>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Status</label>
+                      <div className="mt-1">
+                        <Badge variant="default" className="bg-green-600">
+                          {ticketData.paymentStatus === 'paid' ? 'Paid' : 'Confirmed'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR Code */}
+                  <div className="text-center bg-white dark:bg-gray-800 p-4 rounded-lg border">
+                    <h5 className="font-medium mb-3 text-sm">QR Code for Entry</h5>
+                    {ticketData.qrCodeImage ? (
+                      <img 
+                        src={ticketData.qrCodeImage} 
+                        alt={`QR Code for ticket ${ticketData.ticketNumber}`}
+                        className="w-32 h-32 mx-auto mb-3"
+                        onError={(e) => {
+                          console.error('QR Code image failed to load:', e);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-32 h-32 mx-auto mb-3 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded">
+                        <QrCode className="h-8 w-8 text-gray-400" />
+                      </div>
+                    )}
+                    <Button 
+                      onClick={() => downloadTicketPDF(ticketData, index)} 
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="h-3 w-3" />
+                      Download Ticket PDF
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          /* Single Ticket or Registration Card */
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {isTicket ? <QrCode className="h-5 w-5" /> : <User className="h-5 w-5" />}
+                {isTicket ? 'Your Ticket' : 'Registration Card'}
+              </CardTitle>
+              <CardDescription>
+                {isTicket ? 'Your ticket details and QR code for event entry' : 'Your registration details and access card'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Event Details */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                  {data?.event?.name || searchParams.get('eventName') || 'Event Details'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <MapPin className="h-4 w-4" />
+                    <span>{data?.event?.location || searchParams.get('eventLocation') || 'Location TBD'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <Calendar className="h-4 w-4" />
+                    <span>{data?.event?.startDate ? new Date(data.event.startDate).toLocaleDateString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleDateString() : 'Date TBD'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ticket/Registration Info */}  
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                  <div className="mt-1">
+                    <Badge variant="default" className="bg-green-600">
+                      {data?.paymentStatus === 'paid' ? 'Paid' : 'Confirmed'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Owner Details */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900 dark:text-white">Contact Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-400" />
+                    <span>{data?.ownerName || (data?.firstName && data?.lastName ? `${data.firstName} ${data.lastName}` : '') || (searchParams.get('firstName') && searchParams.get('lastName') ? `${searchParams.get('firstName')} ${searchParams.get('lastName')}` : '') || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span>{data?.ownerEmail || data?.email || searchParams.get('email') || 'N/A'}</span>
+                  </div>
+                </div>
+                {isTicket && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <CreditCard className="h-4 w-4 text-gray-400" />
+                    <span>Category: {data?.category || 'N/A'}</span>
+                    <span className="ml-4">Price: {data?.currency} {data?.price || 0}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Manual Verification Code */}
+              {(data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId) && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                  <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">Manual Verification Code</h4>
+                  <div className="font-mono text-2xl font-bold text-yellow-800 dark:text-yellow-200">
+                    {data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId?.slice(-6) || 'N/A'}
+                  </div>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
+                    Use this 6-digit code for manual verification if QR code scanning is not available
+                  </p>
+                </div>
               )}
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Show this QR code at the event for verification
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+
+              {/* QR Code */}
+              <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-lg border">
+                <h4 className="font-medium mb-4">{isTicket ? 'Your Ticket QR Code' : 'Your Registration QR Code'}</h4>
+                {(data?.qrCode || data?.qrImage || data?.qrCodeImage || qrCode || searchParams.get('qrCodeImage')) ? (
+                  <img 
+                    src={data?.qrCode || data?.qrImage || data?.qrCodeImage || qrCode || searchParams.get('qrCodeImage')} 
+                    alt="QR Code" 
+                    className="w-48 h-48 mx-auto mb-4"
+                    onError={(e) => {
+                      console.error('QR Code image failed to load:', e);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-48 h-48 mx-auto mb-4 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded">
+                    <div className="text-center">
+                      <QrCode className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">Loading QR Code...</p>
+                    </div>
+                  </div>
+                )}
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Show this QR code at the event for verification
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button onClick={downloadTicketPDF} className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            Download {isTicket ? 'Ticket' : 'Card'} PDF
-          </Button>
+        {!isMultipleTickets && (
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button onClick={() => downloadTicketPDF()} className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Download {isTicket ? 'Ticket' : 'Card'} PDF
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setLocation('/')}
+            >
+              Back to Events
+            </Button>
+            {isTicket && (
+              <Button 
+                variant="outline" 
+                onClick={() => setLocation(`/events/${data?.event?.id}`)}
+              >
+                View Event Details
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {/* Common action buttons for all ticket types */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
           <Button 
             variant="outline" 
             onClick={() => setLocation('/')}
           >
             Back to Events
           </Button>
-          {isTicket && (
+          {(data?.event?.id || multipleTickets?.[0]?.event?.id) && (
             <Button 
               variant="outline" 
-              onClick={() => setLocation(`/events/${data?.event?.id}`)}
+              onClick={() => setLocation(`/events/${data?.event?.id || multipleTickets?.[0]?.event?.id}`)}
             >
               View Event Details
             </Button>

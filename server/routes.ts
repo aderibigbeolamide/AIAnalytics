@@ -1866,9 +1866,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reports endpoints
   app.get("/api/reports", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
+      console.log('GET /api/reports - Organization ID:', req.user?.organizationId);
+      
       // Import mongoStorage to use MongoDB operations
       const { mongoStorage } = await import("./mongodb-storage");
-      const reports = await mongoStorage.getAllEventReports();
+      
+      // Filter reports by organization ID for multi-tenant support
+      const reports = await mongoStorage.getReportsByOrganization(req.user!.organizationId!);
+      
+      console.log(`Found ${reports.length} reports for organization ${req.user?.organizationId}`);
       res.json(reports);
     } catch (error) {
       console.error("Failed to fetch reports:", error);
@@ -1930,16 +1936,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid status" });
       }
       
+      const { mongoStorage } = await import("./mongodb-storage");
+      
+      // First, verify the report belongs to the user's organization
+      const existingReport = await mongoStorage.getReportById(reportId);
+      if (!existingReport) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      if (existingReport.organizationId !== req.user!.organizationId) {
+        return res.status(403).json({ message: "Access denied: Report belongs to different organization" });
+      }
+      
       const updates: any = { status };
       if (reviewNotes) {
         updates.reviewNotes = reviewNotes;
       }
       
-      const { mongoStorage } = await import("./mongodb-storage");
+      console.log('Updating report with data:', { reportId, updates });
       const updatedReport = await mongoStorage.updateEventReport(reportId, updates);
+      console.log('Update result:', updatedReport);
       
       if (!updatedReport) {
-        return res.status(404).json({ message: "Report not found" });
+        return res.status(500).json({ message: "Failed to update report" });
       }
       
       res.json(updatedReport);
