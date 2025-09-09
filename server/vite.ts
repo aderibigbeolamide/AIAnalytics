@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url"; // ✅ Add this
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
+// @ts-ignore - vite config is JS, not TS
 import viteConfig from "../vite.config.js";
 import { nanoid } from "nanoid";
 
