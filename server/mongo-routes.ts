@@ -2353,6 +2353,81 @@ export function registerMongoRoutes(app: Express) {
             const encodedQRCode = encodeURIComponent(qrImageBase64);
             return res.redirect(`/payment/success?type=ticket&ticketId=${ticketId}&ticketNumber=${encodeURIComponent(updatedTicket.ticketNumber)}&qrCode=${encodedQRCode}&eventName=${encodeURIComponent(event?.name || 'Event')}&ownerName=${encodeURIComponent(updatedTicket.ownerName)}`);
           }
+        } else if (metadata.type === 'ticket_purchase_multiple') {
+          // Handle multiple ticket purchase payment
+          const ticketIds = metadata.ticketIds;
+          
+          if (!ticketIds || !Array.isArray(ticketIds)) {
+            return res.redirect("/payment/failed?error=invalid_ticket_data");
+          }
+
+          console.log(`Processing multiple ticket payment for ${ticketIds.length} tickets`);
+          
+          // Process each ticket
+          const updatedTickets = [];
+          let event = null;
+          
+          for (const ticketId of ticketIds) {
+            // Get the ticket
+            const ticket = await mongoStorage.getTicketById(ticketId);
+            if (!ticket) {
+              console.error(`Ticket not found: ${ticketId}`);
+              continue;
+            }
+
+            // Generate QR code for each ticket
+            const qrCodeData = JSON.stringify({
+              ticketId: ticket._id.toString(),
+              ticketNumber: ticket.ticketNumber,
+              eventId: ticket.eventId.toString(),
+              timestamp: Date.now()
+            });
+            
+            const QRCode = await import('qrcode');
+            const qrImageBase64 = await QRCode.toDataURL(qrCodeData, {
+              width: 200,
+              margin: 2,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              }
+            });
+
+            // Update ticket payment status
+            const updatedTicket = await mongoStorage.updateTicket(ticketId, {
+              paymentStatus: 'paid',
+              paymentReference: paymentReference as string,
+              status: 'paid',
+              qrCodeImage: qrImageBase64
+            });
+
+            if (updatedTicket) {
+              updatedTickets.push(updatedTicket);
+              
+              // Get event details (same for all tickets)
+              if (!event) {
+                event = await mongoStorage.getEvent(updatedTicket.eventId.toString());
+              }
+            }
+          }
+
+          if (updatedTickets.length > 0 && event) {
+            // Send payment notification to organization admin
+            await NotificationService.createPaymentNotification(
+              event.organizationId.toString(),
+              event._id.toString(),
+              amount,
+              'NGN',
+              metadata.ownerName || 'Customer',
+              'ticket_purchase_multiple'
+            );
+
+            // Redirect to success page with multiple ticket data
+            const ticketNumbers = updatedTickets.map(t => t.ticketNumber).join(',');
+            const firstTicketQR = updatedTickets[0].qrCodeImage;
+            
+            return res.redirect(`/payment/success?type=ticket_multiple&ticketCount=${updatedTickets.length}&ticketNumbers=${encodeURIComponent(ticketNumbers)}&qrCode=${encodeURIComponent(firstTicketQR)}&eventName=${encodeURIComponent(event?.name || 'Event')}&ownerName=${encodeURIComponent(metadata.ownerName || 'Customer')}&amount=${amount}&currency=NGN`);
+          }
         } else if (metadata.type === 'event_registration' && metadata.registrationId) {
           // Handle event registration payment
           const registrationId = metadata.registrationId;
