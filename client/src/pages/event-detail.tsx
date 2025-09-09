@@ -123,12 +123,12 @@ export default function EventDetail() {
       <div className="max-w-4xl mx-auto p-6 space-y-6">
       <Card>
         {/* Event Image */}
-        <div className="h-64 overflow-hidden rounded-t-lg bg-gray-200">
+        <div className="aspect-video w-full overflow-hidden rounded-t-lg bg-gray-200">
           {event.eventImage ? (
             <img 
               src={event.eventImage} 
               alt={event.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-gray-100"
               onError={(e) => {
                 e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1NiIgdmlld0JveD0iMCAwIDQwMCAyNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjU2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Im0xNjAgMTQ4IDQwLTQwIDEyMCAxMjBIMTZ2LTQwbDE0NC0xNDRabS0zMi01NmE0OCA0OCAwIDEgMS05NiAwIDQ4IDQ4IDAgMCAxIDk2IDBaIiBmaWxsPSIjOUM5Q0EzIi8+Cjwvc3ZnPgo=';
               }}
@@ -136,7 +136,7 @@ export default function EventDetail() {
           ) : (
             <EventImage 
               event={event} 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
             />
           )}
         </div>
