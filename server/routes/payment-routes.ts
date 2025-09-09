@@ -24,7 +24,26 @@ export function registerPaymentRoutes(app: Express) {
       const paystackResponse = await verifyPaystackPayment(reference);
       console.log(`Paystack verification response:`, JSON.stringify(paystackResponse, null, 2));
       
-      if (!paystackResponse.status || paystackResponse.data.status !== 'success') {
+      // More robust verification check - handle different status formats
+      const isVerificationSuccessful = (
+        paystackResponse && 
+        (
+          // Standard Paystack response format
+          (paystackResponse.status === true && paystackResponse.data?.status === 'success') ||
+          // Alternative status formats
+          (paystackResponse.status === 'success') ||
+          (paystackResponse.success === true && paystackResponse.data?.status === 'success') ||
+          // Check if payment was actually successful based on amount and gateway response
+          (paystackResponse.data?.gateway_response === 'Successful' && paystackResponse.data?.amount > 0)
+        )
+      );
+
+      console.log('Payment verification successful?', isVerificationSuccessful);
+      console.log('Paystack response status:', paystackResponse?.status);
+      console.log('Paystack data status:', paystackResponse?.data?.status);
+      console.log('Gateway response:', paystackResponse?.data?.gateway_response);
+      
+      if (!isVerificationSuccessful) {
         return res.status(400).json({ 
           status: 'failed',
           message: "Payment verification failed",

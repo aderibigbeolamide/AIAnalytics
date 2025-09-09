@@ -2273,7 +2273,28 @@ export function registerMongoRoutes(app: Express) {
       const { verifyPaystackPayment } = await import('./paystack');
       const verificationData = await verifyPaystackPayment(paymentReference as string);
 
-      if (verificationData.status && verificationData.data.status === 'success') {
+      console.log('Payment verification result:', JSON.stringify(verificationData, null, 2));
+
+      // More robust verification check - handle different status formats
+      const isVerificationSuccessful = (
+        verificationData && 
+        (
+          // Standard Paystack response format
+          (verificationData.status === true && verificationData.data?.status === 'success') ||
+          // Alternative status formats
+          (verificationData.status === 'success') ||
+          (verificationData.success === true && verificationData.data?.status === 'success') ||
+          // Check if payment was actually successful based on amount and gateway response
+          (verificationData.data?.gateway_response === 'Successful' && verificationData.data?.amount > 0)
+        )
+      );
+
+      console.log('Verification successful?', isVerificationSuccessful);
+      console.log('Verification data status:', verificationData?.status);
+      console.log('Verification data.status:', verificationData?.data?.status);
+      console.log('Gateway response:', verificationData?.data?.gateway_response);
+
+      if (isVerificationSuccessful) {
         const metadata = verificationData.data.metadata;
         const amount = verificationData.data.amount / 100; // Convert from kobo
 
