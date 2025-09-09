@@ -18,6 +18,7 @@ const ticketPurchaseSchema = z.object({
   ownerEmail: z.string().email("Valid email is required"),
   ownerPhone: z.string().optional(),
   ticketCategoryId: z.string().min(1, "Please select a ticket category"),
+  quantity: z.number().min(1, "Quantity must be at least 1").max(50, "Maximum 50 tickets per purchase"),
   paymentMethod: z.enum(["paystack", "manual"]),
 });
 
@@ -29,6 +30,7 @@ export default function BuyTicket() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [paymentInitialized, setPaymentInitialized] = useState(false);
+  const [totalAmount, setTotalAmount] = useState(0);
 
   const form = useForm<TicketPurchaseData>({
     resolver: zodResolver(ticketPurchaseSchema),
@@ -36,9 +38,26 @@ export default function BuyTicket() {
       ownerEmail: "",
       ownerPhone: "",
       ticketCategoryId: "",
+      quantity: 1,
       paymentMethod: "paystack",
     },
   });
+
+  // Watch form values to calculate total
+  const watchedValues = form.watch(["ticketCategoryId", "quantity"]);
+  
+  // Calculate total amount when category or quantity changes
+  useEffect(() => {
+    const [categoryId, quantity] = watchedValues;
+    if (categoryId && quantity && event?.ticketCategories) {
+      const selectedCategory = event.ticketCategories.find((cat: any) => cat.id === categoryId);
+      if (selectedCategory) {
+        setTotalAmount(selectedCategory.price * quantity);
+      }
+    } else {
+      setTotalAmount(0);
+    }
+  }, [watchedValues, event?.ticketCategories]);
 
   // Fetch event details from public endpoint to ensure eventType is included
   const { data: event, isLoading } = useQuery<any>({
@@ -310,6 +329,46 @@ export default function BuyTicket() {
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantity</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="50"
+                            placeholder="Enter number of tickets"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Total Amount Display */}
+                  {totalAmount > 0 && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-blue-900">Total Amount:</span>
+                        <span className="text-xl font-bold text-blue-900">
+                          {event.ticketCategories?.find((cat: any) => cat.id === form.watch("ticketCategoryId"))?.currency || 'NGN'} {totalAmount.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-sm text-blue-700 mt-1">
+                        {form.watch("quantity")} ticket(s) × {
+                          event.ticketCategories?.find((cat: any) => cat.id === form.watch("ticketCategoryId"))?.currency || 'NGN'
+                        } {
+                          event.ticketCategories?.find((cat: any) => cat.id === form.watch("ticketCategoryId"))?.price?.toLocaleString() || 0
+                        } each
+                      </div>
+                    </div>
+                  )}
 
                   <FormField
                     control={form.control}
