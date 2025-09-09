@@ -27,9 +27,7 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5000,
-    hmr: {
-      port: 5000,
-    },
+    hmr: false, // Disable HMR for Replit environment
     fs: {
       strict: false,
       allow: [
