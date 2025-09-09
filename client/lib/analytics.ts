@@ -81,7 +81,7 @@ export const initAnalytics = () => {
 export const trackPageView = (url: string) => {
   if (typeof window === 'undefined') return;
   
-  const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID || import.meta.env.VITE_GA_TRACKING_ID;
+  const measurementId = "G-DDXDLBYJ0K";
   
   // Track with Google Analytics if available
   if (window.gtag && measurementId) {
