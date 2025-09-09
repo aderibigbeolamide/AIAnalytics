@@ -838,6 +838,7 @@ export class MongoStorage implements IMongoStorage {
         { $set: { ...updates, updatedAt: new Date() } },
         { returnDocument: 'after' }
       );
+      console.log('MongoDB update result:', result);
       return result || null;
     } catch (error) {
       console.error('Error updating event report:', error);

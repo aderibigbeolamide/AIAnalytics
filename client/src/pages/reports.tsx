@@ -62,11 +62,14 @@ export default function Reports() {
       return result;
     },
     onSuccess: (data) => {
+      console.log('Update success callback, data:', data);
       toast({
         title: "Report updated",
-        description: `Report has been ${data.status}`,
+        description: `Report has been ${data.status || 'updated'}`,
       });
+      // Force cache refresh and component re-render
       queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
+      queryClient.refetchQueries({ queryKey: ['/api/reports'] });
       setShowReviewDialog(false);
       setSelectedReport(null);
       setReviewNotes("");
