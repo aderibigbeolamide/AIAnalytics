@@ -2443,15 +2443,49 @@ export function registerMongoRoutes(app: Express) {
               'ticket_purchase_multiple'
             );
 
-            // Send email confirmation to ticket purchaser
+            // Send email confirmation to ticket purchaser with PDF attachments
             try {
               const { EmailService } = await import('./services/email-service');
+              const { pdfService } = await import('./services/pdf-service');
               const emailService = new EmailService();
               
               // Get first ticket for email address
               const ownerEmail = updatedTickets[0].ownerEmail;
               
-              await emailService.sendPaymentSuccessEmail(ownerEmail, {
+              // Generate PDF attachments for each ticket
+              const ticketPDFs = [];
+              for (const ticket of updatedTickets) {
+                try {
+                  const ticketData = {
+                    eventName: event.name,
+                    eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
+                    eventTime: event.startDate ? event.startDate.toLocaleTimeString() : 'TBD',
+                    eventLocation: event.location || 'TBD',
+                    participantName: ticket.ownerName,
+                    registrationId: ticket.ticketNumber,
+                    qrCodeData: JSON.stringify({
+                      ticketId: ticket._id.toString(),
+                      ticketNumber: ticket.ticketNumber,
+                      eventId: ticket.eventId.toString(),
+                      ownerEmail: ticket.ownerEmail,
+                      timestamp: Date.now()
+                    }),
+                    ticketType: ticket.category,
+                    organizationName: event.organizationName || 'EventValidate'
+                  };
+                  
+                  const pdfBuffer = await pdfService.generateEventTicket(ticketData);
+                  ticketPDFs.push({
+                    filename: `ticket-${ticket.ticketNumber}.pdf`,
+                    content: pdfBuffer,
+                    contentType: 'application/pdf'
+                  });
+                } catch (pdfError) {
+                  console.error(`❌ Failed to generate PDF for ticket ${ticket.ticketNumber}:`, pdfError);
+                }
+              }
+              
+              await emailService.sendPaymentSuccessEmailWithAttachments(ownerEmail, {
                 participantName: metadata.ownerName || 'Customer',
                 eventName: event.name,
                 eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
@@ -2459,10 +2493,12 @@ export function registerMongoRoutes(app: Express) {
                 amount: amount.toString(),
                 currency: 'NGN',
                 transactionId: paymentReference as string,
-                paymentDate: new Date().toLocaleDateString()
-              });
+                paymentDate: new Date().toLocaleDateString(),
+                ticketCount: updatedTickets.length,
+                ticketNumbers: updatedTickets.map(t => t.ticketNumber).join(', ')
+              }, ticketPDFs);
               
-              console.log(`✅ Payment confirmation email sent to ${ownerEmail}`);
+              console.log(`✅ Payment confirmation email with ${ticketPDFs.length} ticket PDFs sent to ${ownerEmail}`);
             } catch (emailError) {
               console.error('❌ Failed to send payment confirmation email:', emailError);
             }
