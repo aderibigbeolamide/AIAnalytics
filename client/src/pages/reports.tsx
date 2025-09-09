@@ -231,7 +231,7 @@ export default function Reports() {
         ) : (
           <div className="space-y-4">
             {filteredReports.map((report) => (
-              <Card key={report.id} className="hover:shadow-md transition-shadow">
+              <Card key={report._id || report.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
