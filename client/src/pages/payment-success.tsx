@@ -196,7 +196,8 @@ export default function PaymentSuccess() {
     }
   };
   
-  const isTicket = type === 'ticket';
+  const isTicket = type === 'ticket' || type === 'ticket_multiple';
+  const isMultipleTickets = type === 'ticket_multiple';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
@@ -208,7 +209,7 @@ export default function PaymentSuccess() {
             Payment Successful!
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Your {isTicket ? 'ticket has been purchased' : 'registration is confirmed'}
+            Your {isMultipleTickets ? `${ticketCount} tickets have been purchased` : isTicket ? 'ticket has been purchased' : 'registration is confirmed'}
           </p>
         </div>
 
@@ -217,10 +218,10 @@ export default function PaymentSuccess() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {isTicket ? <QrCode className="h-5 w-5" /> : <User className="h-5 w-5" />}
-              {isTicket ? 'Your Ticket' : 'Registration Card'}
+              {isMultipleTickets ? `Your ${ticketCount} Tickets` : isTicket ? 'Your Ticket' : 'Registration Card'}
             </CardTitle>
             <CardDescription>
-              {isTicket ? 'Your ticket details and QR code for event entry' : 'Your registration details and access card'}
+              {isMultipleTickets ? `Details for your ${ticketCount} tickets and QR codes for event entry` : isTicket ? 'Your ticket details and QR code for event entry' : 'Your registration details and access card'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -271,8 +272,18 @@ export default function PaymentSuccess() {
                 <div className="flex items-center gap-2 text-sm">
                   <CreditCard className="h-4 w-4 text-gray-400" />
                   <span>Category: {data?.category || 'N/A'}</span>
-                  <span className="ml-4">Price: {data?.currency} {data?.price || 0}</span>
+                  {isMultipleTickets ? (
+                    <span className="ml-4">Total: {currency} {amount}</span>
+                  ) : (
+                    <span className="ml-4">Price: {data?.currency} {data?.price || 0}</span>
+                  )}
                 </div>
+                {isMultipleTickets && ticketNumbers && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <QrCode className="h-4 w-4 text-gray-400" />
+                    <span>Ticket Numbers: {ticketNumbers.split(',').join(', ')}</span>
+                  </div>
+                )}
               )}
             </div>
 
@@ -291,10 +302,10 @@ export default function PaymentSuccess() {
 
             {/* QR Code */}
             <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-lg border">
-              <h4 className="font-medium mb-4">Your Registration QR Code</h4>
-              {(data?.qrCode || data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')) ? (
+              <h4 className="font-medium mb-4">{isTicket ? 'Your Ticket QR Code' : 'Your Registration QR Code'}</h4>
+              {(data?.qrCode || data?.qrImage || data?.qrCodeImage || qrCode || searchParams.get('qrCodeImage')) ? (
                 <img 
-                  src={data?.qrCode || data?.qrImage || data?.qrCodeImage || searchParams.get('qrCodeImage')} 
+                  src={data?.qrCode || data?.qrImage || data?.qrCodeImage || qrCode || searchParams.get('qrCodeImage')} 
                   alt="QR Code" 
                   className="w-48 h-48 mx-auto mb-4"
                   onError={(e) => {

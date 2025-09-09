@@ -2347,6 +2347,27 @@ export function registerMongoRoutes(app: Express) {
                 updatedTicket.ownerName,
                 'ticket_purchase'
               );
+
+              // Send email confirmation to ticket purchaser
+              try {
+                const { EmailService } = await import('./services/email-service');
+                const emailService = new EmailService();
+                
+                await emailService.sendPaymentSuccessEmail(updatedTicket.ownerEmail, {
+                  participantName: updatedTicket.ownerName,
+                  eventName: event.name,
+                  eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
+                  eventLocation: event.location || 'TBD',
+                  amount: amount.toString(),
+                  currency: updatedTicket.currency,
+                  transactionId: paymentReference as string,
+                  paymentDate: new Date().toLocaleDateString()
+                });
+                
+                console.log(`✅ Payment confirmation email sent to ${updatedTicket.ownerEmail}`);
+              } catch (emailError) {
+                console.error('❌ Failed to send payment confirmation email:', emailError);
+              }
             }
 
             // Redirect to ticket success page with QR code
@@ -2421,6 +2442,30 @@ export function registerMongoRoutes(app: Express) {
               metadata.ownerName || 'Customer',
               'ticket_purchase_multiple'
             );
+
+            // Send email confirmation to ticket purchaser
+            try {
+              const { EmailService } = await import('./services/email-service');
+              const emailService = new EmailService();
+              
+              // Get first ticket for email address
+              const ownerEmail = updatedTickets[0].ownerEmail;
+              
+              await emailService.sendPaymentSuccessEmail(ownerEmail, {
+                participantName: metadata.ownerName || 'Customer',
+                eventName: event.name,
+                eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
+                eventLocation: event.location || 'TBD',
+                amount: amount.toString(),
+                currency: 'NGN',
+                transactionId: paymentReference as string,
+                paymentDate: new Date().toLocaleDateString()
+              });
+              
+              console.log(`✅ Payment confirmation email sent to ${ownerEmail}`);
+            } catch (emailError) {
+              console.error('❌ Failed to send payment confirmation email:', emailError);
+            }
 
             // Redirect to success page with multiple ticket data
             const ticketNumbers = updatedTickets.map(t => t.ticketNumber).join(',');
