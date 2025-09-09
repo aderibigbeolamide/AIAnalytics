@@ -82,10 +82,10 @@ export default function PublicEventDetail() {
         {/* Header with Event Image */}
         <div className="text-center mb-8">
           {/* Event Image */}
-          <div className="mx-auto mb-6 h-64 w-full max-w-2xl overflow-hidden rounded-lg shadow-lg">
+          <div className="mx-auto mb-6 w-full max-w-2xl overflow-hidden rounded-lg shadow-lg bg-gray-100">
             <EventImage 
               event={event} 
-              className="w-full h-full object-cover"
+              className="w-full h-auto object-cover object-center"
             />
           </div>
           
