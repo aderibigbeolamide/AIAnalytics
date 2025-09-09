@@ -11,10 +11,19 @@ export default function PaymentSuccess() {
   const [, setLocation] = useLocation();
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   
-  const type = searchParams.get('type'); // 'ticket' or 'registration'
+  const type = searchParams.get('type'); // 'ticket', 'ticket_multiple', or 'registration'
   const ticketId = searchParams.get('ticketId');
   const registrationId = searchParams.get('registrationId');
   const eventId = searchParams.get('eventId');
+  
+  // Additional parameters for multiple tickets
+  const ticketCount = searchParams.get('ticketCount');
+  const ticketNumbers = searchParams.get('ticketNumbers');
+  const qrCode = searchParams.get('qrCode');
+  const eventName = searchParams.get('eventName');
+  const ownerName = searchParams.get('ownerName');
+  const amount = searchParams.get('amount');
+  const currency = searchParams.get('currency');
 
   // Fetch ticket details if it's a ticket purchase
   const { data: ticket, isLoading: ticketLoading } = useQuery<any>({
