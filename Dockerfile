@@ -75,8 +75,17 @@
 # Simple single-stage Dockerfile for EventValidate
 FROM node:18-alpine
 
-# Install dumb-init
-RUN apk add --no-cache dumb-init
+# Install dumb-init & curl for healthcheck
+RUN apk add --no-cache dumb-init curl
+
+# --- Add build arguments for analytics IDs ---
+
+ARG VITE_GA_MEASUREMENT_ID
+ENV VITE_GA_MEASUREMENT_ID=${VITE_GA_MEASUREMENT_ID}
+
+# Make them available inside the image as env vars
+ENV VITE_GA_MEASUREMENT_ID=$VITE_GA_MEASUREMENT_ID
+ENV VITE_GTM_ID=$VITE_GTM_ID
 
 # Create app directory
 WORKDIR /app
@@ -90,7 +99,7 @@ RUN npm install -g pnpm && pnpm install
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the application (Vite will read the env vars above)
 RUN pnpm run build
 
 # Create uploads directory
@@ -100,14 +109,12 @@ RUN mkdir -p uploads
 EXPOSE 3000
 
 # Health check
-# Install curl
-RUN apk add --no-cache curl
-
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
-  
+
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
 CMD ["npm", "start"]
+
