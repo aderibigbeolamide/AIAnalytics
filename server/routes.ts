@@ -1953,7 +1953,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updates.reviewNotes = reviewNotes;
       }
       
+      console.log('Updating report with data:', { reportId, updates });
       const updatedReport = await mongoStorage.updateEventReport(reportId, updates);
+      console.log('Update result:', updatedReport);
       
       if (!updatedReport) {
         return res.status(500).json({ message: "Failed to update report" });
