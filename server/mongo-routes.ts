@@ -2093,10 +2093,15 @@ export function registerMongoRoutes(app: Express) {
   // Ticket Purchase API (MongoDB-based)
   app.post("/api/tickets/purchase", async (req: Request, res: Response) => {
     try {
-      const { eventId, ownerEmail, ownerPhone, ticketCategoryId, paymentMethod } = req.body;
+      const { eventId, ownerEmail, ownerPhone, ticketCategoryId, quantity = 1, paymentMethod } = req.body;
       
       if (!eventId || !ownerEmail || !ticketCategoryId || !paymentMethod) {
         return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Validate quantity
+      if (!quantity || quantity < 1 || quantity > 50) {
+        return res.status(400).json({ message: "Invalid quantity. Must be between 1 and 50" });
       }
 
       // Generate owner name from email if not provided (for privacy)
@@ -2135,48 +2140,60 @@ export function registerMongoRoutes(app: Express) {
         return res.status(400).json({ message: "This ticket category is no longer available" });
       }
 
-      // Generate ticket data
-      const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      
-      // Generate QR code data
-      const qrData = {
-        eventId,
-        ticketNumber,
-        ownerEmail,
-        issuedAt: new Date().toISOString()
-      };
+      // Calculate total amount for all tickets
+      const totalAmount = ticketCategory.price * quantity;
 
+      // Create multiple tickets if quantity > 1
+      const createdTickets = [];
       const QRCode = await import('qrcode');
-      const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData));
 
-      // Create ticket record
-      const ticketData = {
-        eventId: new mongoose.Types.ObjectId(eventId),
-        organizationId: new mongoose.Types.ObjectId(event.organizationId),
-        ownerEmail,
-        ownerPhone: ownerPhone || '',
-        ownerName,
-        ticketNumber,
-        category: ticketCategory.name,
-        price: ticketCategory.price,
-        currency: ticketCategory.currency,
-        status: "pending",
-        paymentStatus: paymentMethod === "manual" ? "pending" : "pending",
-        paymentMethod,
-        qrCode: qrCodeImage,
-        qrCodeImage: paymentMethod === "manual" ? qrCodeImage : undefined, // Provide QR image for manual payments immediately
-        transferHistory: []
-      };
+      for (let i = 0; i < quantity; i++) {
+        // Generate unique ticket data for each ticket
+        const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        
+        // Generate QR code data for this specific ticket
+        const qrData = {
+          eventId,
+          ticketNumber,
+          ownerEmail,
+          ticketIndex: i + 1,
+          totalTickets: quantity,
+          issuedAt: new Date().toISOString()
+        };
 
-      const ticket = await mongoStorage.createTicket(ticketData);
+        const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData));
 
-      if (paymentMethod === "paystack" && ticketCategory.price > 0) {
+        // Create individual ticket record
+        const ticketData = {
+          eventId: new mongoose.Types.ObjectId(eventId),
+          organizationId: new mongoose.Types.ObjectId(event.organizationId),
+          ownerEmail,
+          ownerPhone: ownerPhone || '',
+          ownerName,
+          ticketNumber,
+          category: ticketCategory.name,
+          price: ticketCategory.price,
+          currency: ticketCategory.currency,
+          status: "pending",
+          paymentStatus: paymentMethod === "manual" ? "pending" : "pending",
+          paymentMethod,
+          qrCode: qrCodeImage,
+          qrCodeImage: paymentMethod === "manual" ? qrCodeImage : undefined, // Provide QR image for manual payments immediately
+          transferHistory: []
+        };
+
+        const ticket = await mongoStorage.createTicket(ticketData);
+        createdTickets.push(ticket);
+      }
+
+      // Handle payment for all tickets
+      if (paymentMethod === "paystack" && totalAmount > 0) {
         // Initialize Paystack payment
         const { initializePaystackPayment } = await import('./paystack');
         const { nanoid } = await import('nanoid');
         
         const reference = `TKT_${Date.now()}_${nanoid(8)}`;
-        const amount = ticketCategory.price * 100; // Convert to kobo
+        const amount = totalAmount * 100; // Convert total amount to kobo
 
         try {
           const paymentData = await initializePaystackPayment(
@@ -2184,43 +2201,56 @@ export function registerMongoRoutes(app: Express) {
             amount,
             reference,
             {
-              ticketId: ticket._id.toString(),
+              ticketIds: createdTickets.map(t => t._id.toString()),
               eventId,
               ticketCategoryId,
-              ticketNumber,
+              quantity,
+              totalAmount,
               ownerName,
               eventName: event.name,
-              type: 'ticket_purchase'
+              type: 'ticket_purchase_multiple'
             }
           );
 
           if (paymentData.status) {
-            // Update ticket with payment reference
-            await mongoStorage.updateTicket(ticket._id.toString(), {
-              paymentReference: reference
-            });
+            // Update all tickets with payment reference
+            for (const ticket of createdTickets) {
+              await mongoStorage.updateTicket(ticket._id.toString(), {
+                paymentReference: reference
+              });
+            }
 
             res.json({
-              ticketId: ticket._id.toString(),
+              ticketIds: createdTickets.map(t => t._id.toString()),
+              quantity,
+              totalAmount,
               paymentUrl: paymentData.data.authorization_url,
               reference,
             });
           } else {
-            // Delete ticket if payment initialization failed
-            await mongoStorage.deleteTicket(ticket._id.toString());
+            // Delete all tickets if payment initialization failed
+            for (const ticket of createdTickets) {
+              await mongoStorage.deleteTicket(ticket._id.toString());
+            }
             res.status(400).json({ message: "Payment initialization failed" });
           }
         } catch (paymentError) {
-          // Delete ticket if payment initialization failed
-          await mongoStorage.deleteTicket(ticket._id.toString());
+          // Delete all tickets if payment initialization failed
+          for (const ticket of createdTickets) {
+            await mongoStorage.deleteTicket(ticket._id.toString());
+          }
           console.error("Payment initialization error:", paymentError);
           res.status(500).json({ message: "Payment initialization failed" });
         }
       } else {
         // For manual payment or free tickets
         res.json({
-          ticketId: ticket._id.toString(),
-          message: paymentMethod === "manual" ? "Ticket reserved. Complete payment to activate." : "Free ticket created successfully.",
+          ticketIds: createdTickets.map(t => t._id.toString()),
+          quantity,
+          totalAmount,
+          message: paymentMethod === "manual" 
+            ? `${quantity} ticket(s) reserved. Complete payment to activate.` 
+            : `${quantity} free ticket(s) created successfully.`,
         });
       }
     } catch (error) {
