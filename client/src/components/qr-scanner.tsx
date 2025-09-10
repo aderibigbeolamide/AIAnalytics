@@ -34,23 +34,12 @@ export function QRScanner({ onClose }: QRScannerProps) {
         headers.Authorization = authHeaders.Authorization;
       }
       
-      // Extract uniqueId from QR data (handle both JSON format and plain text)
-      let uniqueId: string;
-      try {
-        const parsed = JSON.parse(qrData);
-        uniqueId = parsed.uniqueId || parsed.id || qrData;
-      } catch {
-        // If not JSON, treat as plain uniqueId
-        uniqueId = qrData.trim();
-      }
-      
       console.log('QR code scanned - Raw data:', qrData);
-      console.log('Extracted uniqueId for validation:', uniqueId);
       
-      const response = await fetch("/api/validate-id", {
+      const response = await fetch("/api/registrations/validate-qr", {
         method: "POST",
         headers,
-        body: JSON.stringify({ uniqueId }),
+        body: JSON.stringify({ qrCode: qrData }),
       });
       
       const result = await response.json();
@@ -125,22 +114,12 @@ export function QRScanner({ onClose }: QRScannerProps) {
     // Enhanced QR detection with multiple attempts and better parameters
     let code = jsQR(imageData.data, imageData.width, imageData.height, {
       inversionAttempts: "attemptBoth",
-      locateOptions: {
-        finder: {
-          strictMode: false,
-        },
-      },
     });
     
     // Try with different parameters if first attempt fails
     if (!code) {
       code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "invertFirst",
-        locateOptions: {
-          finder: {
-            strictMode: true,
-          },
-        },
       });
     }
     

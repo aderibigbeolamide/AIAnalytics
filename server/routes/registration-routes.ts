@@ -142,7 +142,7 @@ export function registerRegistrationRoutes(app: Express) {
 
       const registration = await RegistrationService.getRegistrationByUniqueId(uniqueId);
       
-      if (!registration) {
+      if (!registration || !registration.id) {
         return res.status(404).json({ message: "Registration not found" });
       }
 
