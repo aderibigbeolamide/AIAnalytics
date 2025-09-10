@@ -22,23 +22,21 @@ import {
 import { Link } from "wouter";
 import { format } from "date-fns";
 
-interface RegistrationData {
+interface TicketData {
   id: string;
-  eventId: string;
-  registrationType: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  auxiliaryBody: string;
-  status: 'registered' | 'validated' | 'cancelled';
-  paymentStatus: 'not_required' | 'pending' | 'completed' | 'failed';
-  paymentAmount?: number;
-  paymentReceiptUrl?: string;
-  uniqueId: string;
-  qrCode?: string;
-  customData: any;
+  ticketNumber: string;
+  ownerEmail: string;
+  ownerPhone?: string;
+  ownerName?: string;
+  category: string;
+  price: string;
+  currency: string;
+  status: 'active' | 'used' | 'expired' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentMethod?: string;
+  validatedAt?: string;
   createdAt: string;
-  memberId?: string;
+  transferHistory: any[];
 }
 
 export default function EventTickets() {
@@ -54,55 +52,53 @@ export default function EventTickets() {
     enabled: !!eventId,
   });
 
-  // Fetch registrations for this event
-  const { data: registrations = [], isLoading: registrationsLoading } = useQuery<RegistrationData[]>({
-    queryKey: [`/api/events/${eventId}/registrations`],
+  // Fetch tickets for this event
+  const { data: tickets = [], isLoading: ticketsLoading } = useQuery<TicketData[]>({
+    queryKey: [`/api/events/${eventId}/tickets`],
     enabled: !!eventId,
     staleTime: 0, // Force fresh data
     gcTime: 0, // Don't cache this query (TanStack Query v5)
   });
 
-  // Filter registrations based on search and status
-  const filteredRegistrations = registrations.filter((registration) => {
-    if (!registration) return false;
+  // Filter tickets based on search and status
+  const filteredTickets = tickets.filter((ticket) => {
+    if (!ticket) return false;
     
-    const fullName = `${registration.firstName} ${registration.lastName}`;
     const matchesSearch = 
-      (registration.uniqueId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (registration.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (registration.auxiliaryBody || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (ticket.ticketNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ticket.ownerEmail || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ticket.ownerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ticket.category || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || registration.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
-  // Group registrations by ticket type (registration type)
-  const registrationsByCategory = filteredRegistrations.reduce((acc, registration) => {
-    const ticketType = registration.registrationType === 'member' ? 'Member Tickets' : 
-                      registration.registrationType === 'guest' ? 'Guest Tickets' : 
-                      registration.registrationType === 'invitee' ? 'Invitee Tickets' : 
-                      'Standard Tickets';
-    if (!acc[ticketType]) {
-      acc[ticketType] = [];
+  // Group tickets by category
+  const ticketsByCategory = filteredTickets.reduce((acc, ticket) => {
+    const category = ticket.category || 'Standard Tickets';
+    if (!acc[category]) {
+      acc[category] = [];
     }
-    acc[ticketType].push(registration);
+    acc[category].push(ticket);
     return acc;
-  }, {} as Record<string, RegistrationData[]>);
+  }, {} as Record<string, TicketData[]>);
   
-  console.log('Registrations data:', registrations);
-  console.log('Filtered registrations:', filteredRegistrations);
-  console.log('Registrations by category:', registrationsByCategory);
+  console.log('Tickets data:', tickets);
+  console.log('Filtered tickets:', filteredTickets);
+  console.log('Tickets by category:', ticketsByCategory);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'registered':
+      case 'active':
         return 'bg-green-100 text-green-800';
-      case 'validated':
+      case 'used':
         return 'bg-blue-100 text-blue-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
+      case 'expired':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -110,20 +106,20 @@ export default function EventTickets() {
 
   const getPaymentStatusIcon = (paymentStatus: string) => {
     switch (paymentStatus) {
-      case 'completed':
+      case 'paid':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'failed':
         return <XCircle className="h-4 w-4 text-red-600" />;
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'not_required':
-        return <CheckCircle className="h-4 w-4 text-gray-600" />;
+      case 'refunded':
+        return <XCircle className="h-4 w-4 text-blue-600" />;
       default:
         return <Clock className="h-4 w-4 text-gray-600" />;
     }
   };
 
-  if (eventLoading || registrationsLoading) {
+  if (eventLoading || ticketsLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse space-y-4">
@@ -166,8 +162,8 @@ export default function EventTickets() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold">{(event as any)?.name} - Registrations</h1>
-              <p className="text-gray-600">Manage and view event registrations</p>
+              <h1 className="text-2xl font-bold">{(event as any)?.name} - Tickets</h1>
+              <p className="text-gray-600">Manage and view event tickets</p>
             </div>
           </div>
           <Badge variant="secondary" className="bg-purple-100 text-purple-800">
@@ -181,24 +177,24 @@ export default function EventTickets() {
           <CardContent className="pt-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{registrations.length}</div>
-                <div className="text-sm text-gray-600">Total Registrations</div>
+                <div className="text-2xl font-bold text-blue-600">{tickets.length}</div>
+                <div className="text-sm text-gray-600">Total Tickets</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {registrations.filter(r => r.status === 'registered').length}
+                  {tickets.filter(t => t.status === 'active').length}
                 </div>
-                <div className="text-sm text-gray-600">Registered</div>
+                <div className="text-sm text-gray-600">Active</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {registrations.filter(r => r.status === 'validated').length}
+                  {tickets.filter(t => t.status === 'used').length}
                 </div>
-                <div className="text-sm text-gray-600">Checked In</div>
+                <div className="text-sm text-gray-600">Used</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {Object.keys(registrationsByCategory).length}
+                  {Object.keys(ticketsByCategory).length}
                 </div>
                 <div className="text-sm text-gray-600">Categories</div>
               </div>
@@ -215,11 +211,11 @@ export default function EventTickets() {
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
                 <Input
-                  placeholder="Search by ID, email, name, or auxiliary body..."
+                  placeholder="Search by ticket number, email, or owner name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
-                  data-testid="input-search-registrations"
+                  data-testid="input-search-tickets"
                 />
               </div>
             </div>
@@ -230,45 +226,45 @@ export default function EventTickets() {
                 onClick={() => setStatusFilter("all")}
                 data-testid="button-filter-all"
               >
-                All ({registrations.length})
+                All ({tickets.length})
               </Button>
               <Button
-                variant={statusFilter === "registered" ? "default" : "outline"}
+                variant={statusFilter === "active" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setStatusFilter("registered")}
-                data-testid="button-filter-registered"
+                onClick={() => setStatusFilter("active")}
+                data-testid="button-filter-active"
               >
-                Registered ({registrations.filter(r => r.status === 'registered').length})
+                Active ({tickets.filter(t => t.status === 'active').length})
               </Button>
               <Button
-                variant={statusFilter === "validated" ? "default" : "outline"}
+                variant={statusFilter === "used" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setStatusFilter("validated")}
-                data-testid="button-filter-validated"
+                onClick={() => setStatusFilter("used")}
+                data-testid="button-filter-used"
               >
-                Checked In ({registrations.filter(r => r.status === 'validated').length})
+                Used ({tickets.filter(t => t.status === 'used').length})
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Registrations by Category */}
-      {Object.keys(registrationsByCategory).length === 0 ? (
+      {/* Tickets by Category */}
+      {Object.keys(ticketsByCategory).length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center">
             <Ticket className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-600 mb-2">No Registrations Found</h3>
+            <h3 className="text-lg font-medium text-gray-600 mb-2">No Tickets Found</h3>
             <p className="text-gray-500">
               {searchTerm || statusFilter !== "all" 
-                ? "No registrations match your current filters." 
-                : "No registrations have been made for this event yet."}
+                ? "No tickets match your current filters." 
+                : "No tickets have been purchased for this event yet."}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-6">
-          {Object.entries(registrationsByCategory).map(([category, categoryRegistrations]) => (
+          {Object.entries(ticketsByCategory).map(([category, categoryTickets]) => (
             <Card key={category}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -277,43 +273,40 @@ export default function EventTickets() {
                     {category}
                   </span>
                   <Badge variant="outline">
-                    {categoryRegistrations.length} registration{categoryRegistrations.length !== 1 ? 's' : ''}
+                    {categoryTickets.length} ticket{categoryTickets.length !== 1 ? 's' : ''}
                   </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {(categoryRegistrations as RegistrationData[]).map((registration) => (
+                  {(categoryTickets as TicketData[]).map((ticket) => (
                     <div 
-                      key={registration.id} 
+                      key={ticket.id} 
                       className="border rounded-lg p-4 hover:bg-gray-50"
-                      data-testid={`registration-card-${registration.uniqueId}`}
+                      data-testid={`ticket-card-${ticket.ticketNumber}`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           <div className="font-mono text-sm font-medium bg-gray-100 px-2 py-1 rounded">
-                            {registration.uniqueId}
+                            {ticket.ticketNumber}
                           </div>
                           <Badge className="bg-purple-100 text-purple-800 border-purple-300">
-                            {registration.registrationType === 'member' ? 'Member Ticket' : 
-                             registration.registrationType === 'guest' ? 'Guest Ticket' : 
-                             registration.registrationType === 'invitee' ? 'Invitee Ticket' : 
-                             'Standard Ticket'}
+                            {ticket.category}
                           </Badge>
-                          <Badge className={getStatusBadge(registration.status)}>
-                            {registration.status === 'registered' ? 'Registered' : registration.status === 'validated' ? 'Checked In' : registration.status}
+                          <Badge className={getStatusBadge(ticket.status)}>
+                            {ticket.status === 'active' ? 'Active' : ticket.status === 'used' ? 'Used' : ticket.status}
                           </Badge>
                           <div className="flex items-center">
-                            {getPaymentStatusIcon(registration.paymentStatus)}
+                            {getPaymentStatusIcon(ticket.paymentStatus)}
                             <span className="ml-1 text-sm text-gray-600">
-                              {registration.paymentStatus === 'not_required' ? 'Free' : registration.paymentStatus}
+                              {ticket.paymentStatus}
                             </span>
                           </div>
                         </div>
-                        {registration.paymentAmount && (
+                        {ticket.price && (
                           <div className="flex items-center text-sm text-gray-600">
                             <DollarSign className="h-4 w-4 mr-1" />
-                            {registration.paymentAmount} NGN
+                            {ticket.price} {ticket.currency}
                           </div>
                         )}
                       </div>
@@ -321,37 +314,29 @@ export default function EventTickets() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div className="flex items-center">
                           <User className="h-4 w-4 mr-2 text-gray-400" />
-                          <span className="font-medium">{registration.firstName} {registration.lastName}</span>
+                          <span className="font-medium">{ticket.ownerName || 'Not specified'}</span>
                         </div>
                         <div className="flex items-center">
                           <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                          <span data-testid={`text-email-${registration.uniqueId}`}>
-                            {registration.email}
+                          <span data-testid={`text-email-${ticket.ticketNumber}`}>
+                            {ticket.ownerEmail}
                           </span>
                         </div>
                         <div className="flex items-center">
-                          <User className="h-4 w-4 mr-2 text-gray-400" />
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm">{registration.registrationType}</span>
-                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
-                              {registration.registrationType === 'member' ? 'Member Ticket' : 
-                               registration.registrationType === 'guest' ? 'Guest Ticket' : 
-                               registration.registrationType === 'invitee' ? 'Invitee Ticket' : 
-                               'Standard Ticket'}
-                            </Badge>
-                          </div>
+                          <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                          <span className="text-sm">{ticket.ownerPhone || 'Not provided'}</span>
                         </div>
                       </div>
                       
                       <div className="flex items-center justify-between mt-3 pt-3 border-t text-xs text-gray-500">
                         <div className="flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
-                          Registered: {format(new Date(registration.createdAt), 'PPp')}
+                          Purchased: {format(new Date(ticket.createdAt), 'PPp')}
                         </div>
-                        {registration.status === 'validated' && (
+                        {ticket.status === 'used' && ticket.validatedAt && (
                           <div className="flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
-                            Checked In
+                            Used: {format(new Date(ticket.validatedAt), 'PPp')}
                           </div>
                         )}
                       </div>
