@@ -3264,14 +3264,18 @@ export function registerMongoRoutes(app: Express) {
         }
 
         // Mark ticket as used
-        await mongoStorage.updateTicket(ticket._id.toString(), {
+        const ticketId = ticket._id ? ticket._id.toString() : '';
+        const validatedById = req.user?.id || '';
+        
+        await mongoStorage.updateTicket(ticketId, {
           status: 'used',
           validatedAt: new Date(),
-          validatedBy: req.user!.id
+          validatedBy: validatedById
         });
 
         // Get event details
-        const event = await mongoStorage.getEvent(ticket.eventId.toString());
+        const eventId = ticket.eventId ? ticket.eventId.toString() : '';
+        const event = await mongoStorage.getEvent(eventId);
 
         return res.json({
           success: true,
