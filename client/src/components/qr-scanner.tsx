@@ -147,14 +147,15 @@ export function QRScanner({ onClose }: QRScannerProps) {
       
       if (data.validationType === 'ticket' && data.registration) {
         memberName = data.registration.guestName || 
-                    `${data.registration.firstName} ${data.registration.lastName}`.trim() || 
+                    data.registration.ownerName || 
                     'Ticket Holder';
         itemType = 'ticket';
         itemId = data.registration.ticketNumber || '';
       } else if (data.registration) {
-        memberName = data.registration.firstName && data.registration.lastName 
-          ? `${data.registration.firstName} ${data.registration.lastName}`
-          : data.registration.guestName || 'Member';
+        memberName = data.registration.guestName || 
+                    data.registration.participantName || 
+                    data.registration.ownerName || 
+                    'Member';
         itemType = 'registration';
         itemId = data.registration.uniqueId || '';
       }
@@ -560,7 +561,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Validation Successful",
-        description: `${data.registration.firstName} ${data.registration.lastName} validated for ${data.event.name}`,
+        description: `${data.details?.participantName || data.details?.ownerName || 'Member'} validated for ${data.details?.eventName || 'Event'}`,
       });
       setManualId("");
       setShowManualInput(false);

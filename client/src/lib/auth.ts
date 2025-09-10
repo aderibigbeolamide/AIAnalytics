@@ -73,10 +73,10 @@ const loadAuthState = () => {
       const authTimestamp = timestamp ? parseInt(timestamp) : Date.now();
       const lastActivityTime = lastActivity ? parseInt(lastActivity) : Date.now();
       
-      // Check if token contains malformed organizationId (stringified MongoDB document)
+      // Check if token contains severely malformed organizationId (only clear if completely invalid)
       if (user?.organizationId && typeof user.organizationId === 'string' && 
-          user.organizationId.includes('_id: new ObjectId(')) {
-        console.log('Detected malformed organizationId in token, clearing auth state to force re-login');
+          user.organizationId.includes('_id: new ObjectId(') && user.organizationId.length > 100) {
+        console.log('Detected severely malformed organizationId in token, clearing auth state to force re-login');
         clearAuthState();
         return { token: null, user: null, member: null, isAuthenticated: false, lastActivity: Date.now() };
       }
