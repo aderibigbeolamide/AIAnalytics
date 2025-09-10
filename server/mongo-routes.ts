@@ -3125,7 +3125,7 @@ export function registerMongoRoutes(app: Express) {
 
       // Try to find as registration
       const registration = await mongoStorage.getEventRegistration(identifier);
-      if (registration && registration.eventId.toString() === eventId) {
+      if (registration && registration.eventId && registration.eventId.toString() === eventId) {
         if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid' && registration.paymentStatus !== 'not_required') {
           return res.json({
             validationStatus: "invalid",
@@ -3140,20 +3140,28 @@ export function registerMongoRoutes(app: Express) {
           });
         }
 
-        await mongoStorage.updateEventRegistration(registration._id.toString(), {
+        // Safely handle ObjectId conversion
+        const validatedById = req.user?.id ? new mongoose.Types.ObjectId(req.user.id) : undefined;
+        
+        await mongoStorage.updateEventRegistration(registration._id ? registration._id.toString() : '', {
           status: 'online',
           attendedAt: new Date(),
-          validatedBy: new mongoose.Types.ObjectId(req.user!.id),
+          validatedBy: validatedById,
           validationMethod: 'manual_unique_id'
         });
+
+        // Safely get participant name
+        const participantName = `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 
+                               registration.registrationData?.fullName || 
+                               'Unknown Participant';
 
         return res.json({
           validationStatus: "valid",
           message: "Registration validated successfully",
           details: {
             type: 'registration',
-            participantName: `${registration.firstName} ${registration.lastName}` || registration.fullName || registration.FullName,
-            eventName: event.name,
+            participantName,
+            eventName: event.name || 'Unknown Event',
             validationMethod: 'manual_unique_id'
           }
         });
