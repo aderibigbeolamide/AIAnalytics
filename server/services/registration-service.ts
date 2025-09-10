@@ -135,19 +135,36 @@ export class RegistrationService {
    */
   static async getRegistrationByQRCode(qrCode: string) {
     try {
+      console.log('🔍 QR validation - parsing QR code:', qrCode);
       const qrData = JSON.parse(qrCode);
-      const registration = await mongoStorage.getEventRegistrationByUniqueId(qrData.registrationId);
+      console.log('🔍 QR validation - parsed data:', qrData);
+      
+      // Try to find registration by registrationId first
+      let registration = null;
+      
+      if (qrData.registrationId) {
+        console.log('🔍 QR validation - looking up by registrationId:', qrData.registrationId);
+        registration = await mongoStorage.getEventRegistration(qrData.registrationId);
+      }
+      
+      // If not found, try by uniqueId
+      if (!registration && qrData.uniqueId) {
+        console.log('🔍 QR validation - looking up by uniqueId:', qrData.uniqueId);
+        registration = await mongoStorage.getEventRegistrationByUniqueId(qrData.uniqueId);
+      }
       
       if (!registration) {
+        console.log('❌ QR validation - no registration found');
         return null;
       }
 
+      console.log('✅ QR validation - registration found:', registration._id);
       return {
         id: registration._id?.toString(),
         ...registration
       };
     } catch (error) {
-      console.error('Error parsing QR code:', error);
+      console.error('❌ Error parsing QR code:', error);
       return null;
     }
   }

@@ -105,6 +105,42 @@ app.use((req, res, next) => {
   const { registerAnalyticsRoutes } = await import("./mongo-analytics-routes.js");
   registerAnalyticsRoutes(app);
   
+  // Test QR code endpoint - no auth required
+  app.get("/api/test/qr", async (req: Request, res: Response) => {
+    try {
+      const QRCode = require('qrcode');
+      
+      // Sample QR data that should work
+      const testQRData = JSON.stringify({
+        registrationId: "test123",
+        eventId: "event123", 
+        uniqueId: "TEST01",
+        timestamp: Date.now()
+      });
+      
+      console.log('🧪 Generated test QR data:', testQRData);
+      
+      const qrImage = await QRCode.toDataURL(testQRData, {
+        width: 400,
+        margin: 3,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: "Test QR code generated - scan this to test",
+        qrData: testQRData,
+        qrImage: qrImage
+      });
+    } catch (error) {
+      console.error('Test QR generation error:', error);
+      res.status(500).json({ message: "Failed to generate test QR" });
+    }
+  });
+
   // Register MongoDB routes (includes ticket lookup)
   const { registerMongoRoutes } = await import("./mongo-routes.js");
   registerMongoRoutes(app);
