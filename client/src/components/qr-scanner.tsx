@@ -92,22 +92,24 @@ export function QRScanner({ onClose }: QRScannerProps) {
       }
       
       // Normalize response format for consistent handling
-      if (isTicketQR && result.ticket) {
-        // Convert ticket response to match registration format for UI consistency
+      if (isTicketQR) {
+        // Handle ticket endpoint response format
+        const ticketData = result.ticket || {};
         return {
           ...result,
           registration: {
-            ticketNumber: result.ticket.ticketNumber,
-            firstName: result.ticket.ownerName?.split(' ')[0] || '',
-            lastName: result.ticket.ownerName?.split(' ').slice(1).join(' ') || '',
-            guestName: result.ticket.ownerName,
-            email: result.ticket.ownerEmail,
-            phone: result.ticket.ownerPhone,
-            ticketType: result.ticket.ticketType,
-            price: result.ticket.price,
-            currency: result.ticket.currency
+            ticketNumber: ticketData.ticketNumber || '',
+            firstName: ticketData.ownerName?.split(' ')[0] || '',
+            lastName: ticketData.ownerName?.split(' ').slice(1).join(' ') || '',
+            guestName: ticketData.ownerName || 'Ticket Holder',
+            email: ticketData.ownerEmail || '',
+            phone: ticketData.ownerPhone || '',
+            ticketType: ticketData.category || ticketData.ticketType || '',
+            price: ticketData.price || '',
+            currency: ticketData.currency || 'NGN'
           },
-          validationType: 'ticket'
+          validationType: 'ticket',
+          validationStatus: result.success ? 'valid' : 'invalid'
         };
       }
       
