@@ -667,8 +667,8 @@ export function registerMongoRoutes(app: Express) {
                 id: reg._id?.toString(),
                 eventId: reg.eventId?.toString(),
                 registrationType: reg.registrationType,
-                firstName: reg.firstName,
-                lastName: reg.lastName,
+                firstName: reg.firstName || '',
+                lastName: reg.lastName || '',
                 email: reg.email,
                 uniqueId: reg.uniqueId,
                 status: reg.status,
@@ -2553,7 +2553,7 @@ export function registerMongoRoutes(app: Express) {
                 event.organizationId.toString(),
                 eventId,
                 registration._id!.toString(),
-                registration.firstName + ' ' + registration.lastName,
+                `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
                 registration.registrationType || 'member'
               );
             }
@@ -2755,8 +2755,8 @@ export function registerMongoRoutes(app: Express) {
         id: registration._id.toString(),
         registrationId: registration.registrationId,
         uniqueId: registration.uniqueId,
-        firstName: registration.firstName,
-        lastName: registration.lastName,
+        firstName: registration.firstName || '',
+        lastName: registration.lastName || '',
         email: registration.email,
         phone: registration.phone,
         status: registration.status,
@@ -2811,8 +2811,8 @@ export function registerMongoRoutes(app: Express) {
         id: registration._id.toString(),
         registrationId: registration.registrationId,
         uniqueId: registration.uniqueId,
-        firstName: registration.firstName,
-        lastName: registration.lastName,
+        firstName: registration.firstName || '',
+        lastName: registration.lastName || '',
         email: registration.email,
         phone: registration.phone,
         status: registration.status,
@@ -2970,7 +2970,7 @@ export function registerMongoRoutes(app: Express) {
             details: {
               registrationId: registration._id!.toString(),
               status: registration.paymentStatus,
-              participantName: `${registration.firstName} ${registration.lastName}`,
+              participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
               eventName: event.name
             }
           });
@@ -2983,7 +2983,7 @@ export function registerMongoRoutes(app: Express) {
             message: "Registration has already been validated for entry",
             details: {
               registrationId: registration._id!.toString(),
-              participantName: `${registration.firstName} ${registration.lastName}`,
+              participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
               eventName: event.name,
               attendedAt: registration.updatedAt
             }
@@ -3003,7 +3003,7 @@ export function registerMongoRoutes(app: Express) {
           details: {
             type: 'registration',
             registrationId: registration._id!.toString(),
-            participantName: `${registration.firstName} ${registration.lastName}`,
+            participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
             email: registration.email,
             eventName: event.name,
             registrationType: registration.registrationType,
@@ -3323,8 +3323,8 @@ export function registerMongoRoutes(app: Express) {
 
       console.log(`Found registration:`, {
         id: registration._id?.toString(),
-        firstName: registration.firstName,
-        lastName: registration.lastName,
+        firstName: registration.firstName || '',
+        lastName: registration.lastName || '',
         status: registration.status,
         eventId: registration.eventId
       });
@@ -3517,7 +3517,7 @@ export function registerMongoRoutes(app: Express) {
           message: "Registration validated successfully",
           details: {
             type: 'registration',
-            participantName: `${registration.firstName} ${registration.lastName}`,
+            participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
             email: registration.email,
             eventName: event.name,
             registrationType: registration.registrationType,
@@ -3659,7 +3659,7 @@ export function registerMongoRoutes(app: Express) {
           message: `${memberName} validated successfully (face recognition not available)`,
           details: {
             type: 'registration',
-            participantName: `${registration.firstName} ${registration.lastName}`,
+            participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
             email: registration.email,
             eventName: event.name,
             confidence: 0,
@@ -3692,7 +3692,7 @@ export function registerMongoRoutes(app: Express) {
           message: bestMatch.result.message,
           details: {
             type: 'registration',
-            participantName: `${registration.firstName} ${registration.lastName}`,
+            participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
             email: registration.email,
             eventName: event.name,
             confidence: Math.round(bestMatch.result.confidence * 100),
