@@ -736,29 +736,6 @@ export function QRScanner({ onClose }: QRScannerProps) {
           <Hash className="h-4 w-4" />
           {showManualInput ? "Hide Manual Entry" : "Manual Entry"}
         </Button>
-        <Button 
-          variant="outline" 
-          onClick={() => setShowTestQR(!showTestQR)}
-          className="flex items-center gap-2"
-        >
-          🧪 Test QR
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={() => {
-            const testData = JSON.stringify({
-              registrationId: "test123",
-              eventId: "event123", 
-              uniqueId: "TEST01",
-              timestamp: Date.now()
-            });
-            console.log('🧪 Simulating QR scan with test data:', testData);
-            validateQRMutation.mutate(testData);
-          }}
-          className="flex items-center gap-2"
-        >
-          🔬 Test Scan
-        </Button>
         <Button variant="outline" onClick={onClose}>
           Close
         </Button>
