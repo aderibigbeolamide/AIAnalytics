@@ -589,11 +589,11 @@ export default function SuperAdminDashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setLocation("/dashboard")}
+            onClick={() => window.history.back()}
             className="flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back to Dashboard</span>
+            <span className="hidden sm:inline">Back</span>
             <span className="sm:hidden">Back</span>
           </Button>
           <Badge variant="outline" className="text-purple-600 border-purple-200">

@@ -238,9 +238,9 @@ export default function SuperAdminChat() {
           <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Chat Session Not Found</h2>
           <p className="text-gray-600 mb-4">The requested chat session could not be found.</p>
-          <Button onClick={() => setLocation('/super-admin')}>
+          <Button onClick={() => window.history.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            Back
           </Button>
         </div>
       </div>
@@ -255,7 +255,7 @@ export default function SuperAdminChat() {
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
-              onClick={() => setLocation('/super-admin')}
+              onClick={() => window.history.back()}
               className="p-2"
             >
               <ArrowLeft className="h-4 w-4" />
