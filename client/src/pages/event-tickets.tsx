@@ -56,8 +56,10 @@ export default function EventTickets() {
 
   // Fetch registrations for this event
   const { data: registrations = [], isLoading: registrationsLoading } = useQuery<RegistrationData[]>({
-    queryKey: ["/api/events", eventId, "registrations"],
+    queryKey: [`/api/events/${eventId}/registrations`],
     enabled: !!eventId,
+    staleTime: 0, // Force fresh data
+    gcTime: 0, // Don't cache this query (TanStack Query v5)
   });
 
   // Filter registrations based on search and status
