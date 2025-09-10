@@ -99,7 +99,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
       try {
         result = JSON.parse(responseText);
         console.log('🔍 Parsed JSON result:', result);
-      } catch (jsonError) {
+      } catch (jsonError: any) {
         console.error('❌ JSON parsing error:', jsonError);
         console.error('❌ Failed to parse response:', responseText);
         throw new Error(`Invalid JSON response: ${jsonError.message}. Response: ${responseText.substring(0, 100)}...`);
@@ -767,8 +767,8 @@ export function QRScanner({ onClose }: QRScannerProps) {
                   : "text-red-600"
               }`}>
                 {lastScanResult.message || 
-                  (lastScanResult.member 
-                    ? `${lastScanResult.member.firstName} ${lastScanResult.member.lastName} - ${lastScanResult.event?.name}`
+                  (lastScanResult.details?.participantName 
+                    ? `${lastScanResult.details.participantName} - ${lastScanResult.details?.eventName || 'Event'}`
                     : "Scan result"
                   )
                 }
