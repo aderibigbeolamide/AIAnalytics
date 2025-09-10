@@ -767,8 +767,8 @@ export function QRScanner({ onClose }: QRScannerProps) {
                   : "text-red-600"
               }`}>
                 {lastScanResult.message || 
-                  (lastScanResult.details?.participantName 
-                    ? `${lastScanResult.details.participantName} - ${lastScanResult.details?.eventName || 'Event'}`
+                  (lastScanResult.details?.participantName || lastScanResult.details?.ownerName
+                    ? `${lastScanResult.details.participantName || lastScanResult.details.ownerName} - ${lastScanResult.details?.eventName || 'Event'}`
                     : "Scan result"
                   )
                 }

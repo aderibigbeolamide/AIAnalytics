@@ -148,7 +148,7 @@ export default function Scanner() {
                             <h3 className="font-semibold">Validation Successful</h3>
                           </div>
                           <div className="space-y-1 text-sm">
-                            <p><strong>Member:</strong> {lastValidationResult.details?.participantName || 'N/A'}</p>
+                            <p><strong>Member:</strong> {lastValidationResult.details?.participantName || lastValidationResult.details?.ownerName || 'N/A'}</p>
                             <p><strong>Event:</strong> {lastValidationResult.details?.eventName || 'N/A'}</p>
                             <p><strong>Status:</strong> Validated</p>
                             {lastValidationResult.details?.validationMethod && (
