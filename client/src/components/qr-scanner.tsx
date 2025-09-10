@@ -77,15 +77,33 @@ export function QRScanner({ onClose }: QRScannerProps) {
       console.log('🔍 Using endpoint:', endpoint);
       console.log('🔍 Request body:', requestBody);
       
+      console.log('🔍 Making request to:', endpoint);
+      console.log('🔍 Request headers:', headers);
+      console.log('🔍 Request body JSON:', JSON.stringify(requestBody));
+      
       const response = await fetch(endpoint, {
         method: "POST",
         headers,
         body: JSON.stringify(requestBody),
       });
       
-      const result = await response.json();
       console.log('🔍 Response status:', response.status);
-      console.log('🔍 Response result:', result);
+      console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      // Get response text first to debug JSON parsing issues
+      const responseText = await response.text();
+      console.log('🔍 Raw response text:', responseText);
+      console.log('🔍 Response text length:', responseText.length);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+        console.log('🔍 Parsed JSON result:', result);
+      } catch (jsonError) {
+        console.error('❌ JSON parsing error:', jsonError);
+        console.error('❌ Failed to parse response:', responseText);
+        throw new Error(`Invalid JSON response: ${jsonError.message}. Response: ${responseText.substring(0, 100)}...`);
+      }
       
       if (!response.ok) {
         throw new Error(result.message || "Validation failed");
