@@ -3216,12 +3216,78 @@ export function registerMongoRoutes(app: Express) {
 
       console.log(`Validating unique ID: ${uniqueId}`);
 
-      // Find registration by unique ID
+      // First, try to find as a ticket (ticket numbers usually start with TKT)
+      let ticket = null;
+      try {
+        ticket = await mongoStorage.getTicketByNumber(uniqueId);
+      } catch (error) {
+        console.log('Not a ticket number, trying registration...');
+      }
+
+      if (ticket) {
+        console.log(`Found ticket: ${ticket.ticketNumber}`);
+        
+        // Validate ticket using same logic as QR scanner
+        if (ticket.status === "used") {
+          return res.status(200).json({ 
+            success: false,
+            message: "Ticket has already been used for entry",
+            validationStatus: "already_used",
+            details: {
+              type: 'ticket',
+              ticketNumber: ticket.ticketNumber,
+              ownerName: ticket.ownerName,
+              usedAt: ticket.validatedAt
+            }
+          });
+        }
+
+        if (ticket.paymentStatus !== "paid") {
+          return res.status(200).json({ 
+            success: false,
+            message: "Payment required. Please complete payment before entry.",
+            validationStatus: "payment_required",
+            details: {
+              type: 'ticket',
+              ticketNumber: ticket.ticketNumber,
+              paymentStatus: ticket.paymentStatus
+            }
+          });
+        }
+
+        // Mark ticket as used
+        await mongoStorage.updateTicket(ticket._id.toString(), {
+          status: 'used',
+          validatedAt: new Date(),
+          validatedBy: req.user!.id
+        });
+
+        // Get event details
+        const event = await mongoStorage.getEvent(ticket.eventId.toString());
+
+        return res.json({
+          success: true,
+          message: "Ticket validated successfully",
+          validationStatus: "valid",
+          details: {
+            type: 'ticket',
+            ticketNumber: ticket.ticketNumber,
+            ownerName: ticket.ownerName,
+            ownerEmail: ticket.ownerEmail,
+            category: ticket.category,
+            price: ticket.price,
+            currency: ticket.currency,
+            eventName: event?.name || 'Unknown Event'
+          }
+        });
+      }
+
+      // If not a ticket, try to find as registration by unique ID
       const registration = await mongoStorage.getEventRegistrationByUniqueId(uniqueId);
       if (!registration) {
-        console.log(`Registration not found for ID: ${uniqueId}`);
+        console.log(`Neither ticket nor registration found for ID: ${uniqueId}`);
         return res.status(404).json({ 
-          message: "Registration not found",
+          message: "Ticket or registration not found",
           validationStatus: "invalid" 
         });
       }
