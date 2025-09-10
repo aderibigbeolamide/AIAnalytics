@@ -23,21 +23,38 @@ export function registerMongoDashboardRoutes(app: Express) {
         const eventId = r.eventId ? r.eventId.toString() : '';
         return orgEventIds.includes(eventId);
       });
+
+      // Get all tickets for organization events
+      let allTickets: any[] = [];
+      for (const eventId of orgEventIds) {
+        try {
+          const eventTickets = await mongoStorage.getTickets({ eventId });
+          allTickets.push(...eventTickets);
+        } catch (error) {
+          console.log(`No tickets found for event ${eventId}`);
+        }
+      }
       
-      // Basic statistics
+      // Basic statistics (include both registrations and tickets)
       const totalEvents = events.length;
       const totalMembers = members.length;
-      const totalRegistrations = orgRegistrations.length;
+      const totalRegistrations = orgRegistrations.length + allTickets.length; // Combined total
       
       // Event status breakdown
       const activeEvents = events.filter(e => e.status === 'active' || e.status === 'upcoming').length;
       const completedEvents = events.filter(e => e.status === 'completed').length;
       const upcomingEvents = events.filter(e => e.status === 'upcoming').length;
       
-      // Validation and attendance statistics
-      const validatedRegistrations = orgRegistrations.filter(r => r.status === 'online').length;
-      const pendingValidations = orgRegistrations.filter(r => r.status === 'active').length;
-      const validationRate = totalRegistrations > 0 ? (validatedRegistrations / totalRegistrations) * 100 : 0;
+      // Validation and attendance statistics (include both registrations and tickets)
+      const validatedRegistrations = orgRegistrations.filter(r => r.status === 'online' || r.status === 'attended').length;
+      const validatedTickets = allTickets.filter(t => t.status === 'used').length;
+      const totalValidated = validatedRegistrations + validatedTickets;
+      
+      const pendingRegistrations = orgRegistrations.filter(r => r.status === 'active' || r.status === 'pending').length;
+      const pendingTickets = allTickets.filter(t => t.status === 'active' || t.status === 'paid').length;
+      const pendingValidations = pendingRegistrations + pendingTickets;
+      
+      const validationRate = totalRegistrations > 0 ? (totalValidated / totalRegistrations) * 100 : 0;
       
       // Today's activity
       const today = new Date();
@@ -45,9 +62,15 @@ export function registerMongoDashboardRoutes(app: Express) {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
-      const scansToday = orgRegistrations.filter(r => 
+      const registrationScansToday = orgRegistrations.filter(r => 
         r.validatedAt && r.validatedAt >= today && r.validatedAt < tomorrow
       ).length;
+      
+      const ticketScansToday = allTickets.filter(t => 
+        t.validatedAt && t.validatedAt >= today && t.validatedAt < tomorrow
+      ).length;
+      
+      const scansToday = registrationScansToday + ticketScansToday;
       
       // Auxiliary body statistics
       const auxiliaryBodyStats: { [key: string]: any } = {};
@@ -85,8 +108,13 @@ export function registerMongoDashboardRoutes(app: Express) {
       const previousRegistrations = orgRegistrations.filter(r => r.createdAt && r.createdAt >= twoWeeksAgo && r.createdAt < oneWeekAgo).length;
       const registrationTrend = previousRegistrations > 0 ? ((recentRegistrations - previousRegistrations) / previousRegistrations) * 100 : 0;
       
-      const recentValidations = orgRegistrations.filter(r => r.validatedAt && r.validatedAt >= oneWeekAgo).length;
-      const previousValidations = orgRegistrations.filter(r => r.validatedAt && r.validatedAt >= twoWeeksAgo && r.validatedAt < oneWeekAgo).length;
+      const recentRegistrationValidations = orgRegistrations.filter(r => r.validatedAt && r.validatedAt >= oneWeekAgo).length;
+      const recentTicketValidations = allTickets.filter(t => t.validatedAt && t.validatedAt >= oneWeekAgo).length;
+      const recentValidations = recentRegistrationValidations + recentTicketValidations;
+      
+      const previousRegistrationValidations = orgRegistrations.filter(r => r.validatedAt && r.validatedAt >= twoWeeksAgo && r.validatedAt < oneWeekAgo).length;
+      const previousTicketValidations = allTickets.filter(t => t.validatedAt && t.validatedAt >= twoWeeksAgo && t.validatedAt < oneWeekAgo).length;
+      const previousValidations = previousRegistrationValidations + previousTicketValidations;
       const validationTrend = previousValidations > 0 ? ((recentValidations - previousValidations) / previousValidations) * 100 : 0;
       
       // Event type breakdown
@@ -106,8 +134,8 @@ export function registerMongoDashboardRoutes(app: Express) {
         upcomingEvents: upcomingEvents.toString(),
         completedEvents: completedEvents.toString(),
         
-        // Validation metrics
-        validatedRegistrations: validatedRegistrations.toString(),
+        // Validation metrics (combined registrations and tickets)
+        validatedRegistrations: totalValidated.toString(),
         pendingValidations: pendingValidations.toString(),
         validationRate: Math.round(validationRate * 10) / 10, // Round to 1 decimal
         scansToday: scansToday.toString(),
