@@ -2457,12 +2457,12 @@ export function registerMongoRoutes(app: Express) {
               for (const ticket of updatedTickets) {
                 try {
                   const ticketData = {
-                    eventName: event.name,
-                    eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
-                    eventTime: event.startDate ? event.startDate.toLocaleTimeString() : 'TBD',
-                    eventLocation: event.location || 'TBD',
-                    participantName: ticket.ownerName,
-                    registrationId: ticket.ticketNumber,
+                    eventName: event.name || 'Event',
+                    eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'Date TBD',
+                    eventTime: event.startDate ? event.startDate.toLocaleTimeString() : 'Time TBD',
+                    eventLocation: event.location || 'Location TBD',
+                    participantName: ticket.ownerName || 'Ticket Holder',
+                    registrationId: ticket.ticketNumber || 'N/A',
                     qrCodeData: JSON.stringify({
                       ticketId: ticket._id.toString(),
                       ticketNumber: ticket.ticketNumber,
@@ -2470,7 +2470,7 @@ export function registerMongoRoutes(app: Express) {
                       ownerEmail: ticket.ownerEmail,
                       timestamp: Date.now()
                     }),
-                    ticketType: ticket.category,
+                    ticketType: ticket.category || 'General',
                     organizationName: event.organizationName || 'EventValidate'
                   };
                   

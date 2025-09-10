@@ -51,16 +51,16 @@ class PDFService {
       // Event Title
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      doc.text(ticketData.eventName, 20, 45);
+      doc.text(ticketData.eventName || 'Event', 20, 45);
       
       // Participant Name
       doc.setFontSize(14);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Attendee: ${ticketData.participantName}`, 20, 60);
+      doc.text(`Attendee: ${ticketData.participantName || 'Ticket Holder'}`, 20, 60);
       
       // Registration ID
       doc.setFontSize(10);
-      doc.text(`Registration ID: ${ticketData.registrationId}`, 20, 70);
+      doc.text(`Registration ID: ${ticketData.registrationId || 'N/A'}`, 20, 70);
       
       // Event Details Box
       doc.setFillColor(243, 244, 246); // lightGray
@@ -73,9 +73,9 @@ class PDFService {
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.text(`Date: ${ticketData.eventDate}`, 25, 100);
-      doc.text(`Time: ${ticketData.eventTime}`, 25, 110);
-      doc.text(`Location: ${ticketData.eventLocation}`, 25, 115);
+      doc.text(`Date: ${ticketData.eventDate || 'Date TBD'}`, 25, 100);
+      doc.text(`Time: ${ticketData.eventTime || 'Time TBD'}`, 25, 110);
+      doc.text(`Location: ${ticketData.eventLocation || 'Location TBD'}`, 25, 115);
       
       if (ticketData.organizationName) {
         doc.text(`Organizer: ${ticketData.organizationName}`, 120, 100);
