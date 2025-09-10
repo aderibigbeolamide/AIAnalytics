@@ -78,13 +78,16 @@ export default function EventTickets() {
     return matchesSearch && matchesStatus;
   });
 
-  // Group registrations by auxiliary body
+  // Group registrations by ticket type (registration type)
   const registrationsByCategory = filteredRegistrations.reduce((acc, registration) => {
-    const category = registration.auxiliaryBody || 'General';
-    if (!acc[category]) {
-      acc[category] = [];
+    const ticketType = registration.registrationType === 'member' ? 'Member Tickets' : 
+                      registration.registrationType === 'guest' ? 'Guest Tickets' : 
+                      registration.registrationType === 'invitee' ? 'Invitee Tickets' : 
+                      'Standard Tickets';
+    if (!acc[ticketType]) {
+      acc[ticketType] = [];
     }
-    acc[category].push(registration);
+    acc[ticketType].push(registration);
     return acc;
   }, {} as Record<string, RegistrationData[]>);
   
@@ -291,6 +294,12 @@ export default function EventTickets() {
                           <div className="font-mono text-sm font-medium bg-gray-100 px-2 py-1 rounded">
                             {registration.uniqueId}
                           </div>
+                          <Badge className="bg-purple-100 text-purple-800 border-purple-300">
+                            {registration.registrationType === 'member' ? 'Member Ticket' : 
+                             registration.registrationType === 'guest' ? 'Guest Ticket' : 
+                             registration.registrationType === 'invitee' ? 'Invitee Ticket' : 
+                             'Standard Ticket'}
+                          </Badge>
                           <Badge className={getStatusBadge(registration.status)}>
                             {registration.status === 'registered' ? 'Registered' : registration.status === 'validated' ? 'Checked In' : registration.status}
                           </Badge>
@@ -322,7 +331,15 @@ export default function EventTickets() {
                         </div>
                         <div className="flex items-center">
                           <User className="h-4 w-4 mr-2 text-gray-400" />
-                          <span>{registration.registrationType}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm">{registration.registrationType}</span>
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+                              {registration.registrationType === 'member' ? 'Member Ticket' : 
+                               registration.registrationType === 'guest' ? 'Guest Ticket' : 
+                               registration.registrationType === 'invitee' ? 'Invitee Ticket' : 
+                               'Standard Ticket'}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                       
