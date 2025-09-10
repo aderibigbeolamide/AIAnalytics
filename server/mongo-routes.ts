@@ -3919,6 +3919,116 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Validate ticket endpoint (for QR scanner)
+  app.post("/api/tickets/:ticketId/validate", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { ticketId } = req.params;
+      console.log('🎫 Ticket validation request for:', ticketId);
+      
+      if (!ticketId) {
+        return res.status(400).json({ 
+          message: "Ticket ID is required",
+          success: false
+        });
+      }
+
+      // Try to get ticket by ID first (only if it looks like an ObjectId)
+      let ticket = null;
+      
+      // Check if ticketId looks like a valid ObjectId (24 hex characters)
+      if (/^[a-f\d]{24}$/i.test(ticketId)) {
+        try {
+          ticket = await mongoStorage.getTicketById(ticketId);
+          console.log('🎫 Found ticket by ID:', ticket?._id);
+        } catch (error) {
+          console.log('Failed to get ticket by ID, trying by number...');
+        }
+      }
+      
+      // If not found by ID, try by ticket number
+      if (!ticket) {
+        ticket = await mongoStorage.getTicketByNumber(ticketId);
+        console.log('🎫 Found ticket by number:', ticket?.ticketNumber);
+      }
+      
+      if (!ticket) {
+        console.log('❌ Ticket not found');
+        return res.status(404).json({ 
+          message: "Ticket not found",
+          success: false
+        });
+      }
+
+      console.log('🎫 Found ticket:', {
+        id: ticket._id,
+        ticketNumber: ticket.ticketNumber,
+        status: ticket.status,
+        paymentStatus: ticket.paymentStatus,
+        validatedAt: ticket.validatedAt
+      });
+
+      // Check if ticket has already been used
+      if (ticket.status === "used") {
+        return res.status(400).json({ 
+          message: "Ticket already used",
+          validatedAt: ticket.validatedAt,
+          success: false
+        });
+      }
+
+      // Check payment status
+      if (ticket.paymentStatus !== "paid") {
+        return res.status(400).json({ 
+          message: "Payment required. Please complete payment before entry.",
+          paymentStatus: ticket.paymentStatus,
+          success: false,
+          requiresPayment: true
+        });
+      }
+
+      // Check if ticket is active
+      if (ticket.status === "expired" || ticket.status === "cancelled") {
+        return res.status(400).json({ 
+          message: `Ticket is ${ticket.status}`,
+          success: false 
+        });
+      }
+
+      // Mark ticket as used - validation successful
+      const updatedTicket = await mongoStorage.updateTicket(ticket._id.toString(), {
+        status: 'used',
+        validatedAt: new Date(),
+        validatedBy: req.user!.id
+      });
+
+      const responseData = { 
+        message: "Ticket validated successfully",
+        success: true,
+        ticket: {
+          id: ticket._id?.toString(),
+          ticketNumber: ticket.ticketNumber,
+          ownerName: ticket.ownerName,
+          ownerEmail: ticket.ownerEmail,
+          ownerPhone: ticket.ownerPhone,
+          category: ticket.category,
+          price: ticket.price,
+          currency: ticket.currency,
+          status: "used",
+          validatedAt: new Date(),
+        },
+      };
+      
+      console.log('🎫 Ticket validation success response:', JSON.stringify(responseData, null, 2));
+      res.json(responseData);
+    } catch (error) {
+      console.error("Validate ticket error:", error);
+      res.status(500).json({ 
+        message: "Failed to validate ticket",
+        success: false 
+      });
+    }
+  });
+
   // Get tickets for a specific event (for admin dashboard)
   app.get("/api/events/:eventId/tickets", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
