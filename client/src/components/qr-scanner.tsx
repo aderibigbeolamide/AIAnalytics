@@ -38,11 +38,46 @@ export function QRScanner({ onClose }: QRScannerProps) {
       console.log('🔍 QR data length:', qrData?.length);
       console.log('🔍 QR data type:', typeof qrData);
       
-      const requestBody = { qrCode: qrData };
-      console.log('🔍 Request body being sent:', requestBody);
-      console.log('🔍 Request body JSON:', JSON.stringify(requestBody));
+      // Parse QR data to determine type
+      let parsedData;
+      try {
+        parsedData = JSON.parse(qrData);
+        console.log('🔍 Parsed QR data:', parsedData);
+      } catch (e) {
+        console.log('🔍 QR data is not JSON, treating as raw string');
+        parsedData = null;
+      }
       
-      const response = await fetch("/api/registrations/validate-qr", {
+      // Determine if this is a ticket or registration QR code
+      const isTicketQR = parsedData && (parsedData.ticketId || parsedData.ticketNumber);
+      const isRegistrationQR = parsedData && (parsedData.registrationId || parsedData.uniqueId);
+      
+      console.log('🔍 QR Type Detection:', { isTicketQR, isRegistrationQR });
+      
+      let endpoint, requestBody;
+      
+      if (isTicketQR) {
+        // For ticket-based events, use the ticket validation endpoint
+        console.log('🎫 Processing as TICKET QR code');
+        const ticketId = parsedData.ticketId || parsedData.ticketNumber;
+        endpoint = `/api/tickets/${ticketId}/validate`;
+        requestBody = {}; // Ticket validation doesn't need body data, just the ID in URL
+      } else if (isRegistrationQR) {
+        // For registration-based events, use the registration validation endpoint
+        console.log('📝 Processing as REGISTRATION QR code');
+        endpoint = "/api/registrations/validate-qr";
+        requestBody = { qrCode: qrData };
+      } else {
+        // Fallback: try registration endpoint for backward compatibility
+        console.log('❓ Unknown QR format, defaulting to REGISTRATION endpoint');
+        endpoint = "/api/registrations/validate-qr";
+        requestBody = { qrCode: qrData };
+      }
+      
+      console.log('🔍 Using endpoint:', endpoint);
+      console.log('🔍 Request body:', requestBody);
+      
+      const response = await fetch(endpoint, {
         method: "POST",
         headers,
         body: JSON.stringify(requestBody),
@@ -56,28 +91,66 @@ export function QRScanner({ onClose }: QRScannerProps) {
         throw new Error(result.message || "Validation failed");
       }
       
-      return result;
+      // Normalize response format for consistent handling
+      if (isTicketQR && result.ticket) {
+        // Convert ticket response to match registration format for UI consistency
+        return {
+          ...result,
+          registration: {
+            ticketNumber: result.ticket.ticketNumber,
+            firstName: result.ticket.ownerName?.split(' ')[0] || '',
+            lastName: result.ticket.ownerName?.split(' ').slice(1).join(' ') || '',
+            guestName: result.ticket.ownerName,
+            email: result.ticket.ownerEmail,
+            phone: result.ticket.ownerPhone,
+            ticketType: result.ticket.ticketType,
+            price: result.ticket.price,
+            currency: result.ticket.currency
+          },
+          validationType: 'ticket'
+        };
+      }
+      
+      return { ...result, validationType: 'registration' };
     },
     onSuccess: (data) => {
       console.log('QR validation response:', data);
       setLastScanResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       
-      const memberName = data.registration?.firstName && data.registration?.lastName 
-        ? `${data.registration.firstName} ${data.registration.lastName}`
-        : data.registration?.guestName || 'Member';
+      // Handle both ticket and registration responses
+      let memberName = 'Member';
+      let itemType = 'entry';
+      let itemId = '';
       
-      if (data.validationStatus === "already_validated") {
+      if (data.validationType === 'ticket' && data.registration) {
+        memberName = data.registration.guestName || 
+                    `${data.registration.firstName} ${data.registration.lastName}`.trim() || 
+                    'Ticket Holder';
+        itemType = 'ticket';
+        itemId = data.registration.ticketNumber || '';
+      } else if (data.registration) {
+        memberName = data.registration.firstName && data.registration.lastName 
+          ? `${data.registration.firstName} ${data.registration.lastName}`
+          : data.registration.guestName || 'Member';
+        itemType = 'registration';
+        itemId = data.registration.uniqueId || '';
+      }
+      
+      if (data.validationStatus === "already_validated" || 
+          data.message?.includes("already") || 
+          data.message?.includes("used")) {
         toast({
           title: "Already Validated",
-          description: `${memberName} was already validated for ${data.event?.name}`,
+          description: `${memberName} was already validated${data.event?.name ? ` for ${data.event.name}` : ''}`,
           variant: "default",
         });
       } else {
         toast({
-          title: "Validation Successful",
-          description: `${memberName} validated for ${data.event?.name}`,
+          title: "Validation Successful ✅",
+          description: `${memberName} validated${data.event?.name ? ` for ${data.event.name}` : ''} ${itemId ? `(${itemId})` : ''}`,
         });
       }
     },
