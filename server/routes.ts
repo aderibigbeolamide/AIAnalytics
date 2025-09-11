@@ -2996,7 +2996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate ticket data - shorter format
-      const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const ticketNumber = `TKT${generateValidationCode()}`;
       const qrCode = generateQRCode();
 
       // Create ticket record

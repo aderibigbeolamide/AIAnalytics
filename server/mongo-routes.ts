@@ -1487,7 +1487,7 @@ export function registerMongoRoutes(app: Express) {
       const amountInKobo = Math.round(amountInNaira * 100);
       
       // Generate unique identifiers for registration
-      const uniqueId = `${registrationType.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const uniqueId = generateValidationCode();
       const qrCode = nanoid(16);
       const paymentReference = `REG_${Date.now()}_${nanoid(8)}`;
 
@@ -2160,7 +2160,7 @@ export function registerMongoRoutes(app: Express) {
 
       for (let i = 0; i < quantity; i++) {
         // Generate unique ticket data for each ticket
-        const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        const ticketNumber = `TKT${generateValidationCode()}`;
         
         // Generate QR code data for this specific ticket
         const qrData = {
@@ -2603,7 +2603,7 @@ export function registerMongoRoutes(app: Express) {
           const registrationData = JSON.parse(metadata.registrationData || '{}');
           
           // Generate registration ID and QR code
-          const registrationId = `REG${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+          const registrationId = `REG${Date.now()}${generateValidationCode()}`;
           
           const qrData = {
             eventId,

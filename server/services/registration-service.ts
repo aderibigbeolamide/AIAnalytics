@@ -1,13 +1,14 @@
 import { mongoStorage } from "../mongodb-storage";
 import { nanoid } from "nanoid";
 import QRCode from "qrcode";
+import { generateValidationCode } from "../utils";
 
 export class RegistrationService {
   /**
    * Create event registration
    */
   static async createRegistration(eventId: string, registrationData: any) {
-    const uniqueId = nanoid(6).toUpperCase();
+    const uniqueId = generateValidationCode();
     const qrCodeData = JSON.stringify({
       eventId,
       registrationId: uniqueId, // Keep for backward compatibility
