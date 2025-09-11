@@ -3,6 +3,7 @@ import { mongoStorage } from "./mongodb-storage";
 import { authenticateToken, type AuthenticatedRequest } from "./mongo-auth-routes";
 import multer from "multer";
 import { nanoid } from "nanoid";
+import { generateValidationCode } from "./utils";
 import QRCode from "qrcode";
 import { NotificationService } from "./notification-service";
 import { FaceRecognitionService } from "./face-recognition";
@@ -834,7 +835,7 @@ export function registerMongoRoutes(app: Express) {
       }
 
       // Generate unique identifiers - use nanoid for consistency with RegistrationService
-      const uniqueId = nanoid(6).toUpperCase();
+      const uniqueId = generateValidationCode();
       
       console.log('Generated uniqueId for secured event (nanoid):', uniqueId);
       const qrCode = nanoid(16);

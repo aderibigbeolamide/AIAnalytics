@@ -49,6 +49,7 @@ export function getQRUrl(registrationId: number, req?: Request): string {
 
 /**
  * Generate a unique 6-character ID using only letters (A-Z)
+ * @deprecated Use generateValidationCode() instead for consistency
  */
 export function generateUniqueId(): string {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -57,4 +58,14 @@ export function generateUniqueId(): string {
     result += letters.charAt(Math.floor(Math.random() * letters.length));
   }
   return result;
+}
+
+/**
+ * Generate a consistent validation code for registrations
+ * This is the ONLY function that should be used for validation codes
+ */
+export function generateValidationCode(): string {
+  // Use nanoid for better uniqueness and always uppercase
+  const { nanoid } = require('nanoid');
+  return nanoid(6).toUpperCase();
 }
