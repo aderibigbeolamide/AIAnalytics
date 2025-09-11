@@ -28,6 +28,7 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5000,
     hmr: false, // Disable HMR for Replit environment
+    allowedHosts: true, // Allow all hosts for Replit proxy
     fs: {
       strict: false,
       allow: [
