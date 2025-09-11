@@ -447,7 +447,9 @@ export class MongoStorage implements IMongoStorage {
       registration = await EventRegistration.findOne({
         $or: [
           { 'registrationData.manualVerificationCode': uniqueId },
-          { manualVerificationCode: uniqueId }
+          { manualVerificationCode: uniqueId },
+          { 'registrationData.uniqueId': uniqueId },
+          { 'customData.uniqueId': uniqueId }
         ]
       }).populate('eventId memberId validatedBy');
       
@@ -566,7 +568,24 @@ export class MongoStorage implements IMongoStorage {
 
   async getTicketByNumber(ticketNumber: string): Promise<ITicket | null> {
     try {
-      return await Ticket.findOne({ ticketNumber });
+      // Search by ticketNumber field first
+      let ticket = await Ticket.findOne({ ticketNumber });
+      
+      if (ticket) {
+        return ticket;
+      }
+      
+      // Search by other ID fields that might contain the manual verification code
+      ticket = await Ticket.findOne({
+        $or: [
+          { uniqueId: ticketNumber },
+          { manualVerificationCode: ticketNumber },
+          { 'customData.uniqueId': ticketNumber },
+          { 'customData.manualVerificationCode': ticketNumber }
+        ]
+      });
+      
+      return ticket;
     } catch (error) {
       console.error('Error getting ticket by number:', error);
       return null;

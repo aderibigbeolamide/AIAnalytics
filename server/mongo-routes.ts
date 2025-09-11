@@ -1108,10 +1108,10 @@ export function registerMongoRoutes(app: Express) {
           id: regObj._id.toString(),
           eventId: regObj.eventId?.toString(),
           registrationType: regObj.registrationType || 'member',
-          firstName: regObj.firstName,
-          lastName: regObj.lastName,
+          firstName: regObj.firstName || regObj.registrationData?.firstName || regObj.registrationData?.FirstName || '',
+          lastName: regObj.lastName || regObj.registrationData?.lastName || regObj.registrationData?.LastName || '',
           email: regObj.email,
-          auxiliaryBody: regObj.auxiliaryBody || regObj.registrationData?.auxiliaryBody || regObj.registrationData?.AuxiliaryBody || regObj.registrationData?.Gender || regObj.registrationData?.gender || regObj.registrationData?.Student || regObj.registrationData?.student || '',
+          auxiliaryBody: regObj.auxiliaryBody || regObj.registrationData?.auxiliaryBody || regObj.registrationData?.AuxiliaryBody || regObj.registrationData?.Gender || regObj.registrationData?.gender || regObj.registrationData?.auxiliary_body || regObj.registrationData?.['Auxiliary Body'] || regObj.registrationData?.['auxiliary body'] || regObj.customData?.auxiliaryBody || regObj.guestAuxiliaryBody || regObj.member?.auxiliaryBody || 'N/A',
           status: regObj.status || 'registered',
           paymentStatus: regObj.paymentStatus || 'not_required',
           paymentAmount: regObj.paymentAmount,
@@ -3250,7 +3250,7 @@ export function registerMongoRoutes(app: Express) {
           });
         }
 
-        if (ticket.paymentStatus !== "paid") {
+        if (ticket.paymentStatus !== "paid" && ticket.paymentStatus !== "completed") {
           return res.status(200).json({ 
             success: false,
             message: "Payment required. Please complete payment before entry.",
