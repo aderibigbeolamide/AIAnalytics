@@ -827,14 +827,10 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
-      // Generate unique identifiers - pure alphabetic for secured events
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      let uniqueId = '';
-      for (let i = 0; i < 6; i++) {
-        uniqueId += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
+      // Generate unique identifiers - use nanoid for consistency with RegistrationService
+      const uniqueId = nanoid(6).toUpperCase();
       
-      console.log('Generated uniqueId for secured event:', uniqueId);
+      console.log('Generated uniqueId for secured event (nanoid):', uniqueId);
       const qrCode = nanoid(16);
 
       // Determine initial status based on payment requirements
@@ -941,13 +937,11 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
-      // Generate manual verification code - alphabetic for registration events, numeric for ticket events
+      // Generate manual verification code - use consistent nanoid generation
       let manualVerificationCode;
       if (event.eventType === 'registration') {
-        // Generate 6-character alphabetic code for secured registration events
-        manualVerificationCode = Array.from({length: 6}, () => 
-          String.fromCharCode(65 + Math.floor(Math.random() * 26))
-        ).join('');
+        // Generate 6-character alphabetic code for secured registration events using nanoid
+        manualVerificationCode = nanoid(6).toUpperCase();
       } else {
         // Generate 6-digit numeric code for ticket-based events
         manualVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
