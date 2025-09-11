@@ -48,12 +48,12 @@ export function FaceRecognitionValidator({ eventId, onValidationSuccess, onClose
     mutationFn: async ({ file, memberName, email }: { file: File; memberName: string; email: string }) => {
       const authHeaders = getAuthHeaders();
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('faceImage', file);
       formData.append('eventId', selectedEventId);
       formData.append('memberName', memberName);
       if (email) formData.append('email', email);
 
-      const response = await fetch('/api/face-recognition/validate-attendance', {
+      const response = await fetch('/api/validate-face', {
         method: 'POST',
         headers: {
           ...authHeaders,
