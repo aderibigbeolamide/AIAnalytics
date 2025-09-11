@@ -943,15 +943,9 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
-      // Generate manual verification code - use consistent nanoid generation
-      let manualVerificationCode;
-      if (event.eventType === 'registration') {
-        // Generate 6-character alphabetic code for secured registration events using nanoid
-        manualVerificationCode = nanoid(6).toUpperCase();
-      } else {
-        // Generate 6-digit numeric code for ticket-based events
-        manualVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      }
+      // Use uniqueId as the manual verification code for consistency
+      // This ensures the same code is stored in database and shown to user
+      const manualVerificationCode = uniqueId;
       
       // Store manual verification code at root level for validation lookup
       registrationData.manualVerificationCode = manualVerificationCode;
