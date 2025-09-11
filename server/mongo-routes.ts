@@ -732,6 +732,7 @@ export function registerMongoRoutes(app: Express) {
                 status: event?.status
               }
             });
+            }
           }
         }
         
