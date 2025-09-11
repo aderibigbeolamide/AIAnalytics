@@ -42,7 +42,6 @@ import {
 import { 
   generateQRCode, 
   generateQRImage, 
-  generateShortUniqueId,
   encryptQRData, 
   decryptQRData, 
   validateQRData,
@@ -65,6 +64,7 @@ import {
   insertEventRecommendationSchema
 } from "@shared/schema";
 import { z } from "zod";
+import { nanoid } from "nanoid";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -964,7 +964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const qrCode = generateQRCode();
-      const uniqueId = generateShortUniqueId(); // Generate shorter 6-character ID for manual validation
+      const uniqueId = nanoid(6).toUpperCase(); // Generate consistent 6-character ID for manual validation
       
       // Extract common fields from custom form data
       const getName = () => {
@@ -1682,7 +1682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const qrCode = generateQRCode();
-        const uniqueId = generateShortUniqueId();
+        const uniqueId = nanoid(6).toUpperCase();
         
         // Extract name and email from form data
         const getName = () => {
@@ -1787,7 +1787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const qrCode = generateQRCode();
-        const uniqueId = generateShortUniqueId();
+        const uniqueId = nanoid(6).toUpperCase();
         
         // Extract name and email from form data
         const getName = () => {
