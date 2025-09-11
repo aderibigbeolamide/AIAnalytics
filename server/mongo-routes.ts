@@ -696,8 +696,13 @@ export function registerMongoRoutes(app: Express) {
         const registrations = await mongoStorage.getEventRegistrations();
         
         if (uniqueId) {
-          const foundRegistrations = registrations.filter(reg => reg.uniqueId === uniqueId);
-          for (const reg of foundRegistrations) {
+          // Use the comprehensive database search instead of in-memory filtering
+          const normalizedCode = String(uniqueId || '').trim().toUpperCase();
+          const foundRegistration = await mongoStorage.getEventRegistrationByAnyCode(normalizedCode);
+          
+          if (foundRegistration) {
+            const foundRegistrations = [foundRegistration];
+            for (const reg of foundRegistrations) {
             let eventId = reg.eventId;
             if (typeof eventId === 'object' && eventId?._id) {
               eventId = eventId._id.toString();
@@ -3220,6 +3225,16 @@ export function registerMongoRoutes(app: Express) {
     } catch (error) {
       console.error("Error adding verification code:", error);
       res.status(500).json({ message: "Failed to add verification code" });
+    }
+  });
+
+  // Debug endpoint to get full registration data
+  app.get("/api/debug/get-registration/:id", async (req: Request, res: Response) => {
+    try {
+      const registration = await mongoStorage.getEventRegistration(req.params.id);
+      res.json(registration);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   });
 
