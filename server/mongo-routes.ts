@@ -827,12 +827,14 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
-      // Generate unique identifiers  
+      // Generate unique identifiers - pure alphabetic for secured events
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       let uniqueId = '';
       for (let i = 0; i < 6; i++) {
         uniqueId += chars.charAt(Math.floor(Math.random() * chars.length));
       }
+      
+      console.log('Generated uniqueId for secured event:', uniqueId);
       const qrCode = nanoid(16);
 
       // Determine initial status based on payment requirements
@@ -1057,10 +1059,12 @@ export function registerMongoRoutes(app: Express) {
         registration: {
           id: registration._id.toString(),
           uniqueId: registration.uniqueId,
+          manualVerificationCode: registration.manualVerificationCode,
           registrationType: registration.registrationType,
           firstName: registration.firstName,
           lastName: registration.lastName,
           email: registration.email,
+          auxiliaryBody: registration.auxiliaryBody,
           status: registration.status,
           paymentStatus: registration.paymentStatus,
           qrCode: registration.qrCode,
