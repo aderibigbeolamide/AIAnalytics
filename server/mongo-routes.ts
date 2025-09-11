@@ -1111,7 +1111,19 @@ export function registerMongoRoutes(app: Express) {
           firstName: regObj.firstName || regObj.registrationData?.firstName || regObj.registrationData?.FirstName || '',
           lastName: regObj.lastName || regObj.registrationData?.lastName || regObj.registrationData?.LastName || '',
           email: regObj.email,
-          auxiliaryBody: regObj.auxiliaryBody || regObj.registrationData?.auxiliaryBody || regObj.registrationData?.AuxiliaryBody || regObj.registrationData?.Gender || regObj.registrationData?.gender || regObj.registrationData?.auxiliary_body || regObj.registrationData?.['Auxiliary Body'] || regObj.registrationData?.['auxiliary body'] || regObj.customData?.auxiliaryBody || regObj.guestAuxiliaryBody || regObj.member?.auxiliaryBody || 'N/A',
+          auxiliaryBody: regObj.auxiliaryBody || 
+            regObj.registrationData?.auxiliaryBody || 
+            regObj.registrationData?.AuxiliaryBody || 
+            regObj.registrationData?.Gender || 
+            regObj.registrationData?.gender || 
+            (Array.isArray(regObj.registrationData?.Student) ? regObj.registrationData?.Student[0] : regObj.registrationData?.Student) ||
+            (Array.isArray(regObj.registrationData?.student) ? regObj.registrationData?.student[0] : regObj.registrationData?.student) ||
+            regObj.registrationData?.auxiliary_body || 
+            regObj.registrationData?.['Auxiliary Body'] || 
+            regObj.registrationData?.['auxiliary body'] || 
+            regObj.customData?.auxiliaryBody || 
+            regObj.guestAuxiliaryBody || 
+            regObj.member?.auxiliaryBody || 'N/A',
           status: regObj.status || 'registered',
           paymentStatus: regObj.paymentStatus || 'not_required',
           paymentAmount: regObj.paymentAmount,
