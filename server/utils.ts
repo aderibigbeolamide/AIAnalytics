@@ -63,9 +63,12 @@ export function generateUniqueId(): string {
 /**
  * Generate a consistent validation code for registrations
  * This is the ONLY function that should be used for validation codes
+ * Uses only alphanumeric characters (A-Z, 0-9) - no special characters
  */
 export async function generateValidationCode(): Promise<string> {
-  // Use nanoid for better uniqueness and always uppercase
-  const { nanoid } = await import('nanoid');
-  return nanoid(6).toUpperCase();
+  // Use nanoid with custom alphabet containing only letters and numbers
+  const { customAlphabet } = await import('nanoid');
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const nanoid = customAlphabet(alphabet, 6);
+  return nanoid();
 }

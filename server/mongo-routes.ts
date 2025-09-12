@@ -2559,7 +2559,7 @@ export function registerMongoRoutes(app: Express) {
             // Get event details for notification
             const event = await mongoStorage.getEvent(eventId);
             if (event) {
-              // Send registration notification
+              // Send registration notification to organization admin
               await NotificationService.createRegistrationNotification(
                 event.organizationId.toString(),
                 eventId,
@@ -2567,6 +2567,27 @@ export function registerMongoRoutes(app: Express) {
                 `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
                 registration.registrationType || 'member'
               );
+
+              // Send registration confirmation email to the user with QR code and event card
+              try {
+                const { EmailService } = await import('./services/email-service');
+                const emailService = new EmailService();
+                
+                await emailService.sendRegistrationConfirmationEmail(registration.email, {
+                  participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
+                  eventName: event.name,
+                  eventDate: event.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD',
+                  eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString() : 'TBD',
+                  eventLocation: event.location || 'TBD',
+                  registrationId: registration.uniqueId,
+                  qrCode: qrImageBase64,
+                  eventUrl: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/event-view/${eventId}`
+                });
+                
+                console.log(`✅ Registration confirmation email sent to ${registration.email}`);
+              } catch (emailError) {
+                console.error('❌ Failed to send registration confirmation email:', emailError);
+              }
             }
 
             // Generate manual verification code - alphabetic for registration events, numeric for ticket events
