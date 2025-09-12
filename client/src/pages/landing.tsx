@@ -39,9 +39,9 @@ import conferenceVenueImage from "@assets/generated_images/Conference_venue_with
 import mohammedHeadshot from "@assets/generated_images/Mohammed_Rahman_professional_headshot_7e78c2ea.png";
 import aishaHeadshot from "@assets/generated_images/Aisha_Johnson_professional_headshot_6238ff87.png";
 import davidHeadshot from "@assets/generated_images/David_Martinez_professional_headshot_7b3465b9.png";
-import animationFrame1 from "@assets/generated_images/Eventify AI_scanning_animation_frame_1_4738734f.png";
-import animationFrame2 from "@assets/generated_images/Eventify AI_scanning_animation_frame_2_788d3c55.png";
-import animationFrame3 from "@assets/generated_images/Eventify AI_scanning_animation_frame_3_480faa8e.png";
+import animationFrame1 from "@assets/generated_images/EventValidate_scanning_animation_frame_1_4738734f.png";
+import animationFrame2 from "@assets/generated_images/EventValidate_scanning_animation_frame_2_788d3c55.png";
+import animationFrame3 from "@assets/generated_images/EventValidate_scanning_animation_frame_3_480faa8e.png";
 
 export function LandingPage() {
   const [activeTab, setActiveTab] = useState("features");
