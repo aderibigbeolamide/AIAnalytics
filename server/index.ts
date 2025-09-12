@@ -85,6 +85,7 @@ app.use((req, res, next) => {
   registerEventRoutes(app);
   registerRegistrationRoutes(app);
   registerPaymentRoutes(app);
+  console.log("[INIT] Payment routes registered");
   registerOrganizationRoutes(app);
   registerVerificationRoutes(app);
   registerEmailRoutes(app);
@@ -129,6 +130,12 @@ app.use((req, res, next) => {
 
     res.status(status).json({ message });
     throw err;
+  });
+
+  // Add API 404 guard to prevent Vite catch-all from intercepting API routes
+  app.use('/api', (_req, res) => {
+    console.log("[API] Unmatched API route:", _req.method, _req.originalUrl);
+    res.status(404).json({ message: 'API route not found' });
   });
 
   // importantly only setup vite in development and after
