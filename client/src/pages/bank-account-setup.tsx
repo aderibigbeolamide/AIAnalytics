@@ -48,7 +48,7 @@ export default function BankAccountSetup() {
   const [isEditing, setIsEditing] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check if current user is super admin
   const isSuperAdmin = user?.role === "super_admin";
@@ -136,10 +136,10 @@ export default function BankAccountSetup() {
   const verifyBankAccountMutation = useMutation({
     mutationFn: async (data: { accountNumber: string; bankCode: string }) => {
       try {
-        console.log("Making verification request with:", data);
+        console.log("Making verification request for bank code:", data.bankCode.substring(0, 3) + "***");
         const response = await apiRequest("POST", "/api/banks/verify", data);
         const result = await response.json();
-        console.log("Verification API response:", result);
+        console.log("Verification API response status:", result.success ? "success" : "failed");
         return result;
       } catch (error) {
         console.error("Verification API error:", error);
@@ -149,7 +149,7 @@ export default function BankAccountSetup() {
     onSuccess: (data: any) => {
       const bankValue = form.getValues("bankCode");
       const [bankCode, bankName, bankId] = bankValue.split('|');
-      console.log("Account verification successful:", data);
+      console.log("Account verification successful");
       
       if (data.success && data.accountName) {
         setVerifiedAccount({
@@ -165,7 +165,7 @@ export default function BankAccountSetup() {
           description: `${bankName} - ${data.accountName}`,
         });
       } else {
-        console.error("Verification response missing required data:", data);
+        console.error("Verification response missing required data");
         setVerifiedAccount(null);
         setVerificationError(data.message || "Invalid response from verification service");
         toast({
@@ -176,7 +176,7 @@ export default function BankAccountSetup() {
       }
     },
     onError: (error: any) => {
-      console.error("Bank verification failed:", error);
+      console.error("Bank verification failed");
       const errorMessage = error.message || "Could not verify account details";
       
       // Handle specific error cases
@@ -262,7 +262,7 @@ export default function BankAccountSetup() {
   const performVerification = useCallback((accountNumber: string, bankCode: string) => {
     // Extract just the bank code from the combined value (format: code|name|id)
     const cleanBankCode = bankCode.split('|')[0];
-    console.log("Performing verification for:", { accountNumber, bankCode: cleanBankCode });
+    console.log("Performing verification for bank:", cleanBankCode, "account ending in:", accountNumber.slice(-3));
     setIsVerifying(true);
     setHasAttemptedVerification(true);
     
@@ -270,7 +270,7 @@ export default function BankAccountSetup() {
       { accountNumber, bankCode: cleanBankCode },
       {
         onSettled: () => {
-          console.log("Bank verification mutation settled");
+          console.log("Bank verification completed");
           setIsVerifying(false);
         },
       }
@@ -280,9 +280,8 @@ export default function BankAccountSetup() {
   // Debounced verification when both bank and account number are provided
   useEffect(() => {
     console.log("useEffect - Verification check:", {
-      accountNumber: watchedAccountNumber,
       accountLength: watchedAccountNumber?.length,
-      bankCode: watchedBankCode,
+      bankSelected: !!watchedBankCode,
       verifiedAccount: !!verifiedAccount,
       isVerifying,
       isPending: verifyBankAccountMutation.isPending,
@@ -302,9 +301,7 @@ export default function BankAccountSetup() {
         !verifyBankAccountMutation.isPending && 
         !hasAttemptedVerification) {
       
-      console.log("✅ All conditions met - Starting debounced verification");
-      console.log("Account Number:", watchedAccountNumber);
-      console.log("Bank Code:", watchedBankCode);
+      console.log("✅ All conditions met - Starting debounced verification for 10-digit account");
       
       // Add 800ms debounce to prevent rapid API calls
       debounceTimeoutRef.current = setTimeout(() => {
@@ -344,10 +341,12 @@ export default function BankAccountSetup() {
     const bankCode = data.bankCode.split('|')[0];
     const formDataWithCleanBankCode = {
       ...data,
-      bankCode: bankCode
+      bankCode: bankCode,
+      // Include verified account name from manual fallback if available
+      accountName: verifiedAccount?.accountName
     };
     
-    console.log("Submitting bank account data:", formDataWithCleanBankCode);
+    console.log("Submitting bank account setup form");
     setupAccountMutation.mutate(formDataWithCleanBankCode);
   };
 
@@ -773,51 +772,64 @@ export default function BankAccountSetup() {
                             </div>
                           </div>
                         )}
-                        {watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying && hasAttemptedVerification && (
-                          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
-                            <div className="flex items-center gap-2 text-sm text-red-600 mb-2">
+                        {watchedAccountNumber && watchedAccountNumber.length === 10 && watchedBankCode && !verifiedAccount && !isVerifying && (verificationError || (hasAttemptedVerification && !verificationError)) && (
+                          <div className={`border rounded-lg p-3 mt-2 ${isRateLimited ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200'}`}>
+                            <div className={`flex items-center gap-2 text-sm mb-2 ${isRateLimited ? 'text-orange-600' : 'text-red-600'}`}>
                               <AlertCircle className="w-4 h-4" />
-                              Automatic verification failed. Please try again or verify manually.
+                              {verificationError || "Automatic verification failed. Please try again or verify manually."}
                             </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setHasAttemptedVerification(false);
-                                setVerifiedAccount(null);
-                              }}
-                              className="mr-2"
-                            >
-                              Try Again
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const bankValue = form.getValues("bankCode");
-                                const accountNum = form.getValues("accountNumber");
-                                const [bankCode, bankName] = bankValue.split('|');
-                                
-                                // Prompt user for account name since verification failed
-                                const accountName = prompt("Since automatic verification failed, please enter your account name as it appears on your bank statement:");
-                                if (accountName && accountName.trim()) {
-                                  setVerifiedAccount({
-                                    accountName: accountName.trim(),
-                                    accountNumber: accountNum,
-                                    bankName: bankName || "Selected Bank",
-                                    bankCode: bankCode,
-                                  });
-                                  toast({
-                                    title: "Manual Verification Complete",
-                                    description: `Account name set to: ${accountName.trim()}`,
-                                  });
-                                }
-                              }}
-                            >
-                              Enter Account Name Manually
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={retryVerification}
+                                disabled={verifyBankAccountMutation.isPending}
+                                data-testid="button-retry-verification"
+                              >
+                                {verifyBankAccountMutation.isPending ? (
+                                  <>
+                                    <div className="animate-spin w-3 h-3 border border-gray-400 border-t-transparent rounded-full mr-1" />
+                                    Verifying...
+                                  </>
+                                ) : (
+                                  <>
+                                    <RefreshCw className="w-3 h-3 mr-1" />
+                                    Try Again
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const bankValue = form.getValues("bankCode");
+                                  const accountNum = form.getValues("accountNumber");
+                                  const [bankCode, bankName] = bankValue.split('|');
+                                  
+                                  // Prompt user for account name since verification failed
+                                  const accountName = prompt("Since automatic verification failed, please enter your account name as it appears on your bank statement:");
+                                  if (accountName && accountName.trim()) {
+                                    setVerifiedAccount({
+                                      accountName: accountName.trim(),
+                                      accountNumber: accountNum,
+                                      bankName: bankName || "Selected Bank",
+                                      bankCode: bankCode,
+                                    });
+                                    setVerificationError(null);
+                                    setIsRateLimited(false);
+                                    toast({
+                                      title: "Manual Verification Complete",
+                                      description: `Account name set to: ${accountName.trim()}`,
+                                    });
+                                  }
+                                }}
+                                data-testid="button-manual-verification"
+                              >
+                                Enter Account Name Manually
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </FormItem>
