@@ -3610,51 +3610,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // OPay-style bank detection from account number using free NUBAN API
+  // OPay-style bank detection from account number - simplified test version
   app.post("/api/banks/detect-opay-style", async (req: Request, res: Response) => {
+    console.log("=== BANK DETECTION ENDPOINT HIT ===");
+    console.log("Request body:", JSON.stringify(req.body));
+    
     try {
       const { accountNumber } = req.body;
+      console.log("Extracted account number:", accountNumber);
 
       if (!accountNumber || accountNumber.length !== 10) {
+        console.log("Invalid account number provided");
         return res.status(400).json({ 
           success: false,
           message: "Valid 10-digit account number is required" 
         });
       }
 
-      console.log(`OPay-style bank detection for account ending in: ...${accountNumber.slice(-3)}`);
+      console.log("Account number validation passed");
       
-      // Use free Nubapi.com API to detect bank from account number
-      const response = await fetch(`https://nubapi.com/verify?account_number=${accountNumber}`);
-      
-      if (!response.ok) {
-        console.log(`Nubapi response not OK: ${response.status}`);
-        return res.status(400).json({
-          success: false,
-          message: "Unable to detect bank from account number"
-        });
-      }
+      // For now, return a test response to verify the endpoint is working
+      console.log("Returning test failure response");
+      return res.status(400).json({
+        success: false,
+        message: "Bank detection temporarily disabled for debugging"
+      });
 
-      const data = await response.json();
-      console.log("Nubapi detection successful");
-
-      if (data.status === 'success' && data.account_name && data.bank_code) {
-        res.json({
-          success: true,
-          accountName: data.account_name,
-          accountNumber: data.account_number,
-          bankName: data.Bank_name,
-          bankCode: data.bank_code
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          message: data.message || "Could not detect bank for this account number"
-        });
-      }
     } catch (error) {
-      console.error("OPay-style bank detection error:", error);
-      res.status(500).json({ 
+      console.error("Bank detection error:", error);
+      return res.status(500).json({ 
         success: false,
         message: "Service temporarily unavailable. Please try again." 
       });
