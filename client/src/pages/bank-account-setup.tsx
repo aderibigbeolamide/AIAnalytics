@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,12 +13,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, CreditCard, Building2, AlertCircle, Loader2, ArrowLeft, Edit, DollarSign } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/lib/auth";
 
 const bankAccountSchema = z.object({
   accountNumber: z.string().min(10, "Account number must be at least 10 digits").max(10, "Account number must be exactly 10 digits"),
+  bankCode: z.string().min(1, "Please select a bank"),
   businessName: z.string().min(2, "Business name is required"),
   businessEmail: z.string().email("Valid email is required").or(z.literal("")).optional(),
   businessPhone: z.string().optional(),
@@ -32,12 +34,12 @@ export default function BankAccountSetup() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
-  const [detectedBankInfo, setDetectedBankInfo] = useState<{ accountName: string; accountNumber: string; bankName: string; bankCode: string } | null>(null);
-  const [isDetecting, setIsDetecting] = useState(false);
-  const [hasAttemptedDetection, setHasAttemptedDetection] = useState(false);
+  const [verifiedAccountInfo, setVerifiedAccountInfo] = useState<{ accountName: string; accountNumber: string; bankName: string; bankCode: string } | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [detectionError, setDetectionError] = useState<string | null>(null);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [availableBanks, setAvailableBanks] = useState<Array<{code: string; name: string}>>([]);
+  const [banksLoading, setBanksLoading] = useState(false);
 
   // Check if current user is super admin
   const isSuperAdmin = user?.role === "super_admin";
@@ -73,6 +75,7 @@ export default function BankAccountSetup() {
     resolver: zodResolver(bankAccountSchema),
     defaultValues: {
       accountNumber: "",
+      bankCode: "",
       businessName: "",
       businessEmail: "",
       businessPhone: "",
@@ -80,117 +83,100 @@ export default function BankAccountSetup() {
     },
   });
 
-  // OPay-style bank detection mutation using free NUBAN API
-  const detectBankMutation = useMutation({
-    mutationFn: async (accountNumber: string) => {
-      console.log("Making OPay-style bank detection request");
-      const response = await apiRequest("POST", "/api/banks/detect-opay-style", { accountNumber });
-      const result = await response.json();
-      console.log("OPay-style detection response:", result.success ? "success" : "failed");
-      return result;
+  // Manual bank verification mutation
+  const verifyBankMutation = useMutation({
+    mutationFn: async (data: { accountNumber: string; bankCode: string }) => {
+      console.log("Making manual bank verification request");
+      const response = await apiRequest("POST", "/api/banks/verify-account", data);
+      return await response.json();
     },
     onSuccess: (data: any) => {
-      console.log("Bank detection successful");
+      console.log("Bank verification successful");
+      setIsVerifying(false);
       
       if (data.success && data.accountName) {
-        setDetectedBankInfo({
+        const selectedBank = availableBanks.find(bank => bank.code === form.getValues("bankCode"));
+        setVerifiedAccountInfo({
           accountName: data.accountName,
           accountNumber: data.accountNumber,
-          bankName: data.bankName,
-          bankCode: data.bankCode
+          bankName: selectedBank?.name || "Selected Bank",
+          bankCode: form.getValues("bankCode")
         });
-        setDetectionError(null);
+        setVerificationError(null);
         toast({
-          title: "Bank Detected!",
-          description: `${data.bankName} - ${data.accountName}`,
+          title: "Account Verified!",
+          description: `${selectedBank?.name} - ${data.accountName}`,
         });
       } else {
-        console.error("Detection response missing required data");
-        setDetectedBankInfo(null);
-        setDetectionError(data.message || "Unable to detect bank for this account number");
+        setVerifiedAccountInfo(null);
+        setVerificationError(data.message || "Unable to verify account with selected bank");
         toast({
-          title: "Detection Failed",
-          description: data.message || "Could not detect bank for this account number",
+          title: "Verification Failed",
+          description: data.message || "Could not verify account with selected bank",
           variant: "destructive",
         });
       }
     },
     onError: (error: any) => {
-      console.error("Bank detection failed");
-      const errorMessage = error.message || "Could not detect bank details";
-      setDetectedBankInfo(null);
-      setDetectionError(errorMessage);
-      
+      console.error("Bank verification failed");
+      setIsVerifying(false);
+      setVerifiedAccountInfo(null);
+      setVerificationError("Failed to verify account. Please check your details and try again.");
       toast({
-        title: "Detection Failed",
-        description: "Unable to detect bank. Please verify your account number and try again.",
+        title: "Verification Failed",
+        description: "Unable to verify account. Please check your details and try again.",
         variant: "destructive",
       });
-    },
-    onSettled: () => {
-      console.log("Bank detection mutation settled");
-      setIsDetecting(false);
-      setHasAttemptedDetection(true);
     }
   });
 
-  // Function to perform OPay-style bank detection
-  const performBankDetection = useCallback((accountNumber: string) => {
-    console.log("Performing OPay-style bank detection for 10-digit account");
-    setIsDetecting(true);
-    detectBankMutation.mutate(accountNumber);
-  }, [detectBankMutation]);
+  // Function to perform manual bank verification
+  const performBankVerification = useCallback((accountNumber: string, bankCode: string) => {
+    if (!bankCode) {
+      setVerificationError("Please select a bank first");
+      return;
+    }
+    console.log("Performing manual bank verification");
+    setIsVerifying(true);
+    setVerificationError(null);
+    verifyBankMutation.mutate({ accountNumber, bankCode });
+  }, [verifyBankMutation]);
 
   // Watch account number for automatic detection
   const watchedAccountNumber = form.watch("accountNumber");
 
-  // Debounced auto-detection when account number is 10 digits
+  // Load available banks on component mount
   useEffect(() => {
-    console.log("useEffect - Detection check:", {
-      accountLength: watchedAccountNumber?.length,
-      detectedBank: !!detectedBankInfo,
-      isDetecting,
-      isPending: detectBankMutation.isPending,
-      hasAttempted: hasAttemptedDetection
-    });
-    
-    // Clear existing timeout
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = null;
-    }
-
-    // Clear state when account number changes
-    if (watchedAccountNumber !== detectedBankInfo?.accountNumber) {
-      setDetectedBankInfo(null);
-      setDetectionError(null);
-      setHasAttemptedDetection(false);
-    }
-
-    // Auto-detect when we have a valid 10-digit account number
-    if (watchedAccountNumber?.length === 10 && 
-        !detectedBankInfo && 
-        !isDetecting && 
-        !detectBankMutation.isPending && 
-        !hasAttemptedDetection) {
-      
-      console.log("✅ All conditions met - Starting debounced OPay-style detection for 10-digit account");
-      
-      // Add 800ms debounce to prevent rapid API calls
-      debounceTimeoutRef.current = setTimeout(() => {
-        performBankDetection(watchedAccountNumber);
-      }, 800);
-    }
-  }, [watchedAccountNumber, detectedBankInfo, isDetecting, detectBankMutation.isPending, hasAttemptedDetection, performBankDetection]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+    const loadBanks = async () => {
+      setBanksLoading(true);
+      try {
+        const response = await apiRequest("GET", "/api/banks/list");
+        const data = await response.json();
+        if (data.success && data.banks) {
+          setAvailableBanks(data.banks);
+        }
+      } catch (error) {
+        console.error("Failed to load banks:", error);
+        setVerificationError("Failed to load banks list. Please refresh the page.");
+      } finally {
+        setBanksLoading(false);
       }
     };
+    loadBanks();
   }, []);
+
+  // Watch for changes in account number and bank code to trigger verification
+  const watchedBankCode = form.watch("bankCode");
+
+  useEffect(() => {
+    // Clear verified info when either field changes
+    if (verifiedAccountInfo && 
+        (watchedAccountNumber !== verifiedAccountInfo.accountNumber || 
+         watchedBankCode !== verifiedAccountInfo.bankCode)) {
+      setVerifiedAccountInfo(null);
+      setVerificationError(null);
+    }
+  }, [watchedAccountNumber, watchedBankCode, verifiedAccountInfo]);
 
   // Fetch existing bank account details
   const { data: existingAccount, isLoading: accountLoading } = useQuery({
@@ -227,8 +213,8 @@ export default function BankAccountSetup() {
       // Include detected bank information if available
       const formData = {
         ...data,
-        bankCode: detectedBankInfo?.bankCode,
-        accountName: detectedBankInfo?.accountName
+        bankCode: verifiedAccountInfo?.bankCode,
+        accountName: verifiedAccountInfo?.accountName
       };
       
       // Only include percentageCharge if user is super admin
@@ -257,10 +243,10 @@ export default function BankAccountSetup() {
 
   // OPay-style form submission handler
   const onSubmit = (data: BankAccountFormData) => {
-    if (!detectedBankInfo) {
+    if (!verifiedAccountInfo) {
       toast({
-        title: "Bank Detection Required",
-        description: "Please enter your 10-digit account number to detect your bank.",
+        title: "Bank Verification Required",
+        description: "Please enter your account number, select your bank, and verify your account details.",
         variant: "destructive",
       });
       return;
@@ -528,48 +514,97 @@ export default function BankAccountSetup() {
                                 <Input
                                   {...field}
                                   placeholder="Enter your 10-digit account number"
-                                  className={`pr-10 ${detectedBankInfo ? 'border-green-500' : ''}`}
+                                  className={`pr-10 ${verifiedAccountInfo ? 'border-green-500' : ''}`}
                                   maxLength={10}
                                   data-testid="input-account-number"
                                 />
-                                {isDetecting && (
+                                {isVerifying && (
                                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                                     <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
                                   </div>
                                 )}
-                                {detectedBankInfo && (
+                                {verifiedAccountInfo && (
                                   <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-600" />
                                 )}
                               </div>
                             </FormControl>
                             <FormMessage />
                             <p className="text-xs text-gray-500 mt-1">
-                              We'll automatically detect your bank when you enter a valid 10-digit account number
+                              Enter your 10-digit account number, then select your bank to verify your account details
                             </p>
                           </FormItem>
                         )}
                       />
 
                       {/* Display Detected Bank Info */}
-                      {detectedBankInfo && (
-                        <Alert data-testid="detected-bank-info">
+                      {verifiedAccountInfo && (
+                        <Alert data-testid="verified-account-info">
                           <CheckCircle className="h-4 w-4 text-green-600" />
                           <AlertDescription className="text-green-700">
                             <div className="space-y-1">
-                              <div><span className="font-medium">Bank:</span> <span data-testid="detected-bank-name">{detectedBankInfo.bankName}</span></div>
-                              <div><span className="font-medium">Account Name:</span> <span className="text-green-700 font-semibold" data-testid="detected-account-name">{detectedBankInfo.accountName}</span></div>
-                              <div><span className="font-medium">Account Number:</span> <span data-testid="detected-account-number">{detectedBankInfo.accountNumber}</span></div>
+                              <div><span className="font-medium">Bank:</span> <span data-testid="verified-bank-name">{verifiedAccountInfo.bankName}</span></div>
+                              <div><span className="font-medium">Account Name:</span> <span className="text-green-700 font-semibold" data-testid="verified-account-name">{verifiedAccountInfo.accountName}</span></div>
+                              <div><span className="font-medium">Account Number:</span> <span data-testid="verified-account-number">{verifiedAccountInfo.accountNumber}</span></div>
                             </div>
                           </AlertDescription>
                         </Alert>
                       )}
 
-                      {/* Display Detection Error */}
-                      {detectionError && hasAttemptedDetection && (
-                        <Alert variant="destructive" data-testid="detection-error">
+                      {/* Bank Selection */}
+                      <FormField
+                        control={form.control}
+                        name="bankCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Select Your Bank</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={banksLoading}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-bank">
+                                  <SelectValue placeholder={banksLoading ? "Loading banks..." : "Choose your bank"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {availableBanks.map((bank) => (
+                                  <SelectItem key={bank.code} value={bank.code} data-testid={`bank-option-${bank.code}`}>
+                                    {bank.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Select your bank to verify your account details
+                            </p>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Manual Verification Button */}
+                      {watchedAccountNumber?.length === 10 && watchedBankCode && !verifiedAccountInfo && !isVerifying && (
+                        <Button
+                          type="button"
+                          onClick={() => performBankVerification(watchedAccountNumber, watchedBankCode)}
+                          className="w-full"
+                          disabled={isVerifying}
+                          data-testid="button-verify-account"
+                        >
+                          {isVerifying ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Verifying Account...
+                            </>
+                          ) : (
+                            "Verify Account Details"
+                          )}
+                        </Button>
+                      )}
+
+                      {/* Display Verification Error */}
+                      {verificationError && (
+                        <Alert variant="destructive" data-testid="verification-error">
                           <AlertCircle className="h-4 w-4" />
                           <AlertDescription>
-                            {detectionError}
+                            {verificationError}
                           </AlertDescription>
                         </Alert>
                       )}
@@ -652,7 +687,7 @@ export default function BankAccountSetup() {
 
                       <Button
                         type="submit"
-                        disabled={updatedSetupAccountMutation.isPending || !detectedBankInfo}
+                        disabled={updatedSetupAccountMutation.isPending || !verifiedAccountInfo}
                         className="w-full"
                         data-testid="button-setup-account"
                       >
