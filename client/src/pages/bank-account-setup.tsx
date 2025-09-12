@@ -314,6 +314,7 @@ export default function BankAccountSetup() {
                           // Pre-populate form with existing data
                           const bankAccount = (existingAccount as any)?.bankAccount;
                           form.reset({
+                            bankCode: bankAccount?.bankCode || '',
                             accountNumber: bankAccount?.accountNumber || '',
                             businessName: bankAccount?.businessName || '',
                             businessEmail: bankAccount?.businessEmail || '',
@@ -336,12 +337,33 @@ export default function BankAccountSetup() {
                   {isEditing ? (
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit((data) => editBankAccountMutation.mutate(data))} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Bank</Label>
-                          <div className="text-sm text-gray-600">
-                            {(existingAccount as any)?.bankAccount?.bankName}
-                          </div>
-                        </div>
+                        <FormField
+                          control={form.control}
+                          name="bankCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Select Your Bank</FormLabel>
+                              <FormControl>
+                                <select
+                                  {...field}
+                                  disabled={banksLoading}
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                  data-testid="edit-select-bank"
+                                >
+                                  <option value="">
+                                    {banksLoading ? "Loading banks..." : `Choose your bank (${availableBanks.length} available)`}
+                                  </option>
+                                  {availableBanks.map((bank) => (
+                                    <option key={bank.code} value={bank.code}>
+                                      {bank.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
                         <FormField
                           control={form.control}
