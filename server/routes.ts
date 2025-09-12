@@ -3610,6 +3610,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OPay-style bank detection from account number using free NUBAN API
+  app.post("/api/banks/detect-opay-style", async (req: Request, res: Response) => {
+    try {
+      const { accountNumber } = req.body;
+
+      if (!accountNumber || accountNumber.length !== 10) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Valid 10-digit account number is required" 
+        });
+      }
+
+      console.log(`OPay-style bank detection for account ending in: ...${accountNumber.slice(-3)}`);
+      
+      // Use free Nubapi.com API to detect bank from account number
+      const response = await fetch(`https://nubapi.com/verify?account_number=${accountNumber}`);
+      
+      if (!response.ok) {
+        console.log(`Nubapi response not OK: ${response.status}`);
+        return res.status(400).json({
+          success: false,
+          message: "Unable to detect bank from account number"
+        });
+      }
+
+      const data = await response.json();
+      console.log("Nubapi detection successful");
+
+      if (data.status === 'success' && data.account_name && data.bank_code) {
+        res.json({
+          success: true,
+          accountName: data.account_name,
+          accountNumber: data.account_number,
+          bankName: data.Bank_name,
+          bankCode: data.bank_code
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: data.message || "Could not detect bank for this account number"
+        });
+      }
+    } catch (error) {
+      console.error("OPay-style bank detection error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Service temporarily unavailable. Please try again." 
+      });
+    }
+  });
+
   // Setup bank account for user (create subaccount)
   app.post("/api/users/setup-bank-account", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
