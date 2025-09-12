@@ -30,7 +30,6 @@ const bankAccountSchema = z.object({
 type BankAccountFormData = z.infer<typeof bankAccountSchema>;
 
 export default function BankAccountSetup() {
-  console.log("🏦 BankAccountSetup component rendering");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -41,8 +40,6 @@ export default function BankAccountSetup() {
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [availableBanks, setAvailableBanks] = useState<Array<{code: string; name: string}>>([]);
   const [banksLoading, setBanksLoading] = useState(false);
-  
-  console.log("🏦 Current availableBanks state:", availableBanks.length, "banks");
 
   // Check if current user is super admin
   const isSuperAdmin = user?.role === "super_admin";
@@ -151,25 +148,18 @@ export default function BankAccountSetup() {
   // Load available banks on component mount
   useEffect(() => {
     const loadBanks = async () => {
-      console.log("🏦 Loading banks...");
       setBanksLoading(true);
       try {
-        console.log("🏦 Making API request to /api/banks/list");
         const response = await apiRequest("GET", "/api/banks/list");
         const data = await response.json();
-        console.log("🏦 Banks API response:", data);
         if (data.success && data.banks) {
-          console.log("🏦 Setting available banks:", data.banks.length, "banks");
           setAvailableBanks(data.banks);
-        } else {
-          console.log("🏦 Banks API failed:", data);
         }
       } catch (error) {
-        console.error("🏦 Failed to load banks:", error);
+        console.error("Failed to load banks:", error);
         setVerificationError("Failed to load banks list. Please refresh the page.");
       } finally {
         setBanksLoading(false);
-        console.log("🏦 Banks loading finished");
       }
     };
     loadBanks();
@@ -567,39 +557,23 @@ export default function BankAccountSetup() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Select Your Bank</FormLabel>
-                            {/* Debug: Show bank count */}
-                            <div className="text-xs text-blue-600 mb-2">
-                              Debug: {availableBanks.length} banks loaded, Loading: {banksLoading.toString()}
-                            </div>
-                            
-                            <Select onValueChange={field.onChange} value={field.value} disabled={banksLoading}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-bank">
-                                  <SelectValue placeholder={banksLoading ? "Loading banks..." : `Choose your bank (${availableBanks.length} available)`} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="max-h-[200px] overflow-y-auto">
-                                {banksLoading ? (
-                                  <div className="px-3 py-2 text-sm text-gray-500">Loading banks...</div>
-                                ) : availableBanks.length === 0 ? (
-                                  <div className="px-3 py-2 text-sm text-gray-500">No banks available</div>
-                                ) : (
-                                  <>
-                                    <SelectItem value="test">🔧 Test Option (Select this to verify dropdown works)</SelectItem>
-                                    {availableBanks.slice(0, 5).map((bank) => (
-                                      <SelectItem key={bank.code} value={bank.code}>
-                                        {bank.name} ({bank.code})
-                                      </SelectItem>
-                                    ))}
-                                    {availableBanks.length > 5 && (
-                                      <div className="px-3 py-1 text-xs text-gray-500 border-t">
-                                        + {availableBanks.length - 5} more banks available
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </SelectContent>
-                            </Select>
+                            <FormControl>
+                              <select
+                                {...field}
+                                disabled={banksLoading}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                data-testid="select-bank"
+                              >
+                                <option value="">
+                                  {banksLoading ? "Loading banks..." : `Choose your bank (${availableBanks.length} available)`}
+                                </option>
+                                {availableBanks.map((bank) => (
+                                  <option key={bank.code} value={bank.code}>
+                                    {bank.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </FormControl>
                             <FormMessage />
                             <p className="text-xs text-gray-500 mt-1">
                               Select your bank to verify your account details
