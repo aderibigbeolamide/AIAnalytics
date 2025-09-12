@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuthStore } from "./lib/auth";
 import { useEffect, lazy } from "react";
-import { initAnalytics } from "../lib/analytics";
+import { initAnalytics } from "@/lib/analytics";
 import { useGTM } from "../hooks/use-gtm";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";

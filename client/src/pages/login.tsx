@@ -7,7 +7,7 @@ import { useAuthStore } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { QrCode, ArrowLeft, Lock, User, Shield, AlertCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { trackLogin } from "../../lib/gtm";
+import { trackLogin } from "@/lib/gtm";
 
 export default function Login() {
   const [username, setUsername] = useState("");
