@@ -136,8 +136,8 @@ export default function PaymentSuccess() {
               <p><strong>Time:</strong> ${data?.event?.startDate ? new Date(data.event.startDate).toLocaleTimeString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleTimeString() : 'TBD'}</p>
             </div>
             <div style="text-align: left; margin-bottom: 15px;">
-              <p><strong>${type === 'ticket' ? 'Ticket Number' : 'Manual Verification Code'}:</strong> ${data?.ticketNumber || data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId?.slice(-6) || 'N/A'}</p>
-              <p><strong>Owner:</strong> ${data?.ownerName || (data?.firstName + ' ' + data?.lastName) || (searchParams.get('firstName') + ' ' + searchParams.get('lastName')) || 'N/A'}</p>
+              <p><strong>${type === 'ticket' ? 'Ticket Number' : 'Manual Verification Code'}:</strong> ${data?.ticketNumber || data?.uniqueId || searchParams.get('uniqueId') || 'N/A'}</p>
+              <p><strong>Owner:</strong> ${data?.ownerName || (data?.firstName && data?.lastName ? `${data.firstName} ${data.lastName}` : data?.firstName || data?.lastName) || (searchParams.get('firstName') && searchParams.get('lastName') ? `${searchParams.get('firstName')} ${searchParams.get('lastName')}` : searchParams.get('firstName') || searchParams.get('lastName')) || 'N/A'}</p>
               <p><strong>Email:</strong> ${data?.ownerEmail || data?.email || searchParams.get('email') || 'N/A'}</p>
               ${type === 'ticket' ? `<p><strong>Category:</strong> ${data?.category || 'N/A'}</p>` : ''}
             </div>
@@ -382,7 +382,7 @@ export default function PaymentSuccess() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-gray-400" />
-                    <span>{data?.ownerName || (data?.firstName && data?.lastName ? `${data.firstName} ${data.lastName}` : '') || (searchParams.get('firstName') && searchParams.get('lastName') ? `${searchParams.get('firstName')} ${searchParams.get('lastName')}` : '') || 'N/A'}</span>
+                    <span>{data?.ownerName || (data?.firstName && data?.lastName ? `${data.firstName} ${data.lastName}` : data?.firstName || data?.lastName) || (searchParams.get('firstName') && searchParams.get('lastName') ? `${searchParams.get('firstName')} ${searchParams.get('lastName')}` : searchParams.get('firstName') || searchParams.get('lastName')) || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-gray-400" />
@@ -399,11 +399,11 @@ export default function PaymentSuccess() {
               </div>
 
               {/* Manual Verification Code */}
-              {(data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId) && (
+              {(data?.uniqueId || searchParams.get('uniqueId')) && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
                   <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">Manual Verification Code</h4>
                   <div className="font-mono text-2xl font-bold text-yellow-800 dark:text-yellow-200">
-                    {data?.manualVerificationCode || searchParams.get('shortCode') || data?.uniqueId?.slice(-6) || 'N/A'}
+                    {data?.uniqueId || searchParams.get('uniqueId') || 'N/A'}
                   </div>
                   <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
                     Use this 6-digit code for manual verification if QR code scanning is not available
@@ -468,9 +468,9 @@ export default function PaymentSuccess() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
           <Button 
             variant="outline" 
-            onClick={() => setLocation('/')}
+            onClick={() => setLocation(eventId ? `/event-view/${eventId}` : '/')}
           >
-            Back to Events
+            Register Another User
           </Button>
           {(data?.event?.id || multipleTickets?.[0]?.event?.id) && (
             <Button 

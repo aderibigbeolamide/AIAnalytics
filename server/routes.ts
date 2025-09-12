@@ -42,7 +42,6 @@ import {
 import { 
   generateQRCode, 
   generateQRImage, 
-  generateShortUniqueId,
   encryptQRData, 
   decryptQRData, 
   validateQRData,
@@ -65,6 +64,8 @@ import {
   insertEventRecommendationSchema
 } from "@shared/schema";
 import { z } from "zod";
+import { nanoid } from "nanoid";
+import { generateValidationCode } from "./utils";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -964,7 +965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const qrCode = generateQRCode();
-      const uniqueId = generateShortUniqueId(); // Generate shorter 6-character ID for manual validation
+      const uniqueId = await generateValidationCode(); // Generate consistent 6-character ID for manual validation
       
       // Extract common fields from custom form data
       const getName = () => {
@@ -1682,7 +1683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const qrCode = generateQRCode();
-        const uniqueId = generateShortUniqueId();
+        const uniqueId = await generateValidationCode();
         
         // Extract name and email from form data
         const getName = () => {
@@ -1787,7 +1788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const qrCode = generateQRCode();
-        const uniqueId = generateShortUniqueId();
+        const uniqueId = await generateValidationCode();
         
         // Extract name and email from form data
         const getName = () => {
@@ -2995,7 +2996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate ticket data - shorter format
-      const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const ticketNumber = `TKT${await generateValidationCode()}`;
       const qrCode = generateQRCode();
 
       // Create ticket record
@@ -3244,22 +3245,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Validate ticket at event (admin endpoint)
   app.post("/api/tickets/:ticketId/validate", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
+      console.log('🎫 Ticket validation request for:', req.params.ticketId);
       const ticketParam = req.params.ticketId;
       let ticket;
 
       // Try to find ticket by ticket number first, then by ID
       if (isNaN(parseInt(ticketParam))) {
         // It's a ticket number (string like "TKTDAOIKM")
+        console.log('🎫 Looking up ticket by number:', ticketParam);
         [ticket] = await db.select().from(tickets).where(eq(tickets.ticketNumber, ticketParam));
       } else {
         // It's a numeric ID
         const ticketId = parseInt(ticketParam);
+        console.log('🎫 Looking up ticket by ID:', ticketId);
         [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
       }
 
       if (!ticket) {
+        console.log('❌ Ticket not found');
         return res.status(404).json({ message: "Ticket not found" });
       }
+
+      console.log('🎫 Found ticket:', {
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        status: ticket.status,
+        paymentStatus: ticket.paymentStatus,
+        usedAt: ticket.usedAt
+      });
 
       // Check if ticket has already been used
       if (ticket.status === "used") {
@@ -3305,7 +3318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scannedBy: req.user!.id,
       }).where(eq(tickets.id, ticket.id));
 
-      res.json({ 
+      const responseData = { 
         message: "Ticket validated successfully",
         success: true,
         ticket: {
@@ -3313,7 +3326,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: "used",
           usedAt: new Date(),
         },
-      });
+      };
+      
+      console.log('🎫 Ticket validation success response:', JSON.stringify(responseData, null, 2));
+      res.json(responseData);
     } catch (error) {
       console.error("Validate ticket error:", error);
       res.status(500).json({ 

@@ -28,6 +28,10 @@ import { CleanupScheduler } from "./services/cleanup-scheduler.js";
 import path from "path";
 
 const app = express();
+
+// Configure trust proxy for Replit proxy environment
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -105,6 +109,7 @@ app.use((req, res, next) => {
   const { registerAnalyticsRoutes } = await import("./mongo-analytics-routes.js");
   registerAnalyticsRoutes(app);
   
+
   // Register MongoDB routes (includes ticket lookup)
   const { registerMongoRoutes } = await import("./mongo-routes.js");
   registerMongoRoutes(app);

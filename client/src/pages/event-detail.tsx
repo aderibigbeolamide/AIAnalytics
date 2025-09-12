@@ -370,12 +370,13 @@ export default function EventDetail() {
                         </Badge>
                       </td>
                       <td className="p-2">
-                        {(reg.auxiliaryBody || reg.guestAuxiliaryBody || reg.guest_auxiliary_body) && (
+                        {(reg.auxiliaryBody && reg.auxiliaryBody !== 'N/A') || 
+                         (reg.guestAuxiliaryBody && reg.guestAuxiliaryBody !== 'N/A') || 
+                         (reg.guest_auxiliary_body && reg.guest_auxiliary_body !== 'N/A') ? (
                           <Badge variant="secondary">
                             {reg.auxiliaryBody || reg.guestAuxiliaryBody || reg.guest_auxiliary_body}
                           </Badge>
-                        )}
-                        {!(reg.auxiliaryBody || reg.guestAuxiliaryBody || reg.guest_auxiliary_body) && (
+                        ) : (
                           <span className="text-sm text-muted-foreground">—</span>
                         )}
                       </td>

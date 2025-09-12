@@ -54,10 +54,9 @@ export default function BankAccountSetup() {
   const editBankAccountMutation = useMutation({
     mutationFn: async (data: BankAccountFormData) => {
       // Only include percentageCharge if user is super admin
-      const submitData = { ...data };
-      if (!isSuperAdmin) {
-        delete submitData.percentageCharge;
-      }
+      const submitData = isSuperAdmin 
+        ? { ...data }
+        : { ...data, percentageCharge: undefined };
       const response = await apiRequest("PUT", "/api/users/bank-account", submitData);
       return await response.json();
     },
@@ -199,10 +198,9 @@ export default function BankAccountSetup() {
   const setupAccountMutation = useMutation({
     mutationFn: async (data: BankAccountFormData) => {
       // Only include percentageCharge if user is super admin
-      const submitData = { ...data };
-      if (!isSuperAdmin) {
-        delete submitData.percentageCharge;
-      }
+      const submitData = isSuperAdmin 
+        ? { ...data }
+        : { ...data, percentageCharge: undefined };
       const response = await apiRequest("POST", "/api/users/setup-bank-account", submitData);
       return await response.json();
     },

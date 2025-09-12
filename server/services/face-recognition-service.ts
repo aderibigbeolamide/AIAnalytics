@@ -4,7 +4,7 @@ import path from 'path';
 
 export class FaceRecognitionService {
   private client: RekognitionClient | null = null;
-  private collectionId: string = 'eventvalidate-faces';
+  private collectionId: string = 'eventify-ai-faces';
 
   constructor() {
     // Check if AWS credentials are configured

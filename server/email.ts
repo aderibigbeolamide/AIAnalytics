@@ -113,8 +113,17 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
       ? `${registration.member.firstName} ${registration.member.lastName}` 
       : registration.member?.firstName || registration.member?.lastName) ||
     (registration.firstName && registration.lastName ? `${registration.firstName} ${registration.lastName}` : null) ||
+    // Check registrationData fields
+    (registration.registrationData?.firstName && registration.registrationData?.lastName 
+      ? `${registration.registrationData.firstName} ${registration.registrationData.lastName}` : null) ||
+    (registration.registrationData?.FirstName && registration.registrationData?.LastName 
+      ? `${registration.registrationData.FirstName} ${registration.registrationData.LastName}` : null) ||
     registration.firstName ||
     registration.lastName ||
+    registration.registrationData?.firstName ||
+    registration.registrationData?.lastName ||
+    registration.registrationData?.FirstName ||
+    registration.registrationData?.LastName ||
     (registration.guestEmail ? registration.guestEmail.split('@')[0] : null) || // Extract name from email as last resort
     'Guest';
   

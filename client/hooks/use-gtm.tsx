@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { trackPageView } from '../lib/gtm';
+import { trackPageView } from '../src/lib/gtm';
 
 export const useGTM = () => {
   const [location] = useLocation();

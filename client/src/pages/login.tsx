@@ -7,7 +7,7 @@ import { useAuthStore } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { QrCode, ArrowLeft, Lock, User, Shield, AlertCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { trackLogin } from "../../lib/gtm";
+import { trackLogin } from "@/lib/gtm";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -48,7 +48,7 @@ export default function Login() {
       
       toast({
         title: "Welcome back!",
-        description: "Successfully signed in to EventValidate",
+        description: "Successfully signed in to Eventify AI",
       });
       // Small delay to ensure state is updated before redirect
       setTimeout(() => {

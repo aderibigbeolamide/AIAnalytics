@@ -26,14 +26,14 @@ interface TicketData {
   id: string;
   ticketNumber: string;
   ownerEmail: string;
-  ownerPhone: string;
-  ownerName: string;
+  ownerPhone?: string;
+  ownerName?: string;
   category: string;
-  price: number;
+  price: string;
   currency: string;
-  status: 'active' | 'used' | 'cancelled';
-  paymentStatus: 'pending' | 'completed' | 'failed';
-  paymentMethod: string;
+  status: 'active' | 'used' | 'expired' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentMethod?: string;
   validatedAt?: string;
   createdAt: string;
   transferHistory: any[];
@@ -54,8 +54,10 @@ export default function EventTickets() {
 
   // Fetch tickets for this event
   const { data: tickets = [], isLoading: ticketsLoading } = useQuery<TicketData[]>({
-    queryKey: ["/api/events", eventId, "tickets"],
+    queryKey: [`/api/events/${eventId}/tickets`],
     enabled: !!eventId,
+    staleTime: 0, // Force fresh data
+    gcTime: 0, // Don't cache this query (TanStack Query v5)
   });
 
   // Filter tickets based on search and status
@@ -75,7 +77,7 @@ export default function EventTickets() {
 
   // Group tickets by category
   const ticketsByCategory = filteredTickets.reduce((acc, ticket) => {
-    const category = ticket.category || 'General';
+    const category = ticket.category || 'Standard Tickets';
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -95,6 +97,8 @@ export default function EventTickets() {
         return 'bg-blue-100 text-blue-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
+      case 'expired':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -102,12 +106,14 @@ export default function EventTickets() {
 
   const getPaymentStatusIcon = (paymentStatus: string) => {
     switch (paymentStatus) {
-      case 'completed':
+      case 'paid':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'failed':
         return <XCircle className="h-4 w-4 text-red-600" />;
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'refunded':
+        return <XCircle className="h-4 w-4 text-blue-600" />;
       default:
         return <Clock className="h-4 w-4 text-gray-600" />;
     }
@@ -157,7 +163,7 @@ export default function EventTickets() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold">{(event as any)?.name} - Tickets</h1>
-              <p className="text-gray-600">Manage and view purchased tickets</p>
+              <p className="text-gray-600">Manage and view event tickets</p>
             </div>
           </div>
           <Badge variant="secondary" className="bg-purple-100 text-purple-800">
@@ -205,7 +211,7 @@ export default function EventTickets() {
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
                 <Input
-                  placeholder="Search by ticket number, email, name, or category..."
+                  placeholder="Search by ticket number, email, or owner name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -273,7 +279,7 @@ export default function EventTickets() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {categoryTickets.map((ticket) => (
+                  {(categoryTickets as TicketData[]).map((ticket) => (
                     <div 
                       key={ticket.id} 
                       className="border rounded-lg p-4 hover:bg-gray-50"
@@ -284,8 +290,11 @@ export default function EventTickets() {
                           <div className="font-mono text-sm font-medium bg-gray-100 px-2 py-1 rounded">
                             {ticket.ticketNumber}
                           </div>
+                          <Badge className="bg-purple-100 text-purple-800 border-purple-300">
+                            {ticket.category}
+                          </Badge>
                           <Badge className={getStatusBadge(ticket.status)}>
-                            {ticket.status}
+                            {ticket.status === 'active' ? 'Active' : ticket.status === 'used' ? 'Used' : ticket.status}
                           </Badge>
                           <div className="flex items-center">
                             {getPaymentStatusIcon(ticket.paymentStatus)}
@@ -294,16 +303,18 @@ export default function EventTickets() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          {ticket.price} {ticket.currency}
-                        </div>
+                        {ticket.price && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            {ticket.price} {ticket.currency}
+                          </div>
+                        )}
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div className="flex items-center">
                           <User className="h-4 w-4 mr-2 text-gray-400" />
-                          <span className="font-medium">{ticket.ownerName}</span>
+                          <span className="font-medium">{ticket.ownerName || 'Not specified'}</span>
                         </div>
                         <div className="flex items-center">
                           <Mail className="h-4 w-4 mr-2 text-gray-400" />
@@ -313,7 +324,7 @@ export default function EventTickets() {
                         </div>
                         <div className="flex items-center">
                           <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                          <span>{ticket.ownerPhone}</span>
+                          <span className="text-sm">{ticket.ownerPhone || 'Not provided'}</span>
                         </div>
                       </div>
                       
@@ -322,7 +333,7 @@ export default function EventTickets() {
                           <Calendar className="h-3 w-3 mr-1" />
                           Purchased: {format(new Date(ticket.createdAt), 'PPp')}
                         </div>
-                        {ticket.validatedAt && (
+                        {ticket.status === 'used' && ticket.validatedAt && (
                           <div className="flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
                             Used: {format(new Date(ticket.validatedAt), 'PPp')}
