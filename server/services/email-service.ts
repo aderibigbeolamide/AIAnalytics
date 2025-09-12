@@ -119,7 +119,7 @@ export class EmailService {
 
     try {
       const mailOptions = {
-        from: `"EventValidate" <${process.env.SMTP_USER}>`,
+        from: `"Eventify AI" <${process.env.SMTP_USER}>`,
         to: Array.isArray(config.to) ? config.to.join(', ') : config.to,
         subject: config.subject,
         text: config.text,
@@ -139,10 +139,10 @@ export class EmailService {
   // Organization approval/rejection email
   async sendOrganizationApprovalEmail(email: string, data: OrganizationApprovalEmailData): Promise<boolean> {
     const subject = data.status === 'approved' 
-      ? `Welcome to EventValidate - ${data.organizationName} Approved!`
+      ? `Welcome to Eventify AI - ${data.organizationName} Approved!`
       : data.status === 'suspended'
       ? `Account Suspended - ${data.organizationName}`
-      : `EventValidate Application Update - ${data.organizationName}`;
+      : `Eventify AI Application Update - ${data.organizationName}`;
 
     const html = data.status === 'approved' ? `
       <!DOCTYPE html>
@@ -161,11 +161,11 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Welcome to EventValidate!</h1>
+              <h1>🎉 Welcome to Eventify AI!</h1>
             </div>
             <div class="content">
               <h2>Congratulations ${data.contactPerson}!</h2>
-              <p>We're excited to inform you that <strong>${data.organizationName}</strong> has been approved for EventValidate!</p>
+              <p>We're excited to inform you that <strong>${data.organizationName}</strong> has been approved for Eventify AI!</p>
               
               <p><strong>What's next?</strong></p>
               <ul>
@@ -183,7 +183,7 @@ export class EmailService {
               <p>Welcome to the future of event management!</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>Transform your events with AI-powered validation</p>
             </div>
           </div>
@@ -209,7 +209,7 @@ export class EmailService {
             </div>
             <div class="content">
               <h2>Hello ${data.contactPerson},</h2>
-              <p>We are writing to inform you that your organization, <strong>${data.organizationName}</strong>, has been suspended on EventValidate.</p>
+              <p>We are writing to inform you that your organization, <strong>${data.organizationName}</strong>, has been suspended on Eventify AI.</p>
               
               ${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ''}
               
@@ -227,7 +227,7 @@ export class EmailService {
               <p>We apologize for any inconvenience this may cause.</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -248,11 +248,11 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>EventValidate Application Update</h1>
+              <h1>Eventify AI Application Update</h1>
             </div>
             <div class="content">
               <h2>Hello ${data.contactPerson},</h2>
-              <p>Thank you for your interest in EventValidate.</p>
+              <p>Thank you for your interest in Eventify AI.</p>
               
               <p>After careful review, we're unable to approve <strong>${data.organizationName}</strong> at this time.</p>
               
@@ -260,10 +260,10 @@ export class EmailService {
               
               <p>If you have questions or would like to reapply in the future, please contact us at ${data.adminEmail || 'admin@eventifyai.com'}.</p>
               
-              <p>Thank you for considering EventValidate.</p>
+              <p>Thank you for considering Eventify AI.</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -337,7 +337,7 @@ export class EmailService {
               <p>We look forward to seeing you at the event!</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>You're receiving this because you're registered for this event.</p>
             </div>
           </div>
@@ -405,7 +405,7 @@ export class EmailService {
               <p>If you have any questions about your payment or the event, please don't hesitate to contact us.</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>Keep this email for your records</p>
             </div>
           </div>
@@ -510,7 +510,7 @@ export class EmailService {
               <p>Looking forward to seeing you at the event!</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>You're receiving this confirmation for your event registration</p>
             </div>
           </div>
@@ -572,10 +572,10 @@ export class EmailService {
               
               <p><strong>Questions?</strong> Our support team is here to help! Contact us at admin@eventifyai.com</p>
               
-              <p>Thank you for choosing EventValidate!</p>
+              <p>Thank you for choosing Eventify AI!</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>Transform your events with AI-powered validation</p>
             </div>
           </div>
@@ -634,7 +634,7 @@ export class EmailService {
               <p>Need help? Contact our support team at admin@eventifyai.com</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>Secure email verification for organization registration</p>
             </div>
           </div>
@@ -667,13 +667,13 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>EventValidate Notification</h1>
+              <h1>Eventify AI Notification</h1>
             </div>
             <div class="content">
               ${message.replace(/\n/g, '<br>')}
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -755,10 +755,10 @@ export class EmailService {
               
               <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
               
-              <p>Thank you for choosing EventValidate!</p>
+              <p>Thank you for choosing Eventify AI!</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>For support: admin@eventifyai.com</p>
             </div>
           </div>

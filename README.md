@@ -1,4 +1,4 @@
-# EventValidate - Local Development & Deployment Guide
+# Eventify AI - Local Development & Deployment Guide
 
 
 ## Local Development Setup

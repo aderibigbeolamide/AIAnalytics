@@ -48,7 +48,7 @@ export default function Login() {
       
       toast({
         title: "Welcome back!",
-        description: "Successfully signed in to EventValidate",
+        description: "Successfully signed in to Eventify AI",
       });
       // Small delay to ensure state is updated before redirect
       setTimeout(() => {

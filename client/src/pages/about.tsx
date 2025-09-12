@@ -82,7 +82,7 @@ export function AboutPage() {
           <div className="text-center">
             <Badge className="mb-6 bg-blue-100 text-blue-800 border-blue-200">
               <Heart className="h-4 w-4 mr-2" />
-              About EventValidate
+              About Eventify AI
             </Badge>
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
               Transforming Event
@@ -360,7 +360,7 @@ export function AboutPage() {
             Ready to Transform Your Events?
           </h2>
           <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-            Join thousands of organizations already using EventValidate to streamline 
+            Join thousands of organizations already using Eventify AI to streamline 
             their event management and create exceptional member experiences.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
