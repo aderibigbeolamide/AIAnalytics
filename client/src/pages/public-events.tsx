@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Calendar, Users, Search, Filter, ArrowRight, ArrowLeft, Brain, Sparkles, TrendingUp, Star } from "lucide-react";
+import { MapPin, Calendar, Users, Search, Filter, ArrowRight, ArrowLeft, Brain, Sparkles, TrendingUp, Star, X, AlertCircle, Info } from "lucide-react";
 import { EventImage } from "@/lib/event-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SmartRecommendations } from "@/components/smart-recommendations";
@@ -164,7 +164,9 @@ export default function PublicEventsPage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold text-gray-900">All Events</h1>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {searchTerm.trim() ? `Search: "${searchTerm}"` : "All Events"}
+                </h1>
                 {aiEnabled && (
                   <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0">
                     <Brain className="h-3 w-3 mr-1" />
@@ -173,7 +175,10 @@ export default function PublicEventsPage() {
                 )}
               </div>
               <p className="text-gray-600 mt-2">
-                {aiEnabled ? "AI-enhanced discovery with smart insights and recommendations" : "Discover and register for upcoming events"}
+                {searchTerm.trim() 
+                  ? `Showing AI-enhanced search results for "${searchTerm}"` 
+                  : (aiEnabled ? "AI-enhanced discovery with smart insights and recommendations" : "Discover and register for upcoming events")
+                }
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -250,17 +255,70 @@ export default function PublicEventsPage() {
           </div>
         </div>
 
-        {/* Results Summary */}
-        <div className="mb-6">
-          <p className="text-gray-600">
-            Showing {filteredEvents.length} of {events.length} events
-            {searchTerm && (
-              <span className="ml-2 font-medium">
-                for "{searchTerm}"
-              </span>
-            )}
-          </p>
-        </div>
+        {/* Search Results Header */}
+        {searchTerm.trim() ? (
+          <div className="mb-8">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-full">
+                    <Search className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-blue-900">
+                      Search Results for "{searchTerm}"
+                    </h2>
+                    <p className="text-blue-700 text-sm">
+                      Found {filteredEvents.length} matching event{filteredEvents.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSearchTerm('')}
+                  className="text-blue-600 border-blue-300 hover:bg-blue-100"
+                  data-testid="button-clear-search"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Search
+                </Button>
+              </div>
+              {filteredEvents.length === 0 && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-600" />
+                    <p className="text-yellow-800 font-medium">No events found</p>
+                  </div>
+                  <p className="text-yellow-700 text-sm mt-1">
+                    Try adjusting your search terms or browse all events below.
+                  </p>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setSearchTerm('')}
+                    className="text-yellow-600 p-0 h-auto mt-2"
+                    data-testid="button-browse-all-events"
+                  >
+                    Browse all events →
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <p className="text-gray-600">
+                Showing all {filteredEvents.length} available events
+              </p>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Info className="h-4 w-4" />
+                Use the search bar above to find specific events
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Events Grid */}
         {isLoading ? (
