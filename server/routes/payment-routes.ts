@@ -386,7 +386,21 @@ export function registerPaymentRoutes(app: Express) {
       
       // Get list of Nigerian banks
       const banksData = await getNigerianBanks();
-      const banks = banksData.data || [];
+      const rawBanks = banksData.data || [];
+      
+      // Remove duplicates from raw data first (some banks have same code in Paystack API)
+      // Keep the first occurrence and log duplicates for debugging
+      const uniqueRawBanks = rawBanks.reduce((acc: any[], bank: any) => {
+        const existingBank = acc.find(existingBank => existingBank.code === bank.code);
+        if (!existingBank) {
+          acc.push(bank);
+        } else {
+          console.log(`Skipping duplicate bank code ${bank.code}: ${bank.name} (keeping ${existingBank.name})`);
+        }
+        return acc;
+      }, []);
+      
+      const banks = uniqueRawBanks;
       
       // Sort banks alphabetically and prioritize major banks
       const majorBanks = [
