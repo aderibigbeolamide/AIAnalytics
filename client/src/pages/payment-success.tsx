@@ -132,8 +132,20 @@ export default function PaymentSuccess() {
             <h3 style="color: #2563eb; margin-bottom: 15px;">${data?.event?.name || searchParams.get('eventName') || 'Event'}</h3>
             <div style="text-align: left; margin-bottom: 15px;">
               <p><strong>Location:</strong> ${data?.event?.location || searchParams.get('eventLocation') || 'TBD'}</p>
-              <p><strong>Date:</strong> ${data?.event?.startDate ? new Date(data.event.startDate).toLocaleDateString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleDateString() : 'TBD'}</p>
-              <p><strong>Time:</strong> ${data?.event?.startDate ? new Date(data.event.startDate).toLocaleTimeString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleTimeString() : 'TBD'}</p>
+              <p><strong>Date:</strong> ${
+                data?.event?.startDate
+                  ? new Date(data.event.startDate).toLocaleDateString()
+                  : searchParams.get('eventDate')
+                  ? new Date(searchParams.get('eventDate') ?? '').toLocaleDateString()
+                  : 'TBD'
+              }</p>
+              <p><strong>Time:</strong> ${
+                data?.event?.startDate
+                  ? new Date(data.event.startDate).toLocaleTimeString()
+                  : searchParams.get('eventDate')
+                  ? new Date(searchParams.get('eventDate') ?? '').toLocaleTimeString()
+                  : 'TBD'
+              }</p>
             </div>
             <div style="text-align: left; margin-bottom: 15px;">
               <p><strong>${type === 'ticket' ? 'Ticket Number' : 'Manual Verification Code'}:</strong> ${data?.ticketNumber || data?.uniqueId || searchParams.get('uniqueId') || 'N/A'}</p>
@@ -359,7 +371,7 @@ export default function PaymentSuccess() {
                   </div>
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Calendar className="h-4 w-4" />
-                    <span>{data?.event?.startDate ? new Date(data.event.startDate).toLocaleDateString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate')).toLocaleDateString() : 'Date TBD'}</span>
+                    <span>{data?.event?.startDate ? new Date(data.event.startDate).toLocaleDateString() : searchParams.get('eventDate') ? new Date(searchParams.get('eventDate') ?? "").toLocaleDateString() : 'Date TBD'}</span>
                   </div>
                 </div>
               </div>
