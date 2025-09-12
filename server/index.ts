@@ -28,6 +28,10 @@ import { CleanupScheduler } from "./services/cleanup-scheduler.js";
 import path from "path";
 
 const app = express();
+
+// Configure trust proxy for Replit proxy environment
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
