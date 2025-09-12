@@ -87,7 +87,7 @@ export default function BankAccountSetup() {
   const verifyBankMutation = useMutation({
     mutationFn: async (data: { accountNumber: string; bankCode: string }) => {
       console.log("Making manual bank verification request");
-      const response = await apiRequest("POST", "/api/banks/verify-account", data);
+      const response = await apiRequest("POST", "/api/banks/verify", data);
       return await response.json();
     },
     onSuccess: (data: any) => {
