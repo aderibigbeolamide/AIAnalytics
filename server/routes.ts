@@ -3610,6 +3610,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OPay-style bank detection from account number - simplified test version
+  app.post("/api/banks/detect-opay-style", async (req: Request, res: Response) => {
+    console.log("=== BANK DETECTION ENDPOINT HIT ===");
+    console.log("Request body:", JSON.stringify(req.body));
+    
+    try {
+      const { accountNumber } = req.body;
+      console.log("Extracted account number:", accountNumber);
+
+      if (!accountNumber || accountNumber.length !== 10) {
+        console.log("Invalid account number provided");
+        return res.status(400).json({ 
+          success: false,
+          message: "Valid 10-digit account number is required" 
+        });
+      }
+
+      console.log("Account number validation passed");
+      
+      // For now, return a test response to verify the endpoint is working
+      console.log("Returning test failure response");
+      return res.status(400).json({
+        success: false,
+        message: "Bank detection temporarily disabled for debugging"
+      });
+
+    } catch (error) {
+      console.error("Bank detection error:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Service temporarily unavailable. Please try again." 
+      });
+    }
+  });
+
   // Setup bank account for user (create subaccount)
   app.post("/api/users/setup-bank-account", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {

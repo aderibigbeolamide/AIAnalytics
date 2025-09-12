@@ -17,7 +17,7 @@ export interface EmailConfig {
 export interface OrganizationApprovalEmailData {
   organizationName: string;
   contactPerson: string;
-  status: 'approved' | 'rejected';
+  status: 'approved' | 'rejected' | 'suspended';
   reason?: string;
   loginUrl?: string;
   adminEmail?: string;

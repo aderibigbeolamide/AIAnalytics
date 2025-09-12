@@ -187,9 +187,14 @@ export async function createPaystackSubaccount(
 let lastRequestTime = 0;
 const REQUEST_DELAY = 5000; // 5 seconds between requests (increased from 3 seconds)
 
-// Extended cache for verification results (15 minute TTL)
-const verificationCache = new Map<string, { result: any; timestamp: number }>();
-const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+// Extended cache for verification results (15 minute TTL for positive, 5 minutes for negative)
+const verificationCache = new Map<string, { result: any; timestamp: number; isSuccess: boolean }>();
+const SUCCESS_CACHE_TTL = 15 * 60 * 1000; // 15 minutes for successful verifications
+const FAILURE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for failed verifications
+
+// Global cache to track failed bank attempts per account (shorter TTL)
+const failedBankAttempts = new Map<string, { bankCodes: Set<string>; timestamp: number }>();
+const FAILED_ATTEMPTS_TTL = 10 * 60 * 1000; // 10 minutes
 
 // Circuit breaker for Paystack API - Fixed implementation
 class PaystackCircuitBreaker {
@@ -317,6 +322,16 @@ class RequestQueue {
 // Global request queue
 const requestQueue = new RequestQueue();
 
+// Helper function to get banks that have already failed for this account
+export function getFailedBanksForAccount(accountNumber: string): Set<string> {
+  const failedKey = accountNumber;
+  const existing = failedBankAttempts.get(failedKey);
+  if (existing && (Date.now() - existing.timestamp) < FAILED_ATTEMPTS_TTL) {
+    return existing.bankCodes;
+  }
+  return new Set();
+}
+
 // Sleep function for delays
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -354,12 +369,19 @@ export async function verifyBankAccount(accountNumber: string, bankCode: string)
     console.log(`Verifying account ${accountNumber} with bank code ${bankCode}`);
     console.log(`Using Paystack Secret Key: ${process.env.PAYSTACK_SECRET_KEY ? 'Available' : 'Missing'}`);
     
-    // Check cache first
+    // Check cache first with different TTL for success vs failure
     const cacheKey = `${accountNumber}:${bankCode}`;
     const cached = verificationCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-      console.log(`Returning cached verification result for ${accountNumber}`);
-      return cached.result;
+    if (cached) {
+      const currentTime = Date.now();
+      const cacheTTL = cached.isSuccess ? SUCCESS_CACHE_TTL : FAILURE_CACHE_TTL;
+      if ((currentTime - cached.timestamp) < cacheTTL) {
+        console.log(`Returning cached ${cached.isSuccess ? 'successful' : 'failed'} verification result for ${accountNumber}`);
+        return cached.result;
+      } else {
+        // Remove expired cache entry
+        verificationCache.delete(cacheKey);
+      }
     }
     
     // Use request queue and circuit breaker for better reliability (correct order)
@@ -439,13 +461,27 @@ export async function verifyBankAccount(accountNumber: string, bankCode: string)
       });
     });
     
-    // Cache successful results
-    if (result && result.status) {
-      console.log(`Caching verification result for ${accountNumber}`);
-      verificationCache.set(cacheKey, {
-        result: result,
-        timestamp: Date.now()
-      });
+    // Cache both successful and failed results
+    const isSuccess = !!(result && result.status && result.data?.account_name);
+    console.log(`Caching ${isSuccess ? 'successful' : 'failed'} verification result for ${accountNumber}`);
+    verificationCache.set(cacheKey, {
+      result: result,
+      timestamp: Date.now(),
+      isSuccess
+    });
+    
+    // Track failed attempts for this account
+    if (!isSuccess) {
+      const failedKey = accountNumber;
+      const existing = failedBankAttempts.get(failedKey);
+      if (existing && (Date.now() - existing.timestamp) < FAILED_ATTEMPTS_TTL) {
+        existing.bankCodes.add(bankCode);
+      } else {
+        failedBankAttempts.set(failedKey, {
+          bankCodes: new Set([bankCode]),
+          timestamp: Date.now()
+        });
+      }
     }
     
     return result;
