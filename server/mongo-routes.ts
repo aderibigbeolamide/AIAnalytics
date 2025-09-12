@@ -2520,7 +2520,7 @@ export function registerMongoRoutes(app: Express) {
             
             return res.redirect(`/payment/success?type=ticket_multiple&ticketCount=${updatedTickets.length}&ticketNumbers=${encodeURIComponent(ticketNumbers)}&qrCode=${encodeURIComponent(firstTicketQR)}&eventName=${encodeURIComponent(event?.name || 'Event')}&ownerName=${encodeURIComponent(metadata.ownerName || 'Customer')}&amount=${amount}&currency=NGN`);
           }
-        } else if (metadata.type === 'event_registration' && metadata.registrationId) {
+        } else if ((metadata.type === 'event_registration' || metadata.type === 'existing_registration_payment') && metadata.registrationId) {
           // Handle event registration payment
           const registrationId = metadata.registrationId;
           const eventId = metadata.eventId;
@@ -2590,18 +2590,8 @@ export function registerMongoRoutes(app: Express) {
               }
             }
 
-            // Generate manual verification code - alphabetic for registration events, numeric for ticket events
-            let shortCode;
-            // Reuse the event variable that was already fetched above
-            if (event && event.eventType === 'registration') {
-              // Generate 6-character alphabetic code for secured registration events
-              shortCode = Array.from({length: 6}, () => 
-                String.fromCharCode(65 + Math.floor(Math.random() * 26))
-              ).join('');
-            } else {
-              // Generate 6-digit numeric code for ticket-based events
-              shortCode = Math.floor(100000 + Math.random() * 900000).toString();
-            }
+            // Generate manual verification code using consistent alphanumeric approach
+            const shortCode = await generateValidationCode();
             
             // Update registration with short verification code
             await mongoStorage.updateEventRegistration(registration._id.toString(), {
