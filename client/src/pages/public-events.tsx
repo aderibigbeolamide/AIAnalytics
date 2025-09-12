@@ -76,15 +76,17 @@ export default function PublicEventsPage() {
     },
   });
 
-  const { data: events = [], isLoading } = useQuery<Event[]>({
-    queryKey: ["/api/events/public", { search: searchTerm, includeAI: aiEnabled ? 'true' : 'false', userId: user?.id, sessionId }],
+  // Query for search results when search term exists
+  const { data: searchResults = [], isLoading: isSearchLoading } = useQuery<Event[]>({
+    queryKey: ["/api/events/public/search", { search: searchTerm, includeAI: aiEnabled ? 'true' : 'false', userId: user?.id, sessionId }],
     queryFn: async ({ queryKey }) => {
-      const [url, params] = queryKey as [string, { search: string; includeAI: string; userId?: number; sessionId: string }];
-      const searchParams = new URLSearchParams();
-      
-      if (params.search && params.search.trim()) {
-        searchParams.append('search', params.search.trim());
+      const [, params] = queryKey as [string, { search: string; includeAI: string; userId?: number; sessionId: string }];
+      if (!params.search || !params.search.trim()) {
+        return [];
       }
+      
+      const searchParams = new URLSearchParams();
+      searchParams.append('search', params.search.trim());
       if (params.includeAI) {
         searchParams.append('includeAI', params.includeAI);
       }
@@ -95,8 +97,8 @@ export default function PublicEventsPage() {
         searchParams.append('sessionId', params.sessionId);
       }
       
-      const fullUrl = searchParams.toString() ? `${url}?${searchParams.toString()}` : url;
-      console.log('Fetching events with URL:', fullUrl);
+      const fullUrl = `/api/events/public?${searchParams.toString()}`;
+      console.log('Fetching search results with URL:', fullUrl);
       
       const response = await fetch(fullUrl);
       if (!response.ok) {
@@ -104,8 +106,38 @@ export default function PublicEventsPage() {
       }
       return response.json();
     },
-    refetchInterval: 5000, // Refresh every 5 seconds to show new events
-    staleTime: 0, // Always refetch when search changes
+    enabled: !!searchTerm.trim(), // Only run query when there's a search term
+    staleTime: 0,
+  });
+
+  // Query for all events (always runs)
+  const { data: allEvents = [], isLoading: isAllEventsLoading } = useQuery<Event[]>({
+    queryKey: ["/api/events/public/all", { includeAI: aiEnabled ? 'true' : 'false', userId: user?.id, sessionId }],
+    queryFn: async ({ queryKey }) => {
+      const [, params] = queryKey as [string, { includeAI: string; userId?: number; sessionId: string }];
+      const searchParams = new URLSearchParams();
+      
+      if (params.includeAI) {
+        searchParams.append('includeAI', params.includeAI);
+      }
+      if (params.userId) {
+        searchParams.append('userId', params.userId.toString());
+      }
+      if (params.sessionId) {
+        searchParams.append('sessionId', params.sessionId);
+      }
+      
+      const fullUrl = searchParams.toString() ? `/api/events/public?${searchParams.toString()}` : '/api/events/public';
+      console.log('Fetching all events with URL:', fullUrl);
+      
+      const response = await fetch(fullUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
+    refetchInterval: searchTerm.trim() ? false : 5000, // Disable refetch during search
+    staleTime: 0,
   });
 
   // Track search behavior when search term changes
@@ -123,22 +155,35 @@ export default function PublicEventsPage() {
     }
   }, [searchTerm]);
 
-  // Filter events based on type (search is handled by backend AI)
-  const filteredEvents = useMemo(() => {
-    return events.filter(event => {
+  // Filter events based on type
+  const filteredSearchResults = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    return searchResults.filter(event => {
       const matchesType = eventTypeFilter === "all" || event.eventType === eventTypeFilter;
       return matchesType;
     });
-  }, [events, eventTypeFilter]);
+  }, [searchResults, eventTypeFilter, searchTerm]);
 
-  // Get AI-powered recommendations
+  const filteredAllEvents = useMemo(() => {
+    return allEvents.filter(event => {
+      const matchesType = eventTypeFilter === "all" || event.eventType === eventTypeFilter;
+      // If there's a search, exclude events that are already in search results
+      if (searchTerm.trim()) {
+        const isInSearchResults = filteredSearchResults.some(searchEvent => searchEvent.id === event.id);
+        return matchesType && !isInSearchResults;
+      }
+      return matchesType;
+    });
+  }, [allEvents, eventTypeFilter, searchTerm, filteredSearchResults]);
+
+  // Get AI-powered recommendations from all events
   const recommendedEvents = useMemo(() => {
     if (!aiEnabled) return [];
-    return filteredEvents
+    return allEvents
       .filter(event => event.aiInsights?.vibeScore && event.aiInsights.vibeScore > 0.7)
       .sort((a, b) => (b.aiInsights?.vibeScore || 0) - (a.aiInsights?.vibeScore || 0))
       .slice(0, 3);
-  }, [filteredEvents, aiEnabled]);
+  }, [allEvents, aiEnabled]);
 
   // Render vibe score indicator
   const renderVibeScore = (score: number) => {
@@ -269,7 +314,7 @@ export default function PublicEventsPage() {
                       Search Results for "{searchTerm}"
                     </h2>
                     <p className="text-blue-700 text-sm">
-                      Found {filteredEvents.length} matching event{filteredEvents.length !== 1 ? 's' : ''}
+                      Found {filteredSearchResults.length} matching event{filteredSearchResults.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
@@ -284,14 +329,14 @@ export default function PublicEventsPage() {
                   Clear Search
                 </Button>
               </div>
-              {filteredEvents.length === 0 && (
+              {filteredSearchResults.length === 0 && (
                 <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-yellow-600" />
-                    <p className="text-yellow-800 font-medium">No events found</p>
+                    <p className="text-yellow-800 font-medium">No matching events found</p>
                   </div>
                   <p className="text-yellow-700 text-sm mt-1">
-                    Try adjusting your search terms or browse all events below.
+                    No events match your search criteria. You can browse all events below or try different search terms.
                   </p>
                   <Button
                     variant="link"
@@ -300,7 +345,7 @@ export default function PublicEventsPage() {
                     className="text-yellow-600 p-0 h-auto mt-2"
                     data-testid="button-browse-all-events"
                   >
-                    Browse all events →
+                    Clear search
                   </Button>
                 </div>
               )}
@@ -310,7 +355,7 @@ export default function PublicEventsPage() {
           <div className="mb-6">
             <div className="flex items-center justify-between">
               <p className="text-gray-600">
-                Showing all {filteredEvents.length} available events
+                Showing all {filteredAllEvents.length} available events
               </p>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Info className="h-4 w-4" />
@@ -320,136 +365,268 @@ export default function PublicEventsPage() {
           </div>
         )}
 
-        {/* Events Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, index) => (
-              <Card key={index} className="animate-pulse">
-                <div className="h-48 bg-gray-200 rounded-t-lg"></div>
-                <CardContent className="p-6">
-                  <div className="h-6 bg-gray-200 rounded mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-4 w-2/3"></div>
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredEvents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map((event, index) => (
-              <Card 
-                key={event.id} 
-                className="group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border-0 shadow-lg bg-white overflow-hidden cursor-pointer transform hover:scale-[1.02]"
-                style={{ animationDelay: `${index * 100}ms` }}
-                onClick={() => {
-                  trackInteractionMutation.mutate({
-                    eventId: event.id,
-                    interactionType: 'click',
-                    searchQuery: searchTerm || undefined
-                  });
-                  window.location.href = `/event-view/${event.id}`;
-                }}
-              >
-                <div className="relative h-48 overflow-hidden">
-                  <EventImage 
-                    event={event} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="absolute top-4 right-4 space-y-2">
-                    {(() => {
-                      const now = new Date();
-                      const startDate = new Date(event.startDate);
-                      const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + (24 * 60 * 60 * 1000));
-                      
-                      if (now >= startDate && now <= endDate) {
-                        return (
-                          <Badge className="bg-green-500/90 text-white border-0 animate-pulse">
-                            Live Now
-                          </Badge>
-                        );
-                      } else {
-                        return (
-                          <Badge className="bg-blue-500/90 text-white border-0">
-                            Upcoming
-                          </Badge>
-                        );
-                      }
-                    })()}
-                    <Badge className="bg-white/90 text-gray-800 border-0 block">
-                      {event.eventType === 'ticket' ? 'Ticketed' : 'Registration'}
-                    </Badge>
-                    {aiEnabled && event.aiInsights?.vibeScore && event.aiInsights.vibeScore > 0.8 && (
-                      <Badge className="bg-yellow-500/90 text-white border-0 block">
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        High Vibe
-                      </Badge>
-                    )}
-                  </div>
+        {/* Events Grid with Per-Section Loading */}
+        <div className="space-y-8">
+          {/* Search Results Section */}
+          {searchTerm.trim() && (
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex-1"></div>
+                <h3 className="text-xl font-semibold text-blue-700 bg-blue-50 px-4 py-2 rounded-full border border-blue-200">
+                  Search Results
+                </h3>
+                <div className="h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex-1"></div>
+              </div>
+              {isSearchLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(3)].map((_, index) => (
+                    <Card key={index} className="animate-pulse">
+                      <div className="h-48 bg-gray-200 rounded-t-lg"></div>
+                      <CardContent className="p-6">
+                        <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                        <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded mb-4 w-2/3"></div>
+                        <div className="h-10 bg-gray-200 rounded"></div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-                <CardContent className="p-6 group-hover:bg-gradient-to-br group-hover:from-blue-50 group-hover:to-purple-50 transition-all duration-300">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
-                    {event.name}
-                  </h3>
-                  {event.description && (
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                      {event.description}
-                    </p>
-                  )}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                      {event.location}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                      {new Date(event.startDate).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                    {event.maxAttendees && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Users className="h-4 w-4 mr-2 text-gray-400" />
-                        Max {event.maxAttendees} attendees
+              ) : filteredSearchResults.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredSearchResults.map((event, index) => (
+                    <Card 
+                      key={event.id} 
+                      className="group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border-0 shadow-lg bg-white overflow-hidden cursor-pointer transform hover:scale-[1.02]"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                      onClick={() => {
+                        trackInteractionMutation.mutate({
+                          eventId: event.id,
+                          interactionType: 'click',
+                          searchQuery: searchTerm || undefined
+                        });
+                        window.location.href = `/event-view/${event.id}`;
+                      }}
+                    >
+                      <div className="relative h-48 overflow-hidden">
+                        <EventImage 
+                          event={event} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute top-4 right-4 space-y-2">
+                          {(() => {
+                            const now = new Date();
+                            const startDate = new Date(event.startDate);
+                            const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + (24 * 60 * 60 * 1000));
+                            
+                            if (now >= startDate && now <= endDate) {
+                              return (
+                                <Badge className="bg-green-500/90 text-white border-0 animate-pulse">
+                                  Live Now
+                                </Badge>
+                              );
+                            } else {
+                              return (
+                                <Badge className="bg-blue-500/90 text-white border-0">
+                                  Upcoming
+                                </Badge>
+                              );
+                            }
+                          })()}
+                          <Badge className="bg-white/90 text-gray-800 border-0 block">
+                            {event.eventType === 'ticket' ? 'Ticketed' : 'Registration'}
+                          </Badge>
+                          {aiEnabled && event.aiInsights?.vibeScore && event.aiInsights.vibeScore > 0.8 && (
+                            <Badge className="bg-yellow-500/90 text-white border-0 block">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              High Vibe
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  <Button 
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold"
-                    onClick={() => window.location.href = `/event-view/${event.id}`}
-                  >
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                    View Details & Register
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <div className="bg-gray-100 rounded-full p-8 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-              <Search className="h-12 w-12 text-gray-400" />
+                      <CardContent className="p-6 group-hover:bg-gradient-to-br group-hover:from-blue-50 group-hover:to-purple-50 transition-all duration-300">
+                        <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
+                          {event.name}
+                        </h3>
+                        {event.description && (
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                            {event.description}
+                          </p>
+                        )}
+                        <div className="space-y-2 mb-4">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                            {event.location}
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                            {new Date(event.startDate).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                          {event.maxAttendees && (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Users className="h-4 w-4 mr-2 text-gray-400" />
+                              Max {event.maxAttendees} attendees
+                            </div>
+                          )}
+                        </div>
+                        <Button 
+                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold"
+                          onClick={() => window.location.href = `/event-view/${event.id}`}
+                        >
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                          View Details & Register
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No search results found for "{searchTerm}"</p>
+                </div>
+              )}
             </div>
-            <h3 className="text-2xl font-bold text-gray-600 mb-2">No Events Found</h3>
-            <p className="text-gray-500 mb-6">
-              {searchTerm ? `No events match "${searchTerm}"` : "No events available at the moment"}
-            </p>
-            {searchTerm && (
-              <Button 
-                variant="outline" 
-                onClick={() => setSearchTerm("")}
-              >
-                Clear Search
-              </Button>
+          )}
+
+          {/* All Events Section */}
+          <div>
+            {searchTerm.trim() && filteredSearchResults.length > 0 && (
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-1 bg-gradient-to-r from-gray-300 to-gray-500 rounded-full flex-1"></div>
+                <h3 className="text-xl font-semibold text-gray-700 bg-gray-50 px-4 py-2 rounded-full border border-gray-200">
+                  All Other Events
+                </h3>
+                <div className="h-1 bg-gradient-to-r from-gray-500 to-gray-300 rounded-full flex-1"></div>
+              </div>
+            )}
+            {isAllEventsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, index) => (
+                  <Card key={index} className="animate-pulse">
+                    <div className="h-48 bg-gray-200 rounded-t-lg"></div>
+                    <CardContent className="p-6">
+                      <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-4 w-2/3"></div>
+                      <div className="h-10 bg-gray-200 rounded"></div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredAllEvents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredAllEvents.map((event, index) => (
+                  <Card 
+                    key={event.id} 
+                    className="group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border-0 shadow-lg bg-white overflow-hidden cursor-pointer transform hover:scale-[1.02]"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                    onClick={() => {
+                      trackInteractionMutation.mutate({
+                        eventId: event.id,
+                        interactionType: 'click',
+                        searchQuery: searchTerm || undefined
+                      });
+                      window.location.href = `/event-view/${event.id}`;
+                    }}
+                  >
+                    <div className="relative h-48 overflow-hidden">
+                      <EventImage 
+                        event={event} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute top-4 right-4 space-y-2">
+                        {(() => {
+                          const now = new Date();
+                          const startDate = new Date(event.startDate);
+                          const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + (24 * 60 * 60 * 1000));
+                          
+                          if (now >= startDate && now <= endDate) {
+                            return (
+                              <Badge className="bg-green-500/90 text-white border-0 animate-pulse">
+                                Live Now
+                              </Badge>
+                            );
+                          } else {
+                            return (
+                              <Badge className="bg-blue-500/90 text-white border-0">
+                                Upcoming
+                              </Badge>
+                            );
+                          }
+                        })()}
+                        <Badge className="bg-white/90 text-gray-800 border-0 block">
+                          {event.eventType === 'ticket' ? 'Ticketed' : 'Registration'}
+                        </Badge>
+                        {aiEnabled && event.aiInsights?.vibeScore && event.aiInsights.vibeScore > 0.8 && (
+                          <Badge className="bg-yellow-500/90 text-white border-0 block">
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            High Vibe
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <CardContent className="p-6 group-hover:bg-gradient-to-br group-hover:from-blue-50 group-hover:to-purple-50 transition-all duration-300">
+                      <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
+                        {event.name}
+                      </h3>
+                      {event.description && (
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                          {event.description}
+                        </p>
+                      )}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                          {event.location}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                          {new Date(event.startDate).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                        {event.maxAttendees && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Users className="h-4 w-4 mr-2 text-gray-400" />
+                            Max {event.maxAttendees} attendees
+                          </div>
+                        )}
+                      </div>
+                      <Button 
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold"
+                        onClick={() => {
+                          window.location.href = `/event-view/${event.id}`;
+                        }}
+                      >
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                        View Details & Register
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>No events available at the moment</p>
+              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
