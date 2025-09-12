@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, CreditCard, Building2, AlertCircle, Search, Loader2, ArrowLeft, Edit, DollarSign } from "lucide-react";
+import { CheckCircle, CreditCard, Building2, AlertCircle, Search, Loader2, ArrowLeft, Edit, DollarSign, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,9 @@ export default function BankAccountSetup() {
   const [bankSearchTerm] = useState("");
   const [hasAttemptedVerification, setHasAttemptedVerification] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if current user is super admin
   const isSuperAdmin = user?.role === "super_admin";
@@ -155,6 +158,8 @@ export default function BankAccountSetup() {
           bankName: bankName || "Unknown Bank",
           bankCode: bankCode,
         });
+        setVerificationError(null);
+        setIsRateLimited(false);
         toast({
           title: "Account Verified",
           description: `${bankName} - ${data.accountName}`,
@@ -162,6 +167,7 @@ export default function BankAccountSetup() {
       } else {
         console.error("Verification response missing required data:", data);
         setVerifiedAccount(null);
+        setVerificationError(data.message || "Invalid response from verification service");
         toast({
           title: "Verification Failed",
           description: data.message || "Invalid response from verification service",
@@ -175,7 +181,13 @@ export default function BankAccountSetup() {
       
       // Handle specific error cases
       let userMessage = errorMessage;
-      if (errorMessage.includes("401")) {
+      let isRateLimit = false;
+      
+      // Check for explicit HTTP 429 status or common rate limit messages
+      if (error.status === 429 || errorMessage.includes("429") || errorMessage.includes("Too Many Requests") || errorMessage.includes("temporarily unavailable") || errorMessage.includes("temporarily busy") || errorMessage.includes("Service temporarily")) {
+        userMessage = "Bank verification is temporarily busy due to high traffic. Please wait a moment and try again.";
+        isRateLimit = true;
+      } else if (errorMessage.includes("401")) {
         userMessage = "Authentication required. Please refresh the page and try again.";
       } else if (errorMessage.includes("timeout") || errorMessage.includes("ECONNREFUSED")) {
         userMessage = "Network error. Please check your connection and try again.";
@@ -185,11 +197,16 @@ export default function BankAccountSetup() {
         userMessage = "Invalid bank selection. Please select your bank and try again.";
       }
       
-      toast({
-        title: "Verification Failed",
-        description: userMessage,
-        variant: "destructive",
-      });
+      setVerificationError(userMessage);
+      setIsRateLimited(isRateLimit);
+      
+      if (!isRateLimit) {
+        toast({
+          title: "Verification Failed",
+          description: userMessage,
+          variant: "destructive",
+        });
+      }
       setVerifiedAccount(null);
     },
   });
@@ -225,18 +242,20 @@ export default function BankAccountSetup() {
   const watchedBankCodeWithName = form.watch("bankCode");
   const watchedBankCode = watchedBankCodeWithName ? watchedBankCodeWithName.split('|')[0] : "";
   
-  // Clear verification when account number or bank changes
+  // Clear verification state on any account number change
   useEffect(() => {
-    if (watchedAccountNumber && watchedAccountNumber.length !== 10) {
-      setVerifiedAccount(null);
-      setHasAttemptedVerification(false);
-    }
+    setVerifiedAccount(null);
+    setHasAttemptedVerification(false);
+    setVerificationError(null);
+    setIsRateLimited(false);
   }, [watchedAccountNumber]);
 
   // Reset verification when bank changes
   useEffect(() => {
     setVerifiedAccount(null);
     setHasAttemptedVerification(false);
+    setVerificationError(null);
+    setIsRateLimited(false);
   }, [watchedBankCode]);
 
   // Stable verification function
@@ -258,7 +277,7 @@ export default function BankAccountSetup() {
     );
   }, [verifyBankAccountMutation]);
 
-  // Verify account when both bank and account number are provided (only once per combination)
+  // Debounced verification when both bank and account number are provided
   useEffect(() => {
     console.log("useEffect - Verification check:", {
       accountNumber: watchedAccountNumber,
@@ -270,6 +289,11 @@ export default function BankAccountSetup() {
       hasAttempted: hasAttemptedVerification
     });
     
+    // Clear existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
     if (watchedAccountNumber && 
         watchedAccountNumber.length === 10 && 
         watchedBankCode && 
@@ -278,14 +302,33 @@ export default function BankAccountSetup() {
         !verifyBankAccountMutation.isPending && 
         !hasAttemptedVerification) {
       
-      console.log("✅ All conditions met - Starting verification immediately");
+      console.log("✅ All conditions met - Starting debounced verification");
       console.log("Account Number:", watchedAccountNumber);
       console.log("Bank Code:", watchedBankCode);
       
-      // Trigger verification immediately without timeout
+      // Add 800ms debounce to prevent rapid API calls
+      debounceTimeoutRef.current = setTimeout(() => {
+        performVerification(watchedAccountNumber, watchedBankCode);
+      }, 800);
+    }
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, hasAttemptedVerification, verifyBankAccountMutation.isPending, performVerification]);
+
+  // Manual retry function
+  const retryVerification = useCallback(() => {
+    if (watchedAccountNumber && watchedBankCode) {
+      setHasAttemptedVerification(false);
+      setVerificationError(null);
+      setIsRateLimited(false);
       performVerification(watchedAccountNumber, watchedBankCode);
     }
-  }, [watchedBankCode, watchedAccountNumber, verifiedAccount, isVerifying, hasAttemptedVerification, verifyBankAccountMutation.isPending, performVerification]);
+  }, [watchedAccountNumber, watchedBankCode, performVerification]);
 
   const onSubmit = (data: BankAccountFormData) => {
     if (!verifiedAccount) {
