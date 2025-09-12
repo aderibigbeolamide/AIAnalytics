@@ -185,7 +185,11 @@ export async function createPaystackSubaccount(
 
 // Rate limiting helper
 let lastRequestTime = 0;
-const REQUEST_DELAY = 1000; // 1 second between requests
+const REQUEST_DELAY = 3000; // 3 seconds between requests (increased from 1 second)
+
+// Simple in-memory cache for verification results (5 minute TTL)
+const verificationCache = new Map<string, { result: any; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Sleep function for delays
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -194,7 +198,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
-  baseDelay: number = 1000
+  baseDelay: number = 5000 // Increased base delay to 5 seconds
 ): Promise<T> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -206,8 +210,9 @@ async function retryWithBackoff<T>(
       
       // If it's a rate limit error, wait longer
       if (error.status === 429) {
-        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000; // Add jitter
-        console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        // Much longer delays for rate limiting: 5s, 15s, 35s
+        const delay = baseDelay * Math.pow(3, attempt) + Math.random() * 2000; // Increased multiplier and jitter
+        console.log(`Rate limited, retrying in ${Math.round(delay/1000)}s (attempt ${attempt + 1}/${maxRetries + 1})`);
         await sleep(delay);
       } else {
         throw error; // Don't retry non-rate-limit errors
@@ -223,6 +228,14 @@ export async function verifyBankAccount(accountNumber: string, bankCode: string)
     console.log(`Verifying account ${accountNumber} with bank code ${bankCode}`);
     console.log(`Using Paystack Secret Key: ${process.env.PAYSTACK_SECRET_KEY ? 'Available' : 'Missing'}`);
     
+    // Check cache first
+    const cacheKey = `${accountNumber}:${bankCode}`;
+    const cached = verificationCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+      console.log(`Returning cached verification result for ${accountNumber}`);
+      return cached.result;
+    }
+    
     // Rate limiting: ensure minimum delay between requests
     const now = Date.now();
     const timeSinceLastRequest = now - lastRequestTime;
@@ -233,7 +246,7 @@ export async function verifyBankAccount(accountNumber: string, bankCode: string)
     }
     lastRequestTime = Date.now();
     
-    return await retryWithBackoff(async () => {
+    const result = await retryWithBackoff(async () => {
       const response = await fetch(
         `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
         {
@@ -301,8 +314,28 @@ export async function verifyBankAccount(accountNumber: string, bankCode: string)
       
       return data;
     });
-  } catch (error) {
+    
+    // Cache successful results
+    if (result && result.status) {
+      console.log(`Caching verification result for ${accountNumber}`);
+      verificationCache.set(cacheKey, {
+        result: result,
+        timestamp: Date.now()
+      });
+    }
+    
+    return result;
+  } catch (error: any) {
     console.error('Bank account verification error:', error);
+    
+    // For rate limit errors, provide a more user-friendly message
+    if (error.status === 429) {
+      return {
+        status: false,
+        message: "Service temporarily busy due to high traffic. Please wait a few minutes and try again."
+      };
+    }
+    
     throw error;
   }
 }
