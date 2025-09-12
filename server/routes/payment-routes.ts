@@ -409,8 +409,8 @@ export function registerPaymentRoutes(app: Express) {
       
       // Get other banks (exclude major ones from the full list)
       const otherBanks = banks
-        .filter(bank => !majorBanks.some(major => major.code === bank.code))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .filter((bank: any) => !majorBanks.some((major: any) => major.code === bank.code))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name));
       
       // Combine with major banks first, then others
       const sortedBanks = [...majorBanks, ...otherBanks];
@@ -421,6 +421,40 @@ export function registerPaymentRoutes(app: Express) {
         banks: sortedBanks
       });
 
+    } catch (error) {
+      console.error("Get banks list error:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Unable to load banks list. Please try again." 
+      });
+    }
+  });
+
+  // Get Nigerian banks list endpoint - alias for /api/banks
+  app.get("/api/banks/list", async (req: Request, res: Response) => {
+    console.log("=== BANKS LIST ENDPOINT HIT ===");
+    
+    try {
+      const { getNigerianBanks } = await import('../paystack');
+      const banksData = await getNigerianBanks();
+      
+      if (banksData.status) {
+        const banks = banksData.data;
+        
+        console.log(`Successfully loaded ${banks.length} banks from Paystack API`);
+        
+        res.json({
+          success: true,
+          banks: banks,
+          message: `Found ${banks.length} Nigerian banks`
+        });
+      } else {
+        console.log("Failed to fetch banks from Paystack API");
+        res.status(400).json({
+          success: false,
+          message: "Failed to fetch banks from Paystack API"
+        });
+      }
     } catch (error) {
       console.error("Get banks list error:", error);
       return res.status(500).json({ 
