@@ -10,6 +10,32 @@ const paymentVerifySchema = z.object({
   eventId: z.string().optional(),
 });
 
+const bankVerificationSchema = z.object({
+  accountNumber: z.string()
+    .min(10, "Account number must be exactly 10 digits")
+    .max(10, "Account number must be exactly 10 digits")
+    .regex(/^\d{10}$/, "Account number must be exactly 10 digits"),
+  bankCode: z.string().min(1, "Bank code is required")
+});
+
+// Helper function to redact account numbers for logging
+function redactAccountNumber(accountNumber: string): string {
+  if (!accountNumber || accountNumber.length !== 10) {
+    return "[INVALID]";
+  }
+  return `****${accountNumber.slice(-4)}`;
+}
+
+// Helper function to redact request body for logging
+function redactRequestBody(body: any): any {
+  if (!body) return body;
+  const redacted = { ...body };
+  if (redacted.accountNumber) {
+    redacted.accountNumber = redactAccountNumber(redacted.accountNumber);
+  }
+  return redacted;
+}
+
 export function registerPaymentRoutes(app: Express) {
   // Verify payment by reference (GET route for callback)
   app.get("/api/payment/verify/:reference", async (req: Request, res: Response) => {
@@ -282,40 +308,92 @@ export function registerPaymentRoutes(app: Express) {
     res.json({ status: "payment routes working", timestamp: new Date().toISOString() });
   });
 
-  // OPay-style bank detection from account number
-  app.post("/api/banks/detect-opay-style", async (req: Request, res: Response) => {
-    console.log("=== BANK DETECTION ENDPOINT HIT ===");
-    console.log("Request body:", JSON.stringify(req.body));
+  // Manual bank account verification - user selects bank, we verify account name
+  app.post("/api/banks/verify-account", async (req: Request, res: Response) => {
+    console.log("=== MANUAL BANK VERIFICATION ENDPOINT HIT ===");
+    console.log("Request body:", JSON.stringify(redactRequestBody(req.body)));
     
     try {
-      const { accountNumber } = req.body;
-      console.log("Extracted account number:", accountNumber);
-
-      if (!accountNumber || accountNumber.length !== 10) {
-        console.log("Invalid account number provided");
-        return res.status(400).json({ 
+      // Validate request body with Zod
+      const validation = bankVerificationSchema.safeParse(req.body);
+      if (!validation.success) {
+        console.log("Invalid request data:", validation.error.errors);
+        return res.status(400).json({
           success: false,
-          message: "Valid 10-digit account number is required" 
+          message: "Invalid input data",
+          errors: validation.error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
         });
       }
 
-      console.log(`Bank detection for account ending in: ...${accountNumber.slice(-3)}`);
+      const { accountNumber, bankCode } = validation.data;
+      console.log(`Manual verification - Account: ${redactAccountNumber(accountNumber)}, Bank: ${bankCode}`);
+
+      console.log(`Manual bank verification for account ${redactAccountNumber(accountNumber)} with bank code ${bankCode}`);
       
       // Import the bank functions
       const { verifyBankAccount, getNigerianBanks } = await import('../paystack');
+      
+      // Get list of banks to find the bank name
+      const banksData = await getNigerianBanks();
+      const banks = banksData.data || [];
+      const selectedBank = banks.find(bank => bank.code === bankCode);
+      
+      if (!selectedBank) {
+        console.log(`Invalid bank code provided: ${bankCode}`);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid bank selected. Please choose a valid bank from the list."
+        });
+      }
+
+      // Verify account with the selected bank only
+      console.log(`Verifying with ${selectedBank.name} (${selectedBank.code})`);
+      const verificationData = await verifyBankAccount(accountNumber, selectedBank.code);
+      
+      if (verificationData.status && verificationData.data?.account_name) {
+        console.log(`Manual verification successful: ${selectedBank.name} - Account: ${redactAccountNumber(accountNumber)} - Name: ${verificationData.data.account_name}`);
+        return res.json({
+          success: true,
+          accountName: verificationData.data.account_name,
+          accountNumber: verificationData.data.account_number || accountNumber,
+          bankName: selectedBank.name,
+          bankCode: selectedBank.code
+        });
+      } else {
+        console.log(`Manual verification failed for account ${redactAccountNumber(accountNumber)}: ${verificationData.message || 'Unknown error'}`);
+        return res.status(400).json({
+          success: false,
+          message: verificationData.message || "Could not verify account with the selected bank. Please check your account number and bank selection."
+        });
+      }
+
+    } catch (error) {
+      console.error("Manual bank verification error:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Bank verification service is temporarily unavailable. Please try again in a few minutes." 
+      });
+    }
+  });
+
+  // Get list of Nigerian banks for dropdown selection
+  app.get("/api/banks/list", async (req: Request, res: Response) => {
+    console.log("=== GET BANKS LIST ENDPOINT HIT ===");
+    
+    try {
+      // Import the bank functions
+      const { getNigerianBanks } = await import('../paystack');
       
       // Get list of Nigerian banks
       const banksData = await getNigerianBanks();
       const banks = banksData.data || [];
       
-      // Try to verify with the most common banks first
-      const priorityBanks = [
+      // Sort banks alphabetically and prioritize major banks
+      const majorBanks = [
         { code: '044', name: 'Access Bank' },
-        { code: '014', name: 'Afribank' },
-        { code: '030', name: 'Heritage Bank' },
-        { code: '070', name: 'Fidelity Bank' },
         { code: '011', name: 'First Bank of Nigeria' },
         { code: '214', name: 'First City Monument Bank' },
+        { code: '070', name: 'Fidelity Bank' },
         { code: '058', name: 'Guaranty Trust Bank' },
         { code: '082', name: 'Keystone Bank' },
         { code: '221', name: 'Stanbic IBTC Bank' },
@@ -323,52 +401,31 @@ export function registerPaymentRoutes(app: Express) {
         { code: '232', name: 'Sterling Bank' },
         { code: '033', name: 'United Bank for Africa' },
         { code: '032', name: 'Union Bank of Nigeria' },
+        { code: '215', name: 'Unity Bank' },
         { code: '035', name: 'Wema Bank' },
         { code: '057', name: 'Zenith Bank' },
-        { code: '050', name: 'Ecobank Nigeria' },
-        { code: '084', name: 'Enterprise Bank' }
+        { code: '050', name: 'Ecobank Nigeria' }
       ];
-
-      // Combine priority banks with the full list
-      const allBanks = [...priorityBanks, ...banks].filter((bank, index, arr) => 
-        arr.findIndex(b => b.code === bank.code) === index
-      );
-
-      // Try to verify the account number with each bank
-      for (const bank of allBanks) {
-        try {
-          console.log(`Attempting verification with ${bank.name} (${bank.code})`);
-          const verificationData = await verifyBankAccount(accountNumber, bank.code);
-          
-          if (verificationData.status && verificationData.data?.account_name) {
-            console.log(`Bank detection successful: ${bank.name} - ${verificationData.data.account_name}`);
-            return res.json({
-              success: true,
-              accountName: verificationData.data.account_name,
-              accountNumber: verificationData.data.account_number || accountNumber,
-              bankName: bank.name,
-              bankCode: bank.code
-            });
-          }
-        } catch (bankError) {
-          // Continue to next bank if this one fails
-          console.log(`Verification failed for ${bank.name}: ${bankError}`);
-          continue;
-        }
-      }
-
-      // If no bank worked, return failure
-      console.log("Could not detect bank for account number");
-      return res.status(400).json({
-        success: false,
-        message: "Unable to detect bank for this account number. Please select your bank manually."
+      
+      // Get other banks (exclude major ones from the full list)
+      const otherBanks = banks
+        .filter(bank => !majorBanks.some(major => major.code === bank.code))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      
+      // Combine with major banks first, then others
+      const sortedBanks = [...majorBanks, ...otherBanks];
+      
+      console.log(`Returning ${sortedBanks.length} banks for selection`);
+      return res.json({
+        success: true,
+        banks: sortedBanks
       });
 
     } catch (error) {
-      console.error("Bank detection error:", error);
+      console.error("Get banks list error:", error);
       return res.status(500).json({ 
         success: false,
-        message: "Service temporarily unavailable. Please try again." 
+        message: "Unable to load banks list. Please try again." 
       });
     }
   });
