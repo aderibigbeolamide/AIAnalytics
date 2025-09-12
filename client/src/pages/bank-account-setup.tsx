@@ -372,12 +372,72 @@ export default function BankAccountSetup() {
                             <FormItem>
                               <FormLabel>Account Number</FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="1234567890" data-testid="input-account-number" />
+                                <div className="relative">
+                                  <Input
+                                    {...field}
+                                    placeholder="1234567890"
+                                    className={`pr-10 ${verifiedAccountInfo ? 'border-green-500' : ''}`}
+                                    maxLength={10}
+                                    data-testid="input-account-number"
+                                  />
+                                  {isVerifying && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
+                                    </div>
+                                  )}
+                                  {verifiedAccountInfo && (
+                                    <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-600" />
+                                  )}
+                                </div>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
+
+                        {/* Display Verified Account Info in Edit Mode */}
+                        {verifiedAccountInfo && (
+                          <Alert data-testid="edit-verified-account-info">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <AlertDescription className="text-green-700">
+                              <div className="space-y-1">
+                                <div><span className="font-medium">Bank:</span> <span data-testid="edit-verified-bank-name">{verifiedAccountInfo.bankName}</span></div>
+                                <div><span className="font-medium">Account Name:</span> <span className="text-green-700 font-semibold" data-testid="edit-verified-account-name">{verifiedAccountInfo.accountName}</span></div>
+                                <div><span className="font-medium">Account Number:</span> <span data-testid="edit-verified-account-number">{verifiedAccountInfo.accountNumber}</span></div>
+                              </div>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        {/* Manual Verification Button in Edit Mode */}
+                        {watchedAccountNumber?.length === 10 && watchedBankCode && !verifiedAccountInfo && !isVerifying && (
+                          <Button
+                            type="button"
+                            onClick={() => performBankVerification(watchedAccountNumber, watchedBankCode)}
+                            className="w-full"
+                            disabled={isVerifying}
+                            data-testid="button-edit-verify-account"
+                          >
+                            {isVerifying ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Verifying Account...
+                              </>
+                            ) : (
+                              "Verify Account Details"
+                            )}
+                          </Button>
+                        )}
+
+                        {/* Display Verification Error in Edit Mode */}
+                        {verificationError && (
+                          <Alert variant="destructive" data-testid="edit-verification-error">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                              {verificationError}
+                            </AlertDescription>
+                          </Alert>
+                        )}
 
                         <FormField
                           control={form.control}
