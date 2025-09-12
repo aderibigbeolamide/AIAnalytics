@@ -183,69 +183,124 @@ export async function createPaystackSubaccount(
   }
 }
 
+// Rate limiting helper
+let lastRequestTime = 0;
+const REQUEST_DELAY = 1000; // 1 second between requests
+
+// Sleep function for delays
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Retry with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      // If it's a rate limit error, wait longer
+      if (error.status === 429) {
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000; // Add jitter
+        console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        await sleep(delay);
+      } else {
+        throw error; // Don't retry non-rate-limit errors
+      }
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
 // Verify bank account details
 export async function verifyBankAccount(accountNumber: string, bankCode: string) {
   try {
     console.log(`Verifying account ${accountNumber} with bank code ${bankCode}`);
     console.log(`Using Paystack Secret Key: ${process.env.PAYSTACK_SECRET_KEY ? 'Available' : 'Missing'}`);
     
-    const response = await fetch(
-      `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      console.error('Paystack API response not OK:', response.status, response.statusText);
-      return {
-        status: false,
-        message: `API error: ${response.status} ${response.statusText}`
-      };
+    // Rate limiting: ensure minimum delay between requests
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTime;
+    if (timeSinceLastRequest < REQUEST_DELAY) {
+      const waitTime = REQUEST_DELAY - timeSinceLastRequest;
+      console.log(`Rate limiting: waiting ${waitTime}ms before next request`);
+      await sleep(waitTime);
     }
-
-    const responseText = await response.text();
-    if (!responseText) {
-      console.error('Empty response from Paystack API');
-      return {
-        status: false,
-        message: 'Empty response from bank verification service'
-      };
-    }
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse Paystack response:', responseText);
-      return {
-        status: false,
-        message: 'Invalid response format from bank verification service'
-      };
-    }
-    console.log('Paystack verification response:', data);
+    lastRequestTime = Date.now();
     
-    // If the response is unsuccessful, return a more specific error
-    if (!data.status) {
-      let errorMessage = data.message || "Could not resolve account name. Check parameters or try again.";
-      
-      // Provide more helpful error messages based on error codes
-      if (data.code === 'invalid_bank_code') {
-        errorMessage = "Invalid bank code. Please ensure you selected the correct bank.";
-      } else if (data.code === 'invalid_account') {
-        errorMessage = "Invalid account number. Please check your account number and try again.";
+    return await retryWithBackoff(async () => {
+      const response = await fetch(
+        `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Paystack API response not OK:', response.status, response.statusText);
+        
+        // For rate limit errors, throw an error to trigger retry
+        if (response.status === 429) {
+          const error = new Error(`Rate limited: ${response.status} ${response.statusText}`);
+          (error as any).status = 429;
+          throw error;
+        }
+        
+        return {
+          status: false,
+          message: `API error: ${response.status} ${response.statusText}`
+        };
       }
       
-      return {
-        status: false,
-        message: errorMessage
-      };
-    }
-    
-    return data;
+      // Process the response here, inside the retry block
+      const responseText = await response.text();
+      if (!responseText) {
+        console.error('Empty response from Paystack API');
+        return {
+          status: false,
+          message: 'Empty response from bank verification service'
+        };
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse Paystack response:', responseText);
+        return {
+          status: false,
+          message: 'Invalid response format from bank verification service'
+        };
+      }
+      console.log('Paystack verification response:', data);
+      
+      // If the response is unsuccessful, return a more specific error
+      if (!data.status) {
+        let errorMessage = data.message || "Could not resolve account name. Check parameters or try again.";
+        
+        // Provide more helpful error messages based on error codes
+        if (data.code === 'invalid_bank_code') {
+          errorMessage = "Invalid bank code. Please ensure you selected the correct bank.";
+        } else if (data.code === 'invalid_account') {
+          errorMessage = "Invalid account number. Please check your account number and try again.";
+        }
+        
+        return {
+          status: false,
+          message: errorMessage
+        };
+      }
+      
+      return data;
+    });
   } catch (error) {
     console.error('Bank account verification error:', error);
     throw error;
