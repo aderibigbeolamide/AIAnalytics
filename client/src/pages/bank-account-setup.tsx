@@ -30,6 +30,7 @@ const bankAccountSchema = z.object({
 type BankAccountFormData = z.infer<typeof bankAccountSchema>;
 
 export default function BankAccountSetup() {
+  console.log("🏦 BankAccountSetup component rendering");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -40,6 +41,8 @@ export default function BankAccountSetup() {
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [availableBanks, setAvailableBanks] = useState<Array<{code: string; name: string}>>([]);
   const [banksLoading, setBanksLoading] = useState(false);
+  
+  console.log("🏦 Current availableBanks state:", availableBanks.length, "banks");
 
   // Check if current user is super admin
   const isSuperAdmin = user?.role === "super_admin";
@@ -148,18 +151,25 @@ export default function BankAccountSetup() {
   // Load available banks on component mount
   useEffect(() => {
     const loadBanks = async () => {
+      console.log("🏦 Loading banks...");
       setBanksLoading(true);
       try {
+        console.log("🏦 Making API request to /api/banks/list");
         const response = await apiRequest("GET", "/api/banks/list");
         const data = await response.json();
+        console.log("🏦 Banks API response:", data);
         if (data.success && data.banks) {
+          console.log("🏦 Setting available banks:", data.banks.length, "banks");
           setAvailableBanks(data.banks);
+        } else {
+          console.log("🏦 Banks API failed:", data);
         }
       } catch (error) {
-        console.error("Failed to load banks:", error);
+        console.error("🏦 Failed to load banks:", error);
         setVerificationError("Failed to load banks list. Please refresh the page.");
       } finally {
         setBanksLoading(false);
+        console.log("🏦 Banks loading finished");
       }
     };
     loadBanks();
@@ -564,11 +574,17 @@ export default function BankAccountSetup() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {availableBanks.map((bank) => (
-                                  <SelectItem key={bank.code} value={bank.code} data-testid={`bank-option-${bank.code}`}>
-                                    {bank.name}
-                                  </SelectItem>
-                                ))}
+                                {availableBanks.length === 0 ? (
+                                  <div className="px-3 py-2 text-sm text-gray-500">
+                                    {banksLoading ? "Loading banks..." : "No banks available"}
+                                  </div>
+                                ) : (
+                                  availableBanks.map((bank) => (
+                                    <SelectItem key={bank.code} value={bank.code} data-testid={`bank-option-${bank.code}`}>
+                                      {bank.name}
+                                    </SelectItem>
+                                  ))
+                                )}
                               </SelectContent>
                             </Select>
                             <FormMessage />
