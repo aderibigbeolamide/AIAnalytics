@@ -8,7 +8,7 @@ export class RegistrationService {
    * Create event registration
    */
   static async createRegistration(eventId: string, registrationData: any) {
-    const uniqueId = generateValidationCode();
+    const uniqueId = await generateValidationCode();
     const qrCodeData = JSON.stringify({
       eventId,
       registrationId: uniqueId, // Keep for backward compatibility

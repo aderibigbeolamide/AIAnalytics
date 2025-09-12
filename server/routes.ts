@@ -965,7 +965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const qrCode = generateQRCode();
-      const uniqueId = generateValidationCode(); // Generate consistent 6-character ID for manual validation
+      const uniqueId = await generateValidationCode(); // Generate consistent 6-character ID for manual validation
       
       // Extract common fields from custom form data
       const getName = () => {
@@ -1683,7 +1683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const qrCode = generateQRCode();
-        const uniqueId = generateValidationCode();
+        const uniqueId = await generateValidationCode();
         
         // Extract name and email from form data
         const getName = () => {
@@ -1788,7 +1788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const qrCode = generateQRCode();
-        const uniqueId = generateValidationCode();
+        const uniqueId = await generateValidationCode();
         
         // Extract name and email from form data
         const getName = () => {
@@ -2996,7 +2996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate ticket data - shorter format
-      const ticketNumber = `TKT${generateValidationCode()}`;
+      const ticketNumber = `TKT${await generateValidationCode()}`;
       const qrCode = generateQRCode();
 
       // Create ticket record

@@ -835,7 +835,7 @@ export function registerMongoRoutes(app: Express) {
       }
 
       // Generate unique identifiers - use nanoid for consistency with RegistrationService
-      const uniqueId = generateValidationCode();
+      const uniqueId = await generateValidationCode();
       
       console.log('Generated uniqueId for secured event (nanoid):', uniqueId);
       const qrCode = nanoid(16);
@@ -1487,7 +1487,7 @@ export function registerMongoRoutes(app: Express) {
       const amountInKobo = Math.round(amountInNaira * 100);
       
       // Generate unique identifiers for registration
-      const uniqueId = generateValidationCode();
+      const uniqueId = await generateValidationCode();
       const qrCode = nanoid(16);
       const paymentReference = `REG_${Date.now()}_${nanoid(8)}`;
 
@@ -2160,7 +2160,7 @@ export function registerMongoRoutes(app: Express) {
 
       for (let i = 0; i < quantity; i++) {
         // Generate unique ticket data for each ticket
-        const ticketNumber = `TKT${generateValidationCode()}`;
+        const ticketNumber = `TKT${await generateValidationCode()}`;
         
         // Generate QR code data for this specific ticket
         const qrData = {
@@ -2603,7 +2603,7 @@ export function registerMongoRoutes(app: Express) {
           const registrationData = JSON.parse(metadata.registrationData || '{}');
           
           // Generate registration ID and QR code
-          const registrationId = `REG${Date.now()}${generateValidationCode()}`;
+          const registrationId = `REG${Date.now()}${await generateValidationCode()}`;
           
           const qrData = {
             eventId,

@@ -64,8 +64,8 @@ export function generateUniqueId(): string {
  * Generate a consistent validation code for registrations
  * This is the ONLY function that should be used for validation codes
  */
-export function generateValidationCode(): string {
+export async function generateValidationCode(): Promise<string> {
   // Use nanoid for better uniqueness and always uppercase
-  const { nanoid } = require('nanoid');
+  const { nanoid } = await import('nanoid');
   return nanoid(6).toUpperCase();
 }
