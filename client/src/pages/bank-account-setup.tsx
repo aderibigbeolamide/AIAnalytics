@@ -567,23 +567,36 @@ export default function BankAccountSetup() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Select Your Bank</FormLabel>
+                            {/* Debug: Show bank count */}
+                            <div className="text-xs text-blue-600 mb-2">
+                              Debug: {availableBanks.length} banks loaded, Loading: {banksLoading.toString()}
+                            </div>
+                            
                             <Select onValueChange={field.onChange} value={field.value} disabled={banksLoading}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-bank">
-                                  <SelectValue placeholder={banksLoading ? "Loading banks..." : "Choose your bank"} />
+                                  <SelectValue placeholder={banksLoading ? "Loading banks..." : `Choose your bank (${availableBanks.length} available)`} />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent>
-                                {availableBanks.length === 0 ? (
-                                  <div className="px-3 py-2 text-sm text-gray-500">
-                                    {banksLoading ? "Loading banks..." : "No banks available"}
-                                  </div>
+                              <SelectContent className="max-h-[200px] overflow-y-auto">
+                                {banksLoading ? (
+                                  <div className="px-3 py-2 text-sm text-gray-500">Loading banks...</div>
+                                ) : availableBanks.length === 0 ? (
+                                  <div className="px-3 py-2 text-sm text-gray-500">No banks available</div>
                                 ) : (
-                                  availableBanks.map((bank) => (
-                                    <SelectItem key={bank.code} value={bank.code} data-testid={`bank-option-${bank.code}`}>
-                                      {bank.name}
-                                    </SelectItem>
-                                  ))
+                                  <>
+                                    <SelectItem value="test">🔧 Test Option (Select this to verify dropdown works)</SelectItem>
+                                    {availableBanks.slice(0, 5).map((bank) => (
+                                      <SelectItem key={bank.code} value={bank.code}>
+                                        {bank.name} ({bank.code})
+                                      </SelectItem>
+                                    ))}
+                                    {availableBanks.length > 5 && (
+                                      <div className="px-3 py-1 text-xs text-gray-500 border-t">
+                                        + {availableBanks.length - 5} more banks available
+                                      </div>
+                                    )}
+                                  </>
                                 )}
                               </SelectContent>
                             </Select>
