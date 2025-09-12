@@ -124,8 +124,7 @@ export function registerPaymentRoutes(app: Express) {
       await mongoStorage.updateEventRegistration(metadata.registrationId, {
         paymentStatus: 'paid',
         paymentReference: reference,
-        paymentAmount: (paystackResponse.data.amount / 100).toString(), // Convert from kobo to naira
-        paymentCurrency: paystackResponse.data.currency,
+        paymentAmount: paystackResponse.data.amount / 100, // Convert from kobo to naira
         paymentVerifiedAt: new Date()
       });
 
@@ -210,8 +209,7 @@ export function registerPaymentRoutes(app: Express) {
       await mongoStorage.updateEventRegistration(registrationId!, {
         paymentStatus: 'paid',
         paymentReference: reference,
-        paymentAmount: paymentData.amount,
-        paymentCurrency: paymentData.currency,
+        paymentAmount: parseFloat(paymentData.amount),
         paymentVerifiedAt: paymentData.verifiedAt
       });
 
@@ -246,7 +244,7 @@ export function registerPaymentRoutes(app: Express) {
         
         if (metadata && metadata.registrationId) {
           const registration = await mongoStorage.getEventRegistration(metadata.registrationId);
-          const eventData = await mongoStorage.getEvent(registration?.eventId.toString());
+          const eventData = registration ? await mongoStorage.getEvent(registration.eventId.toString()) : null;
           
           if (registration && eventData) {
             // Update registration
@@ -254,7 +252,6 @@ export function registerPaymentRoutes(app: Express) {
               paymentStatus: 'paid',
               paymentReference: reference,
               paymentAmount: event.data.amount,
-              paymentCurrency: event.data.currency,
               paymentVerifiedAt: new Date()
             });
 
@@ -276,6 +273,103 @@ export function registerPaymentRoutes(app: Express) {
     } catch (error) {
       console.error("Webhook processing error:", error);
       res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
+  // Simple test route to verify payment routes are working
+  app.get("/api/test-payment-routes", (req: Request, res: Response) => {
+    console.log("=== PAYMENT ROUTES TEST ENDPOINT HIT ===");
+    res.json({ status: "payment routes working", timestamp: new Date().toISOString() });
+  });
+
+  // OPay-style bank detection from account number
+  app.post("/api/banks/detect-opay-style", async (req: Request, res: Response) => {
+    console.log("=== BANK DETECTION ENDPOINT HIT ===");
+    console.log("Request body:", JSON.stringify(req.body));
+    
+    try {
+      const { accountNumber } = req.body;
+      console.log("Extracted account number:", accountNumber);
+
+      if (!accountNumber || accountNumber.length !== 10) {
+        console.log("Invalid account number provided");
+        return res.status(400).json({ 
+          success: false,
+          message: "Valid 10-digit account number is required" 
+        });
+      }
+
+      console.log(`Bank detection for account ending in: ...${accountNumber.slice(-3)}`);
+      
+      // Import the bank functions
+      const { verifyBankAccount, getNigerianBanks } = await import('../paystack');
+      
+      // Get list of Nigerian banks
+      const banksData = await getNigerianBanks();
+      const banks = banksData.data || [];
+      
+      // Try to verify with the most common banks first
+      const priorityBanks = [
+        { code: '044', name: 'Access Bank' },
+        { code: '014', name: 'Afribank' },
+        { code: '030', name: 'Heritage Bank' },
+        { code: '070', name: 'Fidelity Bank' },
+        { code: '011', name: 'First Bank of Nigeria' },
+        { code: '214', name: 'First City Monument Bank' },
+        { code: '058', name: 'Guaranty Trust Bank' },
+        { code: '082', name: 'Keystone Bank' },
+        { code: '221', name: 'Stanbic IBTC Bank' },
+        { code: '068', name: 'Standard Chartered Bank' },
+        { code: '232', name: 'Sterling Bank' },
+        { code: '033', name: 'United Bank for Africa' },
+        { code: '032', name: 'Union Bank of Nigeria' },
+        { code: '035', name: 'Wema Bank' },
+        { code: '057', name: 'Zenith Bank' },
+        { code: '050', name: 'Ecobank Nigeria' },
+        { code: '084', name: 'Enterprise Bank' }
+      ];
+
+      // Combine priority banks with the full list
+      const allBanks = [...priorityBanks, ...banks].filter((bank, index, arr) => 
+        arr.findIndex(b => b.code === bank.code) === index
+      );
+
+      // Try to verify the account number with each bank
+      for (const bank of allBanks) {
+        try {
+          console.log(`Attempting verification with ${bank.name} (${bank.code})`);
+          const verificationData = await verifyBankAccount(accountNumber, bank.code);
+          
+          if (verificationData.status && verificationData.data?.account_name) {
+            console.log(`Bank detection successful: ${bank.name} - ${verificationData.data.account_name}`);
+            return res.json({
+              success: true,
+              accountName: verificationData.data.account_name,
+              accountNumber: verificationData.data.account_number || accountNumber,
+              bankName: bank.name,
+              bankCode: bank.code
+            });
+          }
+        } catch (bankError) {
+          // Continue to next bank if this one fails
+          console.log(`Verification failed for ${bank.name}: ${bankError}`);
+          continue;
+        }
+      }
+
+      // If no bank worked, return failure
+      console.log("Could not detect bank for account number");
+      return res.status(400).json({
+        success: false,
+        message: "Unable to detect bank for this account number. Please select your bank manually."
+      });
+
+    } catch (error) {
+      console.error("Bank detection error:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Service temporarily unavailable. Please try again." 
+      });
     }
   });
 }
