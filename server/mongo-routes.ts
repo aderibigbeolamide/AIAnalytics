@@ -1140,7 +1140,7 @@ export function registerMongoRoutes(app: Express) {
         const { EmailService } = await import('./services/email-service');
         const emailService = new EmailService();
         
-        const recipientEmail = registration.guestEmail || registration.email;
+        const recipientEmail = registration.email;
         await emailService.sendRegistrationConfirmationEmail(recipientEmail, {
           participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
           eventName: event.name,
