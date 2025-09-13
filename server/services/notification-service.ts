@@ -300,7 +300,7 @@ class NotificationService {
         participantName: name || 'Participant',
         registrationId: registration.uniqueId || registration._id?.toString() || 'N/A',
         qrCodeData: registration.qrCode || qrCode || '{}',
-        organizationName: event.organizationName || 'EventValidate',
+        organizationName: event.organizationName || 'Eventify AI',
         ticketType: registration.registrationType || 'Standard'
       });
     } catch (error) {

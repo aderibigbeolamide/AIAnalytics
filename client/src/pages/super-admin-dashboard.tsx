@@ -1784,7 +1784,7 @@ export default function SuperAdminDashboard() {
                   <Button 
                     variant="outline" 
                     className="w-full justify-start"
-                    onClick={() => setNotificationMessage("🎉 Welcome to EventValidate! Start creating amazing events today.")}
+                    onClick={() => setNotificationMessage("🎉 Welcome to Eventify AI! Start creating amazing events today.")}
                     data-testid="button-template-welcome"
                   >
                     Welcome Message
