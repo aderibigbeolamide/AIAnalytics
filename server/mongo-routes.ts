@@ -1136,42 +1136,25 @@ export function registerMongoRoutes(app: Express) {
       });
 
       // Send registration confirmation email
-      console.log('🔍 Starting email confirmation process...');
-      console.log('📧 Registration email field:', registration.email);
-      console.log('👤 Registration data:', JSON.stringify({
-        id: registration._id?.toString(),
-        firstName: registration.firstName,
-        lastName: registration.lastName,
-        email: registration.email,
-        registrationType: registration.registrationType
-      }));
-      
       try {
         const { EmailService } = await import('./services/email-service');
         const emailService = new EmailService();
         
         const recipientEmail = registration.email;
-        console.log(`📤 Attempting to send email to: "${recipientEmail}"`);
+        await emailService.sendRegistrationConfirmationEmail(recipientEmail, {
+          participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
+          eventName: event.name,
+          eventDate: event.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD',
+          eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString() : 'TBD',
+          eventLocation: event.location || 'TBD',
+          registrationId: registration.uniqueId,
+          qrCode: qrImageBase64,
+          eventUrl: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/events/${eventId}/public`
+        });
         
-        if (!recipientEmail) {
-          console.error('❌ No recipient email found - skipping email');
-        } else {
-          await emailService.sendRegistrationConfirmationEmail(recipientEmail, {
-            participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
-            eventName: event.name,
-            eventDate: event.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD',
-            eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString() : 'TBD',
-            eventLocation: event.location || 'TBD',
-            registrationId: registration.uniqueId,
-            qrCode: qrImageBase64,
-            eventUrl: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/events/${eventId}/public`
-          });
-          
-          console.log(`✅ Registration confirmation email sent to ${recipientEmail}`);
-        }
+        console.log(`✅ Registration confirmation email sent to ${recipientEmail}`);
       } catch (emailError) {
         console.error('❌ Failed to send registration confirmation email:', emailError);
-        console.error('❌ Email error stack:', emailError.stack);
       }
 
       // Send success response
@@ -2140,39 +2123,6 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
-  // Test email endpoint to verify email service
-  app.post("/api/test-email", async (req: Request, res: Response) => {
-    try {
-      console.log('🧪 Testing email service...');
-      
-      const { EmailService } = await import('./services/email-service');
-      const emailService = new EmailService();
-      
-      const testEmail = req.body.email || 'test@example.com';
-      
-      const result = await emailService.sendRegistrationConfirmationEmail(testEmail, {
-        participantName: 'Test User',
-        eventName: 'Test Event',
-        eventDate: new Date().toLocaleDateString(),
-        eventTime: new Date().toLocaleTimeString(),
-        eventLocation: 'Test Location',
-        registrationId: 'TEST123',
-        qrCode: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
-        eventUrl: 'https://test.com'
-      });
-      
-      if (result) {
-        console.log('✅ Test email sent successfully');
-        res.json({ success: true, message: 'Test email sent successfully' });
-      } else {
-        console.log('❌ Test email failed to send');
-        res.status(500).json({ success: false, message: 'Test email failed to send' });
-      }
-    } catch (error) {
-      console.error('❌ Test email error:', error);
-      res.status(500).json({ success: false, message: 'Test email error', error: error.message });
-    }
-  });
 
   // Test notification endpoint (for demonstration)
   app.post("/api/notifications/create-test", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
