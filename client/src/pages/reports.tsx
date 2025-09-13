@@ -415,10 +415,46 @@ export default function Reports() {
                   {selectedReport.event && (
                     <div className="text-sm text-gray-600">
                       <span className="font-medium">Event:</span> {selectedReport.event.name}
+                      {selectedReport.event.eventType && (
+                        <Badge variant="outline" className={`ml-2 ${getEventTypeColor(selectedReport.event.eventType)}`} size="sm">
+                          {selectedReport.event.eventType === 'ticket' ? '🎫 Ticket Event' : '📝 Registration Event'}
+                        </Badge>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Ticket Information for ticket-based events */}
+              {selectedReport.ticketInfo && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm font-medium text-purple-800">🎫 Ticket Information</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Ticket Number:</span>
+                      <span className="font-mono text-purple-900">{selectedReport.ticketInfo.ticketNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Category:</span>
+                      <span className="text-purple-900">{selectedReport.ticketInfo.category}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Ticket Status:</span>
+                      <Badge className={getTicketStatusColor(selectedReport.ticketInfo.status)} size="sm">
+                        {selectedReport.ticketInfo.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Payment Status:</span>
+                      <Badge className={getTicketStatusColor(selectedReport.ticketInfo.paymentStatus)} size="sm">
+                        {selectedReport.ticketInfo.paymentStatus}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Report Message */}
               <div className="space-y-2">

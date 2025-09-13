@@ -340,54 +340,93 @@ export function registerMongoRoutes(app: Express) {
         report.organizationId?.toString() === organizationId
       );
       
-      // Enhance reports with event type and ticket information
-      const enhancedReports = await Promise.all(
-        organizationReports.map(async (report) => {
-          try {
-            // Get event details to include event type
-            const event = await mongoStorage.getEventById(report.eventId);
-            
-            // Enhanced report object
-            const enhancedReport = {
-              ...report,
-              event: event ? {
-                id: event._id?.toString(),
-                name: event.name,
-                eventType: event.eventType || 'registration',
-                location: event.location,
-                startDate: event.startDate
-              } : null
-            };
+      // Optimize: Batch fetch events and tickets to avoid N+1 queries
+      const enhancedReports = await (async () => {
+        // Get unique event IDs to batch fetch
+        const eventIds = [...new Set(organizationReports.map(r => r.eventId).filter(Boolean))];
+        
+        if (eventIds.length === 0) {
+          return organizationReports;
+        }
+        
+        try {
+          // Batch fetch all events at once
+          const eventsPromise = Promise.all(eventIds.map(async (eventId) => {
+            try {
+              const event = await mongoStorage.getEventById(eventId);
+              return event ? [eventId, event] : null;
+            } catch (error) {
+              console.warn('Could not fetch event:', eventId, error);
+              return null;
+            }
+          }));
+          
+          // Batch fetch all tickets for ticket-based events
+          const ticketsPromise = Promise.all(eventIds.map(async (eventId) => {
+            try {
+              const event = await mongoStorage.getEventById(eventId);
+              if (event && event.eventType === 'ticket') {
+                const tickets = await mongoStorage.getTickets({ eventId });
+                return [eventId, tickets || []];
+              }
+              return [eventId, []];
+            } catch (error) {
+              console.warn('Could not fetch tickets for event:', eventId, error);
+              return [eventId, []];
+            }
+          }));
+          
+          // Wait for both batch operations to complete
+          const [eventsResults, ticketsResults] = await Promise.all([eventsPromise, ticketsPromise]);
+          
+          // Create lookup maps for efficient access
+          const eventsMap = new Map(eventsResults.filter(Boolean));
+          const ticketsMap = new Map(ticketsResults);
+          
+          // Map reports to enhanced objects using the lookup data
+          return organizationReports.map(report => {
+            try {
+              const event = eventsMap.get(report.eventId);
+              
+              // Enhanced report object
+              const enhancedReport = {
+                ...report,
+                event: event ? {
+                  id: event._id?.toString(),
+                  name: event.name,
+                  eventType: event.eventType || 'registration',
+                  location: event.location,
+                  startDate: event.startDate
+                } : null
+              };
 
-            // If reporter email provided, check if they have a ticket (for ticket events)
-            if (report.reporterEmail && event?.eventType === 'ticket') {
-              try {
-                const tickets = await mongoStorage.getTickets({ 
-                  eventId: report.eventId,
-                  ownerEmail: report.reporterEmail 
-                });
+              // Add ticket information for ticket-based events
+              if (report.reporterEmail && event?.eventType === 'ticket' && ticketsMap.has(report.eventId)) {
+                const eventTickets = ticketsMap.get(report.eventId);
+                const userTicket = eventTickets.find(ticket => ticket.ownerEmail === report.reporterEmail);
                 
-                if (tickets && tickets.length > 0) {
-                  const ticket = tickets[0]; // Get first ticket
+                if (userTicket) {
                   enhancedReport.ticketInfo = {
-                    ticketNumber: ticket.ticketNumber,
-                    category: ticket.category,
-                    status: ticket.status,
-                    paymentStatus: ticket.paymentStatus
+                    ticketNumber: userTicket.ticketNumber,
+                    category: userTicket.category,
+                    status: userTicket.status,
+                    paymentStatus: userTicket.paymentStatus
                   };
                 }
-              } catch (ticketError) {
-                console.warn('Error fetching ticket info for report:', ticketError);
               }
-            }
 
-            return enhancedReport;
-          } catch (enhancementError) {
-            console.warn('Error enhancing report:', enhancementError);
-            return report; // Return original report if enhancement fails
-          }
-        })
-      );
+              return enhancedReport;
+            } catch (enhancementError) {
+              console.warn('Error enhancing report:', enhancementError);
+              return report; // Return original report if enhancement fails
+            }
+          });
+          
+        } catch (batchError) {
+          console.error('Error in batch processing:', batchError);
+          return organizationReports; // Return original reports if batch enhancement fails
+        }
+      })();
       
       console.log(`Found ${enhancedReports.length} reports for organization ${organizationId}`);
       res.json(enhancedReports);
