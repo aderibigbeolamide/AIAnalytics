@@ -125,8 +125,13 @@ export default function Dashboard() {
       // Store that user has seen the tour
       localStorage.setItem('dashboard-tour-seen', 'true');
     } else if (type === EVENTS.STEP_AFTER) {
-      console.log('Step completed, moving to next step');
-      setTourStepIndex(index + 1);
+      if (action === ACTIONS.NEXT) {
+        console.log('Moving to next step');
+        setTourStepIndex(index + 1);
+      } else if (action === ACTIONS.PREV) {
+        console.log('Moving to previous step');
+        setTourStepIndex(index - 1);
+      }
     }
   };
 
