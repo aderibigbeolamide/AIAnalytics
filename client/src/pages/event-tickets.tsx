@@ -139,7 +139,7 @@ export default function EventTickets() {
     return (
       <div className="container mx-auto p-6 text-center">
         <h1 className="text-2xl font-bold text-red-600 mb-4">Event Not Found</h1>
-        <Link href="/events">
+        <Link href="/admin/events">
           <Button variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Events
@@ -155,7 +155,7 @@ export default function EventTickets() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            <Link href="/events">
+            <Link href="/admin/events">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Events
