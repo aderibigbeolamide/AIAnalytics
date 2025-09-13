@@ -73,12 +73,41 @@ const loadAuthState = () => {
       const authTimestamp = timestamp ? parseInt(timestamp) : Date.now();
       const lastActivityTime = lastActivity ? parseInt(lastActivity) : Date.now();
       
-      // Check if token contains severely malformed organizationId (only clear if completely invalid)
-      if (user?.organizationId && typeof user.organizationId === 'string' && 
-          user.organizationId.includes('_id: new ObjectId(') && user.organizationId.length > 100) {
-        console.log('Detected severely malformed organizationId in token, clearing auth state to force re-login');
-        clearAuthState();
-        return { token: null, user: null, member: null, isAuthenticated: false, lastActivity: Date.now() };
+      // Fix malformed organizationId instead of clearing entire auth state
+      if (user?.organizationId && typeof user.organizationId === 'string') {
+        // Clean up malformed organizationId that might contain MongoDB debug info
+        if (user.organizationId.includes('_id: new ObjectId(') || user.organizationId.includes('ObjectId(')) {
+          console.log('Detected malformed organizationId, attempting to clean it up');
+          
+          // Try to extract the actual ObjectId from malformed strings
+          const objectIdMatch = user.organizationId.match(/ObjectId\(['"]([a-f0-9]{24})['"]\)/i);
+          if (objectIdMatch && objectIdMatch[1]) {
+            user.organizationId = objectIdMatch[1];
+            console.log('Successfully cleaned organizationId:', user.organizationId);
+            // Save the cleaned user data back to localStorage
+            try {
+              localStorage.setItem('auth_user', JSON.stringify(user));
+            } catch (error) {
+              console.warn('Could not save cleaned user data:', error);
+            }
+          } else {
+            // If we can't clean it, extract any 24-character hex string
+            const hexMatch = user.organizationId.match(/([a-f0-9]{24})/i);
+            if (hexMatch && hexMatch[1]) {
+              user.organizationId = hexMatch[1];
+              console.log('Extracted organizationId from malformed string:', user.organizationId);
+              try {
+                localStorage.setItem('auth_user', JSON.stringify(user));
+              } catch (error) {
+                console.warn('Could not save cleaned user data:', error);
+              }
+            } else {
+              console.warn('Could not extract valid organizationId, but continuing with authentication');
+              // Don't clear the entire auth state - just remove the malformed organizationId
+              delete user.organizationId;
+            }
+          }
+        }
       }
       
       // Check if token is too old (more than 6 days, giving 1 day buffer for 7-day expiry)
