@@ -162,10 +162,33 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
       y += lineHeight;
     });
     
-    // QR Code section
-    const qrDataUrl = qrImageBase64 ? `data:image/png;base64,${qrImageBase64}` : 
-                      registration.qrImage || 
-                      (registration.qrImageBase64 ? `data:image/png;base64,${registration.qrImageBase64}` : null);
+    // QR Code section - use same normalization logic as display
+    const normalizeQRCodeData = () => {
+      // Try different sources in order of preference
+      const sources = [
+        qrImageBase64,
+        registration.qrImage,
+        registration.qrCodeImage,
+        registration.qrImageBase64,
+        registration.qrCode
+      ];
+
+      for (const source of sources) {
+        if (source && typeof source === 'string' && source.length > 10) {
+          // If it already has data URL prefix, use as-is
+          if (source.startsWith('data:image/')) {
+            return source;
+          }
+          // If it's base64 data without prefix, add prefix
+          if (source.length > 50) { // Reasonable check for base64 data
+            return `data:image/png;base64,${source}`;
+          }
+        }
+      }
+      return null;
+    };
+
+    const qrDataUrl = normalizeQRCodeData();
     
     if (qrDataUrl) {
       const qrImg = new Image();
@@ -259,40 +282,67 @@ export function RegistrationCard({ registration, event, qrImageBase64 }: Registr
             <QrCode className="h-5 w-5" />
             Your Registration QR Code
           </h3>
-          {(qrImageBase64 || registration.qrCode || registration.qrImage || registration.qrImageBase64) ? (
-            <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
-              <img 
-                src={qrImageBase64 ? `data:image/png;base64,${qrImageBase64}` : 
-                     registration.qrCode || 
-                     registration.qrImage || 
-                     (registration.qrImageBase64 ? `data:image/png;base64,${registration.qrImageBase64}` : '')} 
-                alt="Registration QR Code" 
-                className="w-48 h-48 mx-auto"
-                onError={(e) => {
-                  console.error('QR Image failed to load:', e);
-                  const target = e.currentTarget as HTMLImageElement;
-                  target.style.display = 'none';
-                  const fallback = target.parentElement?.nextElementSibling as HTMLElement;
-                  if (fallback) {
-                    fallback.style.display = 'block';
-                    if (target.parentElement) {
-                      target.parentElement.style.display = 'none';
-                    }
+          {(() => {
+            // Helper function to normalize QR code data to proper data URL
+            const normalizeQRCodeData = () => {
+              // Try different sources in order of preference
+              const sources = [
+                qrImageBase64,
+                registration.qrImage,
+                registration.qrCodeImage,
+                registration.qrImageBase64,
+                registration.qrCode
+              ];
+
+              for (const source of sources) {
+                if (source && typeof source === 'string' && source.length > 10) {
+                  // If it already has data URL prefix, use as-is
+                  if (source.startsWith('data:image/')) {
+                    return source;
                   }
-                }}
-              />
-            </div>
-          ) : (
-            <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
-              <div className="w-48 h-48 mx-auto flex items-center justify-center bg-gray-100 rounded">
-                <div className="text-center">
-                  <QrCode className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">QR Code Loading...</p>
-                  <p className="text-xs text-gray-400 mt-1">Please use your Unique ID below for now</p>
+                  // If it's base64 data without prefix, add prefix
+                  if (source.length > 50) { // Reasonable check for base64 data
+                    return `data:image/png;base64,${source}`;
+                  }
+                }
+              }
+              return null;
+            };
+
+            const qrSrc = normalizeQRCodeData();
+            
+            return qrSrc ? (
+              <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
+                <img 
+                  src={qrSrc}
+                  alt="Registration QR Code" 
+                  className="w-48 h-48 mx-auto"
+                  onError={(e) => {
+                    console.error('Failed to load QR image for download');
+                    const target = e.currentTarget as HTMLImageElement;
+                    target.style.display = 'none';
+                    const fallback = target.parentElement?.nextElementSibling as HTMLElement;
+                    if (fallback) {
+                      fallback.style.display = 'block';
+                      if (target.parentElement) {
+                        target.parentElement.style.display = 'none';
+                      }
+                    }
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
+                <div className="w-48 h-48 mx-auto flex items-center justify-center bg-gray-100 rounded">
+                  <div className="text-center">
+                    <QrCode className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">QR Code Loading...</p>
+                    <p className="text-xs text-gray-400 mt-1">Please use your Unique ID below for now</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
           <p className="text-sm text-gray-600 mt-4">
             Save this QR code or take a screenshot. Present it at the event entrance for quick check-in.
           </p>
