@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Joyride, { STATUS, CallBackProps, Step, ACTIONS, EVENTS } from "react-joyride";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,8 @@ import {
   Trash2,
   TrendingUp,
   Activity,
-  Clock
+  Clock,
+  HelpCircle
 } from "lucide-react";
 import { EnhancedCard } from "@/components/ui/enhanced-card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -51,8 +53,97 @@ export default function Dashboard() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [manualValidationOpen, setManualValidationOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
-  const [currentView, setCurrentView] = useState<"overview" | "events" | "members">("overview");
+  const [currentView, setCurrentView] = useState<"overview" | "events" | "members" | "analytics" | "validation">("overview");
+  const [runTour, setRunTour] = useState(false);
+  const [tourStepIndex, setTourStepIndex] = useState(0);
   const queryClient = useQueryClient();
+
+  // Tour configuration - only show steps for elements that are currently visible
+  const tourSteps: Step[] = [
+    {
+      target: 'body',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Welcome to Eventify AI Dashboard! 🎉</h3>
+          <p>This guided tour will show you around your event management dashboard. You can create events, manage members, scan QR codes, and much more!</p>
+        </div>
+      ),
+      placement: 'center',
+    },
+    {
+      target: '.tour-stats-overview',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Overview Statistics 📊</h3>
+          <p>Here you can see your key metrics at a glance - total events, members, registrations, and recent activity. This gives you a quick snapshot of your organization's performance.</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: '.tour-navigation-tabs',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Navigation Tabs 🗂️</h3>
+          <p>Switch between different views: Overview (statistics), Events (manage your events), and Members (manage your organization members). Each tab provides specific tools for that area.</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: '.tour-quick-actions',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Quick Actions ⚡</h3>
+          <p>These buttons let you quickly create new events, add members, or scan QR codes for validation. Use these for your most common tasks!</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: 'body',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Explore More Features! 🚀</h3>
+          <p>Try clicking on different tabs (Events, Members) to explore more features. You can always click the Help button again to restart this tour. Happy event managing!</p>
+        </div>
+      ),
+      placement: 'center',
+    }
+  ];
+
+  // Tour callback function
+  const handleTourCallback = (data: CallBackProps) => {
+    const { status, index, type, action } = data;
+    console.log('Tour callback:', { status, index, type, action });
+    
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+      console.log('Tour finished or skipped');
+      setRunTour(false);
+      setTourStepIndex(0);
+      
+      // Store that user has seen the tour
+      localStorage.setItem('dashboard-tour-seen', 'true');
+    } else if (type === EVENTS.STEP_AFTER) {
+      if (action === ACTIONS.NEXT) {
+        console.log('Moving to next step');
+        setTourStepIndex(index + 1);
+      } else if (action === ACTIONS.PREV) {
+        console.log('Moving to previous step');
+        setTourStepIndex(index - 1);
+      }
+    }
+  };
+
+  // Check if user should see tour on first visit
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('dashboard-tour-seen');
+    if (!hasSeenTour) {
+      // Show tour after a short delay to allow dashboard to load
+      const timer = setTimeout(() => setRunTour(true), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const { data: stats } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -168,10 +259,11 @@ export default function Dashboard() {
             </div>
             
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 tour-quick-actions">
               <Button 
                 onClick={() => setIsEventModalOpen(true)} 
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                data-testid="button-create-event"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Event
@@ -180,6 +272,7 @@ export default function Dashboard() {
                 onClick={() => setIsMemberModalOpen(true)} 
                 variant="outline" 
                 className="px-4 py-2"
+                data-testid="button-add-member"
               >
                 <UserPlus className="h-4 w-4 mr-1" />
                 Member
@@ -188,16 +281,32 @@ export default function Dashboard() {
                 onClick={() => setIsScannerOpen(true)} 
                 variant="outline" 
                 className="px-4 py-2"
+                data-testid="button-scan-qr"
               >
                 <Camera className="h-4 w-4 mr-1" />
                 Scan
+              </Button>
+              <Button 
+                onClick={() => {
+                  console.log('Help button clicked, starting tour...');
+                  localStorage.removeItem('dashboard-tour-seen'); // Reset tour status
+                  setTourStepIndex(0);
+                  setRunTour(true);
+                }} 
+                variant="outline" 
+                className="px-4 py-2"
+                data-testid="button-help-tour"
+                title="Take a guided tour"
+              >
+                <HelpCircle className="h-4 w-4 mr-1" />
+                Help
               </Button>
             </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border p-2 mb-6">
+        <div className="bg-white rounded-lg shadow-sm border p-2 mb-6 tour-navigation-tabs">
           <div className="flex gap-1">
             {[
               { id: "overview", label: "Overview", icon: BarChart },
@@ -222,7 +331,7 @@ export default function Dashboard() {
         </div>
 
         {/* Condensed Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 tour-stats-overview">
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -417,7 +526,7 @@ export default function Dashboard() {
 
         {/* Conditional Content Based on Current View */}
         {currentView === "events" && (
-          <Card>
+          <Card className="tour-events-section">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Event Management</CardTitle>
@@ -629,7 +738,7 @@ export default function Dashboard() {
         {currentView === "analytics" && (
           <div className="space-y-6">
             {/* AI-Powered Features */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 tour-ai-features">
               <div>
                 <EventRecommendations limit={3} />
               </div>
@@ -814,6 +923,46 @@ export default function Dashboard() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Hidden element for tour welcome step */}
+      <div className="tour-dashboard-welcome" style={{ display: 'none' }}></div>
+
+      {/* Guided Tour Component */}
+      <Joyride
+        steps={tourSteps}
+        run={runTour}
+        stepIndex={tourStepIndex}
+        callback={handleTourCallback}
+        continuous={true}
+        showProgress={true}
+        showSkipButton={true}
+        debug={true}
+        scrollToFirstStep={true}
+        spotlightClicks={true}
+        disableOverlayClose={true}
+        styles={{
+          options: {
+            primaryColor: '#3B82F6',
+            backgroundColor: '#FFFFFF',
+            textColor: '#374151',
+            overlayColor: 'rgba(0, 0, 0, 0.5)',
+            arrowColor: '#FFFFFF',
+            zIndex: 10000,
+          },
+          tooltip: {
+            fontSize: '14px',
+            borderRadius: '8px',
+            padding: '16px',
+          },
+        }}
+        locale={{
+          back: 'Back',
+          close: 'Close',
+          last: 'Finish',
+          next: 'Next',
+          skip: 'Skip Tour',
+        }}
+      />
     </div>
   );
 }
