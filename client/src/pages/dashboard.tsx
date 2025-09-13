@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import Joyride, { STATUS, CallBackProps, Step, ACTIONS, EVENTS } from "react-joyride";
+import Joyride, { STATUS, CallBackProps, Step } from "react-joyride";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,15 +53,15 @@ export default function Dashboard() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [manualValidationOpen, setManualValidationOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
-  const [currentView, setCurrentView] = useState<"overview" | "events" | "members" | "analytics" | "validation">("overview");
+  const [currentView, setCurrentView] = useState<"overview" | "events" | "members">("overview");
   const [runTour, setRunTour] = useState(false);
   const [tourStepIndex, setTourStepIndex] = useState(0);
   const queryClient = useQueryClient();
 
-  // Tour configuration - only show steps for elements that are currently visible
+  // Tour configuration
   const tourSteps: Step[] = [
     {
-      target: 'body',
+      target: '.tour-dashboard-welcome',
       content: (
         <div>
           <h3 className="text-lg font-semibold mb-2">Welcome to Eventify AI Dashboard! 🎉</h3>
@@ -101,37 +101,39 @@ export default function Dashboard() {
       placement: 'bottom',
     },
     {
-      target: 'body',
+      target: '.tour-events-section',
       content: (
         <div>
-          <h3 className="text-lg font-semibold mb-2">Explore More Features! 🚀</h3>
-          <p>Try clicking on different tabs (Events, Members) to explore more features. You can always click the Help button again to restart this tour. Happy event managing!</p>
+          <h3 className="text-lg font-semibold mb-2">Recent Events 📅</h3>
+          <p>View and manage your recent events here. You can see event status, registration counts, and quickly access event details or edit events.</p>
         </div>
       ),
-      placement: 'center',
+      placement: 'top',
+    },
+    {
+      target: '.tour-ai-features',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">AI-Powered Features 🤖</h3>
+          <p>Eventify AI includes smart features like seat availability heatmaps and personalized event recommendations to help optimize your events and improve user experience.</p>
+        </div>
+      ),
+      placement: 'top',
     }
   ];
 
   // Tour callback function
   const handleTourCallback = (data: CallBackProps) => {
-    const { status, index, type, action } = data;
-    console.log('Tour callback:', { status, index, type, action });
+    const { status, index, type } = data;
     
-    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
-      console.log('Tour finished or skipped');
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       setRunTour(false);
       setTourStepIndex(0);
       
       // Store that user has seen the tour
       localStorage.setItem('dashboard-tour-seen', 'true');
-    } else if (type === EVENTS.STEP_AFTER) {
-      if (action === ACTIONS.NEXT) {
-        console.log('Moving to next step');
-        setTourStepIndex(index + 1);
-      } else if (action === ACTIONS.PREV) {
-        console.log('Moving to previous step');
-        setTourStepIndex(index - 1);
-      }
+    } else if (type === 'step:after') {
+      setTourStepIndex(index + 1);
     }
   };
 
@@ -287,12 +289,7 @@ export default function Dashboard() {
                 Scan
               </Button>
               <Button 
-                onClick={() => {
-                  console.log('Help button clicked, starting tour...');
-                  localStorage.removeItem('dashboard-tour-seen'); // Reset tour status
-                  setTourStepIndex(0);
-                  setRunTour(true);
-                }} 
+                onClick={() => setRunTour(true)} 
                 variant="outline" 
                 className="px-4 py-2"
                 data-testid="button-help-tour"
@@ -936,10 +933,6 @@ export default function Dashboard() {
         continuous={true}
         showProgress={true}
         showSkipButton={true}
-        debug={true}
-        scrollToFirstStep={true}
-        spotlightClicks={true}
-        disableOverlayClose={true}
         styles={{
           options: {
             primaryColor: '#3B82F6',
@@ -947,7 +940,7 @@ export default function Dashboard() {
             textColor: '#374151',
             overlayColor: 'rgba(0, 0, 0, 0.5)',
             arrowColor: '#FFFFFF',
-            zIndex: 10000,
+            zIndex: 1000,
           },
           tooltip: {
             fontSize: '14px',
