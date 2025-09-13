@@ -29,6 +29,15 @@ interface Report {
   event?: {
     id: string;
     name: string;
+    eventType?: string;
+    location?: string;
+    startDate?: string;
+  };
+  ticketInfo?: {
+    ticketNumber: string;
+    category: string;
+    status: string;
+    paymentStatus: string;
   };
 }
 
@@ -36,6 +45,7 @@ export default function Reports() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [eventTypeFilter, setEventTypeFilter] = useState("all");
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [reviewNotes, setReviewNotes] = useState("");
@@ -105,12 +115,16 @@ export default function Reports() {
     const matchesSearch = searchTerm === "" || 
       report.reporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       report.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.reporterEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      report.reporterEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (report.event?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (report.ticketInfo?.ticketNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || report.status === statusFilter;
     const matchesType = typeFilter === "all" || report.reportType === typeFilter;
+    const matchesEventType = eventTypeFilter === "all" || 
+      (report.event?.eventType || 'registration') === eventTypeFilter;
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesEventType;
   });
 
   const getStatusIcon = (status: string) => {
@@ -154,6 +168,32 @@ export default function Reports() {
     }
   };
 
+  const getEventTypeColor = (eventType: string) => {
+    switch (eventType) {
+      case 'ticket':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'registration':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getTicketStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'used':
+        return 'bg-blue-100 text-blue-800';
+      case 'pending':
+        return 'bg-orange-100 text-orange-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -168,7 +208,7 @@ export default function Reports() {
         </div>
 
         {/* Filters */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
@@ -203,6 +243,17 @@ export default function Reports() {
               <SelectItem value="praise">Praise</SelectItem>
               <SelectItem value="technical">Technical</SelectItem>
               <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by event type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Event Types</SelectItem>
+              <SelectItem value="registration">Registration Events</SelectItem>
+              <SelectItem value="ticket">Ticket Events</SelectItem>
             </SelectContent>
           </Select>
           
@@ -247,6 +298,11 @@ export default function Reports() {
                         <Badge variant="outline" className={getTypeColor(report.reportType)}>
                           {report.reportType}
                         </Badge>
+                        {report.event && (
+                          <Badge variant="outline" className={getEventTypeColor(report.event.eventType || 'registration')}>
+                            {report.event.eventType === 'ticket' ? '🎫 Ticket Event' : '📝 Registration Event'}
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -271,9 +327,39 @@ export default function Reports() {
                   <p className="text-gray-800 mb-3 line-clamp-3">{report.message}</p>
                   
                   {report.event && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                       <span className="font-medium">Event:</span>
                       <span>{report.event.name}</span>
+                    </div>
+                  )}
+                  
+                  {report.ticketInfo && (
+                    <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium text-purple-800">🎫 Ticket Information</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-gray-600">Ticket #:</span>
+                          <span className="ml-1 font-mono">{report.ticketInfo.ticketNumber}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Category:</span>
+                          <span className="ml-1">{report.ticketInfo.category}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Status:</span>
+                          <Badge className={`ml-1 ${getTicketStatusColor(report.ticketInfo.status)}`} size="sm">
+                            {report.ticketInfo.status}
+                          </Badge>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Payment:</span>
+                          <Badge className={`ml-1 ${getTicketStatusColor(report.ticketInfo.paymentStatus)}`} size="sm">
+                            {report.ticketInfo.paymentStatus}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CardContent>

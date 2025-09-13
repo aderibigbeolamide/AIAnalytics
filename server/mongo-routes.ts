@@ -328,7 +328,7 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
-  // Global reports endpoint
+  // Global reports endpoint - Enhanced for ticket-based events
   app.get("/api/reports", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const organizationId = req.user?.organizationId;
@@ -340,8 +340,57 @@ export function registerMongoRoutes(app: Express) {
         report.organizationId?.toString() === organizationId
       );
       
-      console.log(`Found ${organizationReports.length} reports for organization ${organizationId}`);
-      res.json(organizationReports);
+      // Enhance reports with event type and ticket information
+      const enhancedReports = await Promise.all(
+        organizationReports.map(async (report) => {
+          try {
+            // Get event details to include event type
+            const event = await mongoStorage.getEventById(report.eventId);
+            
+            // Enhanced report object
+            const enhancedReport = {
+              ...report,
+              event: event ? {
+                id: event._id?.toString(),
+                name: event.name,
+                eventType: event.eventType || 'registration',
+                location: event.location,
+                startDate: event.startDate
+              } : null
+            };
+
+            // If reporter email provided, check if they have a ticket (for ticket events)
+            if (report.reporterEmail && event?.eventType === 'ticket') {
+              try {
+                const tickets = await mongoStorage.getTickets({ 
+                  eventId: report.eventId,
+                  ownerEmail: report.reporterEmail 
+                });
+                
+                if (tickets && tickets.length > 0) {
+                  const ticket = tickets[0]; // Get first ticket
+                  enhancedReport.ticketInfo = {
+                    ticketNumber: ticket.ticketNumber,
+                    category: ticket.category,
+                    status: ticket.status,
+                    paymentStatus: ticket.paymentStatus
+                  };
+                }
+              } catch (ticketError) {
+                console.warn('Error fetching ticket info for report:', ticketError);
+              }
+            }
+
+            return enhancedReport;
+          } catch (enhancementError) {
+            console.warn('Error enhancing report:', enhancementError);
+            return report; // Return original report if enhancement fails
+          }
+        })
+      );
+      
+      console.log(`Found ${enhancedReports.length} reports for organization ${organizationId}`);
+      res.json(enhancedReports);
     } catch (error) {
       console.error('Error fetching all reports:', error);
       res.status(500).json({ message: "Failed to fetch reports" });
