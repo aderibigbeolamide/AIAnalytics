@@ -244,8 +244,8 @@ class NotificationService {
       email = member.email;
       name = member.fullName;
     } else {
-      email = registration.guestEmail || '';
-      name = registration.guestName || 'Participant';
+      email = registration.email || '';
+      name = `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Participant';
     }
 
     if (!email) return;
@@ -283,8 +283,8 @@ class NotificationService {
       email = member.email;
       name = member.fullName;
     } else {
-      email = registration.guestEmail || '';
-      name = registration.guestName || 'Participant';
+      email = registration.email || '';
+      name = `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Participant';
     }
 
     if (!email) return;

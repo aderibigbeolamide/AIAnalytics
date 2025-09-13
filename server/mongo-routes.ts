@@ -1135,6 +1135,28 @@ export function registerMongoRoutes(app: Express) {
         qrImageBase64: qrImageBase64.replace('data:image/png;base64,', '')
       });
 
+      // Send registration confirmation email
+      try {
+        const { EmailService } = await import('./services/email-service');
+        const emailService = new EmailService();
+        
+        const recipientEmail = registration.email;
+        await emailService.sendRegistrationConfirmationEmail(recipientEmail, {
+          participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
+          eventName: event.name,
+          eventDate: event.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD',
+          eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString() : 'TBD',
+          eventLocation: event.location || 'TBD',
+          registrationId: registration.uniqueId,
+          qrCode: qrImageBase64,
+          eventUrl: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/events/${eventId}/public`
+        });
+        
+        console.log(`✅ Registration confirmation email sent to ${recipientEmail}`);
+      } catch (emailError) {
+        console.error('❌ Failed to send registration confirmation email:', emailError);
+      }
+
       // Send success response
       res.status(201).json({
         success: true,
@@ -2100,6 +2122,7 @@ export function registerMongoRoutes(app: Express) {
       res.status(500).json({ message: "Ticket payment verification failed" });
     }
   });
+
 
   // Test notification endpoint (for demonstration)
   app.post("/api/notifications/create-test", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
