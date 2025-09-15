@@ -32,6 +32,9 @@ const app = express();
 // Configure trust proxy for Replit proxy environment
 app.set('trust proxy', 1);
 
+// Disable ETags globally to prevent 304 responses
+app.set('etag', false);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -80,8 +83,14 @@ app.use((req, res, next) => {
   // Run auto-seeding before starting the server
   await mongoAutoSeed();
   
+  // Register MongoDB routes FIRST (includes our status calculation logic)
+  const { registerMongoRoutes } = await import("./mongo-routes.js");
+  registerMongoRoutes(app);
+  console.log("[INIT] MongoDB routes registered FIRST");
+
   // Register new organized routes
   registerAuthRoutes(app);
+  // NOTE: registerEventRoutes contains duplicate PostgreSQL routes - registering after MongoDB
   registerEventRoutes(app);
   registerRegistrationRoutes(app);
   registerPaymentRoutes(app);
@@ -109,11 +118,6 @@ app.use((req, res, next) => {
   // Register analytics routes
   const { registerAnalyticsRoutes } = await import("./mongo-analytics-routes.js");
   registerAnalyticsRoutes(app);
-  
-
-  // Register MongoDB routes (includes ticket lookup)
-  const { registerMongoRoutes } = await import("./mongo-routes.js");
-  registerMongoRoutes(app);
   
   // Create HTTP server directly since legacy routes disabled
   const server = createServer(app);

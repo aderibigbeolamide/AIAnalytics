@@ -112,14 +112,21 @@ export function registerMongoRoutes(app: Express) {
   // ================ EVENT MANAGEMENT ================
   
   // Get events for organization (admin dashboard)
-  app.get("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-    console.log('*** DEBUG: GET /api/events route called with FRESH stats logic ***', new Date().toISOString());
-    
-    // Force no caching for this endpoint
+  app.get("/api/events", authenticateToken, (req: AuthenticatedRequest, res: Response, next) => {
+    // Completely disable ETags and conditional requests for this route
+    req.headers['if-none-match'] = undefined;
+    req.headers['if-modified-since'] = undefined;
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    res.set('Last-Modified', new Date().toUTCString());
+    next();
+  }, async (req: AuthenticatedRequest, res: Response) => {
+    console.log('*** DEBUG: GET /api/events route called with FRESH stats logic ***', new Date().toISOString());
+    
+    // Additional cache prevention
+    res.removeHeader('ETag');
+    res.removeHeader('Last-Modified');
+    res.set('X-Fresh-Request', Date.now().toString());
     
     try {
       const organizationId = req.user?.organizationId;
