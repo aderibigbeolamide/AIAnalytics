@@ -163,17 +163,18 @@ export function registerMongoRoutes(app: Express) {
             ? tickets.length 
             : registrations.length;
             
-          const memberRegistrations = event.eventType === 'ticket' 
-            ? tickets.filter(ticket => ticket.paymentStatus === 'completed').length // Paid tickets
-            : registrations.filter(reg => (reg.registrationType === 'member' || reg.registration_type === 'member')).length;
+          // Always use registrations to determine member/guest/invitee counts based on registrationType
+          const memberRegistrations = registrations.filter(reg => 
+            reg.registrationType === 'member' || (reg as any).registration_type === 'member'
+          ).length;
             
-          const guestRegistrations = event.eventType === 'ticket' 
-            ? tickets.filter(ticket => ticket.paymentStatus === 'pending').length // Pending payment tickets
-            : registrations.filter(reg => (reg.registrationType === 'guest' || reg.registration_type === 'guest')).length;
+          const guestRegistrations = registrations.filter(reg => 
+            reg.registrationType === 'guest' || (reg as any).registration_type === 'guest'
+          ).length;
             
-          const inviteeRegistrations = event.eventType === 'ticket' 
-            ? tickets.filter(ticket => ticket.paymentStatus === 'failed').length // Failed payment tickets
-            : registrations.filter(reg => (reg.registrationType === 'invitee' || reg.registration_type === 'invitee')).length;
+          const inviteeRegistrations = registrations.filter(reg => 
+            reg.registrationType === 'invitee' || (reg as any).registration_type === 'invitee'
+          ).length;
           
           // Calculate attendance rate
           const attendedCount = event.eventType === 'ticket'
