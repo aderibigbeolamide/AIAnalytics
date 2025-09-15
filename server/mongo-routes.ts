@@ -187,6 +187,24 @@ export function registerMongoRoutes(app: Express) {
           
           console.log(`Stats for ${event.name}: total=${totalRegistrations}, members=${memberRegistrations}, guests=${guestRegistrations}, invitees=${inviteeRegistrations}`);
           
+          // Calculate dynamic status based on current date
+          const now = new Date();
+          const startDate = new Date(event.startDate);
+          const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+          
+          let dynamicStatus = event.status;
+          if (event.status !== 'cancelled') {
+            if (now >= startDate && now <= endDate) {
+              dynamicStatus = 'ongoing';
+            } else if (now < startDate) {
+              dynamicStatus = 'upcoming';
+            } else {
+              dynamicStatus = 'completed';
+            }
+          }
+          
+          console.log(`Event ${event.name}: status calculation - now: ${now.toISOString()}, start: ${startDate.toISOString()}, end: ${endDate.toISOString()}, status: ${dynamicStatus}`);
+          
           // Create base event object and remove existing statistics fields
           const baseEvent = (event as any).toObject();
           delete baseEvent.totalRegistrations;
@@ -201,7 +219,8 @@ export function registerMongoRoutes(app: Express) {
             id: (event as any)._id?.toString(),
             organizationId: event.organizationId?.toString(),
             createdBy: event.createdBy?.toString(),
-            // Add calculated statistics
+            // Add calculated statistics and dynamic status
+            status: dynamicStatus,
             totalRegistrations: totalRegistrations || 0,
             memberRegistrations: memberRegistrations || 0,
             guestRegistrations: guestRegistrations || 0,
