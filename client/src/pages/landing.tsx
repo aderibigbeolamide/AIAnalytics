@@ -1027,14 +1027,29 @@ export function LandingPage() {
             {/* Bottom CTA */}
             <div className="text-center mt-12 pt-8 border-t border-gray-200">
               <p className="text-medium-contrast mb-4">Ready to secure your next event?</p>
-              <Button 
-                size="lg"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
-                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=Eventify AI Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of Eventify AI for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
-              >
-                <Target className="h-5 w-5 mr-2" />
-                Start Your Free Demo
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Button 
+                  size="lg"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
+                  onClick={() => window.open(`mailto:admin@eventifyai.com?subject=Eventify AI Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of Eventify AI for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+                  data-testid="button-demo-request"
+                >
+                  <Target className="h-5 w-5 mr-2" />
+                  Start Your Free Demo
+                </Button>
+                <span className="text-medium-contrast text-sm">or</span>
+                <Link href="/organization-register">
+                  <Button 
+                    variant="outline"
+                    size="lg"
+                    className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold px-8 py-3 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
+                    data-testid="button-signup-hero"
+                  >
+                    <Building className="h-5 w-5 mr-2" />
+                    Sign Up Now
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -1226,21 +1241,33 @@ export function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Button 
-                    className={`w-full font-semibold py-3 text-lg transition-all focus-visible:focus ${plan.popular ? 'btn-primary text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
-                    onClick={() => {
-                      if (plan.price === "Custom") {
-                        // Open WhatsApp for enterprise inquiries
-                        window.open(`https://wa.me/2348107183206?text=Hi! I'm interested in the ${plan.name} plan for Eventify AI. Can you provide more details?`, '_blank');
-                      } else {
-                        // Open email for standard plans
-                        window.open(`mailto:admin@eventifyai.com?subject=Eventify AI ${plan.name} Inquiry&body=Hello,%0D%0A%0D%0AI'm interested in the ${plan.name} plan (${plan.price}/${plan.period}) for Eventify AI.%0D%0A%0D%0APlease provide more information about:%0D%0A- Setup process%0D%0A- Payment options%0D%0A- Implementation timeline%0D%0A%0D%0AThank you!`, '_blank');
-                      }
-                    }}
-                  >
-                    {plan.price === "Custom" ? "Contact Sales" : "Get Started"}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  <div className="space-y-3">
+                    <Link href="/organization-register">
+                      <Button 
+                        className={`w-full font-semibold py-3 text-lg transition-all focus-visible:focus ${plan.popular ? 'btn-primary text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                        data-testid={`button-signup-${plan.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        {plan.price === "Custom" ? "Contact Sales" : "Sign Up Now"}
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </Link>
+                    <Button 
+                      variant="outline"
+                      className="w-full font-medium py-2 text-sm border-gray-300 text-gray-600 hover:bg-gray-50"
+                      onClick={() => {
+                        if (plan.price === "Custom") {
+                          // Open WhatsApp for enterprise inquiries
+                          window.open(`https://wa.me/2348107183206?text=Hi! I'm interested in the ${plan.name} plan for Eventify AI. Can you provide more details?`, '_blank');
+                        } else {
+                          // Open email for standard plans
+                          window.open(`mailto:admin@eventifyai.com?subject=Eventify AI ${plan.name} Inquiry&body=Hello,%0D%0A%0D%0AI'm interested in the ${plan.name} plan (${plan.price}/${plan.period}) for Eventify AI.%0D%0A%0D%0APlease provide more information about:%0D%0A- Setup process%0D%0A- Payment options%0D%0A- Implementation timeline%0D%0A%0D%0AThank you!`, '_blank');
+                        }
+                      }}
+                      data-testid={`button-contact-${plan.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      Learn More
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
