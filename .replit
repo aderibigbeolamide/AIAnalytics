@@ -7,8 +7,8 @@ channel = "stable-25_05"
 packages = ["jq"]
 
 [deployment]
-deploymentTarget = "vm"
-run = ["npm", "run", "start"]
+deploymentTarget = "autoscale"
+run = ["npm", "start"]
 build = ["npm", "run", "build"]
 
 [[ports]]

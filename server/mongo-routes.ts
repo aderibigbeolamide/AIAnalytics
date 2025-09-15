@@ -112,14 +112,21 @@ export function registerMongoRoutes(app: Express) {
   // ================ EVENT MANAGEMENT ================
   
   // Get events for organization (admin dashboard)
-  app.get("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-    console.log('*** DEBUG: GET /api/events route called with FRESH stats logic ***', new Date().toISOString());
-    
-    // Force no caching for this endpoint
+  app.get("/api/events", authenticateToken, (req: AuthenticatedRequest, res: Response, next) => {
+    // Completely disable ETags and conditional requests for this route
+    req.headers['if-none-match'] = undefined;
+    req.headers['if-modified-since'] = undefined;
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    res.set('Last-Modified', new Date().toUTCString());
+    next();
+  }, async (req: AuthenticatedRequest, res: Response) => {
+    console.log('*** DEBUG: GET /api/events route called with FRESH stats logic ***', new Date().toISOString());
+    
+    // Additional cache prevention
+    res.removeHeader('ETag');
+    res.removeHeader('Last-Modified');
+    res.set('X-Fresh-Request', Date.now().toString());
     
     try {
       const organizationId = req.user?.organizationId;
@@ -163,17 +170,18 @@ export function registerMongoRoutes(app: Express) {
             ? tickets.length 
             : registrations.length;
             
-          const memberRegistrations = event.eventType === 'ticket' 
-            ? tickets.filter(ticket => ticket.paymentStatus === 'completed').length // Paid tickets
-            : registrations.filter(reg => (reg.registrationType === 'member' || reg.registration_type === 'member')).length;
+          // Always use registrations to determine member/guest/invitee counts based on registrationType
+          const memberRegistrations = registrations.filter(reg => 
+            reg.registrationType === 'member' || (reg as any).registration_type === 'member'
+          ).length;
             
-          const guestRegistrations = event.eventType === 'ticket' 
-            ? tickets.filter(ticket => ticket.paymentStatus === 'pending').length // Pending payment tickets
-            : registrations.filter(reg => (reg.registrationType === 'guest' || reg.registration_type === 'guest')).length;
+          const guestRegistrations = registrations.filter(reg => 
+            reg.registrationType === 'guest' || (reg as any).registration_type === 'guest'
+          ).length;
             
-          const inviteeRegistrations = event.eventType === 'ticket' 
-            ? tickets.filter(ticket => ticket.paymentStatus === 'failed').length // Failed payment tickets
-            : registrations.filter(reg => (reg.registrationType === 'invitee' || reg.registration_type === 'invitee')).length;
+          const inviteeRegistrations = registrations.filter(reg => 
+            reg.registrationType === 'invitee' || (reg as any).registration_type === 'invitee'
+          ).length;
           
           // Calculate attendance rate
           const attendedCount = event.eventType === 'ticket'
@@ -185,6 +193,24 @@ export function registerMongoRoutes(app: Express) {
             : 0;
           
           console.log(`Stats for ${event.name}: total=${totalRegistrations}, members=${memberRegistrations}, guests=${guestRegistrations}, invitees=${inviteeRegistrations}`);
+          
+          // Calculate dynamic status based on current date
+          const now = new Date();
+          const startDate = new Date(event.startDate);
+          const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+          
+          let dynamicStatus = event.status;
+          if (event.status !== 'cancelled') {
+            if (now >= startDate && now <= endDate) {
+              dynamicStatus = 'ongoing';
+            } else if (now < startDate) {
+              dynamicStatus = 'upcoming';
+            } else {
+              dynamicStatus = 'completed';
+            }
+          }
+          
+          console.log(`Event ${event.name}: status calculation - now: ${now.toISOString()}, start: ${startDate.toISOString()}, end: ${endDate.toISOString()}, status: ${dynamicStatus}`);
           
           // Create base event object and remove existing statistics fields
           const baseEvent = (event as any).toObject();
@@ -200,7 +226,8 @@ export function registerMongoRoutes(app: Express) {
             id: (event as any)._id?.toString(),
             organizationId: event.organizationId?.toString(),
             createdBy: event.createdBy?.toString(),
-            // Add calculated statistics
+            // Add calculated statistics and dynamic status
+            status: dynamicStatus,
             totalRegistrations: totalRegistrations || 0,
             memberRegistrations: memberRegistrations || 0,
             guestRegistrations: guestRegistrations || 0,
