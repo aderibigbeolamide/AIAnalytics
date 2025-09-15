@@ -33,39 +33,39 @@ const upload = multer({
 export function registerMongoRoutes(app: Express) {
   // ================ PUBLIC ENDPOINTS (PRIORITY) ================
   
-  // Get public events (DISABLED - AI-enhanced version in event-routes.ts is used instead)
-  // app.get("/api/events/public", async (req: Request, res: Response) => {
-  //   try {
-  //     const events = await mongoStorage.getEvents();
-  //     
-  //     const publicEvents = events.filter(event => ['upcoming', 'active'].includes(event.status)).map(event => ({
-  //       id: event._id?.toString(),
-  //       name: event.name,
-  //       description: event.description,
-  //       location: event.location,
-  //       startDate: event.startDate,
-  //       endDate: event.endDate,
-  //       registrationStartDate: event.registrationStartDate,
-  //       registrationEndDate: event.registrationEndDate,
-  //       status: event.status,
-  //       maxAttendees: event.maxAttendees,
-  //       eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
-  //       allowGuests: event.allowGuests,
-  //       allowInvitees: event.allowInvitees,
-  //       eventType: event.eventType,
-  //       eventImage: event.eventImage,
-  //       ticketCategories: event.ticketCategories || [],
-  //       customRegistrationFields: event.customRegistrationFields,
-  //       paymentSettings: event.paymentSettings,
-  //       organizationId: event.organizationId?.toString()
-  //     }));
+  // Get public events (re-enabled to fix landing page issue - no authentication required)
+  app.get("/api/events/public", async (req: Request, res: Response) => {
+    try {
+      const events = await mongoStorage.getEvents();
+      
+      const publicEvents = events.filter(event => ['upcoming', 'active'].includes(event.status)).map(event => ({
+        id: (event._id as any)?.toString(),
+        name: event.name,
+        description: event.description,
+        location: event.location,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        registrationStartDate: event.registrationStartDate,
+        registrationEndDate: event.registrationEndDate,
+        status: event.status,
+        maxAttendees: event.maxAttendees,
+        eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
+        allowGuests: event.allowGuests,
+        allowInvitees: event.allowInvitees,
+        eventType: event.eventType,
+        eventImage: event.eventImage,
+        ticketCategories: event.ticketCategories || [],
+        customRegistrationFields: event.customRegistrationFields,
+        paymentSettings: event.paymentSettings,
+        organizationId: event.organizationId?.toString()
+      }));
 
-  //     res.json(publicEvents);
-  //   } catch (error) {
-  //     console.error("Error getting public events:", error);
-  //     res.status(500).json({ message: "Internal server error" });
-  //   }
-  // });
+      res.json(publicEvents);
+    } catch (error) {
+      console.error("Error getting public events:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   // Get public event by ID (no authentication required)
   app.get("/api/events/:id/public", async (req: Request, res: Response) => {
