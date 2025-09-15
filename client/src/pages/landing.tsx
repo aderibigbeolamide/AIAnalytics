@@ -326,9 +326,14 @@ export function LandingPage() {
                   <Button size="sm" className="whitespace-nowrap">Dashboard</Button>
                 </Link>
               ) : (
-                <Link href="/login">
-                  <Button variant="outline" size="sm" className="whitespace-nowrap">Login</Button>
-                </Link>
+                <div className="flex items-center space-x-2">
+                  <Link href="/login">
+                    <Button variant="outline" size="sm" className="whitespace-nowrap">Login</Button>
+                  </Link>
+                  <Link href="/organization-register">
+                    <Button size="sm" className="whitespace-nowrap" data-testid="button-signup">Sign Up</Button>
+                  </Link>
+                </div>
               )}
             </div>
             
@@ -386,7 +391,7 @@ export function LandingPage() {
               >
                 Pricing
               </a>
-              <div className="pt-2 border-t border-gray-200">
+              <div className="pt-2 border-t border-gray-200 space-y-2">
                 {isAuthenticated ? (
                   <Link href="/dashboard">
                     <Button size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
@@ -394,11 +399,18 @@ export function LandingPage() {
                     </Button>
                   </Link>
                 ) : (
-                  <Link href="/login">
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                      Login
-                    </Button>
-                  </Link>
+                  <>
+                    <Link href="/login">
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/organization-register">
+                      <Button size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)} data-testid="button-signup-mobile">
+                        Sign Up
+                      </Button>
+                    </Link>
+                  </>
                 )}
               </div>
             </div>
