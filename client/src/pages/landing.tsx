@@ -426,18 +426,18 @@ export function LandingPage() {
             <Zap className="h-4 w-4 mr-2" />
             AI-Powered Event Validation Platform
           </Badge>
-          <h1 className="hero-text text-4xl md:text-6xl lg:text-7xl font-bold text-high-contrast mb-8 leading-tight">
-            Stop Event Fraud.
+          <h1 className="hero-text text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-high-contrast mb-6 sm:mb-8 leading-tight px-4 sm:px-0">
+            <span className="block">Stop Event Fraud.</span>
             <span className="text-gradient block mt-2">Start Smart Validation.</span>
           </h1>
-          <p className="hero-subtitle text-xl md:text-2xl text-medium-contrast mb-8 max-w-4xl mx-auto leading-relaxed">
+          <p className="hero-subtitle text-lg sm:text-xl md:text-2xl text-medium-contrast mb-6 sm:mb-8 max-w-4xl mx-auto leading-relaxed px-4 sm:px-0">
             Eventify AI eliminates unauthorized event access with AI-powered QR validation, 
             real-time attendance tracking, and comprehensive member verification for organizations.
           </p>
 
           {/* Mission & Objectives */}
-          <div className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl p-6 max-w-5xl mx-auto border border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <div className="mb-8 sm:mb-12 bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-5xl mx-4 sm:mx-auto border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 text-center">
               <div className="space-y-2">
                 <div className="mx-auto w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
                   <Target className="h-6 w-6 text-white" />
@@ -604,18 +604,19 @@ export function LandingPage() {
           <div className="text-center mb-8">
             <Button 
               size="lg" 
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-12 py-5 text-xl rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300 mb-4"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-6 sm:px-12 py-4 sm:py-5 text-base sm:text-xl rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300 mb-4 w-full sm:w-auto mx-4 sm:mx-0 min-h-[3rem] touch-target"
               onClick={() => window.open(`mailto:admin@eventifyai.com?subject=Eventify AI Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of Eventify AI for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
             >
-              <Target className="h-6 w-6 mr-3" />
-              Get Free Demo - Start Securing Your Events
+              <Target className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3" />
+              <span className="hidden sm:inline">Get Free Demo - Start Securing Your Events</span>
+              <span className="sm:hidden">Get Free Demo</span>
             </Button>
             
             {/* Secondary Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4 px-4 sm:px-0">
               <button
                 onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss Eventify AI for my organization.', '_blank')}
-                className="text-blue-600 hover:text-blue-800 font-medium underline decoration-2 underline-offset-4 hover:decoration-blue-800 transition-colors flex items-center"
+                className="text-blue-600 hover:text-blue-800 font-medium underline decoration-2 underline-offset-4 hover:decoration-blue-800 transition-colors flex items-center touch-target min-h-[2.5rem] py-2 px-3 rounded-lg hover:bg-blue-50"
               >
                 <Phone className="h-4 w-4 mr-2" />
                 Schedule Call
@@ -623,7 +624,7 @@ export function LandingPage() {
               <span className="text-gray-400 hidden sm:block">•</span>
               <button
                 onClick={() => window.location.href = '/organization-register'}
-                className="text-green-600 hover:text-green-800 font-medium underline decoration-2 underline-offset-4 hover:decoration-green-800 transition-colors flex items-center"
+                className="text-green-600 hover:text-green-800 font-medium underline decoration-2 underline-offset-4 hover:decoration-green-800 transition-colors flex items-center touch-target min-h-[2.5rem] py-2 px-3 rounded-lg hover:bg-green-50"
               >
                 <Building className="h-4 w-4 mr-2" />
                 Register Organization
@@ -631,10 +632,10 @@ export function LandingPage() {
             </div>
             
             {/* Security Reassurance */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600 flex items-center justify-center">
-                <Shield className="h-4 w-4 mr-2 text-green-600" />
-                All data encrypted and GDPR-compliant • Enterprise-grade security
+            <div className="mt-6 text-center px-4 sm:px-0">
+              <p className="text-sm text-gray-600 flex items-center justify-center flex-wrap sm:flex-nowrap">
+                <Shield className="h-4 w-4 mr-2 text-green-600 flex-shrink-0" />
+                <span className="text-center">All data encrypted and GDPR-compliant • Enterprise-grade security</span>
               </p>
             </div>
           </div>
