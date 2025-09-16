@@ -29,10 +29,8 @@ const registrationSchema = z.object({
 }).refine((data) => data.adminPassword === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-}).refine((data) => data.contactEmail !== data.adminEmail, {
-  message: "Admin email must be different from organization contact email",
-  path: ["adminEmail"],
 });
+// Note: Email restriction removed - admin can use same email as organization contact
 
 type RegistrationForm = z.infer<typeof registrationSchema>;
 
