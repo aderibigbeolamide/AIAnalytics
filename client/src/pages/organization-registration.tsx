@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { OTPVerificationDialog } from "@/components/ui/otp-verification-dialog";
-import { Building2, User, Mail, Phone, Globe, MapPin, CheckCircle, AlertCircle, Clock, Shield } from "lucide-react";
+import { Building2, User, Mail, Phone, Globe, MapPin, CheckCircle, AlertCircle, Clock, Shield, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 
 const registrationSchema = z.object({
@@ -48,6 +48,10 @@ export default function OrganizationRegistration() {
   const [isOTPDialogOpen, setIsOTPDialogOpen] = useState(false);
   const [isSendingOTP, setIsSendingOTP] = useState(false);
   const [otpError, setOtpError] = useState("");
+  
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<RegistrationForm>({
     resolver: zodResolver(registrationSchema),
@@ -506,7 +510,28 @@ export default function OrganizationRegistration() {
                     <FormItem>
                       <FormLabel>Password *</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <div className="relative">
+                          <Input 
+                            type={showPassword ? "text" : "password"} 
+                            placeholder="••••••••" 
+                            {...field} 
+                            data-testid="input-admin-password"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                            data-testid="button-toggle-admin-password"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-400" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-400" />
+                            )}
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormDescription>
                         Minimum 6 characters
@@ -523,7 +548,28 @@ export default function OrganizationRegistration() {
                     <FormItem>
                       <FormLabel>Confirm Password *</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <div className="relative">
+                          <Input 
+                            type={showConfirmPassword ? "text" : "password"} 
+                            placeholder="••••••••" 
+                            {...field} 
+                            data-testid="input-confirm-password"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            data-testid="button-toggle-confirm-password"
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-400" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-400" />
+                            )}
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormDescription>
                         Re-enter your password to confirm
