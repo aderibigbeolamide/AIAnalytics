@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Use environment variable for MongoDB URI - but make it optional for migration
-const MONGODB_URI = process.env.DATABASE_URL;
+const MONGODB_URI = process.env.MONGODB_URI || (process.env.DATABASE_URL?.startsWith('mongodb') ? process.env.DATABASE_URL : undefined);
 
 console.log("MongoDB service - checking connection...");
 
@@ -23,7 +23,15 @@ export const connectToMongoDB = async () => {
   }
 
   try {
-    await mongoose.connect(MONGODB_URI);
+    // Configure connection options for better reliability
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 30000,
+      maxPoolSize: 10,
+      retryWrites: true,
+      w: 'majority'
+    });
     isConnected = true;
     console.log("✅ MongoDB connected successfully");
   } catch (error) {

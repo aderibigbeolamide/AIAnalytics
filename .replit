@@ -7,8 +7,8 @@ channel = "stable-25_05"
 packages = ["jq"]
 
 [deployment]
-deploymentTarget = "vm"
-run = ["npm", "start"]
+deploymentTarget = "autoscale"
+run = ["npm", "run", "start"]
 build = ["npm", "run", "build"]
 
 [[ports]]
@@ -88,7 +88,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npx tsx server/index.ts"
+args = "npm run dev"
 waitForPort = 5000
 
 [agent]

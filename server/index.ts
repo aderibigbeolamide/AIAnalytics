@@ -51,18 +51,31 @@ app.use((req, res, next) => {
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+  // Only capture response data in development
+  if (process.env.NODE_ENV !== 'production') {
+    const originalResJson = res.json;
+    res.json = function (bodyJson, ...args) {
+      capturedJsonResponse = bodyJson;
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
+  }
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      
+      // Only log response data in development and redact sensitive fields
+      if (process.env.NODE_ENV !== 'production' && capturedJsonResponse) {
+        // Redact sensitive fields
+        const sanitized = JSON.stringify(capturedJsonResponse, (key, value) => {
+          const sensitiveKeys = ['password', 'token', 'otp', 'email', 'secret'];
+          if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk.toLowerCase()))) {
+            return '***';
+          }
+          return value;
+        });
+        logLine += ` :: ${sanitized}`;
       }
 
       if (logLine.length > 80) {
