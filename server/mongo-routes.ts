@@ -2232,6 +2232,29 @@ export function registerMongoRoutes(app: Express) {
         });
       }
 
+      // Validate admin user required fields
+      if (!adminUsername || !adminEmail || !adminPassword || !adminFirstName || !adminLastName) {
+        return res.status(400).json({ 
+          message: "Admin user details are required (username, email, password, first name, last name)" 
+        });
+      }
+
+      // Check if admin username already exists
+      const existingUser = await mongoStorage.getUserByUsername(adminUsername);
+      if (existingUser) {
+        return res.status(400).json({ 
+          message: "Admin username already exists" 
+        });
+      }
+
+      // Check if admin email already exists
+      const existingAdminUser = await mongoStorage.getUserByEmail(adminEmail);
+      if (existingAdminUser) {
+        return res.status(400).json({ 
+          message: "Admin email already exists" 
+        });
+      }
+
       // Map organizationName to name for MongoDB schema
       const organizationData = {
         name: organizationName, // This is the key fix!
@@ -2250,11 +2273,57 @@ export function registerMongoRoutes(app: Express) {
       };
 
       const organization = await mongoStorage.createOrganization(organizationData);
+
+      // Hash admin password and create admin user for the organization  
+      const bcrypt = (await import('bcrypt')).default;
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+      const adminUserData = {
+        username: adminUsername,
+        email: adminEmail,
+        password: hashedPassword,
+        firstName: adminFirstName,
+        lastName: adminLastName,
+        role: 'admin',
+        organizationId: organization._id.toString(),
+        status: 'pending', // Will be activated when organization is approved
+        twoFactorEnabled: false,
+        emailVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const adminUser = await mongoStorage.createUser(adminUserData);
+
+      // Send registration confirmation email
+      try {
+        const { EmailService } = await import('./services/email-service');
+        const emailService = new EmailService();
+        
+        await emailService.sendOrganizationRegistrationEmail(contactEmail, {
+          organizationName: organizationName,
+          contactPerson: `${adminFirstName} ${adminLastName}`.trim(),
+          contactEmail: contactEmail,
+          adminUsername: adminUsername
+        });
+        
+        console.log(`✅ Registration confirmation email sent to ${contactEmail}`);
+      } catch (emailError) {
+        console.error('❌ Failed to send registration confirmation email:', emailError);
+        // Don't fail the registration if email fails
+      }
       
       res.status(201).json({
         id: organization._id.toString(),
         organization: organization.toObject(),
-        message: "Organization registered successfully. Awaiting approval."
+        adminUser: {
+          id: adminUser._id.toString(),
+          username: adminUser.username,
+          email: adminUser.email,
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName
+        },
+        message: "Organization and admin user registered successfully. Registration confirmation email sent. Awaiting approval."
       });
     } catch (error) {
       console.error("Error registering organization:", error);
