@@ -514,6 +514,7 @@ export default function OrganizationRegistration() {
                           <Input 
                             type={showPassword ? "text" : "password"} 
                             placeholder="••••••••" 
+                            className="pr-10"
                             {...field} 
                             data-testid="input-admin-password"
                           />
@@ -521,14 +522,16 @@ export default function OrganizationRegistration() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
                             onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            aria-pressed={showPassword}
                             data-testid="button-toggle-admin-password"
                           >
                             {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-gray-400" />
+                              <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
                             ) : (
-                              <Eye className="h-4 w-4 text-gray-400" />
+                              <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
                             )}
                           </Button>
                         </div>
@@ -552,6 +555,7 @@ export default function OrganizationRegistration() {
                           <Input 
                             type={showConfirmPassword ? "text" : "password"} 
                             placeholder="••••••••" 
+                            className="pr-10"
                             {...field} 
                             data-testid="input-confirm-password"
                           />
@@ -559,14 +563,16 @@ export default function OrganizationRegistration() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                            aria-pressed={showConfirmPassword}
                             data-testid="button-toggle-confirm-password"
                           >
                             {showConfirmPassword ? (
-                              <EyeOff className="h-4 w-4 text-gray-400" />
+                              <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
                             ) : (
-                              <Eye className="h-4 w-4 text-gray-400" />
+                              <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
                             )}
                           </Button>
                         </div>
