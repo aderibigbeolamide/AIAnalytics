@@ -2203,17 +2203,58 @@ export function registerMongoRoutes(app: Express) {
   // Register organization
   app.post("/api/organizations/register", async (req: Request, res: Response) => {
     try {
+      // Map frontend field names to MongoDB schema field names
+      const {
+        organizationName,
+        contactEmail,
+        description,
+        contactPhone,
+        address,
+        website,
+        adminUsername,
+        adminEmail,
+        adminPassword,
+        adminFirstName,
+        adminLastName,
+        ...rest
+      } = req.body;
+
+      // Validate required fields
+      if (!organizationName) {
+        return res.status(400).json({ 
+          message: "Organization name is required" 
+        });
+      }
+
+      if (!contactEmail) {
+        return res.status(400).json({ 
+          message: "Contact email is required" 
+        });
+      }
+
+      // Map organizationName to name for MongoDB schema
       const organizationData = {
-        ...req.body,
+        name: organizationName, // This is the key fix!
+        description,
+        contactEmail,
+        contactPhone,
+        address,
+        website,
         status: 'pending',
-        createdAt: new Date()
+        subscriptionPlan: 'basic',
+        subscriptionStatus: 'active',
+        maxEvents: 10,
+        maxMembers: 500,
+        isVerified: false,
+        ...rest
       };
 
       const organization = await mongoStorage.createOrganization(organizationData);
       
       res.status(201).json({
         id: organization._id.toString(),
-        ...organization.toObject()
+        organization: organization.toObject(),
+        message: "Organization registered successfully. Awaiting approval."
       });
     } catch (error) {
       console.error("Error registering organization:", error);
