@@ -28,7 +28,9 @@ import {
   User,
   CreditCard,
   FileText,
-  Users
+  Users,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -64,6 +66,12 @@ export default function OrganizationProfile() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  
+  // Password visibility states
+  const [showUsernameCurrentPassword, setShowUsernameCurrentPassword] = useState(false);
+  const [showPasswordCurrentPassword, setShowPasswordCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   // Fetch organization profile
   const { data: profile, isLoading } = useQuery({
@@ -478,7 +486,31 @@ export default function OrganizationProfile() {
                         <FormItem>
                           <FormLabel>Current Password</FormLabel>
                           <FormControl>
-                            <Input {...field} type="password" placeholder="Enter current password to confirm" />
+                            <div className="relative">
+                              <Input 
+                                {...field} 
+                                type={showUsernameCurrentPassword ? "text" : "password"} 
+                                placeholder="Enter current password to confirm" 
+                                className="pr-10"
+                                data-testid="input-username-current-password"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                                onClick={() => setShowUsernameCurrentPassword(!showUsernameCurrentPassword)}
+                                aria-label={showUsernameCurrentPassword ? "Hide password" : "Show password"}
+                                aria-pressed={showUsernameCurrentPassword}
+                                data-testid="button-toggle-username-current-password"
+                              >
+                                {showUsernameCurrentPassword ? (
+                                  <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                                ) : (
+                                  <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                                )}
+                              </Button>
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -528,7 +560,31 @@ export default function OrganizationProfile() {
                       <FormItem>
                         <FormLabel>Current Password</FormLabel>
                         <FormControl>
-                          <Input {...field} type="password" placeholder="Enter current password" />
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              type={showPasswordCurrentPassword ? "text" : "password"} 
+                              placeholder="Enter current password" 
+                              className="pr-10"
+                              data-testid="input-password-current-password"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                              onClick={() => setShowPasswordCurrentPassword(!showPasswordCurrentPassword)}
+                              aria-label={showPasswordCurrentPassword ? "Hide password" : "Show password"}
+                              aria-pressed={showPasswordCurrentPassword}
+                              data-testid="button-toggle-password-current-password"
+                            >
+                              {showPasswordCurrentPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -542,7 +598,31 @@ export default function OrganizationProfile() {
                       <FormItem>
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input {...field} type="password" placeholder="Enter new password" />
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              type={showNewPassword ? "text" : "password"} 
+                              placeholder="Enter new password" 
+                              className="pr-10"
+                              data-testid="input-new-password"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              aria-label={showNewPassword ? "Hide password" : "Show password"}
+                              aria-pressed={showNewPassword}
+                              data-testid="button-toggle-new-password"
+                            >
+                              {showNewPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -556,7 +636,31 @@ export default function OrganizationProfile() {
                       <FormItem>
                         <FormLabel>Confirm New Password</FormLabel>
                         <FormControl>
-                          <Input {...field} type="password" placeholder="Confirm new password" />
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              type={showConfirmNewPassword ? "text" : "password"} 
+                              placeholder="Confirm new password" 
+                              className="pr-10"
+                              data-testid="input-confirm-new-password"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                              onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                              aria-label={showConfirmNewPassword ? "Hide password" : "Show password"}
+                              aria-pressed={showConfirmNewPassword}
+                              data-testid="button-toggle-confirm-new-password"
+                            >
+                              {showConfirmNewPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

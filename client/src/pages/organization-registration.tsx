@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { OTPVerificationDialog } from "@/components/ui/otp-verification-dialog";
-import { Building2, User, Mail, Phone, Globe, MapPin, CheckCircle, AlertCircle, Clock, Shield } from "lucide-react";
+import { Building2, User, Mail, Phone, Globe, MapPin, CheckCircle, AlertCircle, Clock, Shield, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 
 const registrationSchema = z.object({
@@ -29,10 +29,8 @@ const registrationSchema = z.object({
 }).refine((data) => data.adminPassword === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-}).refine((data) => data.contactEmail !== data.adminEmail, {
-  message: "Admin email must be different from organization contact email",
-  path: ["adminEmail"],
 });
+// Note: Email restriction removed - admin can use same email as organization contact
 
 type RegistrationForm = z.infer<typeof registrationSchema>;
 
@@ -48,6 +46,10 @@ export default function OrganizationRegistration() {
   const [isOTPDialogOpen, setIsOTPDialogOpen] = useState(false);
   const [isSendingOTP, setIsSendingOTP] = useState(false);
   const [otpError, setOtpError] = useState("");
+  
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<RegistrationForm>({
     resolver: zodResolver(registrationSchema),
@@ -506,7 +508,31 @@ export default function OrganizationRegistration() {
                     <FormItem>
                       <FormLabel>Password *</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <div className="relative">
+                          <Input 
+                            type={showPassword ? "text" : "password"} 
+                            placeholder="••••••••" 
+                            className="pr-10"
+                            {...field} 
+                            data-testid="input-admin-password"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            aria-pressed={showPassword}
+                            data-testid="button-toggle-admin-password"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                            )}
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormDescription>
                         Minimum 6 characters
@@ -523,7 +549,31 @@ export default function OrganizationRegistration() {
                     <FormItem>
                       <FormLabel>Confirm Password *</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <div className="relative">
+                          <Input 
+                            type={showConfirmPassword ? "text" : "password"} 
+                            placeholder="••••••••" 
+                            className="pr-10"
+                            {...field} 
+                            data-testid="input-confirm-password"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                            aria-pressed={showConfirmPassword}
+                            data-testid="button-toggle-confirm-password"
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                            )}
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormDescription>
                         Re-enter your password to confirm

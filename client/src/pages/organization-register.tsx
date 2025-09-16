@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { OTPVerificationDialog } from "@/components/ui/otp-verification-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, ArrowLeft, CheckCircle, AlertTriangle, Shield } from "lucide-react";
+import { Loader2, Building2, ArrowLeft, CheckCircle, AlertTriangle, Shield, Eye, EyeOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function OrganizationRegister() {
@@ -22,6 +22,10 @@ export default function OrganizationRegister() {
   const [isOTPDialogOpen, setIsOTPDialogOpen] = useState(false);
   const [isSendingOTP, setIsSendingOTP] = useState(false);
   const [otpError, setOtpError] = useState("");
+  
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -121,12 +125,7 @@ export default function OrganizationRegister() {
       return;
     }
 
-    // Check that admin email is different from contact email
-    if (formData.adminEmail && formData.contactEmail === formData.adminEmail) {
-      setError("Admin email must be different from organization contact email");
-      setLoading(false);
-      return;
-    }
+    // Email validation removed - admin can use same email as contact
 
     if (!formData.adminEmail) {
       setError("Admin email is required");
@@ -440,28 +439,68 @@ export default function OrganizationRegister() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="adminPassword">Admin Password *</Label>
-                    <Input
-                      id="adminPassword"
-                      name="adminPassword"
-                      type="password"
-                      value={formData.adminPassword}
-                      onChange={handleInputChange}
-                      placeholder="Minimum 6 characters"
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="adminPassword"
+                        name="adminPassword"
+                        type={showPassword ? "text" : "password"}
+                        value={formData.adminPassword}
+                        onChange={handleInputChange}
+                        placeholder="Minimum 6 characters"
+                        className="pr-10"
+                        required
+                        data-testid="input-admin-password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-pressed={showPassword}
+                        data-testid="button-toggle-admin-password"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="adminPasswordConfirm">Confirm Password *</Label>
-                    <Input
-                      id="adminPasswordConfirm"
-                      name="adminPasswordConfirm"
-                      type="password"
-                      value={formData.adminPasswordConfirm}
-                      onChange={handleInputChange}
-                      placeholder="Confirm password"
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="adminPasswordConfirm"
+                        name="adminPasswordConfirm"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={formData.adminPasswordConfirm}
+                        onChange={handleInputChange}
+                        placeholder="Confirm password"
+                        className="pr-10"
+                        required
+                        data-testid="input-confirm-password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                        aria-pressed={showConfirmPassword}
+                        data-testid="button-toggle-confirm-password"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
