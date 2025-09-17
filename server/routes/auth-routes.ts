@@ -134,7 +134,14 @@ export function registerAuthRoutes(app: Express) {
       // Get organization info if user is not a super admin
       let organizationInfo = null;
       if (user.role !== 'super_admin' && user.organizationId) {
-        organizationInfo = await mongoStorage.getOrganization(user.organizationId.toString());
+        // Check if organizationId is already populated (an object) or just an ID
+        if (typeof user.organizationId === 'object' && user.organizationId._id) {
+          // Already populated, use the populated data
+          organizationInfo = user.organizationId;
+        } else {
+          // It's just an ID string, fetch the organization
+          organizationInfo = await mongoStorage.getOrganization(user.organizationId.toString());
+        }
       }
 
       // Generate JWT token
@@ -143,7 +150,9 @@ export function registerAuthRoutes(app: Express) {
         username: user.username,
         email: user.email,
         role: user.role,
-        organizationId: user.organizationId?.toString(),
+        organizationId: typeof user.organizationId === 'object' && user.organizationId?._id 
+          ? (user.organizationId._id as any).toString() 
+          : user.organizationId?.toString(),
         firstName: user.firstName,
         lastName: user.lastName,
       });
@@ -154,7 +163,9 @@ export function registerAuthRoutes(app: Express) {
         username: user.username,
         email: user.email,
         role: user.role,
-        organizationId: user.organizationId?.toString(),
+        organizationId: typeof user.organizationId === 'object' && user.organizationId?._id 
+          ? (user.organizationId._id as any).toString() 
+          : user.organizationId?.toString(),
         firstName: user.firstName,
         lastName: user.lastName,
         organization: organizationInfo ? {
@@ -216,7 +227,9 @@ export function registerAuthRoutes(app: Express) {
         username: user.username,
         email: user.email,
         role: user.role,
-        organizationId: user.organizationId?.toString(),
+        organizationId: typeof user.organizationId === 'object' && user.organizationId?._id 
+          ? (user.organizationId._id as any).toString() 
+          : user.organizationId?.toString(),
         firstName: user.firstName,
         lastName: user.lastName,
         organization: organizationInfo ? {
