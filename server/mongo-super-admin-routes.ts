@@ -1628,4 +1628,187 @@ export function registerMongoSuperAdminRoutes(app: Express) {
       });
     }
   });
+
+  // Upgrade organization to Pro subscription
+  app.post("/api/super-admin/organizations/:id/upgrade-to-pro", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const organizationId = req.params.id;
+      
+      // Get organization details
+      const organization = await mongoStorage.getOrganization(organizationId);
+      if (!organization) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      
+      // Update organization to Pro plan
+      const updatedOrg = await mongoStorage.updateOrganization(organizationId, {
+        subscriptionPlan: 'pro',
+        maxEvents: 100,
+        maxMembers: -1, // Unlimited members for pro plan
+      });
+
+      if (!updatedOrg) {
+        return res.status(404).json({ message: "Failed to update organization" });
+      }
+
+      // Send email notification to organization admin
+      try {
+        const { EmailService } = await import('../services/email-service.js');
+        const emailService = new EmailService();
+        
+        await emailService.sendEmail({
+          to: organization.contactEmail,
+          subject: "🎉 Your Organization has been Upgraded to Pro Plan!",
+          html: `
+            <h2>Congratulations!</h2>
+            <p>Dear ${organization.name} team,</p>
+            <p>Great news! Your organization has been successfully upgraded to the <strong>Pro Plan</strong>.</p>
+            
+            <h3>Your New Pro Plan Benefits:</h3>
+            <ul>
+              <li>✅ Up to 100 events</li>
+              <li>✅ Unlimited members/registrations</li>
+              <li>✅ Priority support</li>
+              <li>✅ Advanced analytics</li>
+            </ul>
+            
+            <p>You can now create more events and support unlimited registrations for your organization.</p>
+            <p>Login to your dashboard to explore all the new features: <a href="${process.env.APP_DOMAIN}/login">Dashboard</a></p>
+            
+            <p>Best regards,<br>
+            Eventify AI Team</p>
+          `
+        });
+      } catch (emailError) {
+        console.error('Failed to send upgrade email:', emailError);
+      }
+
+      // Send in-app notification
+      try {
+        await mongoStorage.createNotification({
+          organizationId: new (await import('mongoose')).Types.ObjectId(organizationId),
+          recipientId: new (await import('mongoose')).Types.ObjectId(organizationId), // Will be handled by admin
+          senderId: req.user?._id,
+          type: 'subscription_upgrade',
+          title: 'Upgraded to Pro Plan!',
+          message: 'Your organization has been upgraded to Pro Plan with 100 events and unlimited members.',
+          data: {
+            subscriptionPlan: 'pro',
+            maxEvents: 100,
+            maxMembers: 'unlimited'
+          },
+          priority: 'high',
+          category: 'system',
+          isRead: false
+        });
+      } catch (notificationError) {
+        console.error('Failed to create upgrade notification:', notificationError);
+      }
+
+      res.json({ 
+        message: "Organization upgraded to Pro plan successfully",
+        organization: {
+          id: (updatedOrg._id as any).toString(),
+          name: updatedOrg.name,
+          subscriptionPlan: updatedOrg.subscriptionPlan,
+          maxEvents: updatedOrg.maxEvents,
+          maxMembers: updatedOrg.maxMembers
+        }
+      });
+    } catch (error) {
+      console.error("Error upgrading organization:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Downgrade organization to Basic subscription
+  app.post("/api/super-admin/organizations/:id/downgrade-to-basic", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const organizationId = req.params.id;
+      
+      // Get organization details
+      const organization = await mongoStorage.getOrganization(organizationId);
+      if (!organization) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      
+      // Update organization to Basic plan
+      const updatedOrg = await mongoStorage.updateOrganization(organizationId, {
+        subscriptionPlan: 'basic',
+        maxEvents: 10,
+        maxMembers: 5000,
+      });
+
+      if (!updatedOrg) {
+        return res.status(404).json({ message: "Failed to update organization" });
+      }
+
+      // Send email notification to organization admin
+      try {
+        const { EmailService } = await import('../services/email-service.js');
+        const emailService = new EmailService();
+        
+        await emailService.sendEmail({
+          to: organization.contactEmail,
+          subject: "Organization Plan Changed to Basic",
+          html: `
+            <h2>Plan Change Notification</h2>
+            <p>Dear ${organization.name} team,</p>
+            <p>Your organization subscription has been changed to the <strong>Basic Plan</strong>.</p>
+            
+            <h3>Your Basic Plan Limits:</h3>
+            <ul>
+              <li>📅 Up to 10 events</li>
+              <li>👥 Up to 5,000 members/registrations</li>
+              <li>📧 Email support</li>
+            </ul>
+            
+            <p>If you need more capacity, please contact us to upgrade to Pro Plan.</p>
+            <p>Login to your dashboard: <a href="${process.env.APP_DOMAIN}/login">Dashboard</a></p>
+            
+            <p>Best regards,<br>
+            Eventify AI Team</p>
+          `
+        });
+      } catch (emailError) {
+        console.error('Failed to send downgrade email:', emailError);
+      }
+
+      // Send in-app notification
+      try {
+        await mongoStorage.createNotification({
+          organizationId: new (await import('mongoose')).Types.ObjectId(organizationId),
+          recipientId: new (await import('mongoose')).Types.ObjectId(organizationId), // Will be handled by admin
+          senderId: req.user?._id,
+          type: 'subscription_downgrade',
+          title: 'Plan Changed to Basic',
+          message: 'Your organization plan has been changed to Basic Plan with 10 events and 5,000 members limit.',
+          data: {
+            subscriptionPlan: 'basic',
+            maxEvents: 10,
+            maxMembers: 5000
+          },
+          priority: 'medium',
+          category: 'system',
+          isRead: false
+        });
+      } catch (notificationError) {
+        console.error('Failed to create downgrade notification:', notificationError);
+      }
+
+      res.json({ 
+        message: "Organization downgraded to Basic plan successfully",
+        organization: {
+          id: (updatedOrg._id as any).toString(),
+          name: updatedOrg.name,
+          subscriptionPlan: updatedOrg.subscriptionPlan,
+          maxEvents: updatedOrg.maxEvents,
+          maxMembers: updatedOrg.maxMembers
+        }
+      });
+    } catch (error) {
+      console.error("Error downgrading organization:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 }

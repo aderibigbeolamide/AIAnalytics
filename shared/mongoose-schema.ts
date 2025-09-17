@@ -49,7 +49,7 @@ export interface IOrganization extends Document {
   approvedBy?: mongoose.Types.ObjectId;
   approvedAt?: Date;
   rejectionReason?: string;
-  subscriptionPlan: string; // basic, premium, enterprise
+  subscriptionPlan: string; // basic, pro
   subscriptionStatus: string; // active, suspended, cancelled
   maxEvents: number;
   maxMembers: number;
@@ -85,7 +85,7 @@ const OrganizationSchema = new Schema<IOrganization>({
   subscriptionPlan: { type: String, required: true, default: "basic" },
   subscriptionStatus: { type: String, required: true, default: "active" },
   maxEvents: { type: Number, required: true, default: 10 },
-  maxMembers: { type: Number, required: true, default: 500 },
+  maxMembers: { type: Number, required: true, default: 5000 },
   settings: { type: Schema.Types.Mixed, default: {} },
   paystackSubaccountCode: { type: String },
   bankName: { type: String },
