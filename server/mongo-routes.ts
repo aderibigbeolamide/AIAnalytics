@@ -3138,6 +3138,21 @@ export function registerMongoRoutes(app: Express) {
         return res.status(404).json({ message: "Event not found" });
       }
 
+      // SECURITY: Check organization ownership - prevent cross-organization validation
+      if (req.user?.role !== 'super_admin') {
+        const userOrgId = req.user?.organizationId?.toString();
+        const eventOrgId = event.organizationId?.toString();
+        
+        if (!userOrgId || !eventOrgId || userOrgId !== eventOrgId) {
+          console.log(`[AUDIT] Access denied - User org ${userOrgId} attempted validation for event org ${eventOrgId}`);
+          return res.status(403).json({ 
+            success: false,
+            message: "Access denied. You can only validate events from your organization.",
+            validationStatus: "unauthorized"
+          });
+        }
+      }
+
       let validationResult = {
         validationStatus: "invalid",
         message: "Invalid QR code",
@@ -3542,7 +3557,36 @@ export function registerMongoRoutes(app: Express) {
           });
         }
 
-        // Mark ticket as used
+        // Get event details BEFORE marking ticket as used
+        const eventId = ticket.eventId ? ticket.eventId.toString() : '';
+        const event = await mongoStorage.getEvent(eventId);
+
+        // SECURITY: Fail fast if event doesn't exist - prevent ticket state changes without valid event
+        if (!event) {
+          console.log(`[SECURITY] Event ${eventId} not found for ticket ${ticket.ticketNumber} - access denied`);
+          return res.status(404).json({ 
+            success: false,
+            message: "Event not found",
+            validationStatus: "invalid"
+          });
+        }
+
+        // SECURITY: Check organization ownership - prevent cross-organization validation
+        if (req.user?.role !== 'super_admin') {
+          const userOrgId = req.user?.organizationId?.toString();
+          const eventOrgId = event.organizationId?.toString();
+          
+          if (!userOrgId || !eventOrgId || userOrgId !== eventOrgId) {
+            console.log(`[AUDIT] Access denied - User org ${userOrgId} attempted to validate ticket for event org ${eventOrgId}`);
+            return res.status(403).json({ 
+              success: false,
+              message: "Access denied. You can only validate events from your organization.",
+              validationStatus: "unauthorized"
+            });
+          }
+        }
+
+        // Mark ticket as used only after organization check passes
         const ticketId = ticket._id ? ticket._id.toString() : '';
         const validatedById = req.user?.id || '';
         
@@ -3551,10 +3595,6 @@ export function registerMongoRoutes(app: Express) {
           validatedAt: new Date(),
           validatedBy: validatedById
         });
-
-        // Get event details
-        const eventId = ticket.eventId ? ticket.eventId.toString() : '';
-        const event = await mongoStorage.getEvent(eventId);
 
         return res.json({
           success: true,
@@ -3598,6 +3638,20 @@ export function registerMongoRoutes(app: Express) {
           message: "Event not found",
           validationStatus: "invalid" 
         });
+      }
+
+      // SECURITY: Check organization ownership - prevent cross-organization validation
+      if (req.user?.role !== 'super_admin') {
+        const userOrgId = req.user?.organizationId?.toString();
+        const eventOrgId = event.organizationId?.toString();
+        
+        if (!userOrgId || !eventOrgId || userOrgId !== eventOrgId) {
+          return res.status(403).json({ 
+            success: false,
+            message: "Access denied. You can only validate events from your organization.",
+            validationStatus: "unauthorized"
+          });
+        }
       }
 
       console.log(`Found registration:`, {
@@ -3853,6 +3907,21 @@ export function registerMongoRoutes(app: Express) {
           message: "Event not found",
           validationStatus: "invalid" 
         });
+      }
+
+      // SECURITY: Check organization ownership - prevent cross-organization validation
+      if (req.user?.role !== 'super_admin') {
+        const userOrgId = req.user?.organizationId?.toString();
+        const eventOrgId = event.organizationId?.toString();
+        
+        if (!userOrgId || !eventOrgId || userOrgId !== eventOrgId) {
+          console.log(`[AUDIT] Access denied - User org ${userOrgId} attempted validation for event org ${eventOrgId}`);
+          return res.status(403).json({ 
+            success: false,
+            message: "Access denied. You can only validate events from your organization.",
+            validationStatus: "unauthorized"
+          });
+        }
       }
 
       // Find member registrations for this event
