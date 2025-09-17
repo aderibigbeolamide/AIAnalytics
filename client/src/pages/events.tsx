@@ -42,6 +42,7 @@ export default function Events() {
         }
         
         return {
+          ...eventData, // Preserve all original fields
           id: eventData._id?.toString() || event.id,
           name: eventData.name || 'Unnamed Event',
           description: eventData.description || '',
@@ -62,6 +63,14 @@ export default function Events() {
           allowInvitees: eventData.allowInvitees,
           ticketCategories: eventData.ticketCategories || [],
           paymentSettings: eventData.paymentSettings,
+          // Ensure these essential fields are preserved
+          registrationStartDate: eventData.registrationStartDate,
+          registrationEndDate: eventData.registrationEndDate,
+          eligibleAuxiliaryBodies: eventData.eligibleAuxiliaryBodies || [],
+          customRegistrationFields: eventData.customRegistrationFields || [],
+          invitations: eventData.invitations || [],
+          reminderSettings: eventData.reminderSettings,
+          faceRecognitionSettings: eventData.faceRecognitionSettings,
           createdAt: eventData.createdAt,
           updatedAt: eventData.updatedAt
         };
