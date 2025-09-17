@@ -1449,7 +1449,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual validation by unique ID
-  // Export Attendance endpoint
+  // Export Attendance endpoint - DISABLED: Conflicting with MongoDB implementation
+  // The MongoDB export-attendance endpoint in mongo-routes.ts provides proper CSV export functionality
+  /*
   app.get("/api/events/:eventId/export-attendance", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
@@ -1490,6 +1492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to export attendance" });
     }
   });
+  */
 
   // Analytics endpoint
   app.get("/api/analytics", authenticateToken, async (req: AuthenticatedRequest, res) => {
