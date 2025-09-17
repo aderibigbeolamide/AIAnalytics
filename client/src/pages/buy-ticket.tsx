@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Ticket, Calendar, MapPin, Users, DollarSign, Clock } from "lucide-react";
+import { Ticket, Calendar, MapPin, Users, DollarSign, Clock, MessageSquare } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { CountdownTimer } from "@/components/countdown-timer";
 
@@ -394,6 +394,7 @@ export default function BuyTicket() {
                     type="submit" 
                     className="w-full" 
                     disabled={purchaseTicketMutation.isPending || paymentInitialized}
+                    data-testid="button-purchase-ticket"
                   >
                     {purchaseTicketMutation.isPending ? (
                       <LoadingSpinner />
@@ -411,6 +412,28 @@ export default function BuyTicket() {
             </CardContent>
           </Card>
         )}
+
+        {/* Feedback Section - Always visible */}
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold mb-2">Have Feedback About This Event?</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                We'd love to hear your thoughts, suggestions, or any issues you've encountered.
+              </p>
+              <Link href={`/report/${eventId}`}>
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  data-testid="button-event-feedback"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Provide Event Feedback
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

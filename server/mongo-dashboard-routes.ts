@@ -477,6 +477,12 @@ export function registerMongoDashboardRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
 
+      // Get organization details for subscription plan
+      let organization = null;
+      if (user.organizationId) {
+        organization = await mongoStorage.getOrganization(user.organizationId);
+      }
+
       // Return organization profile data
       const profile = {
         businessName: user.businessName || "",
@@ -486,6 +492,9 @@ export function registerMongoDashboardRoutes(app: Express) {
         description: user.description || "",
         website: user.website || "",
         profileImage: user.profileImage || null,
+        subscriptionPlan: organization?.subscriptionPlan || "basic",
+        maxEvents: organization?.maxEvents || 10,
+        maxMembers: organization?.maxMembers || 500,
       };
 
       res.json(profile);

@@ -271,4 +271,104 @@ export function registerOrganizationRoutes(app: Express) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // Request upgrade to Pro plan
+  app.post("/api/organizations/request-pro-upgrade", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Get organization details
+      const organization = await mongoStorage.getOrganization(req.user.organizationId);
+      if (!organization) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+
+      // Check if organization is already on Pro plan
+      if (organization.subscriptionPlan === 'pro') {
+        return res.status(400).json({ message: "Organization is already on Pro plan" });
+      }
+
+      // Send upgrade request email to admin@eventifyai.com
+      try {
+        const { EmailService } = await import('../services/email-service.js');
+        const emailService = new EmailService();
+        
+        await emailService.sendEmail({
+          to: 'admin@eventifyai.com',
+          subject: `Pro Plan Upgrade Request - ${organization.name}`,
+          html: `
+            <h2>Pro Plan Upgrade Request</h2>
+            <p>A new organization has requested an upgrade to Pro Plan:</p>
+            
+            <h3>Organization Details:</h3>
+            <ul>
+              <li><strong>Organization Name:</strong> ${organization.name}</li>
+              <li><strong>Contact Email:</strong> ${organization.contactEmail}</li>
+              <li><strong>Contact Phone:</strong> ${organization.contactPhone || 'Not provided'}</li>
+              <li><strong>Current Plan:</strong> ${organization.subscriptionPlan}</li>
+              <li><strong>Current Events Limit:</strong> ${organization.maxEvents}</li>
+              <li><strong>Current Members Limit:</strong> ${organization.maxMembers}</li>
+              <li><strong>Organization ID:</strong> ${organization._id}</li>
+              <li><strong>Request Date:</strong> ${new Date().toLocaleString()}</li>
+            </ul>
+            
+            <h3>Pro Plan Benefits Requested:</h3>
+            <ul>
+              <li>Up to 100 events</li>
+              <li>Unlimited members/registrations</li>
+              <li>Priority support</li>
+              <li>Advanced analytics</li>
+            </ul>
+            
+            <p>Please review this request and proceed with the upgrade through the Super Admin dashboard.</p>
+            
+            <p><a href="${process.env.APP_DOMAIN}/super-admin">Super Admin Dashboard</a></p>
+          `
+        });
+        
+        // Also send confirmation email to organization
+        await emailService.sendEmail({
+          to: organization.contactEmail,
+          subject: "Pro Plan Upgrade Request Received",
+          html: `
+            <h2>Upgrade Request Received</h2>
+            <p>Dear ${organization.name} team,</p>
+            <p>We have received your request to upgrade to the <strong>Pro Plan</strong>.</p>
+            
+            <h3>Pro Plan Benefits:</h3>
+            <ul>
+              <li>✅ Up to 100 events</li>
+              <li>✅ Unlimited members/registrations</li>
+              <li>✅ Priority support</li>
+              <li>✅ Advanced analytics</li>
+            </ul>
+            
+            <p>Our team will review your request and get back to you within 24-48 hours.</p>
+            <p>If you have any questions, please contact us at admin@eventifyai.com</p>
+            
+            <p>Best regards,<br>
+            Eventify AI Team</p>
+          `
+        });
+        
+      } catch (emailError) {
+        console.error('Failed to send upgrade request email:', emailError);
+        return res.status(500).json({ message: "Failed to send upgrade request. Please try again." });
+      }
+
+      res.json({ 
+        message: "Pro plan upgrade request sent successfully. We will contact you within 24-48 hours.",
+        organization: {
+          id: (organization._id as any).toString(),
+          name: organization.name,
+          currentPlan: organization.subscriptionPlan
+        }
+      });
+    } catch (error) {
+      console.error("Error requesting pro upgrade:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 }

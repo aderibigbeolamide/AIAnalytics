@@ -93,8 +93,10 @@ app.use((req, res, next) => {
   // Connect to MongoDB
   await connectToMongoDB();
   
-  // Run auto-seeding before starting the server
-  await mongoAutoSeed();
+  // Run auto-seeding only in development environment
+  if (process.env.NODE_ENV !== 'production') {
+    await mongoAutoSeed();
+  }
   
   // Register MongoDB routes FIRST (includes our status calculation logic)
   const { registerMongoRoutes } = await import("./mongo-routes.js");

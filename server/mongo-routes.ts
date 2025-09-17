@@ -293,6 +293,16 @@ export function registerMongoRoutes(app: Express) {
             allowInvitees: plainEvent.allowInvitees,
             ticketCategories: plainEvent.ticketCategories || [],
             paymentSettings: plainEvent.paymentSettings,
+            // Essential fields for editing
+            registrationStartDate: plainEvent.registrationStartDate,
+            registrationEndDate: plainEvent.registrationEndDate,
+            eligibleAuxiliaryBodies: plainEvent.eligibleAuxiliaryBodies || [],
+            customRegistrationFields: plainEvent.customRegistrationFields || [],
+            invitations: plainEvent.invitations || [],
+            reminderSettings: plainEvent.reminderSettings,
+            faceRecognitionSettings: plainEvent.faceRecognitionSettings,
+            requiresPayment: plainEvent.requiresPayment,
+            paymentAmount: plainEvent.paymentAmount,
             createdAt: plainEvent.createdAt,
             updatedAt: plainEvent.updatedAt
           };
@@ -4637,6 +4647,112 @@ export function registerMongoRoutes(app: Express) {
     } catch (error) {
       console.error("Error fixing face recognition settings:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Export attendance data as CSV
+  app.get("/api/events/:eventId/export-attendance", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const eventId = req.params.eventId;
+      const organizationId = req.user?.organizationId;
+
+      // Get event details
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Check if user has access to this event
+      if (req.user?.role !== 'super_admin' && event.organizationId?.toString() !== organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get registrations for this event
+      const registrations = await mongoStorage.getEventRegistrations(eventId);
+      
+      // Get attendance records
+      const attendance = await mongoStorage.getAttendance(eventId);
+      
+      // Create CSV data
+      const csvHeaders = [
+        'Registration ID',
+        'First Name',
+        'Last Name', 
+        'Email',
+        'Registration Type',
+        'Auxiliary Body',
+        'Status',
+        'Payment Status',
+        'Payment Amount',
+        'Attended',
+        'Attendance Time',
+        'Registered At',
+        'Unique ID',
+        'Phone Number'
+      ];
+
+      const csvRows = registrations.map(reg => {
+        const attendanceRecord = attendance.find(att => 
+          att.registrationId === reg._id?.toString() || 
+          att.uniqueId === reg.uniqueId
+        );
+        
+        // Extract data from registration object
+        const regObj = reg.toObject ? reg.toObject() : reg;
+        
+        return [
+          regObj._id?.toString() || '',
+          regObj.firstName || regObj.registrationData?.firstName || regObj.registrationData?.FirstName || '',
+          regObj.lastName || regObj.registrationData?.lastName || regObj.registrationData?.LastName || '',
+          regObj.email || regObj.registrationData?.email || regObj.registrationData?.Email || '',
+          regObj.registrationType || 'member',
+          regObj.auxiliaryBody || 
+            regObj.registrationData?.auxiliaryBody || 
+            regObj.registrationData?.AuxiliaryBody || 
+            regObj.registrationData?.Gender || 
+            regObj.registrationData?.gender || 
+            regObj.customData?.auxiliaryBody || 
+            regObj.guestAuxiliaryBody || 
+            regObj.member?.auxiliaryBody || 'N/A',
+          regObj.status || 'registered',
+          regObj.paymentStatus || 'not_required',
+          regObj.paymentAmount || '',
+          attendanceRecord ? 'Yes' : 'No',
+          attendanceRecord?.scannedAt ? new Date(attendanceRecord.scannedAt).toISOString() : '',
+          regObj.createdAt ? new Date(regObj.createdAt).toISOString() : '',
+          regObj.uniqueId || '',
+          regObj.phoneNumber || regObj.registrationData?.phoneNumber || regObj.registrationData?.PhoneNumber || ''
+        ];
+      });
+
+      // Convert to CSV format
+      const csvContent = [csvHeaders, ...csvRows]
+        .map(row => row.map(field => {
+          // Escape fields that contain commas or quotes
+          const fieldStr = String(field || '');
+          if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n')) {
+            return `"${fieldStr.replace(/"/g, '""')}"`;
+          }
+          return fieldStr;
+        }).join(','))
+        .join('\n');
+
+      // Set CSV headers
+      const eventName = event.name.replace(/[^a-zA-Z0-9]/g, '_');
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `${eventName}_attendance_${timestamp}.csv`;
+      
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Add BOM for proper Excel encoding
+      res.write('\uFEFF');
+      res.end(csvContent);
+      
+    } catch (error) {
+      console.error("Error exporting attendance:", error);
+      res.status(500).json({ message: "Failed to export attendance data" });
     }
   });
 }

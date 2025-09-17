@@ -7,7 +7,7 @@ channel = "stable-25_05"
 packages = ["jq"]
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "vm"
 run = ["npm", "run", "start"]
 build = ["npm", "run", "build"]
 
@@ -50,6 +50,10 @@ externalPort = 3003
 [[ports]]
 localPort = 39667
 externalPort = 6000
+
+[[ports]]
+localPort = 40639
+externalPort = 9000
 
 [[ports]]
 localPort = 43147
