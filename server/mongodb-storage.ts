@@ -190,7 +190,7 @@ export class MongoStorage implements IMongoStorage {
 
   async getUserByUsername(username: string): Promise<IUser | null> {
     try {
-      return await User.findOne({ username });
+      return await User.findOne({ username }).populate('organizationId');
     } catch (error) {
       console.error('Error getting user by username:', error);
       return null;
