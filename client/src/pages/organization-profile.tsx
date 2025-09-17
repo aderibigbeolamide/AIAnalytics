@@ -515,7 +515,7 @@ export default function OrganizationProfile() {
                     <div className="space-y-2">
                       <h4 className="font-medium">Members Limit</h4>
                       <div className="text-2xl font-bold text-green-600">
-                        {profile.maxMembers === -1 ? '∞' : profile.maxMembers.toLocaleString()}
+                        {profile.maxMembers === -1 ? '∞' : (profile.maxMembers ?? 0).toLocaleString()}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {profile.maxMembers === -1 ? 'Unlimited members' : 'members/registrations allowed'}
