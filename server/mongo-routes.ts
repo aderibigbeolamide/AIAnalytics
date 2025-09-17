@@ -293,6 +293,16 @@ export function registerMongoRoutes(app: Express) {
             allowInvitees: plainEvent.allowInvitees,
             ticketCategories: plainEvent.ticketCategories || [],
             paymentSettings: plainEvent.paymentSettings,
+            // Essential fields for editing
+            registrationStartDate: plainEvent.registrationStartDate,
+            registrationEndDate: plainEvent.registrationEndDate,
+            eligibleAuxiliaryBodies: plainEvent.eligibleAuxiliaryBodies || [],
+            customRegistrationFields: plainEvent.customRegistrationFields || [],
+            invitations: plainEvent.invitations || [],
+            reminderSettings: plainEvent.reminderSettings,
+            faceRecognitionSettings: plainEvent.faceRecognitionSettings,
+            requiresPayment: plainEvent.requiresPayment,
+            paymentAmount: plainEvent.paymentAmount,
             createdAt: plainEvent.createdAt,
             updatedAt: plainEvent.updatedAt
           };
