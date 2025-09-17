@@ -89,11 +89,17 @@ export function registerMongoAuthRoutes(app: Express) {
       
       console.log(`Login attempt for user: ${username}`);
       
-      // Find user by username (without populate to get raw ObjectId)
-      const user = await mongoStorage.getUserByUsername(username.trim());
+      // Find user by username first, then try email if not found
+      let user = await mongoStorage.getUserByUsername(username.trim());
       
       if (!user) {
-        console.log(`User not found: ${username}`);
+        console.log(`User not found by username, trying email: ${username}`);
+        // Try to find by email if username lookup failed
+        user = await mongoStorage.getUserByEmail(username.trim());
+      }
+      
+      if (!user) {
+        console.log(`User not found by username or email: ${username}`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
       
