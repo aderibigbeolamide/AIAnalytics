@@ -491,34 +491,34 @@ export default function OrganizationProfile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {orgProfile ? (
+              {profile ? (
                 <div className="space-y-4">
                   {/* Current Plan */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <h4 className="font-medium">Current Plan</h4>
-                      <Badge variant={orgProfile.subscriptionPlan === 'pro' ? 'default' : 'secondary'} className="text-lg px-3 py-1">
-                        {orgProfile.subscriptionPlan === 'pro' ? '✨ Pro Plan' : '🏷️ Basic Plan'}
+                      <Badge variant={profile.subscriptionPlan === 'pro' ? 'default' : 'secondary'} className="text-lg px-3 py-1">
+                        {profile.subscriptionPlan === 'pro' ? '✨ Pro Plan' : '🏷️ Basic Plan'}
                       </Badge>
                     </div>
                     
                     <div className="space-y-2">
                       <h4 className="font-medium">Events Limit</h4>
                       <div className="text-2xl font-bold text-blue-600">
-                        {orgProfile.maxEvents === -1 ? '∞' : orgProfile.maxEvents}
+                        {profile.maxEvents === -1 ? '∞' : profile.maxEvents}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {orgProfile.maxEvents === -1 ? 'Unlimited events' : 'events allowed'}
+                        {profile.maxEvents === -1 ? 'Unlimited events' : 'events allowed'}
                       </p>
                     </div>
                     
                     <div className="space-y-2">
                       <h4 className="font-medium">Members Limit</h4>
                       <div className="text-2xl font-bold text-green-600">
-                        {orgProfile.maxMembers === -1 ? '∞' : orgProfile.maxMembers.toLocaleString()}
+                        {profile.maxMembers === -1 ? '∞' : profile.maxMembers.toLocaleString()}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {orgProfile.maxMembers === -1 ? 'Unlimited members' : 'members/registrations allowed'}
+                        {profile.maxMembers === -1 ? 'Unlimited members' : 'members/registrations allowed'}
                       </p>
                     </div>
                   </div>
@@ -526,11 +526,11 @@ export default function OrganizationProfile() {
                   {/* Plan Comparison */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                     {/* Basic Plan */}
-                    <Card className={orgProfile.subscriptionPlan === 'basic' ? 'ring-2 ring-blue-500' : ''}>
+                    <Card className={profile.subscriptionPlan === 'basic' ? 'ring-2 ring-blue-500' : ''}>
                       <CardHeader>
                         <CardTitle className="flex items-center justify-between">
                           🏷️ Basic Plan
-                          {orgProfile.subscriptionPlan === 'basic' && (
+                          {profile.subscriptionPlan === 'basic' && (
                             <Badge variant="default">Current</Badge>
                           )}
                         </CardTitle>
@@ -559,11 +559,11 @@ export default function OrganizationProfile() {
                     </Card>
 
                     {/* Pro Plan */}
-                    <Card className={orgProfile.subscriptionPlan === 'pro' ? 'ring-2 ring-green-500' : 'border-green-200'}>
+                    <Card className={profile.subscriptionPlan === 'pro' ? 'ring-2 ring-green-500' : 'border-green-200'}>
                       <CardHeader>
                         <CardTitle className="flex items-center justify-between">
                           ✨ Pro Plan
-                          {orgProfile.subscriptionPlan === 'pro' && (
+                          {profile.subscriptionPlan === 'pro' && (
                             <Badge variant="default">Current</Badge>
                           )}
                         </CardTitle>
@@ -597,7 +597,7 @@ export default function OrganizationProfile() {
                   </div>
 
                   {/* Upgrade Button */}
-                  {orgProfile.subscriptionPlan === 'basic' && (
+                  {profile.subscriptionPlan === 'basic' && (
                     <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-green-200">
                       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div>
@@ -627,7 +627,7 @@ export default function OrganizationProfile() {
                     </div>
                   )}
 
-                  {orgProfile.subscriptionPlan === 'pro' && (
+                  {profile.subscriptionPlan === 'pro' && (
                     <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">🎉</span>
