@@ -48,7 +48,7 @@ const navigationItems: NavItem[] = [
     icon: <Calendar className="h-5 w-5" />,
   },
   {
-    href: ROUTES.EVENTS,
+    href: '/admin/events',
     label: 'Events',
     icon: <Calendar className="h-5 w-5" />,
   },

@@ -15,7 +15,7 @@ import { CsvValidation } from "@/components/csv-validation";
 import { FaceRecognition } from "@/components/face-recognition";
 import { FaceRecognitionTest } from "@/components/face-recognition-test";
 import { CountdownTimer } from "@/components/countdown-timer";
-import { Navbar } from "@/components/navbar";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { EventImage } from "@/lib/event-utils";
 
 export default function EventDetail() {
@@ -118,8 +118,7 @@ export default function EventDetail() {
   const canRegister = user && !isRegistered;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <SidebarLayout>
       <div className="max-w-4xl mx-auto p-6 space-y-6">
       <Card>
         {/* Event Image */}
@@ -616,6 +615,6 @@ export default function EventDetail() {
         </DialogContent>
       </Dialog>
       </div>
-    </div>
+    </SidebarLayout>
   );
 }
