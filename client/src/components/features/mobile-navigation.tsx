@@ -34,7 +34,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     label: 'Events',
-    href: '/events',
+    href: '/admin/events',
     icon: Calendar,
     roles: ['admin', 'super_admin', 'user']
   },
