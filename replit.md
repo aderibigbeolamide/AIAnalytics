@@ -59,6 +59,29 @@ Business focus: Strong emphasis on investor attraction through compelling pitch 
 - **About Page**: Professional company overview showcasing mission, vision, goals, achievements, technology stack, and value propositions with investor-focused content.
 - **Enhanced Event Feedback System (January 2025)**: Improved accessibility of the existing reporting system by adding "Provide Feedback" navigation links to all public event detail pages and ticket purchase flows, enabling users to easily submit feedback, complaints, suggestions, and reports for both registration-based and ticket-based events.
 
+## Replit Deployment (September 2025)
+### Setup Status
+- ✅ **Development Environment**: Fully configured and running
+- ✅ **Workflow**: Configured to run on port 5000 with webview output
+- ✅ **Vite Configuration**: Properly set with `allowedHosts: true` for Replit proxy support
+- ✅ **Server Configuration**: Express server configured with `host: 0.0.0.0` and `trust proxy: 1`
+- ✅ **Database**: MongoDB Atlas connected and seeded with initial data
+- ✅ **Deployment Config**: Autoscale deployment configured with build and start commands
+
+### Running the Application
+- **Development**: The workflow "Start application" runs automatically
+- **Access**: Application available at the Replit webview on port 5000
+- **Hot Module Replacement**: Disabled for Replit compatibility
+
+### Environment Variables
+- `DATABASE_URL`: MongoDB Atlas connection string (already configured)
+- `NODE_ENV`: Set to development
+- `PORT`: Set to 5000 (required for Replit)
+
+### Default Login Credentials
+- **Super Admin**: Check the database seed script for credentials
+- **Organization Admin**: Created during auto-seeding process
+
 ## External Dependencies
 - **Database**:
     - `mongodb`
