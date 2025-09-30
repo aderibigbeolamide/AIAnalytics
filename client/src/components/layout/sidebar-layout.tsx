@@ -179,7 +179,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {!sidebarCollapsed && (
             <div className="flex items-center space-x-2">
               <Building2 className="h-6 w-6" />
-              <span className="text-lg font-semibold">EventValidate</span>
+              <span className="text-lg font-semibold">EventifyAI</span>
             </div>
           )}
           {sidebarCollapsed && (
