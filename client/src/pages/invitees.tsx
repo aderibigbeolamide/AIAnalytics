@@ -23,7 +23,6 @@ export default function InviteesPage() {
     message: "",
   });
 
-  // Fetch events
   const { data: events = [] } = useQuery({
     queryKey: ["/api/events"],
     queryFn: async () => {
@@ -34,7 +33,6 @@ export default function InviteesPage() {
     },
   });
 
-  // Fetch invitees for selected event
   const { data: invitees = [], refetch: refetchInvitees } = useQuery({
     queryKey: ["/api/events", selectedEventId, "invitees"],
     queryFn: async () => {
@@ -47,7 +45,6 @@ export default function InviteesPage() {
     enabled: !!selectedEventId,
   });
 
-  // Create invitation mutation
   const createInvitationMutation = useMutation({
     mutationFn: async (invitationData: { eventId: string; name: string; email: string; message: string }) => {
       const response = await fetch(`/api/events/${invitationData.eventId}/invitees`, {
@@ -88,7 +85,6 @@ export default function InviteesPage() {
     },
   });
 
-  // Delete invitation mutation
   const deleteInvitationMutation = useMutation({
     mutationFn: async (invitationId: number) => {
       const response = await fetch(`/api/invitations/${invitationId}`, {
@@ -157,4 +153,164 @@ export default function InviteesPage() {
   const selectedEvent = events.find((event: any) => event.id.toString() === selectedEventId);
 
   return (
-    <div className="min-h-screen bg-background">
+    <SidebarLayout>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2" data-testid="text-invitees-title">
+            <UsersRound className="inline mr-2" />
+            Event Invitees
+          </h1>
+          <p className="text-muted-foreground">Manage and track event invitations</p>
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Event</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                <SelectTrigger data-testid="select-event">
+                  <SelectValue placeholder="Choose an event" />
+                </SelectTrigger>
+                <SelectContent>
+                  {events.map((event: any) => (
+                    <SelectItem key={event.id} value={event.id.toString()}>
+                      {event.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
+          {selectedEvent && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Invitees for {selectedEvent.name}</span>
+                  <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button data-testid="button-create-invitation">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Invitation
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Send Invitation</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="invitee-name">Name</Label>
+                          <Input
+                            id="invitee-name"
+                            data-testid="input-invitee-name"
+                            placeholder="Enter invitee name"
+                            value={inviteForm.name}
+                            onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="invitee-email">Email</Label>
+                          <Input
+                            id="invitee-email"
+                            data-testid="input-invitee-email"
+                            type="email"
+                            placeholder="Enter invitee email"
+                            value={inviteForm.email}
+                            onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="invitation-message">Message (Optional)</Label>
+                          <Textarea
+                            id="invitation-message"
+                            data-testid="textarea-invitation-message"
+                            placeholder="Add a personal message"
+                            value={inviteForm.message}
+                            onChange={(e) => setInviteForm({ ...inviteForm, message: e.target.value })}
+                          />
+                        </div>
+                        <Button
+                          onClick={handleCreateInvitation}
+                          disabled={createInvitationMutation.isPending}
+                          data-testid="button-send-invitation"
+                          className="w-full"
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          {createInvitationMutation.isPending ? "Sending..." : "Send Invitation"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {invitees.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {invitees.map((invitee: any) => (
+                          <tr key={invitee.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {invitee.name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {invitee.email}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge className={getStatusBadge(invitee.status)}>
+                                {invitee.status}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteInvitationMutation.mutate(invitee.id)}
+                                disabled={deleteInvitationMutation.isPending}
+                                data-testid={`button-delete-${invitee.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Mail className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-500">No invitees for this event yet.</p>
+                    <p className="text-sm text-gray-400">Create an invitation to get started.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {!selectedEventId && (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center">
+                  <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-4 text-gray-500">Please select an event to view invitees</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </SidebarLayout>
+  );
+}

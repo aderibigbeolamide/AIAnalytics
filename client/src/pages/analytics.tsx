@@ -19,12 +19,11 @@ export default function Analytics() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-    <SidebarLayout>
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <SidebarLayout>
+        <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center">Loading analytics...</div>
         </div>
-      </div>
+      </SidebarLayout>
     );
   }
 
@@ -54,7 +53,6 @@ export default function Analytics() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
     <SidebarLayout>
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
@@ -255,6 +253,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </SidebarLayout>
   );
 }

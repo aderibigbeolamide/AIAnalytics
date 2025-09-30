@@ -195,7 +195,6 @@ export default function Reports() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
     <SidebarLayout>
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
@@ -510,6 +509,6 @@ export default function Reports() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </SidebarLayout>
   );
 }
