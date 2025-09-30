@@ -66,9 +66,10 @@ Business focus: Strong emphasis on investor attraction through compelling pitch 
 - ✅ **Vite Configuration**: Properly set with `allowedHosts: true` and `host: 0.0.0.0` for Replit proxy support
 - ✅ **Server Configuration**: Express server configured with `host: 0.0.0.0` and `trust proxy: 1`
 - ✅ **Database**: MongoDB Atlas connected and seeded with initial data (29 events loaded)
-- ✅ **Deployment Config**: Autoscale deployment configured in `.replit` with build and start commands
+- ✅ **Deployment Config**: Autoscale deployment configured with build and start commands
 - ✅ **All Dependencies**: Installed and verified (tsx, vite, express, mongodb, etc.)
 - ✅ **Application Verified**: Frontend and backend working correctly, pages loading successfully
+- ✅ **Package.json Fix**: Updated dev script to use `tsx` directly instead of `npx tsx` to avoid installation prompts
 
 ### Running the Application
 - **Development**: The workflow "Start application" runs automatically with `npm run dev`
