@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Navbar } from "@/components/navbar";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -7,26 +7,19 @@ import { getAuthHeaders } from "@/lib/auth";
 import { BarChart3, TrendingUp, Users, Calendar, PieChart } from "lucide-react";
 
 export default function Analytics() {
+  // All hooks must be called before any conditional returns
   const { data: analytics, isLoading } = useQuery({
     queryKey: ["/api/analytics"],
     queryFn: async () => {
       const response = await fetch("/api/analytics", {
         headers: getAuthHeaders(),
       });
+      if (!response.ok) {
+        throw new Error('Failed to fetch analytics');
+      }
       return response.json();
     },
   });
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">Loading analytics...</div>
-        </div>
-      </div>
-    );
-  }
 
   // Get auxiliary bodies dynamically from the API
   const { data: auxiliaryBodies = [] } = useQuery({
@@ -53,11 +46,25 @@ export default function Analytics() {
     return colors[Math.abs(hash) % colors.length];
   };
 
+  // Generate dynamic colors object for auxiliary bodies
+  const auxiliaryBodyColors: Record<string, string> = {};
+  auxiliaryBodies.forEach((body: string) => {
+    auxiliaryBodyColors[body] = getAuxiliaryBodyColor(body);
+  });
+
+  if (isLoading) {
+    return (
+      <SidebarLayout>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center">Loading analytics...</div>
+        </div>
+      </SidebarLayout>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <SidebarLayout>
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Analytics Dashboard</h1>
@@ -256,6 +263,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </SidebarLayout>
   );
 }

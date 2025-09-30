@@ -1529,40 +1529,6 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="bg-gray-950 text-gray-300 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Main Footer CTA */}
-          <div className="text-center mb-12 pb-8 border-b border-gray-800">
-            <h3 className="text-3xl font-bold text-white mb-4">
-              Ready to Revolutionize Your Event Security?
-            </h3>
-            <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
-              Join 500+ organizations already using Eventify AI to eliminate fraud and streamline event management.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-10 py-4 text-lg rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300"
-                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=Eventify AI Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of Eventify AI for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
-              >
-                <Target className="h-6 w-6 mr-2" />
-                Get Free Demo Now
-              </Button>
-              <Button 
-                variant="outline"
-                size="lg"
-                className="border-2 border-white text-white hover:bg-white hover:text-gray-900 font-semibold px-10 py-4 text-lg rounded-full transition-all duration-300"
-                onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss Eventify AI for my organization.', '_blank')}
-              >
-                <Phone className="h-6 w-6 mr-2" />
-                Schedule Call
-              </Button>
-            </div>
-            <div className="mt-6">
-              <p className="text-sm text-gray-400 flex items-center justify-center">
-                <Shield className="h-4 w-4 mr-2 text-green-400" />
-                Enterprise-grade security • GDPR compliant • 99.9% uptime guarantee
-              </p>
-            </div>
-          </div>
           
           <div className="flex flex-col md:flex-row justify-between items-center">
             <Link href="/">
