@@ -12,11 +12,22 @@ import {
   X,
   ChevronLeft,
   Building2,
+  User,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationBell } from '@/components/ui/notification-bell';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ROUTES } from '@/lib/constants/routes';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 
 interface NavItem {
   href: string;
@@ -90,7 +101,27 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [location] = useLocation();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, member, isAuthenticated, logout } = useAuthStore();
+
+  // Query organization profile for profile image (only for admins)
+  const { data: profile } = useQuery<{ profileImage?: string }>({
+    queryKey: ['/api/organization/profile'],
+    enabled: user?.role === 'admin',
+  });
+
+  // Helper function to get the correct image URL
+  const getProfileImageUrl = (imageUrl?: string) => {
+    if (!imageUrl) return undefined;
+    // If it's already a full URL (Cloudinary), return as is
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    // If it's a local path, add /uploads/ prefix if not already present
+    if (imageUrl.startsWith('/uploads/')) {
+      return imageUrl;
+    }
+    return `/uploads/${imageUrl}`;
+  };
 
   if (!isAuthenticated || !user) {
     return <div>{children}</div>;
@@ -214,6 +245,47 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
             {/* Right Side Actions */}
             <div className="flex items-center space-x-2">
               <ThemeToggle />
+              <NotificationBell />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 px-3 py-2"
+                    data-testid="button-user-profile"
+                  >
+                    <Avatar className="h-8 w-8 ring-2 ring-gray-200 dark:ring-gray-700">
+                      <AvatarImage
+                        src={getProfileImageUrl(profile?.profileImage)}
+                        alt="Profile"
+                        className="object-cover object-center w-full h-full"
+                      />
+                      <AvatarFallback className="bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 text-blue-600 dark:text-blue-300">
+                        <User className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-32">
+                      {member ? `${member.firstName} ${member.lastName}` : user?.username}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">
+                      <span className="w-full cursor-pointer" data-testid="menu-settings">Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  {user?.role === 'admin' && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/organization-profile">
+                        <span className="w-full cursor-pointer" data-testid="menu-organization-profile">Organization Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={logout} data-testid="menu-logout">
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
