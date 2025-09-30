@@ -709,7 +709,7 @@ export function DocumentationPage() {
                 </Button>
               </Link>
               <Link href="/about">
-                <Button variant="outline" className="border-2 border-white text-white hover:bg-white/10 px-8 py-3 rounded-xl font-semibold">
+                <Button className="bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border-2 border-white/30 px-8 py-3 rounded-xl font-semibold">
                   Learn More
                 </Button>
               </Link>
