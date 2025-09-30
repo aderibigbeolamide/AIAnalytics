@@ -7,25 +7,19 @@ import { getAuthHeaders } from "@/lib/auth";
 import { BarChart3, TrendingUp, Users, Calendar, PieChart } from "lucide-react";
 
 export default function Analytics() {
+  // All hooks must be called before any conditional returns
   const { data: analytics, isLoading } = useQuery({
     queryKey: ["/api/analytics"],
     queryFn: async () => {
       const response = await fetch("/api/analytics", {
         headers: getAuthHeaders(),
       });
+      if (!response.ok) {
+        throw new Error('Failed to fetch analytics');
+      }
       return response.json();
     },
   });
-
-  if (isLoading) {
-    return (
-      <SidebarLayout>
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center">Loading analytics...</div>
-        </div>
-      </SidebarLayout>
-    );
-  }
 
   // Get auxiliary bodies dynamically from the API
   const { data: auxiliaryBodies = [] } = useQuery({
@@ -51,6 +45,22 @@ export default function Analytics() {
     }
     return colors[Math.abs(hash) % colors.length];
   };
+
+  // Generate dynamic colors object for auxiliary bodies
+  const auxiliaryBodyColors: Record<string, string> = {};
+  auxiliaryBodies.forEach((body: string) => {
+    auxiliaryBodyColors[body] = getAuxiliaryBodyColor(body);
+  });
+
+  if (isLoading) {
+    return (
+      <SidebarLayout>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center">Loading analytics...</div>
+        </div>
+      </SidebarLayout>
+    );
+  }
 
   return (
     <SidebarLayout>

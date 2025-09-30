@@ -164,6 +164,121 @@ export function registerMongoDashboardRoutes(app: Express) {
     }
   });
 
+  // Analytics endpoint - comprehensive analytics dashboard
+  app.get("/api/analytics", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const organizationId = req.user?.organizationId;
+      
+      // Get all data for the organization
+      const events = await mongoStorage.getEvents(organizationId ? { organizationId } : {});
+      const members = await mongoStorage.getMembers(organizationId ? { organizationId } : {});
+      const registrations = await mongoStorage.getEventRegistrations();
+      
+      // Filter registrations by organization events
+      const orgEventIds = events.map(e => e._id ? e._id.toString() : e.id?.toString() || '');
+      const orgRegistrations = registrations.filter(r => {
+        const eventId = r.eventId ? r.eventId.toString() : '';
+        return orgEventIds.includes(eventId);
+      });
+
+      // Get all tickets for organization events
+      let allTickets: any[] = [];
+      for (const eventId of orgEventIds) {
+        try {
+          const eventTickets = await mongoStorage.getTickets({ eventId });
+          allTickets.push(...eventTickets);
+        } catch (error) {
+          // No tickets for this event
+        }
+      }
+
+      // Basic metrics
+      const totalEvents = events.length;
+      const activeEvents = events.filter(e => e.status === 'active' || e.status === 'upcoming').length;
+      const completedEvents = events.filter(e => e.status === 'completed').length;
+      const totalMembers = members.length;
+
+      // Validation statistics
+      const totalValidated = orgRegistrations.filter(r => r.status === 'online' || r.status === 'attended').length + 
+                            allTickets.filter(t => t.status === 'used').length;
+      const totalRegistrations = orgRegistrations.length + allTickets.length;
+      const validationRate = totalRegistrations > 0 ? (totalValidated / totalRegistrations) * 100 : 0;
+
+      // Today's scans
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const scansToday = orgRegistrations.filter(r => 
+        r.validatedAt && r.validatedAt >= today && r.validatedAt < tomorrow
+      ).length + allTickets.filter(t => 
+        t.validatedAt && t.validatedAt >= today && t.validatedAt < tomorrow
+      ).length;
+
+      // Auxiliary body distribution
+      const auxiliaryBodyDistribution: { [key: string]: number } = {};
+      members.forEach(m => {
+        if (m.auxiliaryBody) {
+          auxiliaryBodyDistribution[m.auxiliaryBody] = (auxiliaryBodyDistribution[m.auxiliaryBody] || 0) + 1;
+        }
+      });
+
+      // Event analytics with detailed performance metrics
+      const eventAnalytics = await Promise.all(events.map(async (event) => {
+        const eventId = event._id?.toString();
+        const eventRegs = await mongoStorage.getEventRegistrations(eventId || '');
+        const eventTickets = event.eventType === 'ticket' ? 
+          await mongoStorage.getTickets({ eventId: eventId || '' }).catch(() => []) : [];
+
+        const totalRegs = event.eventType === 'ticket' ? eventTickets.length : eventRegs.length;
+        const memberRegs = event.eventType === 'ticket' ? 
+          eventTickets.filter(t => t.paymentStatus === 'completed').length :
+          eventRegs.filter(r => r.registrationType === 'member' || r.registration_type === 'member').length;
+        const guestRegs = event.eventType === 'ticket' ? 
+          eventTickets.filter(t => t.paymentStatus === 'pending').length :
+          eventRegs.filter(r => r.registrationType === 'guest' || r.registration_type === 'guest').length;
+        const inviteeRegs = event.eventType === 'ticket' ? 
+          eventTickets.filter(t => t.paymentStatus === 'failed').length :
+          eventRegs.filter(r => r.registrationType === 'invitee' || r.registration_type === 'invitee').length;
+        
+        const attended = event.eventType === 'ticket' ?
+          eventTickets.filter(t => t.status === 'used').length :
+          eventRegs.filter(r => r.status === 'attended').length;
+
+        return {
+          eventId: eventId,
+          name: event.name,
+          totalRegistrations: totalRegs,
+          memberRegistrations: memberRegs,
+          guestRegistrations: guestRegs,
+          inviteeRegistrations: inviteeRegs,
+          totalAttendance: attended,
+          attendanceRate: totalRegs > 0 ? (attended / totalRegs) * 100 : 0,
+        };
+      }));
+
+      const analytics = {
+        totalEvents,
+        activeEvents,
+        completedEvents,
+        totalMembers,
+        overallStats: {
+          validationRate: Math.round(validationRate * 10) / 10,
+          totalScans: totalValidated,
+          scansToday,
+        },
+        auxiliaryBodyDistribution,
+        eventAnalytics,
+      };
+
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error getting analytics:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get events for dashboard
   app.get("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     console.log('*** DASHBOARD ROUTE: GET /api/events with COMPREHENSIVE STATS ***', new Date().toISOString());

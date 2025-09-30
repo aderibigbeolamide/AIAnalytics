@@ -26,6 +26,20 @@ export function Navbar() {
     enabled: user?.role === 'admin',
   });
 
+  // Helper function to get the correct image URL
+  const getProfileImageUrl = (imageUrl?: string) => {
+    if (!imageUrl) return undefined;
+    // If it's already a full URL (Cloudinary), return as is
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    // If it's a local path, add /uploads/ prefix if not already present
+    if (imageUrl.startsWith('/uploads/')) {
+      return imageUrl;
+    }
+    return `/uploads/${imageUrl}`;
+  };
+
   // Filter navigation items based on user role
   const getNavItems = () => {
     const baseItems = [
@@ -34,6 +48,7 @@ export function Navbar() {
 
     const adminItems = [
       { href: "/dashboard", label: "Dashboard", roles: ["admin"] },
+      { href: "/analytics", label: "Analytics", roles: ["admin"] },
       { href: "/members", label: "Members", roles: ["admin"] },
       { href: "/admin/events", label: "Events", roles: ["admin"] },
       { href: "/scanner", label: "Scan QR", roles: ["admin"] },
@@ -103,7 +118,7 @@ export function Navbar() {
                 <Button variant="ghost" className="flex items-center space-x-3 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 dark:hover:from-gray-800 dark:hover:to-gray-700 rounded-xl transition-all duration-300 px-3 py-2">
                   <Avatar className="h-9 w-9 ring-2 ring-blue-100 dark:ring-blue-900">
                     <AvatarImage 
-                      src={profile?.profileImage || undefined} 
+                      src={getProfileImageUrl(profile?.profileImage)} 
                       alt="Profile"
                       className="object-cover object-center w-full h-full"
                     />
@@ -201,7 +216,7 @@ export function Navbar() {
                 <div className="flex items-center px-3 py-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage 
-                      src={profile?.profileImage || undefined} 
+                      src={getProfileImageUrl(profile?.profileImage)} 
                       alt="Profile"
                       className="object-cover object-center w-full h-full"
                     />

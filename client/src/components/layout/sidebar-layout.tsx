@@ -1,16 +1,5 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import {
   Home,
   Calendar,
@@ -19,8 +8,6 @@ import {
   FileText,
   BarChart3,
   Settings,
-  LogOut,
-  User,
   Menu,
   X,
   ChevronLeft,
@@ -103,7 +90,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [location] = useLocation();
-  const { user, logout, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated || !user) {
     return <div>{children}</div>;
@@ -119,39 +106,6 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     }
 
     return baseItems;
-  };
-
-  const handleLogout = () => {
-    logout();
-  };
-
-  const getUserInitials = () => {
-    if (user.firstName && user.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-    }
-    return user.username ? user.username.slice(0, 2).toUpperCase() : 'U';
-  };
-
-  const getRoleBadgeVariant = () => {
-    switch (user.role) {
-      case 'super_admin':
-        return 'destructive';
-      case 'admin':
-        return 'default';
-      default:
-        return 'secondary';
-    }
-  };
-
-  const getRoleLabel = () => {
-    switch (user.role) {
-      case 'super_admin':
-        return 'Super Admin';
-      case 'admin':
-        return 'Admin';
-      default:
-        return 'User';
-    }
   };
 
   const isActive = (href: string) => location === href;
@@ -220,103 +174,10 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
 
         {/* Sidebar Footer */}
         <div className="border-t border-blue-800 p-4">
-          {!sidebarCollapsed ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-800/50 transition-colors">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.avatar} alt={user.username} />
-                    <AvatarFallback className="bg-blue-700 text-white">{getUserInitials()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 text-left overflow-hidden">
-                    <p className="text-sm font-medium truncate">
-                      {user.firstName && user.lastName 
-                        ? `${user.firstName} ${user.lastName}`
-                        : user.username
-                      }
-                    </p>
-                    <p className="text-xs text-blue-200 truncate">{getRoleLabel()}</p>
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user.firstName && user.lastName 
-                        ? `${user.firstName} ${user.lastName}`
-                        : user.username
-                      }
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
-                    <div className="flex items-center space-x-2 pt-1">
-                      <Badge variant={getRoleBadgeVariant()}>
-                        {getRoleLabel()}
-                      </Badge>
-                      {user.organization && (
-                        <Badge variant="outline">
-                          {user.organization.name}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem asChild>
-                  <Link href={ROUTES.PROFILE} className="w-full">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem asChild>
-                  <Link href={ROUTES.SETTINGS} className="w-full">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                
-                {user.role === 'admin' && user.organization && (
-                  <DropdownMenuItem asChild>
-                    <Link href={ROUTES.ORGANIZATION_PROFILE} className="w-full">
-                      <Building2 className="mr-2 h-4 w-4" />
-                      <span>Organization Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuItem 
-                  className="text-red-600 dark:text-red-400"
-                  onClick={handleLogout}
-                  data-testid="button-logout"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <button 
-              onClick={() => setSidebarCollapsed(false)}
-              className="w-full flex justify-center p-3 rounded-lg hover:bg-blue-800/50"
-              title="Expand sidebar"
-            >
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user.avatar} alt={user.username} />
-                <AvatarFallback className="bg-blue-700 text-white">{getUserInitials()}</AvatarFallback>
-              </Avatar>
-            </button>
-          )}
-
           {/* Collapse Toggle - Desktop only */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="hidden lg:flex items-center justify-center w-full mt-2 p-2 rounded-lg hover:bg-blue-800/50 transition-colors"
+            className="hidden lg:flex items-center justify-center w-full p-2 rounded-lg hover:bg-blue-800/50 transition-colors"
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <ChevronLeft className={cn(

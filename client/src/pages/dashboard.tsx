@@ -74,6 +74,14 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState<"overview" | "events" | "members" | "analytics" | "validation">("overview");
   const [runTour, setRunTour] = useState(false);
   const [tourStepIndex, setTourStepIndex] = useState(0);
+  
+  // Analytics dropdown states
+  const [attendanceViewType, setAttendanceViewType] = useState("analytics");
+  const [securityTimeRange, setSecurityTimeRange] = useState("realtime");
+  const [attendanceTrendRange, setAttendanceTrendRange] = useState("7days");
+  const [attendeeChartRange, setAttendeeChartRange] = useState("weekly");
+  const [securityChartRange, setSecurityChartRange] = useState("today");
+  
   const queryClient = useQueryClient();
 
   const tourSteps: Step[] = [
@@ -192,16 +200,17 @@ export default function Dashboard() {
   });
 
   // Prepare analytics data from actual events
-  const getWeeklyAttendance = () => {
+  const getAttendanceData = (range: string) => {
     const now = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const days = range === "weekly" ? 7 : 30;
+    const dateRange = Array.from({ length: days }, (_, i) => {
       const date = new Date(now);
-      date.setDate(date.getDate() - (6 - i));
+      date.setDate(date.getDate() - (days - 1 - i));
       date.setHours(0, 0, 0, 0);
       return date;
     });
 
-    return last7Days.map((date) => {
+    return dateRange.map((date) => {
       const dayEvents = events.filter((event: any) => {
         const eventDate = new Date(event.startDate);
         eventDate.setHours(0, 0, 0, 0);
@@ -212,25 +221,65 @@ export default function Dashboard() {
         sum + (event.totalRegistrations || 0), 0
       );
       
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayName = range === "weekly" 
+        ? date.toLocaleDateString('en-US', { weekday: 'short' })
+        : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       return { day: dayName, attendees, target: 50 };
     });
   };
 
-  const getSecurityValidationData = () => {
+  const getSecurityValidationData = (timeRange: string) => {
     const baseScans = stats?.scansToday || 100;
-    const hours = 12;
-    const avgPerHour = baseScans / hours;
+    let dataPoints, labelFormat;
     
-    const validationData = Array.from({ length: hours }, (_, i) => ({
-      time: i.toString(),
-      scans: Math.max(0, Math.floor(avgPerHour + (Math.random() - 0.5) * avgPerHour * 0.5))
+    if (timeRange === "realtime" || timeRange === "today") {
+      dataPoints = 12; // 12 hours
+      labelFormat = (i: number) => i.toString();
+    } else {
+      dataPoints = 7; // 7 days for week view
+      labelFormat = (i: number) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i];
+    }
+    
+    const avgPerPoint = baseScans / dataPoints;
+    
+    const validationData = Array.from({ length: dataPoints }, (_, i) => ({
+      time: labelFormat(i),
+      scans: Math.max(0, Math.floor(avgPerPoint + (Math.random() - 0.5) * avgPerPoint * 0.5))
     }));
     return validationData;
   };
 
-  const attendanceData = getWeeklyAttendance();
-  const securityValidationData = getSecurityValidationData();
+  const getTrendData = (range: string) => {
+    const now = new Date();
+    const days = range === "7days" ? 7 : range === "30days" ? 30 : 90;
+    const dateRange = Array.from({ length: days }, (_, i) => {
+      const date = new Date(now);
+      date.setDate(date.getDate() - (days - 1 - i));
+      date.setHours(0, 0, 0, 0);
+      return date;
+    });
+
+    return dateRange.map((date) => {
+      const dayEvents = events.filter((event: any) => {
+        const eventDate = new Date(event.startDate);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate.getTime() === date.getTime();
+      });
+      
+      const attendees = dayEvents.reduce((sum: number, event: any) => 
+        sum + (event.totalRegistrations || 0), 0
+      );
+      
+      const dayName = days <= 7
+        ? date.toLocaleDateString('en-US', { weekday: 'short' })
+        : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return { day: dayName, attendees, target: 50 };
+    });
+  };
+
+  const attendanceData = getAttendanceData(attendeeChartRange);
+  const securityValidationData = getSecurityValidationData(securityChartRange);
+  const attendanceTrendData = getTrendData(attendanceTrendRange);
 
   const eventTypeData = [
     { name: 'Completed', value: events.filter((e: any) => e.status === 'completed').length },
@@ -412,7 +461,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Select defaultValue="analytics">
+                    <Select value={attendanceViewType} onValueChange={setAttendanceViewType}>
                       <SelectTrigger className="bg-white/20 border-white/30 text-white">
                         <SelectValue />
                       </SelectTrigger>
@@ -442,7 +491,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Select defaultValue="realtime">
+                    <Select value={securityTimeRange} onValueChange={setSecurityTimeRange}>
                       <SelectTrigger className="border-gray-200 dark:border-slate-600">
                         <SelectValue />
                       </SelectTrigger>
@@ -524,7 +573,7 @@ export default function Dashboard() {
                       </div>
                       <p className="text-xs text-gray-500">Weekly attendance trend</p>
                     </div>
-                    <Select defaultValue="weekly">
+                    <Select value={attendeeChartRange} onValueChange={setAttendeeChartRange}>
                       <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
@@ -560,7 +609,7 @@ export default function Dashboard() {
                       </div>
                       <p className="text-xs text-gray-500">{validationRate.toFixed(1)}% validation rate</p>
                     </div>
-                    <Select defaultValue="today">
+                    <Select value={securityChartRange} onValueChange={setSecurityChartRange}>
                       <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
@@ -592,20 +641,21 @@ export default function Dashboard() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-semibold">Attendance</CardTitle>
-                    <Select defaultValue="7days">
+                    <Select value={attendanceTrendRange} onValueChange={setAttendanceTrendRange}>
                       <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="7days">7 days</SelectItem>
                         <SelectItem value="30days">30 days</SelectItem>
+                        <SelectItem value="90days">90 days</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={250}>
-                    <RechartsBarChart data={attendanceData}>
+                    <RechartsBarChart data={attendanceTrendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} />
