@@ -65,11 +65,11 @@ export function Navbar() {
               <div className="flex-shrink-0 flex items-center cursor-pointer hover:opacity-80 transition-all duration-200">
                 <img 
                   src="/logo.png" 
-                  alt="EventValidate Logo" 
+                  alt="EventifyAI Logo" 
                   className="h-8 md:h-12 w-auto" 
                 />
                 <span className="ml-2 md:ml-3 text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent truncate">
-                  EventValidate
+                  EventifyAI
                 </span>
               </div>
             </Link>
