@@ -51,6 +51,7 @@ import { AboutPage } from "@/pages/about";
 import { DocumentationPage } from "@/pages/documentation";
 import FaceRecognitionTestPage from "@/pages/face-recognition-test";
 import PublicEventsPage from "@/pages/public-events";
+import ChatbotComponent from "@/components/chatbot";
 
 function Router() {
   const { isAuthenticated, checkAuth, loadFromStorage, initializeSessionManagement } = useAuthStore();
@@ -244,6 +245,7 @@ function App() {
         <TooltipProvider>
           <Router />
           <Toaster />
+          <ChatbotComponent />
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

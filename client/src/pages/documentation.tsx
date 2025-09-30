@@ -633,8 +633,8 @@ export function DocumentationPage() {
                       </div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Knowledge Base</h3>
                       <p className="text-gray-600 mb-4">Browse articles and tutorials</p>
-                      <Button variant="outline" className="w-full">
-                        Browse Articles
+                      <Button variant="outline" className="w-full" disabled>
+                        Coming Soon
                       </Button>
                     </CardContent>
                   </Card>
