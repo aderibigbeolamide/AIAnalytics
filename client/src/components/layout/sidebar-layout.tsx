@@ -162,13 +162,17 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         {/* Sidebar Header */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-blue-800">
           {!sidebarCollapsed && (
-            <div className="flex items-center space-x-2">
-              <Building2 className="h-6 w-6" />
-              <span className="text-lg font-semibold">EventifyAI</span>
-            </div>
+            <Link href={ROUTES.LANDING}>
+              <div className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity">
+                <Building2 className="h-6 w-6" />
+                <span className="text-lg font-semibold">EventifyAI</span>
+              </div>
+            </Link>
           )}
           {sidebarCollapsed && (
-            <Building2 className="h-6 w-6 mx-auto" />
+            <Link href={ROUTES.LANDING}>
+              <Building2 className="h-6 w-6 mx-auto cursor-pointer hover:opacity-80 transition-opacity" />
+            </Link>
           )}
           
           {/* Close button for mobile */}
