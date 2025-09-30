@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Navbar } from "@/components/navbar";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { MemberForm } from "@/components/member-form";
 import { EventForm } from "@/components/event-form";
 import { QRScanner } from "@/components/qr-scanner";
@@ -305,10 +305,8 @@ export default function Dashboard() {
   const attendanceRate = events.length > 0 ? (totalAttendance / events.length) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12">
+    <SidebarLayout>
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -912,6 +910,6 @@ export default function Dashboard() {
           },
         }}
       />
-    </div>
+    </SidebarLayout>
   );
 }

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Navbar } from "@/components/navbar";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +20,8 @@ export default function Analytics() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <SidebarLayout>
+      <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center">Loading analytics...</div>
         </div>
       </div>
@@ -55,9 +55,8 @@ export default function Analytics() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <SidebarLayout>
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Analytics Dashboard</h1>
