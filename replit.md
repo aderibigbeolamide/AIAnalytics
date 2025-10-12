@@ -1,7 +1,7 @@
-# EventValidate - AI-Powered Member Validation System
+# Eventify AI - AI-Powered Member Validation System
 
 ## Overview
-EventValidate is an AI-powered, multi-tenant member validation system designed to streamline event operations and member engagement for various organizations. It offers comprehensive event management, member validation, QR code scanning, a robust ticket system, payment processing, and real-time notifications. The platform supports a dual-admin architecture, enabling super admin oversight and organization-specific administration. Its vision is to provide a seamless and efficient solution for managing events and member interactions, targeting a broad market of organizations needing advanced validation and event management capabilities.
+Eventify AI is an AI-powered, multi-tenant member validation system designed to streamline event operations and member engagement for various organizations. It offers comprehensive event management, member validation, QR code scanning, a robust ticket system, payment processing, and real-time notifications. The platform supports a dual-admin architecture, enabling super admin oversight and organization-specific administration. Its vision is to provide a seamless and efficient solution for managing events and member interactions, targeting a broad market of organizations needing advanced validation and event management capabilities.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -57,6 +57,45 @@ Business focus: Strong emphasis on investor attraction through compelling pitch 
 - **Platform Statistics & Analytics**: Implemented comprehensive super admin dashboard with platform settings, financial metrics, growth analytics, and KPI tracking with chart visualizations. Includes organization-specific analytics.
 - **Comprehensive Documentation System**: Multi-tabbed documentation covering Getting Started, Features, Pricing, API, Support, and FAQ sections to guide users through the platform.
 - **About Page**: Professional company overview showcasing mission, vision, goals, achievements, technology stack, and value propositions with investor-focused content.
+- **Enhanced Event Feedback System (January 2025)**: Improved accessibility of the existing reporting system by adding "Provide Feedback" navigation links to all public event detail pages and ticket purchase flows, enabling users to easily submit feedback, complaints, suggestions, and reports for both registration-based and ticket-based events.
+
+## Replit Deployment (September 2025)
+### Setup Status
+- ✅ **Development Environment**: Fully configured and running
+- ✅ **Workflow**: Configured to run on port 5000 with webview output type
+- ✅ **Vite Configuration**: Properly set with `allowedHosts: true` and `host: 0.0.0.0` for Replit proxy support
+- ✅ **Server Configuration**: Express server configured with `host: 0.0.0.0` and `trust proxy: 1`
+- ✅ **Database**: MongoDB Atlas connected and seeded with initial data (29 events loaded)
+- ✅ **Deployment Config**: Autoscale deployment configured with build and start commands
+- ✅ **All Dependencies**: Installed and verified (tsx, vite, express, mongodb, etc.)
+- ✅ **Application Verified**: Frontend and backend working correctly, pages loading successfully
+- ✅ **Package.json Fix**: Updated dev script to use `tsx` directly instead of `npx tsx` to avoid installation prompts
+
+### Running the Application
+- **Development**: The workflow "Start application" runs automatically with `npm run dev`
+- **Access**: Application available at the Replit webview on port 5000
+- **Hot Module Replacement**: Disabled for Replit compatibility (`hmr: false` in vite.config.js)
+- **Build Command**: `npm run build` - Builds both frontend (Vite) and backend (esbuild)
+- **Production Start**: `npm start` - Runs the production build from `dist/index.js`
+
+### Environment Variables (Already Configured)
+- `DATABASE_URL`: MongoDB Atlas connection string (mongodb+srv://...)
+- `NODE_ENV`: Set to development
+- `PORT`: Set to 5000 (required for Replit)
+
+### Key Features Verified Working
+- ✅ Landing page with mission, vision, and goals
+- ✅ Login/authentication system
+- ✅ Events page with AI-powered recommendations
+- ✅ 29 public events loaded from MongoDB
+- ✅ WebSocket chat system initialized
+- ✅ Email service configured
+- ✅ Cloudinary file upload configured
+- ✅ Event cleanup scheduler running
+
+### Default Login Credentials
+- **Super Admin**: Check the database seed script for credentials
+- **Organization Admin**: Created during auto-seeding process
 
 ## External Dependencies
 - **Database**:

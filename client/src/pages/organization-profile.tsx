@@ -28,7 +28,9 @@ import {
   User,
   CreditCard,
   FileText,
-  Users
+  Users,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -64,6 +66,12 @@ export default function OrganizationProfile() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  
+  // Password visibility states
+  const [showUsernameCurrentPassword, setShowUsernameCurrentPassword] = useState(false);
+  const [showPasswordCurrentPassword, setShowPasswordCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   // Fetch organization profile
   const { data: profile, isLoading } = useQuery({
@@ -241,6 +249,31 @@ export default function OrganizationProfile() {
     },
   });
 
+  // Pro upgrade request mutation
+  const upgradeRequestMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/organizations/request-pro-upgrade', {});
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to send upgrade request');
+      }
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Upgrade Request Sent!",
+        description: data.message || "Your Pro plan upgrade request has been sent to our team. We'll contact you within 24-48 hours.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Request Failed",
+        description: error.message || "Failed to send upgrade request. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleProfileSubmit = (data: OrganizationFormData) => {
     updateProfileMutation.mutate(data);
   };
@@ -251,6 +284,10 @@ export default function OrganizationProfile() {
 
   const handleUsernameSubmit = (data: UsernameFormData) => {
     updateUsernameMutation.mutate(data);
+  };
+
+  const handleUpgradeRequest = () => {
+    upgradeRequestMutation.mutate();
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -312,8 +349,9 @@ export default function OrganizationProfile() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="profile" className="text-xs sm:text-sm">Profile Information</TabsTrigger>
+          <TabsTrigger value="subscription" className="text-xs sm:text-sm">Subscription Plan</TabsTrigger>
           <TabsTrigger value="security" className="text-xs sm:text-sm">Security Settings</TabsTrigger>
           <TabsTrigger value="image" className="text-xs sm:text-sm">Profile Image</TabsTrigger>
         </TabsList>
@@ -441,6 +479,178 @@ export default function OrganizationProfile() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="subscription">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Subscription Plan
+              </CardTitle>
+              <CardDescription>
+                Manage your organization's subscription plan and limits
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {profile ? (
+                <div className="space-y-4">
+                  {/* Current Plan */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Current Plan</h4>
+                      <Badge variant={profile.subscriptionPlan === 'pro' ? 'default' : 'secondary'} className="text-lg px-3 py-1">
+                        {profile.subscriptionPlan === 'pro' ? '✨ Pro Plan' : '🏷️ Basic Plan'}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Events Limit</h4>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {profile.maxEvents === -1 ? '∞' : profile.maxEvents}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {profile.maxEvents === -1 ? 'Unlimited events' : 'events allowed'}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Members Limit</h4>
+                      <div className="text-2xl font-bold text-green-600">
+                        {profile.maxMembers === -1 ? '∞' : (profile.maxMembers ?? 0).toLocaleString()}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {profile.maxMembers === -1 ? 'Unlimited members' : 'members/registrations allowed'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Plan Comparison */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    {/* Basic Plan */}
+                    <Card className={profile.subscriptionPlan === 'basic' ? 'ring-2 ring-blue-500' : ''}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          🏷️ Basic Plan
+                          {profile.subscriptionPlan === 'basic' && (
+                            <Badge variant="default">Current</Badge>
+                          )}
+                        </CardTitle>
+                        <CardDescription>Perfect for small organizations</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2 text-sm">
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-500">✓</span>
+                            Up to 10 events
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-500">✓</span>
+                            Up to 5,000 members/registrations
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-500">✓</span>
+                            QR Code validation
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-500">✓</span>
+                            Email support
+                          </li>
+                        </ul>
+                      </CardContent>
+                    </Card>
+
+                    {/* Pro Plan */}
+                    <Card className={profile.subscriptionPlan === 'pro' ? 'ring-2 ring-green-500' : 'border-green-200'}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          ✨ Pro Plan
+                          {profile.subscriptionPlan === 'pro' && (
+                            <Badge variant="default">Current</Badge>
+                          )}
+                        </CardTitle>
+                        <CardDescription>For growing organizations</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2 text-sm">
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-500">✓</span>
+                            Up to 100 events
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-500">✓</span>
+                            <strong>Unlimited</strong> members/registrations
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-500">✓</span>
+                            Advanced analytics
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-500">✓</span>
+                            Priority support
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-500">✓</span>
+                            All Basic features
+                          </li>
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Upgrade Button */}
+                  {profile.subscriptionPlan === 'basic' && (
+                    <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-green-200">
+                      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div>
+                          <h4 className="font-medium text-green-800">Ready to grow?</h4>
+                          <p className="text-sm text-green-600 mt-1">
+                            Upgrade to Pro for unlimited members and 100 events
+                          </p>
+                        </div>
+                        <Button 
+                          onClick={handleUpgradeRequest}
+                          disabled={upgradeRequestMutation.isPending}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          data-testid="button-upgrade-to-pro"
+                        >
+                          {upgradeRequestMutation.isPending ? (
+                            <>
+                              <span className="animate-spin mr-2">⏳</span>
+                              Sending Request...
+                            </>
+                          ) : (
+                            <>
+                              ✨ Request Pro Upgrade
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {profile.subscriptionPlan === 'pro' && (
+                    <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🎉</span>
+                        <div>
+                          <h4 className="font-medium text-green-800">You're on Pro!</h4>
+                          <p className="text-sm text-green-600">
+                            Enjoy unlimited members and up to 100 events
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading subscription information...</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="security">
           <div className="space-y-6">
             {/* Username Section */}
@@ -478,7 +688,31 @@ export default function OrganizationProfile() {
                         <FormItem>
                           <FormLabel>Current Password</FormLabel>
                           <FormControl>
-                            <Input {...field} type="password" placeholder="Enter current password to confirm" />
+                            <div className="relative">
+                              <Input 
+                                {...field} 
+                                type={showUsernameCurrentPassword ? "text" : "password"} 
+                                placeholder="Enter current password to confirm" 
+                                className="pr-10"
+                                data-testid="input-username-current-password"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                                onClick={() => setShowUsernameCurrentPassword(!showUsernameCurrentPassword)}
+                                aria-label={showUsernameCurrentPassword ? "Hide password" : "Show password"}
+                                aria-pressed={showUsernameCurrentPassword}
+                                data-testid="button-toggle-username-current-password"
+                              >
+                                {showUsernameCurrentPassword ? (
+                                  <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                                ) : (
+                                  <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                                )}
+                              </Button>
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -528,7 +762,31 @@ export default function OrganizationProfile() {
                       <FormItem>
                         <FormLabel>Current Password</FormLabel>
                         <FormControl>
-                          <Input {...field} type="password" placeholder="Enter current password" />
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              type={showPasswordCurrentPassword ? "text" : "password"} 
+                              placeholder="Enter current password" 
+                              className="pr-10"
+                              data-testid="input-password-current-password"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                              onClick={() => setShowPasswordCurrentPassword(!showPasswordCurrentPassword)}
+                              aria-label={showPasswordCurrentPassword ? "Hide password" : "Show password"}
+                              aria-pressed={showPasswordCurrentPassword}
+                              data-testid="button-toggle-password-current-password"
+                            >
+                              {showPasswordCurrentPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -542,7 +800,31 @@ export default function OrganizationProfile() {
                       <FormItem>
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input {...field} type="password" placeholder="Enter new password" />
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              type={showNewPassword ? "text" : "password"} 
+                              placeholder="Enter new password" 
+                              className="pr-10"
+                              data-testid="input-new-password"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              aria-label={showNewPassword ? "Hide password" : "Show password"}
+                              aria-pressed={showNewPassword}
+                              data-testid="button-toggle-new-password"
+                            >
+                              {showNewPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -556,7 +838,31 @@ export default function OrganizationProfile() {
                       <FormItem>
                         <FormLabel>Confirm New Password</FormLabel>
                         <FormControl>
-                          <Input {...field} type="password" placeholder="Confirm new password" />
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              type={showConfirmNewPassword ? "text" : "password"} 
+                              placeholder="Confirm new password" 
+                              className="pr-10"
+                              data-testid="input-confirm-new-password"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500"
+                              onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                              aria-label={showConfirmNewPassword ? "Hide password" : "Show password"}
+                              aria-pressed={showConfirmNewPassword}
+                              data-testid="button-toggle-confirm-new-password"
+                            >
+                              {showConfirmNewPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

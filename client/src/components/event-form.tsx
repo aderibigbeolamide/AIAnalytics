@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -134,6 +134,60 @@ export function EventForm({ onClose, event }: EventFormProps) {
       },
     },
   });
+
+  // Reset form when event prop changes (for editing existing events)
+  useEffect(() => {
+    if (event) {
+      const resetData: EventFormData = {
+        name: event.name || "",
+        description: event.description || "",
+        location: event.location || "",
+        eventType: event.eventType || "registration",
+        startDate: event.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : "",
+        endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : "",
+        registrationStartDate: event.registrationStartDate ? new Date(event.registrationStartDate).toISOString().slice(0, 16) : "",
+        registrationEndDate: event.registrationEndDate ? new Date(event.registrationEndDate).toISOString().slice(0, 16) : "",
+        eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies || [],
+        allowGuests: event.allowGuests || false,
+        allowInvitees: event.allowInvitees || false,
+        requiresPayment: event.requiresPayment || false,
+        paymentAmount: event.paymentAmount?.toString() || "",
+        eventImage: event.eventImage || "",
+        paymentSettings: event.paymentSettings || {
+          requiresPayment: false,
+          amount: "",
+          currency: "NGN",
+          paymentMethods: ["paystack"],
+          paymentRules: { member: false, guest: false, invitee: false },
+          allowManualReceipt: false,
+          paymentDescription: "",
+        },
+        customRegistrationFields: event.customRegistrationFields || [],
+        ticketCategories: (event.ticketCategories || []).map((cat: any) => ({
+          ...cat,
+          price: typeof cat.price === 'string' ? parseFloat(cat.price) : cat.price || 0,
+        })),
+        invitations: event.invitations || [],
+        reminderSettings: event.reminderSettings || {
+          enabled: true,
+          days: [7, 3, 1],
+          hours: [24, 2],
+          customMessage: "",
+          emailEnabled: true,
+          inAppEnabled: true,
+          reminderTitle: "",
+        },
+        faceRecognitionSettings: event.faceRecognitionSettings || {
+          enabled: false,
+          required: false,
+          description: "",
+        },
+      };
+      
+      form.reset(resetData);
+      setImagePreview(event.eventImage || null);
+    }
+  }, [event, form]);
 
   const createEventMutation = useMutation({
     mutationFn: async (data: EventFormData) => {

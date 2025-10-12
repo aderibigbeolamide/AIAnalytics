@@ -307,8 +307,8 @@ export function LandingPage() {
           <div className="flex justify-between items-center h-16 w-full">
             <Link href="/">
               <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0">
-                <img src="/logo.png" alt="EventValidate Logo" className="h-8 w-auto" />
-                <span className="ml-2 text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">EventValidate</span>
+                <img src="/logo.png" alt="Eventify AI Logo" className="h-8 w-auto" />
+                <span className="ml-2 text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">Eventify AI</span>
               </div>
             </Link>
             <div className="hidden md:flex items-center space-x-4 lg:space-x-6 ml-auto">
@@ -326,9 +326,14 @@ export function LandingPage() {
                   <Button size="sm" className="whitespace-nowrap">Dashboard</Button>
                 </Link>
               ) : (
-                <Link href="/login">
-                  <Button variant="outline" size="sm" className="whitespace-nowrap">Login</Button>
-                </Link>
+                <div className="flex items-center space-x-2">
+                  <Link href="/login">
+                    <Button variant="outline" size="sm" className="whitespace-nowrap">Login</Button>
+                  </Link>
+                  <Link href="/organization-register">
+                    <Button size="sm" className="whitespace-nowrap" data-testid="button-signup">Sign Up</Button>
+                  </Link>
+                </div>
               )}
             </div>
             
@@ -386,7 +391,7 @@ export function LandingPage() {
               >
                 Pricing
               </a>
-              <div className="pt-2 border-t border-gray-200">
+              <div className="pt-2 border-t border-gray-200 space-y-2">
                 {isAuthenticated ? (
                   <Link href="/dashboard">
                     <Button size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
@@ -394,11 +399,18 @@ export function LandingPage() {
                     </Button>
                   </Link>
                 ) : (
-                  <Link href="/login">
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                      Login
-                    </Button>
-                  </Link>
+                  <>
+                    <Link href="/login">
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/organization-register">
+                      <Button size="sm" className="w-full" onClick={() => setIsMobileMenuOpen(false)} data-testid="button-signup-mobile">
+                        Sign Up
+                      </Button>
+                    </Link>
+                  </>
                 )}
               </div>
             </div>
@@ -414,18 +426,18 @@ export function LandingPage() {
             <Zap className="h-4 w-4 mr-2" />
             AI-Powered Event Validation Platform
           </Badge>
-          <h1 className="hero-text text-4xl md:text-6xl lg:text-7xl font-bold text-high-contrast mb-8 leading-tight">
-            Stop Event Fraud.
+          <h1 className="hero-text text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-high-contrast mb-6 sm:mb-8 leading-tight px-4 sm:px-0">
+            <span className="block">Stop Event Fraud.</span>
             <span className="text-gradient block mt-2">Start Smart Validation.</span>
           </h1>
-          <p className="hero-subtitle text-xl md:text-2xl text-medium-contrast mb-8 max-w-4xl mx-auto leading-relaxed">
-            EventValidate eliminates unauthorized event access with AI-powered QR validation, 
+          <p className="hero-subtitle text-lg sm:text-xl md:text-2xl text-medium-contrast mb-6 sm:mb-8 max-w-4xl mx-auto leading-relaxed px-4 sm:px-0">
+            Eventify AI eliminates unauthorized event access with AI-powered QR validation, 
             real-time attendance tracking, and comprehensive member verification for organizations.
           </p>
 
           {/* Mission & Objectives */}
-          <div className="mb-12 bg-white/80 backdrop-blur-sm rounded-2xl p-6 max-w-5xl mx-auto border border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <div className="mb-8 sm:mb-12 bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-5xl mx-4 sm:mx-auto border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 text-center">
               <div className="space-y-2">
                 <div className="mx-auto w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
                   <Target className="h-6 w-6 text-white" />
@@ -491,7 +503,7 @@ export function LandingPage() {
                 <Star className="h-4 w-4 mr-2" />
                 Live System Demo
               </Badge>
-              <h3 className="text-4xl font-bold text-high-contrast mb-4">See EventValidate in Action</h3>
+              <h3 className="text-4xl font-bold text-high-contrast mb-4">See Eventify AI in Action</h3>
               <p className="text-xl text-medium-contrast max-w-3xl mx-auto leading-relaxed">
                 Watch how attendees scan QR codes and admins see real-time updates instantly
               </p>
@@ -511,7 +523,7 @@ export function LandingPage() {
                 
                 {/* Fallback content if images don't load */}
                 <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold opacity-20">
-                  EventValidate Demo - Frame {currentAnimationFrame + 1}
+                  Eventify AI Demo - Frame {currentAnimationFrame + 1}
                 </div>
                 
                 <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-8 py-4 rounded-full shadow-lg">
@@ -592,18 +604,19 @@ export function LandingPage() {
           <div className="text-center mb-8">
             <Button 
               size="lg" 
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-12 py-5 text-xl rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300 mb-4"
-              onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-6 sm:px-12 py-4 sm:py-5 text-base sm:text-xl rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300 mb-4 w-full sm:w-auto mx-4 sm:mx-0 min-h-[3rem] touch-target"
+              onClick={() => window.open(`mailto:admin@eventifyai.com?subject=Eventify AI Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of Eventify AI for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
             >
-              <Target className="h-6 w-6 mr-3" />
-              Get Free Demo - Start Securing Your Events
+              <Target className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3" />
+              <span className="hidden sm:inline">Get Free Demo - Start Securing Your Events</span>
+              <span className="sm:hidden">Get Free Demo</span>
             </Button>
             
             {/* Secondary Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4 px-4 sm:px-0">
               <button
-                onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss EventValidate for my organization.', '_blank')}
-                className="text-blue-600 hover:text-blue-800 font-medium underline decoration-2 underline-offset-4 hover:decoration-blue-800 transition-colors flex items-center"
+                onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss Eventify AI for my organization.', '_blank')}
+                className="text-blue-600 hover:text-blue-800 font-medium underline decoration-2 underline-offset-4 hover:decoration-blue-800 transition-colors flex items-center touch-target min-h-[2.5rem] py-2 px-3 rounded-lg hover:bg-blue-50"
               >
                 <Phone className="h-4 w-4 mr-2" />
                 Schedule Call
@@ -611,7 +624,7 @@ export function LandingPage() {
               <span className="text-gray-400 hidden sm:block">•</span>
               <button
                 onClick={() => window.location.href = '/organization-register'}
-                className="text-green-600 hover:text-green-800 font-medium underline decoration-2 underline-offset-4 hover:decoration-green-800 transition-colors flex items-center"
+                className="text-green-600 hover:text-green-800 font-medium underline decoration-2 underline-offset-4 hover:decoration-green-800 transition-colors flex items-center touch-target min-h-[2.5rem] py-2 px-3 rounded-lg hover:bg-green-50"
               >
                 <Building className="h-4 w-4 mr-2" />
                 Register Organization
@@ -619,10 +632,10 @@ export function LandingPage() {
             </div>
             
             {/* Security Reassurance */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600 flex items-center justify-center">
-                <Shield className="h-4 w-4 mr-2 text-green-600" />
-                All data encrypted and GDPR-compliant • Enterprise-grade security
+            <div className="mt-6 text-center px-4 sm:px-0">
+              <p className="text-sm text-gray-600 flex items-center justify-center flex-wrap sm:flex-nowrap">
+                <Shield className="h-4 w-4 mr-2 text-green-600 flex-shrink-0" />
+                <span className="text-center">All data encrypted and GDPR-compliant • Enterprise-grade security</span>
               </p>
             </div>
           </div>
@@ -721,7 +734,7 @@ export function LandingPage() {
               <span className="text-gradient block mt-2">Events</span>
             </h2>
             <p className="text-xl text-medium-contrast max-w-3xl mx-auto leading-relaxed">
-              Discover ongoing and upcoming events powered by EventValidate. 
+              Discover ongoing and upcoming events powered by Eventify AI. 
               Experience secure, seamless event registration and validation.
             </p>
           </div>
@@ -836,7 +849,7 @@ export function LandingPage() {
                   variant="outline" 
                   size="lg"
                   className="border-2 font-semibold px-8 py-4 text-lg"
-                  onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Event Inquiry&body=Hello,%0D%0A%0D%0AI would like to inquire about upcoming events on EventValidate.%0D%0A%0D%0AThank you!`, '_blank')}
+                  onClick={() => window.open(`mailto:admin@eventifyai.com?subject=Eventify AI Event Inquiry&body=Hello,%0D%0A%0D%0AI would like to inquire about upcoming events on Eventify AI.%0D%0A%0D%0AThank you!`, '_blank')}
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   Get Notified of New Events
@@ -861,7 +874,7 @@ export function LandingPage() {
                 variant="outline"
                 size="lg"
                 className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-8 py-4 text-lg"
-                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=Eventify AI Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of Eventify AI for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
               >
                 <Target className="h-5 w-5 mr-2" />
                 Get Free Demo
@@ -884,7 +897,7 @@ export function LandingPage() {
               <span className="text-gradient block mt-2">Secure Event Management</span>
             </h2>
             <p className="text-xl text-medium-contrast max-w-3xl mx-auto leading-relaxed">
-              From QR code generation to real-time analytics, EventValidate provides comprehensive tools 
+              From QR code generation to real-time analytics, Eventify AI provides comprehensive tools 
               that ensure your events are secure, efficient, and professionally managed.
             </p>
           </div>
@@ -899,7 +912,7 @@ export function LandingPage() {
             <div className="relative max-w-5xl mx-auto">
               <img 
                 src={dashboardImage} 
-                alt="EventValidate admin dashboard interface" 
+                alt="Eventify AI admin dashboard interface" 
                 className="w-full rounded-2xl shadow-2xl border border-gray-200"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-2xl"></div>
@@ -952,7 +965,7 @@ export function LandingPage() {
             <div className="text-center mb-12">
               <h3 className="text-3xl font-bold text-high-contrast mb-4">How It Works</h3>
               <p className="text-lg text-medium-contrast max-w-2xl mx-auto">
-                Get started with EventValidate in just 3 simple steps - from setup to validation in minutes
+                Get started with Eventify AI in just 3 simple steps - from setup to validation in minutes
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
@@ -1015,14 +1028,29 @@ export function LandingPage() {
             {/* Bottom CTA */}
             <div className="text-center mt-12 pt-8 border-t border-gray-200">
               <p className="text-medium-contrast mb-4">Ready to secure your next event?</p>
-              <Button 
-                size="lg"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
-                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
-              >
-                <Target className="h-5 w-5 mr-2" />
-                Start Your Free Demo
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Button 
+                  size="lg"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
+                  onClick={() => window.open(`mailto:admin@eventifyai.com?subject=Eventify AI Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of Eventify AI for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+                  data-testid="button-demo-request"
+                >
+                  <Target className="h-5 w-5 mr-2" />
+                  Start Your Free Demo
+                </Button>
+                <span className="text-medium-contrast text-sm">or</span>
+                <Link href="/organization-register">
+                  <Button 
+                    variant="outline"
+                    size="lg"
+                    className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold px-8 py-3 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
+                    data-testid="button-signup-hero"
+                  >
+                    <Building className="h-5 w-5 mr-2" />
+                    Sign Up Now
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -1038,7 +1066,7 @@ export function LandingPage() {
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold text-high-contrast mb-6">
               Why Organizations Choose
-              <span className="text-gradient block mt-2">EventValidate</span>
+              <span className="text-gradient block mt-2">Eventify AI</span>
             </h2>
             <p className="text-xl text-medium-contrast max-w-3xl mx-auto leading-relaxed">
               Join hundreds of organizations that have transformed their event security 
@@ -1066,7 +1094,7 @@ export function LandingPage() {
             </div>
             <div className="text-center mt-8">
               <p className="text-lg text-medium-contrast font-medium">
-                From intimate gatherings to large conferences - EventValidate scales with your needs
+                From intimate gatherings to large conferences - Eventify AI scales with your needs
               </p>
             </div>
           </div>
@@ -1093,7 +1121,7 @@ export function LandingPage() {
             <div className="text-center mb-16">
               <h3 className="text-3xl font-bold text-high-contrast mb-4">What Our Users Say</h3>
               <p className="text-lg text-medium-contrast">
-                Real feedback from organizations using EventValidate
+                Real feedback from organizations using Eventify AI
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -1105,7 +1133,7 @@ export function LandingPage() {
                     ))}
                   </div>
                   <p className="text-medium-contrast mb-6 leading-relaxed">
-                    "EventValidate completely transformed our event security. We eliminated unauthorized access 
+                    "Eventify AI completely transformed our event security. We eliminated unauthorized access 
                     and reduced check-in time by 75%. The QR validation is incredibly reliable."
                   </p>
                   <div className="flex items-center">
@@ -1156,7 +1184,7 @@ export function LandingPage() {
                   </div>
                   <p className="text-medium-contrast mb-6 leading-relaxed">
                     "Real-time analytics give us insights we never had before. 
-                    EventValidate pays for itself with the efficiency gains alone."
+                    Eventify AI pays for itself with the efficiency gains alone."
                   </p>
                   <div className="flex items-center">
                     <img 
@@ -1214,21 +1242,33 @@ export function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Button 
-                    className={`w-full font-semibold py-3 text-lg transition-all focus-visible:focus ${plan.popular ? 'btn-primary text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
-                    onClick={() => {
-                      if (plan.price === "Custom") {
-                        // Open WhatsApp for enterprise inquiries
-                        window.open(`https://wa.me/2348107183206?text=Hi! I'm interested in the ${plan.name} plan for EventValidate. Can you provide more details?`, '_blank');
-                      } else {
-                        // Open email for standard plans
-                        window.open(`mailto:admin@eventifyai.com?subject=EventValidate ${plan.name} Inquiry&body=Hello,%0D%0A%0D%0AI'm interested in the ${plan.name} plan (${plan.price}/${plan.period}) for EventValidate.%0D%0A%0D%0APlease provide more information about:%0D%0A- Setup process%0D%0A- Payment options%0D%0A- Implementation timeline%0D%0A%0D%0AThank you!`, '_blank');
-                      }
-                    }}
-                  >
-                    {plan.price === "Custom" ? "Contact Sales" : "Get Started"}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  <div className="space-y-3">
+                    <Link href="/organization-register">
+                      <Button 
+                        className={`w-full font-semibold py-3 text-lg transition-all focus-visible:focus ${plan.popular ? 'btn-primary text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                        data-testid={`button-signup-${plan.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        {plan.price === "Custom" ? "Contact Sales" : "Sign Up Now"}
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </Link>
+                    <Button 
+                      variant="outline"
+                      className="w-full font-medium py-2 text-sm border-gray-300 text-gray-600 hover:bg-gray-50"
+                      onClick={() => {
+                        if (plan.price === "Custom") {
+                          // Open WhatsApp for enterprise inquiries
+                          window.open(`https://wa.me/2348107183206?text=Hi! I'm interested in the ${plan.name} plan for Eventify AI. Can you provide more details?`, '_blank');
+                        } else {
+                          // Open email for standard plans
+                          window.open(`mailto:admin@eventifyai.com?subject=Eventify AI ${plan.name} Inquiry&body=Hello,%0D%0A%0D%0AI'm interested in the ${plan.name} plan (${plan.price}/${plan.period}) for Eventify AI.%0D%0A%0D%0APlease provide more information about:%0D%0A- Setup process%0D%0A- Payment options%0D%0A- Implementation timeline%0D%0A%0D%0AThank you!`, '_blank');
+                        }
+                      }}
+                      data-testid={`button-contact-${plan.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      Learn More
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -1468,7 +1508,7 @@ export function LandingPage() {
             <Button 
               size="lg" 
               className="btn-primary text-white font-semibold px-8 py-4 text-lg mr-4"
-              onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
+              onClick={() => window.open(`mailto:admin@eventifyai.com?subject=Eventify AI Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of Eventify AI for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
             >
               <Target className="h-5 w-5 mr-2" />
               Get Free Demo
@@ -1477,7 +1517,7 @@ export function LandingPage() {
               variant="outline"
               size="lg" 
               className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-8 py-4 text-lg"
-              onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss EventValidate for my organization.', '_blank')}
+              onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss Eventify AI for my organization.', '_blank')}
             >
               <Phone className="h-5 w-5 mr-2" />
               Schedule Call
@@ -1489,46 +1529,12 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="bg-gray-950 text-gray-300 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Main Footer CTA */}
-          <div className="text-center mb-12 pb-8 border-b border-gray-800">
-            <h3 className="text-3xl font-bold text-white mb-4">
-              Ready to Revolutionize Your Event Security?
-            </h3>
-            <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
-              Join 500+ organizations already using EventValidate to eliminate fraud and streamline event management.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-10 py-4 text-lg rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300"
-                onClick={() => window.open(`mailto:admin@eventifyai.com?subject=EventValidate Free Demo Request&body=Hello,%0D%0A%0D%0AI would like to request a free demo of EventValidate for my organization.%0D%0A%0D%0AOrganization Details:%0D%0A- Organization Name:%0D%0A- Expected number of attendees:%0D%0A- Event type:%0D%0A- Preferred demo date/time:%0D%0A%0D%0AThank you!`, '_blank')}
-              >
-                <Target className="h-6 w-6 mr-2" />
-                Get Free Demo Now
-              </Button>
-              <Button 
-                variant="outline"
-                size="lg"
-                className="border-2 border-white text-white hover:bg-white hover:text-gray-900 font-semibold px-10 py-4 text-lg rounded-full transition-all duration-300"
-                onClick={() => window.open('https://wa.me/2348107183206?text=Hi! I would like to schedule a call to discuss EventValidate for my organization.', '_blank')}
-              >
-                <Phone className="h-6 w-6 mr-2" />
-                Schedule Call
-              </Button>
-            </div>
-            <div className="mt-6">
-              <p className="text-sm text-gray-400 flex items-center justify-center">
-                <Shield className="h-4 w-4 mr-2 text-green-400" />
-                Enterprise-grade security • GDPR compliant • 99.9% uptime guarantee
-              </p>
-            </div>
-          </div>
           
           <div className="flex flex-col md:flex-row justify-between items-center">
             <Link href="/">
               <div className="flex items-center mb-4 md:mb-0 cursor-pointer hover:opacity-80 transition-opacity">
-                <img src="/logo.png" alt="EventValidate Logo" className="h-8 w-auto" />
-                <span className="ml-2 text-lg font-semibold text-white">EventValidate</span>
+                <img src="/logo.png" alt="Eventify AI Logo" className="h-8 w-auto" />
+                <span className="ml-2 text-lg font-semibold text-white">Eventify AI</span>
               </div>
             </Link>
             <div className="flex space-x-6">
@@ -1552,7 +1558,7 @@ export function LandingPage() {
                 </a>
               </p>
             </div>
-            <p>&copy; 2025 EventValidate. All rights reserved. Empowering secure events worldwide.</p>
+            <p>&copy; 2025 Eventify AI. All rights reserved. Empowering secure events worldwide.</p>
           </div>
         </div>
       </footer>

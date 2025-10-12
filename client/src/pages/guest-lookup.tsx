@@ -333,7 +333,7 @@ export default function GuestLookup() {
                           </div>
                           <div>
                             <p className="font-medium text-gray-600">Name</p>
-                            <p>{registration.firstName} {registration.lastName}</p>
+                            <p>{registration.guestName || registration.participantName || `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Guest'}</p>
                           </div>
                           <div>
                             <p className="font-medium text-gray-600">Status</p>

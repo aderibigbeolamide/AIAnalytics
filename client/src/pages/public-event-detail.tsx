@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Clock, QrCode, Ticket } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, QrCode, Ticket, MessageSquare } from "lucide-react";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { Link } from "wouter";
 import { EventImage } from "@/lib/event-utils";
@@ -167,35 +167,55 @@ export default function PublicEventDetail() {
             </div>
 
             {/* Registration/Ticket Button */}
-            <div className="flex justify-center pt-4">
-              {event.eventType === "ticket" ? (
-                // Ticket-based event
-                <Link href={`/buy-ticket/${event.id}`}>
-                  <Button size="lg" className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700">
-                    <Ticket className="h-5 w-5" />
-                    Buy Tickets
-                  </Button>
-                </Link>
-              ) : (
-                // Registration-based event
-                isRegistrationOpen() ? (
-                  <Link href={`/register/${event.id}`}>
-                    <Button size="lg" className="flex items-center gap-2">
-                      <QrCode className="h-5 w-5" />
-                      Register for Event
+            <div className="flex flex-col items-center gap-4 pt-4">
+              <div className="flex justify-center">
+                {event.eventType === "ticket" ? (
+                  // Ticket-based event
+                  <Link href={`/buy-ticket/${event.id}`}>
+                    <Button size="lg" className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700">
+                      <Ticket className="h-5 w-5" />
+                      Buy Tickets
                     </Button>
                   </Link>
                 ) : (
-                  <div className="text-center">
-                    <Button size="lg" disabled>
-                      Registration Closed
-                    </Button>
-                    <p className="text-sm text-gray-500 mt-2">
-                      Registration period has ended
-                    </p>
-                  </div>
-                )
-              )}
+                  // Registration-based event
+                  isRegistrationOpen() ? (
+                    <Link href={`/register/${event.id}`}>
+                      <Button size="lg" className="flex items-center gap-2">
+                        <QrCode className="h-5 w-5" />
+                        Register for Event
+                      </Button>
+                    </Link>
+                  ) : (
+                    <div className="text-center">
+                      <Button size="lg" disabled>
+                        Registration Closed
+                      </Button>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Registration period has ended
+                      </p>
+                    </div>
+                  )
+                )}
+              </div>
+              
+              {/* Feedback Link - Available for all events */}
+              <div className="text-center">
+                <Link href={`/report/${event.id}`}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
+                    data-testid="button-feedback"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Provide Feedback
+                  </Button>
+                </Link>
+                <p className="text-xs text-gray-500 mt-1">
+                  Share your thoughts, suggestions, or report issues
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

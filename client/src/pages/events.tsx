@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Navbar } from "@/components/navbar";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { EventForm } from "@/components/event-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ export default function Events() {
         }
         
         return {
+          ...eventData, // Preserve all original fields
           id: eventData._id?.toString() || event.id,
           name: eventData.name || 'Unnamed Event',
           description: eventData.description || '',
@@ -62,6 +63,14 @@ export default function Events() {
           allowInvitees: eventData.allowInvitees,
           ticketCategories: eventData.ticketCategories || [],
           paymentSettings: eventData.paymentSettings,
+          // Ensure these essential fields are preserved
+          registrationStartDate: eventData.registrationStartDate,
+          registrationEndDate: eventData.registrationEndDate,
+          eligibleAuxiliaryBodies: eventData.eligibleAuxiliaryBodies || [],
+          customRegistrationFields: eventData.customRegistrationFields || [],
+          invitations: eventData.invitations || [],
+          reminderSettings: eventData.reminderSettings,
+          faceRecognitionSettings: eventData.faceRecognitionSettings,
           createdAt: eventData.createdAt,
           updatedAt: eventData.updatedAt
         };
@@ -200,10 +209,8 @@ export default function Events() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <SidebarLayout>
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Event Management</h1>
@@ -560,6 +567,6 @@ export default function Events() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </SidebarLayout>
   );
 }

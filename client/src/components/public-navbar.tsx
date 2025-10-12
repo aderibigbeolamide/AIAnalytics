@@ -14,8 +14,8 @@ export function PublicNavbar() {
         <div className="flex justify-between items-center h-16 w-full">
           <Link href="/">
             <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0">
-              <img src="/logo.png" alt="EventValidate Logo" className="h-8 w-auto" />
-              <span className="ml-2 text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">EventValidate</span>
+              <img src="/logo.png" alt="EventifyAI Logo" className="h-8 w-auto" />
+              <span className="ml-2 text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">EventifyAI</span>
             </div>
           </Link>
           <div className="hidden md:flex items-center space-x-4 lg:space-x-6 ml-auto">

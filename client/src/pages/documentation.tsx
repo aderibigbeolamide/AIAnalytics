@@ -225,7 +225,7 @@ export function DocumentationPage() {
 
   const faqs = [
     {
-      question: "How do I get started with EventValidate?",
+      question: "How do I get started with Eventify AI?",
       answer: "Simply register your organization through our registration form. Once approved by our admin team, you'll receive login credentials and can start creating events immediately."
     },
     {
@@ -253,7 +253,7 @@ export function DocumentationPage() {
       answer: "Through Paystack integration, we support bank transfers, card payments, and mobile money solutions optimized for African markets."
     },
     {
-      question: "Can I use EventValidate offline?",
+      question: "Can I use Eventify AI offline?",
       answer: "Our QR scanner has offline capabilities for basic validation. However, real-time features like live analytics require an internet connection."
     },
     {
@@ -281,7 +281,7 @@ export function DocumentationPage() {
               Complete Platform Guide
             </h1>
             <p className="text-lg sm:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed px-2">
-              Everything you need to know about using EventValidate to manage your events, 
+              Everything you need to know about using Eventify AI to manage your events, 
               validate members, and grow your organization.
             </p>
           </div>
@@ -328,7 +328,7 @@ export function DocumentationPage() {
                   Quick Start Guide
                 </CardTitle>
                 <CardDescription className="text-lg">
-                  Get your organization set up and running with EventValidate in just 4 simple steps
+                  Get your organization set up and running with Eventify AI in just 4 simple steps
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -514,7 +514,7 @@ export function DocumentationPage() {
                   API Documentation
                 </CardTitle>
                 <CardDescription className="text-lg">
-                  Integrate EventValidate with your existing systems using our RESTful API
+                  Integrate Eventify AI with your existing systems using our RESTful API
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -595,7 +595,7 @@ export function DocumentationPage() {
                   Support & Help
                 </CardTitle>
                 <CardDescription className="text-lg">
-                  Get the help you need to succeed with EventValidate
+                  Get the help you need to succeed with Eventify AI
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -633,8 +633,8 @@ export function DocumentationPage() {
                       </div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Knowledge Base</h3>
                       <p className="text-gray-600 mb-4">Browse articles and tutorials</p>
-                      <Button variant="outline" className="w-full">
-                        Browse Articles
+                      <Button variant="outline" className="w-full" disabled>
+                        Coming Soon
                       </Button>
                     </CardContent>
                   </Card>
@@ -673,7 +673,7 @@ export function DocumentationPage() {
                   Frequently Asked Questions
                 </CardTitle>
                 <CardDescription className="text-lg">
-                  Find answers to common questions about EventValidate
+                  Find answers to common questions about Eventify AI
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -699,7 +699,7 @@ export function DocumentationPage() {
           <CardContent className="p-8 text-center">
             <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
             <p className="text-xl text-blue-100 mb-6">
-              Join thousands of organizations using EventValidate to streamline their events
+              Join thousands of organizations using Eventify AI to streamline their events
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/organization-register">
@@ -709,7 +709,7 @@ export function DocumentationPage() {
                 </Button>
               </Link>
               <Link href="/about">
-                <Button variant="outline" className="border-2 border-white text-white hover:bg-white/10 px-8 py-3 rounded-xl font-semibold">
+                <Button className="bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 border-2 border-white/30 px-8 py-3 rounded-xl font-semibold">
                   Learn More
                 </Button>
               </Link>

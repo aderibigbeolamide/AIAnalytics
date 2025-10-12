@@ -99,9 +99,17 @@ export function registerRegistrationRoutes(app: Express) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
+      console.log('🔍 QR validation request body:', req.body);
+      console.log('🔍 QR validation request keys:', Object.keys(req.body));
+      
       const { qrCode } = req.body;
       
+      console.log('🔍 Extracted qrCode:', qrCode);
+      console.log('🔍 qrCode type:', typeof qrCode);
+      console.log('🔍 qrCode length:', qrCode?.length);
+      
       if (!qrCode) {
+        console.log('❌ QR code validation failed: No qrCode provided');
         return res.status(400).json({ message: "QR code is required" });
       }
 
@@ -142,7 +150,7 @@ export function registerRegistrationRoutes(app: Express) {
 
       const registration = await RegistrationService.getRegistrationByUniqueId(uniqueId);
       
-      if (!registration) {
+      if (!registration || !registration.id) {
         return res.status(404).json({ message: "Registration not found" });
       }
 
@@ -169,6 +177,50 @@ export function registerRegistrationRoutes(app: Express) {
       res.json(card);
     } catch (error) {
       console.error("Error generating registration card:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Test QR generation endpoint for debugging
+  app.get("/api/registrations/test/qr", async (req: Request, res: Response) => {
+    try {
+      // Get first registration for testing
+      const registrations = await RegistrationService.getEventRegistrations("", {});
+      
+      if (!registrations || registrations.length === 0) {
+        return res.status(404).json({ message: "No registrations found for testing" });
+      }
+
+      const testRegistration = registrations[0];
+      
+      // Generate test QR code data
+      const qrCodeData = JSON.stringify({
+        registrationId: testRegistration.id,
+        eventId: testRegistration.eventId,
+        uniqueId: testRegistration.uniqueId,
+        timestamp: Date.now()
+      });
+      
+      console.log('🧪 Test QR Data:', qrCodeData);
+      
+      const QRCode = require('qrcode');
+      const qrImageBase64 = await QRCode.toDataURL(qrCodeData, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      res.json({
+        message: "Test QR code generated",
+        qrData: qrCodeData,
+        qrImage: qrImageBase64,
+        registration: testRegistration
+      });
+    } catch (error) {
+      console.error("Error generating test QR:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

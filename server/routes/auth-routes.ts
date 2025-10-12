@@ -91,11 +91,17 @@ export function registerAuthRoutes(app: Express) {
       
       console.log(`Login attempt for user: ${username}`);
       
-      // Find user by username (without populate to get raw ObjectId)
-      const user = await mongoStorage.getUserByUsername(username);
+      // Find user by username first, then try email if not found
+      let user = await mongoStorage.getUserByUsername(username);
       
       if (!user) {
-        console.log(`User not found: ${username}`);
+        console.log(`User not found by username, trying email: ${username}`);
+        // Try to find by email if username lookup failed
+        user = await mongoStorage.getUserByEmail(username);
+      }
+      
+      if (!user) {
+        console.log(`User not found by username or email: ${username}`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
@@ -128,7 +134,14 @@ export function registerAuthRoutes(app: Express) {
       // Get organization info if user is not a super admin
       let organizationInfo = null;
       if (user.role !== 'super_admin' && user.organizationId) {
-        organizationInfo = await mongoStorage.getOrganization(user.organizationId.toString());
+        // Check if organizationId is already populated (an object) or just an ID
+        if (typeof user.organizationId === 'object' && user.organizationId._id) {
+          // Already populated, use the populated data
+          organizationInfo = user.organizationId;
+        } else {
+          // It's just an ID string, fetch the organization
+          organizationInfo = await mongoStorage.getOrganization(user.organizationId.toString());
+        }
       }
 
       // Generate JWT token
@@ -137,7 +150,9 @@ export function registerAuthRoutes(app: Express) {
         username: user.username,
         email: user.email,
         role: user.role,
-        organizationId: user.organizationId?.toString(),
+        organizationId: typeof user.organizationId === 'object' && user.organizationId?._id 
+          ? (user.organizationId._id as any).toString() 
+          : user.organizationId?.toString(),
         firstName: user.firstName,
         lastName: user.lastName,
       });
@@ -148,7 +163,9 @@ export function registerAuthRoutes(app: Express) {
         username: user.username,
         email: user.email,
         role: user.role,
-        organizationId: user.organizationId?.toString(),
+        organizationId: typeof user.organizationId === 'object' && user.organizationId?._id 
+          ? (user.organizationId._id as any).toString() 
+          : user.organizationId?.toString(),
         firstName: user.firstName,
         lastName: user.lastName,
         organization: organizationInfo ? {
@@ -210,7 +227,9 @@ export function registerAuthRoutes(app: Express) {
         username: user.username,
         email: user.email,
         role: user.role,
-        organizationId: user.organizationId?.toString(),
+        organizationId: typeof user.organizationId === 'object' && user.organizationId?._id 
+          ? (user.organizationId._id as any).toString() 
+          : user.organizationId?.toString(),
         firstName: user.firstName,
         lastName: user.lastName,
         organization: organizationInfo ? {

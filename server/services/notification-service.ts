@@ -244,8 +244,8 @@ class NotificationService {
       email = member.email;
       name = member.fullName;
     } else {
-      email = registration.guestEmail || '';
-      name = registration.guestName || 'Participant';
+      email = registration.email || '';
+      name = `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Participant';
     }
 
     if (!email) return;
@@ -283,8 +283,8 @@ class NotificationService {
       email = member.email;
       name = member.fullName;
     } else {
-      email = registration.guestEmail || '';
-      name = registration.guestName || 'Participant';
+      email = registration.email || '';
+      name = `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Participant';
     }
 
     if (!email) return;
@@ -293,14 +293,14 @@ class NotificationService {
     let ticketPdf: Buffer | undefined;
     try {
       ticketPdf = await pdfService.generateEventTicket({
-        eventName: event.name,
-        eventDate: new Date(event.startDate).toLocaleDateString(),
-        eventTime: new Date(event.startDate).toLocaleTimeString(),
-        eventLocation: event.location,
-        participantName: name,
-        registrationId: registration.uniqueId || registration._id?.toString(),
-        qrCodeData: registration.qrCode || qrCode,
-        organizationName: event.organizationName,
+        eventName: event.name || 'Event',
+        eventDate: event.startDate ? new Date(event.startDate).toLocaleDateString() : 'Date TBD',
+        eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString() : 'Time TBD',
+        eventLocation: event.location || 'Location TBD',
+        participantName: name || 'Participant',
+        registrationId: registration.uniqueId || registration._id?.toString() || 'N/A',
+        qrCodeData: registration.qrCode || qrCode || '{}',
+        organizationName: event.organizationName || 'Eventify AI',
         ticketType: registration.registrationType || 'Standard'
       });
     } catch (error) {

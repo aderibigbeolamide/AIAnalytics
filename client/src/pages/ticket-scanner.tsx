@@ -241,7 +241,7 @@ export default function TicketScanner() {
       <div className="max-w-4xl mx-auto px-4">
         {/* Back Navigation */}
         <div className="mb-6">
-          <Link href="/events">
+          <Link href="/admin/events">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Events

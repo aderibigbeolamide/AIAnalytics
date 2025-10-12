@@ -1,16 +1,18 @@
 import { mongoStorage } from "../mongodb-storage";
 import { nanoid } from "nanoid";
 import QRCode from "qrcode";
+import { generateValidationCode } from "../utils";
 
 export class RegistrationService {
   /**
    * Create event registration
    */
   static async createRegistration(eventId: string, registrationData: any) {
-    const uniqueId = nanoid(6).toUpperCase();
+    const uniqueId = await generateValidationCode();
     const qrCodeData = JSON.stringify({
       eventId,
-      registrationId: uniqueId,
+      registrationId: uniqueId, // Keep for backward compatibility
+      uniqueId, // Add explicit uniqueId field
       timestamp: Date.now()
     });
     
@@ -135,19 +137,43 @@ export class RegistrationService {
    */
   static async getRegistrationByQRCode(qrCode: string) {
     try {
+      console.log('🔍 QR validation - parsing QR code:', qrCode);
       const qrData = JSON.parse(qrCode);
-      const registration = await mongoStorage.getEventRegistrationByUniqueId(qrData.registrationId);
+      console.log('🔍 QR validation - parsed data:', qrData);
+      
+      // Try to find registration - registrationId in QR actually contains uniqueId
+      let registration = null;
+      
+      // First try by uniqueId (most common case)
+      if (qrData.uniqueId) {
+        console.log('🔍 QR validation - looking up by explicit uniqueId:', qrData.uniqueId);
+        registration = await mongoStorage.getEventRegistrationByUniqueId(qrData.uniqueId);
+      }
+      
+      // If not found and registrationId exists, try it as uniqueId (backward compatibility)
+      if (!registration && qrData.registrationId) {
+        console.log('🔍 QR validation - looking up by registrationId as uniqueId:', qrData.registrationId);
+        registration = await mongoStorage.getEventRegistrationByUniqueId(qrData.registrationId);
+      }
+      
+      // Last resort: try registrationId as MongoDB _id (legacy support)
+      if (!registration && qrData.registrationId) {
+        console.log('🔍 QR validation - looking up by registrationId as MongoDB _id:', qrData.registrationId);
+        registration = await mongoStorage.getEventRegistration(qrData.registrationId);
+      }
       
       if (!registration) {
+        console.log('❌ QR validation - no registration found');
         return null;
       }
 
+      console.log('✅ QR validation - registration found:', registration._id);
       return {
         id: registration._id?.toString(),
         ...registration
       };
     } catch (error) {
-      console.error('Error parsing QR code:', error);
+      console.error('❌ Error parsing QR code:', error);
       return null;
     }
   }
@@ -157,10 +183,12 @@ export class RegistrationService {
    */
   static async validateAttendance(registrationId: string, validationMethod: string) {
     const registration = await mongoStorage.updateEventRegistration(registrationId, {
-      status: 'attended',
-      validationMethod,
-      attendedAt: new Date()
+      status: 'attended'
     });
+
+    if (!registration) {
+      throw new Error('Registration not found');
+    }
 
     return {
       id: registration._id?.toString(),
@@ -176,6 +204,10 @@ export class RegistrationService {
       status,
       updatedAt: new Date()
     });
+
+    if (!registration) {
+      throw new Error('Registration not found');
+    }
 
     return {
       id: registration._id?.toString(),
@@ -236,7 +268,8 @@ export class RegistrationService {
     // Generate QR code for the registration
     const qrCodeData = JSON.stringify({
       eventId: registration.eventId.toString(),
-      registrationId: registration.uniqueId,
+      registrationId: registration.uniqueId, // Keep for backward compatibility
+      uniqueId: registration.uniqueId, // Add explicit uniqueId field
       timestamp: Date.now()
     });
     

@@ -19,7 +19,7 @@ import { QrCode, Users, UserPlus, Mail, Calendar, Clock, CheckCircle, XCircle, C
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RegistrationCard } from "@/components/registration-card";
 import { CountdownTimer } from "@/components/countdown-timer";
-import { trackMemberRegistration } from "../../lib/gtm";
+import { trackMemberRegistration } from "@/lib/gtm";
 
 // Helper function to determine if a field is required for a specific registration type
 function isFieldRequiredForRegistrationType(field: any, registrationType: string): boolean {

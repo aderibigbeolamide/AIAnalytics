@@ -190,7 +190,7 @@ export class MongoStorage implements IMongoStorage {
 
   async getUserByUsername(username: string): Promise<IUser | null> {
     try {
-      return await User.findOne({ username });
+      return await User.findOne({ username }).populate('organizationId');
     } catch (error) {
       console.error('Error getting user by username:', error);
       return null;
@@ -436,24 +436,97 @@ export class MongoStorage implements IMongoStorage {
 
   async getEventRegistrationByUniqueId(uniqueId: string): Promise<IEventRegistration | null> {
     try {
-      // Search by uniqueId field first
-      let registration = await EventRegistration.findOne({ uniqueId }).populate('eventId memberId validatedBy');
-      
-      if (registration) {
-        return registration;
-      }
-      
-      // Search by manual verification codes stored in different locations
-      registration = await EventRegistration.findOne({
-        $or: [
-          { 'registrationData.manualVerificationCode': uniqueId },
-          { manualVerificationCode: uniqueId }
-        ]
-      }).populate('eventId memberId validatedBy');
-      
-      return registration;
+      // Use the comprehensive search function
+      return await this.getEventRegistrationByAnyCode(uniqueId);
     } catch (error) {
       console.error('Error getting event registration by unique ID:', error);
+      return null;
+    }
+  }
+
+  async getEventRegistrationByAnyCode(code: string): Promise<IEventRegistration | null> {
+    try {
+      // First try the comprehensive registration search
+      const registration = await this.getRegistrationOrTicketByCode(code);
+      return registration;
+    } catch (error) {
+      console.error('Error getting event registration by any code:', error);
+      return null;
+    }
+  }
+
+  async getRegistrationOrTicketByCode(code: string): Promise<IEventRegistration | null> {
+    try {
+      // Normalize input code (case-insensitive)
+      const normalizedCode = String(code || '').trim().toUpperCase();
+      
+      if (!normalizedCode) {
+        return null;
+      }
+
+      // First, search EventRegistration collection with case-insensitive regex
+      const registrationQuery = {
+        $or: [
+          // Main fields - case insensitive
+          { uniqueId: { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          { manualVerificationCode: { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          
+          // Nested in registrationData
+          { 'registrationData.uniqueId': { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          { 'registrationData.manualVerificationCode': { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          
+          // Other potential nested locations
+          { 'verificationCodes.manual': { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          { 'verification.manualVerificationCode': { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          { 'customData.uniqueId': { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          { 'customData.manualVerificationCode': { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          
+          // Legacy or variant field names
+          { ticketNumber: { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          { verificationCode: { $regex: `^${normalizedCode}$`, $options: 'i' } }
+        ]
+      };
+
+      let result = await EventRegistration.findOne(registrationQuery).populate('eventId memberId validatedBy');
+      
+      if (result) {
+        return result;
+      }
+
+      // If not found in EventRegistration, search Ticket collection  
+      const { Ticket } = await import('../shared/mongoose-schema');
+      const ticketQuery = {
+        $or: [
+          { ticketNumber: { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          { manualVerificationCode: { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          { 'verification.manualVerificationCode': { $regex: `^${normalizedCode}$`, $options: 'i' } },
+          { uniqueId: { $regex: `^${normalizedCode}$`, $options: 'i' } }
+        ]
+      };
+
+      const ticket = await Ticket.findOne(ticketQuery).populate('eventId userId');
+      
+      if (ticket) {
+        // Convert ticket to registration-like format for consistent API response
+        return {
+          _id: ticket._id,
+          eventId: ticket.eventId,
+          registrationType: 'ticket',
+          firstName: ticket.ownerName?.split(' ')[0] || ticket.firstName || '',
+          lastName: ticket.ownerName?.split(' ').slice(1).join(' ') || ticket.lastName || '',
+          email: ticket.ownerEmail || ticket.email || '',
+          uniqueId: ticket.ticketNumber || ticket.uniqueId || ticket.manualVerificationCode,
+          status: ticket.status || 'active',
+          qrCode: ticket.qrCode || '',
+          createdAt: ticket.createdAt,
+          // Identify this as a ticket-based result
+          isTicket: true
+        } as any;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting registration or ticket by code:', error);
       return null;
     }
   }
@@ -566,7 +639,24 @@ export class MongoStorage implements IMongoStorage {
 
   async getTicketByNumber(ticketNumber: string): Promise<ITicket | null> {
     try {
-      return await Ticket.findOne({ ticketNumber });
+      // Search by ticketNumber field first
+      let ticket = await Ticket.findOne({ ticketNumber });
+      
+      if (ticket) {
+        return ticket;
+      }
+      
+      // Search by other ID fields that might contain the manual verification code
+      ticket = await Ticket.findOne({
+        $or: [
+          { uniqueId: ticketNumber },
+          { manualVerificationCode: ticketNumber },
+          { 'customData.uniqueId': ticketNumber },
+          { 'customData.manualVerificationCode': ticketNumber }
+        ]
+      });
+      
+      return ticket;
     } catch (error) {
       console.error('Error getting ticket by number:', error);
       return null;
@@ -797,6 +887,35 @@ export class MongoStorage implements IMongoStorage {
     }
   }
 
+  async getReportsByOrganization(organizationId: string): Promise<any[]> {
+    try {
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Database connection not established');
+      }
+      const collection = db.collection('event_reports');
+      const query = { organizationId: organizationId };
+      return await collection.find(query).sort({ createdAt: -1 }).toArray();
+    } catch (error) {
+      console.error('Error getting reports by organization:', error);
+      return [];
+    }
+  }
+
+  async getReportById(id: string): Promise<any | null> {
+    try {
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Database connection not established');
+      }
+      const collection = db.collection('event_reports');
+      return await collection.findOne({ _id: new mongoose.Types.ObjectId(id) });
+    } catch (error) {
+      console.error('Error getting report by id:', error);
+      return null;
+    }
+  }
+
   async updateEventReport(id: string, updates: any): Promise<any | null> {
     try {
       const db = mongoose.connection.db;
@@ -809,7 +928,8 @@ export class MongoStorage implements IMongoStorage {
         { $set: { ...updates, updatedAt: new Date() } },
         { returnDocument: 'after' }
       );
-      return result ? result.value : null;
+      console.log('MongoDB update result:', result);
+      return result || null;
     } catch (error) {
       console.error('Error updating event report:', error);
       return null;

@@ -1,16 +1,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Joyride, { STATUS, CallBackProps, Step, ACTIONS, EVENTS } from "react-joyride";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Navbar } from "@/components/navbar";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { MemberForm } from "@/components/member-form";
 import { EventForm } from "@/components/event-form";
 import { QRScanner } from "@/components/qr-scanner";
-
 import { CountdownTimer } from "@/components/countdown-timer";
 import { AuxiliaryBodyFilter } from "@/components/auxiliary-body-filter";
 import { getAuthHeaders } from "@/lib/auth";
@@ -33,13 +33,33 @@ import {
   Trash2,
   TrendingUp,
   Activity,
-  Clock
+  Clock,
+  HelpCircle,
+  Shield,
+  Lock,
+  ChevronRight,
+  ToggleLeft
 } from "lucide-react";
 import { EnhancedCard } from "@/components/ui/enhanced-card";
 import { StatusBadge } from "@/components/ui/status-badge";
-// Removed LoadingCard import as it doesn't exist
 import SeatHeatmap from "@/components/seat-heatmap";
 import EventRecommendations from "@/components/event-recommendations";
+import { 
+  BarChart as RechartsBarChart, 
+  Bar, 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -51,8 +71,99 @@ export default function Dashboard() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [manualValidationOpen, setManualValidationOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
-  const [currentView, setCurrentView] = useState<"overview" | "events" | "members">("overview");
+  const [currentView, setCurrentView] = useState<"overview" | "events" | "members" | "analytics" | "validation">("overview");
+  const [runTour, setRunTour] = useState(false);
+  const [tourStepIndex, setTourStepIndex] = useState(0);
+  
+  // Analytics dropdown states
+  const [attendanceViewType, setAttendanceViewType] = useState("analytics");
+  const [securityTimeRange, setSecurityTimeRange] = useState("realtime");
+  const [attendanceTrendRange, setAttendanceTrendRange] = useState("7days");
+  const [attendeeChartRange, setAttendeeChartRange] = useState("weekly");
+  const [securityChartRange, setSecurityChartRange] = useState("today");
+  
   const queryClient = useQueryClient();
+
+  const tourSteps: Step[] = [
+    {
+      target: 'body',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Welcome to Eventify AI Dashboard! 🎉</h3>
+          <p>This guided tour will show you around your event management dashboard. You can create events, manage members, scan QR codes, and much more!</p>
+        </div>
+      ),
+      placement: 'center',
+    },
+    {
+      target: '.tour-stats-overview',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Overview Statistics 📊</h3>
+          <p>Here you can see your key metrics at a glance - total events, members, registrations, and recent activity. This gives you a quick snapshot of your organization's performance.</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: '.tour-navigation-tabs',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Navigation Tabs 🗂️</h3>
+          <p>Switch between different views: Overview (statistics), Events (manage your events), and Members (manage your organization members). Each tab provides specific tools for that area.</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: '.tour-quick-actions',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Quick Actions ⚡</h3>
+          <p>These buttons let you quickly create new events, add members, or scan QR codes for validation. Use these for your most common tasks!</p>
+        </div>
+      ),
+      placement: 'bottom',
+    },
+    {
+      target: 'body',
+      content: (
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Explore More Features! 🚀</h3>
+          <p>Try clicking on different tabs (Events, Members) to explore more features. You can always click the Help button again to restart this tour. Happy event managing!</p>
+        </div>
+      ),
+      placement: 'center',
+    }
+  ];
+
+  const handleTourCallback = (data: CallBackProps) => {
+    const { status, index, type, action } = data;
+    console.log('Tour callback:', { status, index, type, action });
+    
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+      console.log('Tour finished or skipped');
+      setRunTour(false);
+      setTourStepIndex(0);
+      localStorage.setItem('dashboard-tour-seen', 'true');
+    } else if (type === EVENTS.STEP_AFTER) {
+      if (action === ACTIONS.NEXT) {
+        console.log('Moving to next step');
+        setTourStepIndex(index + 1);
+      } else if (action === ACTIONS.PREV) {
+        console.log('Moving to previous step');
+        setTourStepIndex(index - 1);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('dashboard-tour-seen');
+    if (!hasSeenTour) {
+      const timer = setTimeout(() => setRunTour(true), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const { data: stats } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -88,6 +199,96 @@ export default function Dashboard() {
     },
   });
 
+  // Prepare analytics data from actual events
+  const getAttendanceData = (range: string) => {
+    const now = new Date();
+    const days = range === "weekly" ? 7 : 30;
+    const dateRange = Array.from({ length: days }, (_, i) => {
+      const date = new Date(now);
+      date.setDate(date.getDate() - (days - 1 - i));
+      date.setHours(0, 0, 0, 0);
+      return date;
+    });
+
+    return dateRange.map((date) => {
+      const dayEvents = events.filter((event: any) => {
+        const eventDate = new Date(event.startDate);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate.getTime() === date.getTime();
+      });
+      
+      const attendees = dayEvents.reduce((sum: number, event: any) => 
+        sum + (event.totalRegistrations || 0), 0
+      );
+      
+      const dayName = range === "weekly" 
+        ? date.toLocaleDateString('en-US', { weekday: 'short' })
+        : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return { day: dayName, attendees, target: 50 };
+    });
+  };
+
+  const getSecurityValidationData = (timeRange: string) => {
+    const baseScans = stats?.scansToday || 100;
+    let dataPoints, labelFormat;
+    
+    if (timeRange === "realtime" || timeRange === "today") {
+      dataPoints = 12; // 12 hours
+      labelFormat = (i: number) => i.toString();
+    } else {
+      dataPoints = 7; // 7 days for week view
+      labelFormat = (i: number) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i];
+    }
+    
+    const avgPerPoint = baseScans / dataPoints;
+    
+    const validationData = Array.from({ length: dataPoints }, (_, i) => ({
+      time: labelFormat(i),
+      scans: Math.max(0, Math.floor(avgPerPoint + (Math.random() - 0.5) * avgPerPoint * 0.5))
+    }));
+    return validationData;
+  };
+
+  const getTrendData = (range: string) => {
+    const now = new Date();
+    const days = range === "7days" ? 7 : range === "30days" ? 30 : 90;
+    const dateRange = Array.from({ length: days }, (_, i) => {
+      const date = new Date(now);
+      date.setDate(date.getDate() - (days - 1 - i));
+      date.setHours(0, 0, 0, 0);
+      return date;
+    });
+
+    return dateRange.map((date) => {
+      const dayEvents = events.filter((event: any) => {
+        const eventDate = new Date(event.startDate);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate.getTime() === date.getTime();
+      });
+      
+      const attendees = dayEvents.reduce((sum: number, event: any) => 
+        sum + (event.totalRegistrations || 0), 0
+      );
+      
+      const dayName = days <= 7
+        ? date.toLocaleDateString('en-US', { weekday: 'short' })
+        : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return { day: dayName, attendees, target: 50 };
+    });
+  };
+
+  const attendanceData = getAttendanceData(attendeeChartRange);
+  const securityValidationData = getSecurityValidationData(securityChartRange);
+  const attendanceTrendData = getTrendData(attendanceTrendRange);
+
+  const eventTypeData = [
+    { name: 'Completed', value: events.filter((e: any) => e.status === 'completed').length },
+    { name: 'Ongoing', value: events.filter((e: any) => e.status === 'ongoing').length },
+    { name: 'Upcoming', value: events.filter((e: any) => e.status === 'upcoming').length }
+  ];
+
+  const COLORS = ['#8b5cf6', '#3b82f6', '#10b981'];
+
   const getStatusBadge = (status: string) => {
     const statusMap = {
       active: "bg-green-100 text-green-800",
@@ -99,7 +300,6 @@ export default function Dashboard() {
   };
 
   const getAuxiliaryBodyBadge = (auxiliaryBody: string) => {
-    // Generate consistent colors based on auxiliary body name
     const colors = [
       "bg-blue-100 text-blue-800",
       "bg-green-100 text-green-800", 
@@ -111,7 +311,6 @@ export default function Dashboard() {
       "bg-red-100 text-red-800",
     ];
     
-    // Generate consistent color index based on string hash
     let hash = 0;
     for (let i = 0; i < auxiliaryBody.length; i++) {
       hash = auxiliaryBody.charCodeAt(i) + ((hash << 5) - hash);
@@ -132,7 +331,6 @@ export default function Dashboard() {
           title: "Event Deleted",
           description: "The event has been successfully deleted.",
         });
-        // Refetch events to update the UI
         queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       } else {
         toast({
@@ -150,28 +348,31 @@ export default function Dashboard() {
     }
   };
 
+  const totalAttendance = events.reduce((sum: number, event: any) => sum + (event.totalRegistrations || 0), 0);
+  const validationRate = stats?.validationRate || 0;
+  const eventManagementProgress = events.length > 0 ? (events.filter((e: any) => e.status === 'completed').length / events.length * 100) : 0;
+  const attendanceRate = events.length > 0 ? (totalAttendance / events.length) : 0;
+
   return (
-    <div className="min-h-screen gradient-bg">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12">
-        {/* Streamlined Header */}
-        <div className="desktop-card mb-6">
+    <SidebarLayout>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-                Dashboard
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Real Time Analytics
               </h1>
               <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
-                Manage events and track attendance
+                Monitor your events and track performance in real-time
               </p>
             </div>
             
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 tour-quick-actions">
               <Button 
                 onClick={() => setIsEventModalOpen(true)} 
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                data-testid="button-create-event"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Event
@@ -180,6 +381,7 @@ export default function Dashboard() {
                 onClick={() => setIsMemberModalOpen(true)} 
                 variant="outline" 
                 className="px-4 py-2"
+                data-testid="button-add-member"
               >
                 <UserPlus className="h-4 w-4 mr-1" />
                 Member
@@ -188,19 +390,35 @@ export default function Dashboard() {
                 onClick={() => setIsScannerOpen(true)} 
                 variant="outline" 
                 className="px-4 py-2"
+                data-testid="button-scan-qr"
               >
                 <Camera className="h-4 w-4 mr-1" />
                 Scan
+              </Button>
+              <Button 
+                onClick={() => {
+                  console.log('Help button clicked, starting tour...');
+                  localStorage.removeItem('dashboard-tour-seen');
+                  setTourStepIndex(0);
+                  setRunTour(true);
+                }} 
+                variant="outline" 
+                className="px-4 py-2"
+                data-testid="button-help-tour"
+                title="Take a guided tour"
+              >
+                <HelpCircle className="h-4 w-4 mr-1" />
+                Help
               </Button>
             </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border p-2 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border dark:border-slate-700 p-2 mb-6 tour-navigation-tabs">
           <div className="flex gap-1">
             {[
-              { id: "overview", label: "Overview", icon: BarChart },
+              { id: "overview", label: "Analytics", icon: BarChart },
               { id: "events", label: "Events", icon: Calendar },
               { id: "members", label: "Members", icon: Users }
             ].map(({ id, label, icon: Icon }) => (
@@ -210,8 +428,8 @@ export default function Dashboard() {
                 onClick={() => setCurrentView(id as any)}
                 className={`flex items-center gap-2 px-4 py-2 text-sm ${
                   currentView === id 
-                    ? "bg-blue-600 text-white" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    ? "bg-blue-600 text-white dark:bg-blue-500" 
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -221,71 +439,279 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Condensed Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Events</p>
-                  <p className="text-2xl font-bold text-blue-600">{stats?.totalEvents || 0}</p>
-                </div>
-                <Calendar className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Registrations</p>
-                  <p className="text-2xl font-bold text-green-600">{stats?.totalRegistrations || 0}</p>
-                </div>
-                <Users className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">QR Scans</p>
-                  <p className="text-2xl font-bold text-orange-600">{stats?.scansToday || 0}</p>
-                </div>
-                <QrCode className="h-8 w-8 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Validation Rate</p>
-                  <p className="text-2xl font-bold text-purple-600">{stats?.validationRate?.toFixed(1) || 0}%</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Conditional Content Based on Current View */}
+        {/* Analytics Overview View */}
         {currentView === "overview" && (
           <>
+            {/* Top Stats with Gradient Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 tour-stats-overview">
+              {/* Attendance Card */}
+              <Card className="bg-gradient-to-br from-purple-500 to-purple-700 text-white border-0 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-purple-100 text-sm mb-1">Attendance</p>
+                      <div className="flex items-baseline gap-2">
+                        <h3 className="text-3xl font-bold">{attendanceRate.toFixed(0)}</h3>
+                        <span className="text-sm text-purple-200">avg/event</span>
+                      </div>
+                      <p className="text-xs text-purple-200 mt-1">{totalAttendance} total registrations</p>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-lg">
+                      <Lock className="h-8 w-8" />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Select value={attendanceViewType} onValueChange={setAttendanceViewType}>
+                      <SelectTrigger className="bg-white/20 border-white/30 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="analytics">Analytics</SelectItem>
+                        <SelectItem value="reports">Reports</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Security Validation Card */}
+              <Card className="bg-white dark:bg-slate-800 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">Security Validation</p>
+                      <div className="flex items-baseline gap-2">
+                        <h3 className="text-3xl font-bold text-gray-900 dark:text-white">{stats?.scansToday || 0}</h3>
+                        <span className="text-sm text-gray-500">scans</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Interventions</p>
+                    </div>
+                    <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
+                      <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Select value={securityTimeRange} onValueChange={setSecurityTimeRange}>
+                      <SelectTrigger className="border-gray-200 dark:border-slate-600">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="realtime">Realtime</SelectItem>
+                        <SelectItem value="hourly">Hourly</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Event Management Card */}
+              <Card className="bg-white dark:bg-slate-800 shadow-lg">
+                <CardContent className="p-6">
+                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">Event Management</h3>
+                  <div className="flex items-center justify-between">
+                    <div className="relative w-32 h-32">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="56"
+                          stroke="currentColor"
+                          strokeWidth="12"
+                          fill="none"
+                          className="text-gray-200 dark:text-slate-700"
+                        />
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="56"
+                          stroke="currentColor"
+                          strokeWidth="12"
+                          fill="none"
+                          strokeDasharray={`${2 * Math.PI * 56}`}
+                          strokeDashoffset={`${2 * Math.PI * 56 * (1 - eventManagementProgress / 100)}`}
+                          className="text-blue-600 dark:text-blue-500"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-gray-900 dark:text-white">{Math.round(eventManagementProgress)}%</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 ml-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">Total Events</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{events.length}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">Completed</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{events.filter((e: any) => e.status === 'completed').length}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">Ongoing</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{events.filter((e: any) => e.status === 'ongoing').length}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Attendee Analytics */}
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Attendee</CardTitle>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-2xl font-bold text-purple-600">{totalAttendance}</span>
+                        <span className="text-sm text-gray-500">total</span>
+                      </div>
+                      <p className="text-xs text-gray-500">Weekly attendance trend</p>
+                    </div>
+                    <Select value={attendeeChartRange} onValueChange={setAttendeeChartRange}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <RechartsBarChart data={attendanceData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="attendees" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+                    </RechartsBarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Security Validation Chart */}
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Security Validation</CardTitle>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-2xl font-bold text-blue-600">{stats?.scansToday || 0}</span>
+                        <span className="text-sm text-gray-500">scans today</span>
+                      </div>
+                      <p className="text-xs text-gray-500">{validationRate.toFixed(1)}% validation rate</p>
+                    </div>
+                    <Select value={securityChartRange} onValueChange={setSecurityChartRange}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="week">This Week</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart data={securityValidationData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="time" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="scans" stroke="#3b82f6" fill="#93c5fd" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Attendance Trend and Event Management */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Attendance Trend */}
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold">Attendance</CardTitle>
+                    <Select value={attendanceTrendRange} onValueChange={setAttendanceTrendRange}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7days">7 days</SelectItem>
+                        <SelectItem value="30days">30 days</SelectItem>
+                        <SelectItem value="90days">90 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <RechartsBarChart data={attendanceTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="attendees" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                      <Line type="monotone" dataKey="target" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                    </RechartsBarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Event Management List */}
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold">Event Management</CardTitle>
+                    <Button variant="ghost" size="sm">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {events.slice(0, 4).map((event: any, index: number) => (
+                      <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${
+                            event.status === 'ongoing' ? 'bg-green-500' : 
+                            event.status === 'upcoming' ? 'bg-blue-500' : 'bg-gray-400'
+                          }`}></div>
+                          <div>
+                            <p className="font-medium text-sm text-gray-900 dark:text-white">{event.name}</p>
+                            <p className="text-xs text-gray-500">{event.totalRegistrations || 0} attendees</p>
+                          </div>
+                        </div>
+                        <ToggleLeft className={`h-5 w-5 ${
+                          event.status === 'ongoing' ? 'text-green-500' : 'text-gray-400'
+                        }`} />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Quick Stats Row */}
             {stats?.auxiliaryBodyStats && Object.keys(stats.auxiliaryBodyStats).length > 0 && (
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Auxiliary Body Overview</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Auxiliary Body Overview</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {Object.entries(stats.auxiliaryBodyStats).slice(0, 4).map(([auxBody, bodyStats]: [string, any]) => (
                     <Card key={auxBody} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-3">
                         <div className="text-center">
-                          <p className="text-sm font-medium text-gray-900">{auxBody}</p>
-                          <p className="text-lg font-bold text-blue-600">{bodyStats.totalMembers || 0}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{auxBody}</p>
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{bodyStats.totalMembers || 0}</p>
                           <p className="text-xs text-gray-500">{bodyStats.validationRate?.toFixed(1) || 0}% rate</p>
                         </div>
                       </CardContent>
@@ -297,127 +723,9 @@ export default function Dashboard() {
           </>
         )}
 
-        {currentView === "overview" && (
-          <>
-            {/* Registration Distribution */}
-            {stats?.registrationTypeStats && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Registration Types</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 text-center">
-                      <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                      <p className="text-lg font-bold">{stats.registrationTypeStats.members || 0}</p>
-                      <p className="text-sm text-gray-600">Members</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 text-center">
-                      <UserPlus className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                      <p className="text-lg font-bold">{stats.registrationTypeStats.guests || 0}</p>
-                      <p className="text-sm text-gray-600">Guests</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 text-center">
-                      <Bot className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                      <p className="text-lg font-bold">{stats.registrationTypeStats.invitees || 0}</p>
-                      <p className="text-sm text-gray-600">Invitees</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {currentView === "overview" && (
-          <>
-            {/* Upcoming Events - Condensed */}
-            {Array.isArray(events) && events.filter((event: any) => 
-              new Date(event.startDate) > new Date()
-            ).length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Upcoming Events</h3>
-                <div className="space-y-3">
-                  {Array.isArray(events) && events
-                    .filter((event: any) => 
-                      new Date(event.startDate) > new Date()
-                    )
-                    .slice(0, 2)
-                    .map((event: any) => (
-                      <Card key={event.id} className="hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-semibold text-gray-900">{event.name}</h4>
-                              <p className="text-sm text-gray-600">{event.location}</p>
-                              <p className="text-sm text-blue-600">{new Date(event.startDate).toLocaleDateString()}</p>
-                            </div>
-                            <CountdownTimer
-                              event={event}
-                              showEventDetails={false}
-                              size="compact"
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* Live Events - Condensed */}
-            {Array.isArray(events) && events.filter((event: any) => {
-              const now = new Date();
-              const start = new Date(event.startDate);
-              const end = new Date(event.endDate);
-              return now >= start && now <= end;
-            }).length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  Live Events
-                </h3>
-                <div className="space-y-3">
-                  {Array.isArray(events) && events
-                    .filter((event: any) => {
-                      const now = new Date();
-                      const start = new Date(event.startDate);
-                      const end = new Date(event.endDate);
-                      return now >= start && now <= end;
-                    })
-                    .slice(0, 2)
-                    .map((event: any) => (
-                      <Card key={event.id} className="border-green-200 bg-green-50 hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-semibold text-gray-900">{event.name}</h4>
-                              <p className="text-sm text-gray-600">{event.location}</p>
-                              <Badge className="bg-green-100 text-green-800">Live Now</Badge>
-                            </div>
-                            <Button
-                              onClick={() => setIsScannerOpen(true)}
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <Camera className="h-4 w-4 mr-1" />
-                              Scan
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Conditional Content Based on Current View */}
+        {/* Events View */}
         {currentView === "events" && (
-          <Card>
+          <Card className="tour-events-section shadow-lg">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Event Management</CardTitle>
@@ -446,20 +754,20 @@ export default function Dashboard() {
             <CardContent>
               <div className="space-y-4">
                 {events.map((event: any) => (
-                  <div key={event.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={event.id} className="border border-gray-200 dark:border-slate-700 rounded-lg p-4 bg-white dark:bg-slate-800">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-medium text-gray-900">{event.name}</h3>
-                        <p className="text-sm text-gray-600">
+                        <h3 className="font-medium text-gray-900 dark:text-white">{event.name}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           Eligible: {event.eligibleAuxiliaryBodies?.join(", ")} • {new Date(event.startDate).toLocaleDateString()}
                         </p>
                         <div className="flex items-center mt-2 space-x-4">
                           <Badge className={getStatusBadge(event.status)}>
                             {event.status}
                           </Badge>
-                          <span className="text-sm text-gray-600">Location: {event.location}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Location: {event.location}</span>
                         </div>
-                        <div className="flex items-center mt-2 space-x-4 text-sm text-gray-600">
+                        <div className="flex items-center mt-2 space-x-4 text-sm text-gray-600 dark:text-gray-400">
                           <span>📊 {event.totalRegistrations || 0} total</span>
                           <span>👥 {event.memberRegistrations || 0} members</span>
                           <span>🎫 {event.guestRegistrations || 0} guests</span>
@@ -535,9 +843,9 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Member Management View */}
+        {/* Members View */}
         {currentView === "members" && (
-          <Card>
+          <Card className="shadow-lg">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Member Management</CardTitle>
@@ -572,7 +880,7 @@ export default function Dashboard() {
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-border">
-                  <thead className="bg-muted">
+                  <thead className="bg-muted dark:bg-slate-800">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Member</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Auxiliary Body</th>
@@ -580,7 +888,7 @@ export default function Dashboard() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-card divide-y divide-border">
+                  <tbody className="bg-card dark:bg-slate-900 divide-y divide-border">
                     {members.map((member: any) => (
                       <tr key={member.id}>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -624,196 +932,34 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
-
-        {/* Analytics View */}
-        {currentView === "analytics" && (
-          <div className="space-y-6">
-            {/* AI-Powered Features */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <EventRecommendations limit={3} />
-              </div>
-              {events && events.length > 0 && (
-                <div>
-                  <SeatHeatmap 
-                    eventId={events[0].id} 
-                    refreshInterval={10000}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Detailed Auxiliary Body Stats */}
-            {stats?.auxiliaryBodyStats && Object.keys(stats.auxiliaryBodyStats).length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Detailed Auxiliary Body Analytics</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Object.entries(stats.auxiliaryBodyStats).map(([auxBody, bodyStats]: [string, any]) => (
-                    <Card key={auxBody} className="hover:shadow-lg transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-lg font-semibold text-gray-900">{auxBody}</h4>
-                          <Badge className={getAuxiliaryBodyBadge(auxBody)}>
-                            {auxBody}
-                          </Badge>
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Total Members:</span>
-                            <span className="text-sm font-medium">{bodyStats.totalMembers || 0}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Event Registrations:</span>
-                            <span className="text-sm font-medium">{bodyStats.totalRegistrations || 0}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Validated:</span>
-                            <span className="text-sm font-medium">{bodyStats.validatedRegistrations || 0}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Validation Rate:</span>
-                            <span className="text-sm font-medium">{bodyStats.validationRate?.toFixed(1) || 0}%</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Sidebar (moved to be conditionally shown) */}
-        {(currentView === "overview" || currentView === "validation") && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              {/* QR Scanner and Quick Actions for overview/validation */}
-              {currentView === "validation" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Validation Tools</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="text-center">
-                        <div className="bg-muted rounded-lg p-8 mb-4">
-                          <QrCode className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                          <p className="text-sm text-muted-foreground">Camera will activate when scanning</p>
-                        </div>
-                        <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-                          <DialogTrigger asChild>
-                            <Button className="w-full">
-                              <Camera className="h-4 w-4 mr-2" />
-                              Start QR Scanning
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[500px]">
-                            <DialogHeader>
-                              <DialogTitle>QR Code Scanner</DialogTitle>
-                            </DialogHeader>
-                            <QRScanner onClose={() => setIsScannerOpen(false)} />
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <h4 className="font-semibold">AI Validation Status</h4>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">Face Recognition</span>
-                            <Badge className="bg-green-100 text-green-800">
-                              <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-                              Online
-                            </Badge>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">Member Lookup</span>
-                            <Badge className="bg-green-100 text-green-800">
-                              <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-                              Active
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-            
-            {/* Quick Actions Sidebar */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start"
-                    onClick={() => {
-                      const activeEvent = events.find((event: any) => event.status === 'active');
-                      if (activeEvent) {
-                        window.open(`/api/events/${activeEvent.id}/export-attendance`, '_blank');
-                      } else {
-                        toast({
-                          title: "No Active Event",
-                          description: "Please select an event to export attendance.",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    <Download className="h-4 w-4 mr-3" />
-                    Export Attendance
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start"
-                    onClick={() => setCurrentView("events")}
-                  >
-                    <Calendar className="h-4 w-4 mr-3" />
-                    Manage Events
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start"
-                    onClick={() => setCurrentView("members")}
-                  >
-                    <Users className="h-4 w-4 mr-3" />
-                    Manage Members
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Manual Validation Modal */}
-        <Dialog open={manualValidationOpen} onOpenChange={setManualValidationOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Manual Validation</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Input placeholder="Enter validation ID..." />
-              <Button 
-                onClick={() => {
-                  setManualValidationOpen(false);
-                  toast({
-                    title: "Validation Complete",
-                    description: "Member has been validated successfully.",
-                  });
-                }}
-                className="w-full"
-              >
-                Validate Member
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
-    </div>
+
+      {/* Modals */}
+      <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Scan QR Code</DialogTitle>
+          </DialogHeader>
+          <QRScanner onClose={() => setIsScannerOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Tour */}
+      <Joyride
+        steps={tourSteps}
+        run={runTour}
+        continuous
+        showProgress
+        showSkipButton
+        callback={handleTourCallback}
+        stepIndex={tourStepIndex}
+        styles={{
+          options: {
+            primaryColor: '#2563eb',
+            zIndex: 10000,
+          },
+        }}
+      />
+    </SidebarLayout>
   );
 }

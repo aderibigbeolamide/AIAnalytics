@@ -27,7 +27,9 @@ import {
   Ban,
   Play,
   MessageSquare,
-  AlertTriangle
+  AlertTriangle,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -326,6 +328,60 @@ export default function SuperAdminDashboard() {
     onError: () => {
       toast({ title: "Error", description: "Failed to send notification", variant: "destructive" });
     }
+  });
+
+  // Organization subscription upgrade mutation
+  const upgradeSubscriptionMutation = useMutation({
+    mutationFn: async ({ orgId, plan }: { orgId: string; plan: string }) => {
+      const response = await apiRequest('PATCH', `/api/super-admin/organizations/${orgId}/subscription`, { 
+        subscriptionPlan: plan,
+        maxEvents: plan === 'pro' ? 100 : 10,
+        maxMembers: plan === 'pro' ? -1 : 5000 
+      });
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: "Subscription Upgraded",
+        description: `Organization has been upgraded to ${variables.plan} plan successfully.`,
+      });
+      // Invalidate organization queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/organizations'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Upgrade Failed",
+        description: error.message || "Failed to upgrade subscription. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Organization subscription downgrade mutation
+  const downgradeSubscriptionMutation = useMutation({
+    mutationFn: async ({ orgId, plan }: { orgId: string; plan: string }) => {
+      const response = await apiRequest('PATCH', `/api/super-admin/organizations/${orgId}/subscription`, { 
+        subscriptionPlan: plan,
+        maxEvents: plan === 'basic' ? 10 : 100,
+        maxMembers: plan === 'basic' ? 5000 : -1 
+      });
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: "Subscription Downgraded",
+        description: `Organization has been downgraded to ${variables.plan} plan successfully.`,
+      });
+      // Invalidate organization queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['/api/super-admin/organizations'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Downgrade Failed",
+        description: error.message || "Failed to downgrade subscription. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   // Debug logging
@@ -740,6 +796,38 @@ export default function SuperAdminDashboard() {
                               <Play className="w-4 h-4" />
                               <span className="hidden sm:inline">Reactivate</span>
                             </Button>
+                          )}
+                          
+                          {/* Subscription Management Buttons */}
+                          {org.status === 'approved' && (
+                            <>
+                              {org.subscriptionPlan === 'basic' && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-1"
+                                  onClick={() => upgradeSubscriptionMutation.mutate({ orgId: org.id, plan: 'pro' })}
+                                  disabled={upgradeSubscriptionMutation.isPending || downgradeSubscriptionMutation.isPending}
+                                  data-testid={`button-upgrade-pro-${org.id}`}
+                                >
+                                  <ArrowUp className="w-4 h-4" />
+                                  <span className="hidden sm:inline">Upgrade to Pro</span>
+                                </Button>
+                              )}
+                              {org.subscriptionPlan === 'pro' && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 flex items-center gap-1"
+                                  onClick={() => downgradeSubscriptionMutation.mutate({ orgId: org.id, plan: 'basic' })}
+                                  disabled={upgradeSubscriptionMutation.isPending || downgradeSubscriptionMutation.isPending}
+                                  data-testid={`button-downgrade-basic-${org.id}`}
+                                >
+                                  <ArrowDown className="w-4 h-4" />
+                                  <span className="hidden sm:inline">Downgrade to Basic</span>
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
@@ -1784,7 +1872,7 @@ export default function SuperAdminDashboard() {
                   <Button 
                     variant="outline" 
                     className="w-full justify-start"
-                    onClick={() => setNotificationMessage("🎉 Welcome to EventValidate! Start creating amazing events today.")}
+                    onClick={() => setNotificationMessage("🎉 Welcome to Eventify AI! Start creating amazing events today.")}
                     data-testid="button-template-welcome"
                   >
                     Welcome Message

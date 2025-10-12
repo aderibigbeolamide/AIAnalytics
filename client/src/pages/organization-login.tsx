@@ -69,7 +69,7 @@ export default function OrganizationLogin() {
               <Building2 className="h-10 w-10 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">EventValidate</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Eventify AI</h1>
           <p className="text-gray-600 text-lg">Organization Portal</p>
           <div className="flex items-center justify-center mt-3 text-green-600 text-sm">
             <Shield className="h-4 w-4 mr-1" />
@@ -199,7 +199,7 @@ export default function OrganizationLogin() {
           <Badge variant="outline" className="border-green-200 text-green-700 bg-green-50">
             ✅ Trusted by 500+ Organizations
           </Badge>
-          <p className="text-xs text-gray-400">EventValidate - AI-Powered Member Validation</p>
+          <p className="text-xs text-gray-400">Eventify AI - AI-Powered Member Validation</p>
         </div>
       </div>
     </div>

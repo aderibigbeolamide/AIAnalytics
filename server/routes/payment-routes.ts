@@ -10,6 +10,32 @@ const paymentVerifySchema = z.object({
   eventId: z.string().optional(),
 });
 
+const bankVerificationSchema = z.object({
+  accountNumber: z.string()
+    .min(10, "Account number must be exactly 10 digits")
+    .max(10, "Account number must be exactly 10 digits")
+    .regex(/^\d{10}$/, "Account number must be exactly 10 digits"),
+  bankCode: z.string().min(1, "Bank code is required")
+});
+
+// Helper function to redact account numbers for logging
+function redactAccountNumber(accountNumber: string): string {
+  if (!accountNumber || accountNumber.length !== 10) {
+    return "[INVALID]";
+  }
+  return `****${accountNumber.slice(-4)}`;
+}
+
+// Helper function to redact request body for logging
+function redactRequestBody(body: any): any {
+  if (!body) return body;
+  const redacted = { ...body };
+  if (redacted.accountNumber) {
+    redacted.accountNumber = redactAccountNumber(redacted.accountNumber);
+  }
+  return redacted;
+}
+
 export function registerPaymentRoutes(app: Express) {
   // Verify payment by reference (GET route for callback)
   app.get("/api/payment/verify/:reference", async (req: Request, res: Response) => {
@@ -24,7 +50,26 @@ export function registerPaymentRoutes(app: Express) {
       const paystackResponse = await verifyPaystackPayment(reference);
       console.log(`Paystack verification response:`, JSON.stringify(paystackResponse, null, 2));
       
-      if (!paystackResponse.status || paystackResponse.data.status !== 'success') {
+      // More robust verification check - handle different status formats
+      const isVerificationSuccessful = (
+        paystackResponse && 
+        (
+          // Standard Paystack response format
+          (paystackResponse.status === true && paystackResponse.data?.status === 'success') ||
+          // Alternative status formats
+          (paystackResponse.status === 'success') ||
+          (paystackResponse.success === true && paystackResponse.data?.status === 'success') ||
+          // Check if payment was actually successful based on amount and gateway response
+          (paystackResponse.data?.gateway_response === 'Successful' && paystackResponse.data?.amount > 0)
+        )
+      );
+
+      console.log('Payment verification successful?', isVerificationSuccessful);
+      console.log('Paystack response status:', paystackResponse?.status);
+      console.log('Paystack data status:', paystackResponse?.data?.status);
+      console.log('Gateway response:', paystackResponse?.data?.gateway_response);
+      
+      if (!isVerificationSuccessful) {
         return res.status(400).json({ 
           status: 'failed',
           message: "Payment verification failed",
@@ -105,8 +150,7 @@ export function registerPaymentRoutes(app: Express) {
       await mongoStorage.updateEventRegistration(metadata.registrationId, {
         paymentStatus: 'paid',
         paymentReference: reference,
-        paymentAmount: (paystackResponse.data.amount / 100).toString(), // Convert from kobo to naira
-        paymentCurrency: paystackResponse.data.currency,
+        paymentAmount: paystackResponse.data.amount / 100, // Convert from kobo to naira
         paymentVerifiedAt: new Date()
       });
 
@@ -191,8 +235,7 @@ export function registerPaymentRoutes(app: Express) {
       await mongoStorage.updateEventRegistration(registrationId!, {
         paymentStatus: 'paid',
         paymentReference: reference,
-        paymentAmount: paymentData.amount,
-        paymentCurrency: paymentData.currency,
+        paymentAmount: parseFloat(paymentData.amount),
         paymentVerifiedAt: paymentData.verifiedAt
       });
 
@@ -227,7 +270,7 @@ export function registerPaymentRoutes(app: Express) {
         
         if (metadata && metadata.registrationId) {
           const registration = await mongoStorage.getEventRegistration(metadata.registrationId);
-          const eventData = await mongoStorage.getEvent(registration?.eventId.toString());
+          const eventData = registration ? await mongoStorage.getEvent(registration.eventId.toString()) : null;
           
           if (registration && eventData) {
             // Update registration
@@ -235,7 +278,6 @@ export function registerPaymentRoutes(app: Express) {
               paymentStatus: 'paid',
               paymentReference: reference,
               paymentAmount: event.data.amount,
-              paymentCurrency: event.data.currency,
               paymentVerifiedAt: new Date()
             });
 
@@ -257,6 +299,182 @@ export function registerPaymentRoutes(app: Express) {
     } catch (error) {
       console.error("Webhook processing error:", error);
       res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
+  // Simple test route to verify payment routes are working
+  app.get("/api/test-payment-routes", (req: Request, res: Response) => {
+    console.log("=== PAYMENT ROUTES TEST ENDPOINT HIT ===");
+    res.json({ status: "payment routes working", timestamp: new Date().toISOString() });
+  });
+
+  // Manual bank account verification - user selects bank, we verify account name
+  app.post("/api/banks/verify-account", async (req: Request, res: Response) => {
+    console.log("=== MANUAL BANK VERIFICATION ENDPOINT HIT ===");
+    console.log("Request body:", JSON.stringify(redactRequestBody(req.body)));
+    
+    try {
+      // Validate request body with Zod
+      const validation = bankVerificationSchema.safeParse(req.body);
+      if (!validation.success) {
+        console.log("Invalid request data:", validation.error.errors);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid input data",
+          errors: validation.error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+        });
+      }
+
+      const { accountNumber, bankCode } = validation.data;
+      console.log(`Manual verification - Account: ${redactAccountNumber(accountNumber)}, Bank: ${bankCode}`);
+
+      console.log(`Manual bank verification for account ${redactAccountNumber(accountNumber)} with bank code ${bankCode}`);
+      
+      // Import the bank functions
+      const { verifyBankAccount, getNigerianBanks } = await import('../paystack');
+      
+      // Get list of banks to find the bank name
+      const banksData = await getNigerianBanks();
+      const banks = banksData.data || [];
+      const selectedBank = banks.find(bank => bank.code === bankCode);
+      
+      if (!selectedBank) {
+        console.log(`Invalid bank code provided: ${bankCode}`);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid bank selected. Please choose a valid bank from the list."
+        });
+      }
+
+      // Verify account with the selected bank only
+      console.log(`Verifying with ${selectedBank.name} (${selectedBank.code})`);
+      const verificationData = await verifyBankAccount(accountNumber, selectedBank.code);
+      
+      if (verificationData.status && verificationData.data?.account_name) {
+        console.log(`Manual verification successful: ${selectedBank.name} - Account: ${redactAccountNumber(accountNumber)} - Name: ${verificationData.data.account_name}`);
+        return res.json({
+          success: true,
+          accountName: verificationData.data.account_name,
+          accountNumber: verificationData.data.account_number || accountNumber,
+          bankName: selectedBank.name,
+          bankCode: selectedBank.code
+        });
+      } else {
+        console.log(`Manual verification failed for account ${redactAccountNumber(accountNumber)}: ${verificationData.message || 'Unknown error'}`);
+        return res.status(400).json({
+          success: false,
+          message: verificationData.message || "Could not verify account with the selected bank. Please check your account number and bank selection."
+        });
+      }
+
+    } catch (error) {
+      console.error("Manual bank verification error:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Bank verification service is temporarily unavailable. Please try again in a few minutes." 
+      });
+    }
+  });
+
+  // Get list of Nigerian banks for dropdown selection
+  app.get("/api/banks/list", async (req: Request, res: Response) => {
+    console.log("=== GET BANKS LIST ENDPOINT HIT ===");
+    
+    try {
+      // Import the bank functions
+      const { getNigerianBanks } = await import('../paystack');
+      
+      // Get list of Nigerian banks
+      const banksData = await getNigerianBanks();
+      const rawBanks = banksData.data || [];
+      
+      // Remove duplicates from raw data first (some banks have same code in Paystack API)
+      // Keep the first occurrence and log duplicates for debugging
+      const uniqueRawBanks = rawBanks.reduce((acc: any[], bank: any) => {
+        const existingBank = acc.find(existingBank => existingBank.code === bank.code);
+        if (!existingBank) {
+          acc.push(bank);
+        } else {
+          console.log(`Skipping duplicate bank code ${bank.code}: ${bank.name} (keeping ${existingBank.name})`);
+        }
+        return acc;
+      }, []);
+      
+      const banks = uniqueRawBanks;
+      
+      // Sort banks alphabetically and prioritize major banks
+      const majorBanks = [
+        { code: '044', name: 'Access Bank' },
+        { code: '011', name: 'First Bank of Nigeria' },
+        { code: '214', name: 'First City Monument Bank' },
+        { code: '070', name: 'Fidelity Bank' },
+        { code: '058', name: 'Guaranty Trust Bank' },
+        { code: '082', name: 'Keystone Bank' },
+        { code: '221', name: 'Stanbic IBTC Bank' },
+        { code: '068', name: 'Standard Chartered Bank' },
+        { code: '232', name: 'Sterling Bank' },
+        { code: '033', name: 'United Bank for Africa' },
+        { code: '032', name: 'Union Bank of Nigeria' },
+        { code: '215', name: 'Unity Bank' },
+        { code: '035', name: 'Wema Bank' },
+        { code: '057', name: 'Zenith Bank' },
+        { code: '050', name: 'Ecobank Nigeria' }
+      ];
+      
+      // Get other banks (exclude major ones from the full list)
+      const otherBanks = banks
+        .filter((bank: any) => !majorBanks.some((major: any) => major.code === bank.code))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name));
+      
+      // Combine with major banks first, then others
+      const sortedBanks = [...majorBanks, ...otherBanks];
+      
+      console.log(`Returning ${sortedBanks.length} banks for selection`);
+      return res.json({
+        success: true,
+        banks: sortedBanks
+      });
+
+    } catch (error) {
+      console.error("Get banks list error:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Unable to load banks list. Please try again." 
+      });
+    }
+  });
+
+  // Get Nigerian banks list endpoint - alias for /api/banks
+  app.get("/api/banks/list", async (req: Request, res: Response) => {
+    console.log("=== BANKS LIST ENDPOINT HIT ===");
+    
+    try {
+      const { getNigerianBanks } = await import('../paystack');
+      const banksData = await getNigerianBanks();
+      
+      if (banksData.status) {
+        const banks = banksData.data;
+        
+        console.log(`Successfully loaded ${banks.length} banks from Paystack API`);
+        
+        res.json({
+          success: true,
+          banks: banks,
+          message: `Found ${banks.length} Nigerian banks`
+        });
+      } else {
+        console.log("Failed to fetch banks from Paystack API");
+        res.status(400).json({
+          success: false,
+          message: "Failed to fetch banks from Paystack API"
+        });
+      }
+    } catch (error) {
+      console.error("Get banks list error:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Unable to load banks list. Please try again." 
+      });
     }
   });
 }

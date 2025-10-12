@@ -42,7 +42,6 @@ import {
 import { 
   generateQRCode, 
   generateQRImage, 
-  generateShortUniqueId,
   encryptQRData, 
   decryptQRData, 
   validateQRData,
@@ -65,6 +64,8 @@ import {
   insertEventRecommendationSchema
 } from "@shared/schema";
 import { z } from "zod";
+import { nanoid } from "nanoid";
+import { generateValidationCode } from "./utils";
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -964,7 +965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const qrCode = generateQRCode();
-      const uniqueId = generateShortUniqueId(); // Generate shorter 6-character ID for manual validation
+      const uniqueId = await generateValidationCode(); // Generate consistent 6-character ID for manual validation
       
       // Extract common fields from custom form data
       const getName = () => {
@@ -1448,7 +1449,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual validation by unique ID
-  // Export Attendance endpoint
+  // Export Attendance endpoint - DISABLED: Conflicting with MongoDB implementation
+  // The MongoDB export-attendance endpoint in mongo-routes.ts provides proper CSV export functionality
+  /*
   app.get("/api/events/:eventId/export-attendance", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
@@ -1489,6 +1492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to export attendance" });
     }
   });
+  */
 
   // Analytics endpoint
   app.get("/api/analytics", authenticateToken, async (req: AuthenticatedRequest, res) => {
@@ -1682,7 +1686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const qrCode = generateQRCode();
-        const uniqueId = generateShortUniqueId();
+        const uniqueId = await generateValidationCode();
         
         // Extract name and email from form data
         const getName = () => {
@@ -1787,7 +1791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const qrCode = generateQRCode();
-        const uniqueId = generateShortUniqueId();
+        const uniqueId = await generateValidationCode();
         
         // Extract name and email from form data
         const getName = () => {
@@ -1866,9 +1870,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reports endpoints
   app.get("/api/reports", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
+      console.log('GET /api/reports - Organization ID:', req.user?.organizationId);
+      
       // Import mongoStorage to use MongoDB operations
       const { mongoStorage } = await import("./mongodb-storage");
-      const reports = await mongoStorage.getAllEventReports();
+      
+      // Filter reports by organization ID for multi-tenant support
+      const reports = await mongoStorage.getReportsByOrganization(req.user!.organizationId!);
+      
+      console.log(`Found ${reports.length} reports for organization ${req.user?.organizationId}`);
       res.json(reports);
     } catch (error) {
       console.error("Failed to fetch reports:", error);
@@ -1930,16 +1940,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid status" });
       }
       
+      const { mongoStorage } = await import("./mongodb-storage");
+      
+      // First, verify the report belongs to the user's organization
+      const existingReport = await mongoStorage.getReportById(reportId);
+      if (!existingReport) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      if (existingReport.organizationId !== req.user!.organizationId) {
+        return res.status(403).json({ message: "Access denied: Report belongs to different organization" });
+      }
+      
       const updates: any = { status };
       if (reviewNotes) {
         updates.reviewNotes = reviewNotes;
       }
       
-      const { mongoStorage } = await import("./mongodb-storage");
+      console.log('Updating report with data:', { reportId, updates });
       const updatedReport = await mongoStorage.updateEventReport(reportId, updates);
+      console.log('Update result:', updatedReport);
       
       if (!updatedReport) {
-        return res.status(404).json({ message: "Report not found" });
+        return res.status(500).json({ message: "Failed to update report" });
       }
       
       res.json(updatedReport);
@@ -2976,7 +2999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate ticket data - shorter format
-      const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const ticketNumber = `TKT${await generateValidationCode()}`;
       const qrCode = generateQRCode();
 
       // Create ticket record
@@ -3225,22 +3248,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Validate ticket at event (admin endpoint)
   app.post("/api/tickets/:ticketId/validate", authenticateToken, async (req: AuthenticatedRequest, res) => {
     try {
+      console.log('🎫 Ticket validation request for:', req.params.ticketId);
       const ticketParam = req.params.ticketId;
       let ticket;
 
       // Try to find ticket by ticket number first, then by ID
       if (isNaN(parseInt(ticketParam))) {
         // It's a ticket number (string like "TKTDAOIKM")
+        console.log('🎫 Looking up ticket by number:', ticketParam);
         [ticket] = await db.select().from(tickets).where(eq(tickets.ticketNumber, ticketParam));
       } else {
         // It's a numeric ID
         const ticketId = parseInt(ticketParam);
+        console.log('🎫 Looking up ticket by ID:', ticketId);
         [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId));
       }
 
       if (!ticket) {
+        console.log('❌ Ticket not found');
         return res.status(404).json({ message: "Ticket not found" });
       }
+
+      console.log('🎫 Found ticket:', {
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        status: ticket.status,
+        paymentStatus: ticket.paymentStatus,
+        usedAt: ticket.usedAt
+      });
 
       // Check if ticket has already been used
       if (ticket.status === "used") {
@@ -3286,7 +3321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scannedBy: req.user!.id,
       }).where(eq(tickets.id, ticket.id));
 
-      res.json({ 
+      const responseData = { 
         message: "Ticket validated successfully",
         success: true,
         ticket: {
@@ -3294,7 +3329,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: "used",
           usedAt: new Date(),
         },
-      });
+      };
+      
+      console.log('🎫 Ticket validation success response:', JSON.stringify(responseData, null, 2));
+      res.json(responseData);
     } catch (error) {
       console.error("Validate ticket error:", error);
       res.status(500).json({ 
@@ -3571,6 +3609,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Failed to verify bank account" 
+      });
+    }
+  });
+
+  // OPay-style bank detection from account number - simplified test version
+  app.post("/api/banks/detect-opay-style", async (req: Request, res: Response) => {
+    console.log("=== BANK DETECTION ENDPOINT HIT ===");
+    console.log("Request body:", JSON.stringify(req.body));
+    
+    try {
+      const { accountNumber } = req.body;
+      console.log("Extracted account number:", accountNumber);
+
+      if (!accountNumber || accountNumber.length !== 10) {
+        console.log("Invalid account number provided");
+        return res.status(400).json({ 
+          success: false,
+          message: "Valid 10-digit account number is required" 
+        });
+      }
+
+      console.log("Account number validation passed");
+      
+      // For now, return a test response to verify the endpoint is working
+      console.log("Returning test failure response");
+      return res.status(400).json({
+        success: false,
+        message: "Bank detection temporarily disabled for debugging"
+      });
+
+    } catch (error) {
+      console.error("Bank detection error:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Service temporarily unavailable. Please try again." 
       });
     }
   });

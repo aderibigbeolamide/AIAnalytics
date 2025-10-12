@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Navbar } from "@/components/navbar";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +14,9 @@ import { FileText, Search, Eye, Clock, CheckCircle, XCircle, MessageSquare, User
 import { format } from "date-fns";
 
 interface Report {
-  id: number;
-  eventId: number;
+  _id: string;
+  id?: string; // For backward compatibility
+  eventId: string;
   reporterName: string;
   reporterEmail: string;
   reporterPhone: string;
@@ -23,9 +24,20 @@ interface Report {
   message: string;
   status: string;
   createdAt: string;
+  eventName?: string;
+  organizationId?: string;
   event?: {
-    id: number;
+    id: string;
     name: string;
+    eventType?: string;
+    location?: string;
+    startDate?: string;
+  };
+  ticketInfo?: {
+    ticketNumber: string;
+    category: string;
+    status: string;
+    paymentStatus: string;
   };
 }
 
@@ -33,6 +45,7 @@ export default function Reports() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [eventTypeFilter, setEventTypeFilter] = useState("all");
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [reviewNotes, setReviewNotes] = useState("");
@@ -48,19 +61,25 @@ export default function Reports() {
   });
 
   const updateReportMutation = useMutation({
-    mutationFn: async ({ reportId, status, notes }: { reportId: number; status: string; notes?: string }) => {
+    mutationFn: async ({ reportId, status, notes }: { reportId: string; status: string; notes?: string }) => {
+      console.log('Updating report:', { reportId, status, notes });
       const response = await apiRequest('PUT', `/api/reports/${reportId}`, {
         status,
         reviewNotes: notes
       });
-      return response.json();
+      const result = await response.json();
+      console.log('Update response:', result);
+      return result;
     },
     onSuccess: (data) => {
+      console.log('Update success callback, data:', data);
       toast({
         title: "Report updated",
-        description: `Report has been ${data.status}`,
+        description: `Report has been ${data.status || 'updated'}`,
       });
+      // Force cache refresh and component re-render
       queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
+      queryClient.refetchQueries({ queryKey: ['/api/reports'] });
       setShowReviewDialog(false);
       setSelectedReport(null);
       setReviewNotes("");
@@ -82,8 +101,10 @@ export default function Reports() {
 
   const handleStatusUpdate = (status: string) => {
     if (selectedReport) {
+      const reportId = selectedReport._id || selectedReport.id || '';
+      console.log('Handling status update:', { reportId, status, selectedReport });
       updateReportMutation.mutate({
-        reportId: selectedReport.id,
+        reportId,
         status,
         notes: reviewNotes
       });
@@ -94,12 +115,16 @@ export default function Reports() {
     const matchesSearch = searchTerm === "" || 
       report.reporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       report.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.reporterEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      report.reporterEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (report.event?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (report.ticketInfo?.ticketNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || report.status === statusFilter;
     const matchesType = typeFilter === "all" || report.reportType === typeFilter;
+    const matchesEventType = eventTypeFilter === "all" || 
+      (report.event?.eventType || 'registration') === eventTypeFilter;
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesEventType;
   });
 
   const getStatusIcon = (status: string) => {
@@ -143,11 +168,35 @@ export default function Reports() {
     }
   };
 
+  const getEventTypeColor = (eventType: string) => {
+    switch (eventType) {
+      case 'ticket':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'registration':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getTicketStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'used':
+        return 'bg-blue-100 text-blue-800';
+      case 'pending':
+        return 'bg-orange-100 text-orange-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <SidebarLayout>
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Event Reports</h1>
@@ -157,7 +206,7 @@ export default function Reports() {
         </div>
 
         {/* Filters */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
@@ -195,6 +244,17 @@ export default function Reports() {
             </SelectContent>
           </Select>
           
+          <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by event type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Event Types</SelectItem>
+              <SelectItem value="registration">Registration Events</SelectItem>
+              <SelectItem value="ticket">Ticket Events</SelectItem>
+            </SelectContent>
+          </Select>
+          
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">
               {filteredReports.length} report{filteredReports.length !== 1 ? 's' : ''}
@@ -223,7 +283,7 @@ export default function Reports() {
         ) : (
           <div className="space-y-4">
             {filteredReports.map((report) => (
-              <Card key={report.id} className="hover:shadow-md transition-shadow">
+              <Card key={report._id || report.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -236,6 +296,11 @@ export default function Reports() {
                         <Badge variant="outline" className={getTypeColor(report.reportType)}>
                           {report.reportType}
                         </Badge>
+                        {report.event && (
+                          <Badge variant="outline" className={getEventTypeColor(report.event.eventType || 'registration')}>
+                            {report.event.eventType === 'ticket' ? '🎫 Ticket Event' : '📝 Registration Event'}
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -260,9 +325,39 @@ export default function Reports() {
                   <p className="text-gray-800 mb-3 line-clamp-3">{report.message}</p>
                   
                   {report.event && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                       <span className="font-medium">Event:</span>
                       <span>{report.event.name}</span>
+                    </div>
+                  )}
+                  
+                  {report.ticketInfo && (
+                    <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium text-purple-800">🎫 Ticket Information</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-gray-600">Ticket #:</span>
+                          <span className="ml-1 font-mono">{report.ticketInfo.ticketNumber}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Category:</span>
+                          <span className="ml-1">{report.ticketInfo.category}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Status:</span>
+                          <Badge className={`ml-1 ${getTicketStatusColor(report.ticketInfo.status)}`}>
+                            {report.ticketInfo.status}
+                          </Badge>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Payment:</span>
+                          <Badge className={`ml-1 ${getTicketStatusColor(report.ticketInfo.paymentStatus)}`}>
+                            {report.ticketInfo.paymentStatus}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -318,10 +413,46 @@ export default function Reports() {
                   {selectedReport.event && (
                     <div className="text-sm text-gray-600">
                       <span className="font-medium">Event:</span> {selectedReport.event.name}
+                      {selectedReport.event.eventType && (
+                        <Badge variant="outline" className={`ml-2 ${getEventTypeColor(selectedReport.event.eventType)}`}>
+                          {selectedReport.event.eventType === 'ticket' ? '🎫 Ticket Event' : '📝 Registration Event'}
+                        </Badge>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Ticket Information for ticket-based events */}
+              {selectedReport.ticketInfo && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm font-medium text-purple-800">🎫 Ticket Information</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Ticket Number:</span>
+                      <span className="font-mono text-purple-900">{selectedReport.ticketInfo.ticketNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Category:</span>
+                      <span className="text-purple-900">{selectedReport.ticketInfo.category}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Ticket Status:</span>
+                      <Badge className={getTicketStatusColor(selectedReport.ticketInfo.status)}>
+                        {selectedReport.ticketInfo.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">Payment Status:</span>
+                      <Badge className={getTicketStatusColor(selectedReport.ticketInfo.paymentStatus)}>
+                        {selectedReport.ticketInfo.paymentStatus}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Report Message */}
               <div className="space-y-2">
@@ -378,6 +509,6 @@ export default function Reports() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </SidebarLayout>
   );
 }

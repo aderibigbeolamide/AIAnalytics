@@ -141,7 +141,7 @@ export const Navbar: React.FC = () => {
             <Link href={ROUTES.DASHBOARD}>
               <div className="flex-shrink-0 flex items-center">
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                  EventValidate
+                  EventifyAI
                 </h1>
               </div>
             </Link>

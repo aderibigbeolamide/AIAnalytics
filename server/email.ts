@@ -1,13 +1,16 @@
 import nodemailer from 'nodemailer';
 
-// Create transporter for SMTP email sending
+// Create transporter for SMTP email sending using Zoho configuration
 const transporter = nodemailer.createTransport({
-  host: process.env.MAILER_HOST,
-  port: parseInt(process.env.MAILER_PORT || "587"),
-  secure: false, // true for 465, false for other ports
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || "465"),
+  secure: parseInt(process.env.SMTP_PORT || "465") === 465, // true for 465, false for other ports
   auth: {
-    user: process.env.MAILER_USER,
-    pass: process.env.MAILER_PASS
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 });
 
@@ -110,8 +113,17 @@ export function generateRegistrationCardHTML(registration: any, event: any, qrIm
       ? `${registration.member.firstName} ${registration.member.lastName}` 
       : registration.member?.firstName || registration.member?.lastName) ||
     (registration.firstName && registration.lastName ? `${registration.firstName} ${registration.lastName}` : null) ||
+    // Check registrationData fields
+    (registration.registrationData?.firstName && registration.registrationData?.lastName 
+      ? `${registration.registrationData.firstName} ${registration.registrationData.lastName}` : null) ||
+    (registration.registrationData?.FirstName && registration.registrationData?.LastName 
+      ? `${registration.registrationData.FirstName} ${registration.registrationData.LastName}` : null) ||
     registration.firstName ||
     registration.lastName ||
+    registration.registrationData?.firstName ||
+    registration.registrationData?.lastName ||
+    registration.registrationData?.FirstName ||
+    registration.registrationData?.LastName ||
     (registration.guestEmail ? registration.guestEmail.split('@')[0] : null) || // Extract name from email as last resort
     'Guest';
   

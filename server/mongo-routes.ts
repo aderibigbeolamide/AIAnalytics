@@ -3,6 +3,7 @@ import { mongoStorage } from "./mongodb-storage";
 import { authenticateToken, type AuthenticatedRequest } from "./mongo-auth-routes";
 import multer from "multer";
 import { nanoid } from "nanoid";
+import { generateValidationCode } from "./utils";
 import QRCode from "qrcode";
 import { NotificationService } from "./notification-service";
 import { FaceRecognitionService } from "./face-recognition";
@@ -32,39 +33,39 @@ const upload = multer({
 export function registerMongoRoutes(app: Express) {
   // ================ PUBLIC ENDPOINTS (PRIORITY) ================
   
-  // Get public events (DISABLED - AI-enhanced version in event-routes.ts is used instead)
-  // app.get("/api/events/public", async (req: Request, res: Response) => {
-  //   try {
-  //     const events = await mongoStorage.getEvents();
-  //     
-  //     const publicEvents = events.filter(event => ['upcoming', 'active'].includes(event.status)).map(event => ({
-  //       id: event._id?.toString(),
-  //       name: event.name,
-  //       description: event.description,
-  //       location: event.location,
-  //       startDate: event.startDate,
-  //       endDate: event.endDate,
-  //       registrationStartDate: event.registrationStartDate,
-  //       registrationEndDate: event.registrationEndDate,
-  //       status: event.status,
-  //       maxAttendees: event.maxAttendees,
-  //       eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
-  //       allowGuests: event.allowGuests,
-  //       allowInvitees: event.allowInvitees,
-  //       eventType: event.eventType,
-  //       eventImage: event.eventImage,
-  //       ticketCategories: event.ticketCategories || [],
-  //       customRegistrationFields: event.customRegistrationFields,
-  //       paymentSettings: event.paymentSettings,
-  //       organizationId: event.organizationId?.toString()
-  //     }));
+  // Get public events (re-enabled to fix landing page issue - no authentication required)
+  app.get("/api/events/public", async (req: Request, res: Response) => {
+    try {
+      const events = await mongoStorage.getEvents();
+      
+      const publicEvents = events.filter(event => ['upcoming', 'active'].includes(event.status)).map(event => ({
+        id: (event._id as any)?.toString(),
+        name: event.name,
+        description: event.description,
+        location: event.location,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        registrationStartDate: event.registrationStartDate,
+        registrationEndDate: event.registrationEndDate,
+        status: event.status,
+        maxAttendees: event.maxAttendees,
+        eligibleAuxiliaryBodies: event.eligibleAuxiliaryBodies,
+        allowGuests: event.allowGuests,
+        allowInvitees: event.allowInvitees,
+        eventType: event.eventType,
+        eventImage: event.eventImage,
+        ticketCategories: event.ticketCategories || [],
+        customRegistrationFields: event.customRegistrationFields,
+        paymentSettings: event.paymentSettings,
+        organizationId: event.organizationId?.toString()
+      }));
 
-  //     res.json(publicEvents);
-  //   } catch (error) {
-  //     console.error("Error getting public events:", error);
-  //     res.status(500).json({ message: "Internal server error" });
-  //   }
-  // });
+      res.json(publicEvents);
+    } catch (error) {
+      console.error("Error getting public events:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   // Get public event by ID (no authentication required)
   app.get("/api/events/:id/public", async (req: Request, res: Response) => {
@@ -111,14 +112,21 @@ export function registerMongoRoutes(app: Express) {
   // ================ EVENT MANAGEMENT ================
   
   // Get events for organization (admin dashboard)
-  app.get("/api/events", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-    console.log('*** DEBUG: GET /api/events route called with FRESH stats logic ***', new Date().toISOString());
-    
-    // Force no caching for this endpoint
+  app.get("/api/events", authenticateToken, (req: AuthenticatedRequest, res: Response, next) => {
+    // Completely disable ETags and conditional requests for this route
+    req.headers['if-none-match'] = undefined;
+    req.headers['if-modified-since'] = undefined;
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    res.set('Last-Modified', new Date().toUTCString());
+    next();
+  }, async (req: AuthenticatedRequest, res: Response) => {
+    console.log('*** DEBUG: GET /api/events route called with FRESH stats logic ***', new Date().toISOString());
+    
+    // Additional cache prevention
+    res.removeHeader('ETag');
+    res.removeHeader('Last-Modified');
+    res.set('X-Fresh-Request', Date.now().toString());
     
     try {
       const organizationId = req.user?.organizationId;
@@ -162,17 +170,18 @@ export function registerMongoRoutes(app: Express) {
             ? tickets.length 
             : registrations.length;
             
-          const memberRegistrations = event.eventType === 'ticket' 
-            ? tickets.filter(ticket => ticket.paymentStatus === 'completed').length // Paid tickets
-            : registrations.filter(reg => (reg.registrationType === 'member' || reg.registration_type === 'member')).length;
+          // Always use registrations to determine member/guest/invitee counts based on registrationType
+          const memberRegistrations = registrations.filter(reg => 
+            reg.registrationType === 'member' || (reg as any).registration_type === 'member'
+          ).length;
             
-          const guestRegistrations = event.eventType === 'ticket' 
-            ? tickets.filter(ticket => ticket.paymentStatus === 'pending').length // Pending payment tickets
-            : registrations.filter(reg => (reg.registrationType === 'guest' || reg.registration_type === 'guest')).length;
+          const guestRegistrations = registrations.filter(reg => 
+            reg.registrationType === 'guest' || (reg as any).registration_type === 'guest'
+          ).length;
             
-          const inviteeRegistrations = event.eventType === 'ticket' 
-            ? tickets.filter(ticket => ticket.paymentStatus === 'failed').length // Failed payment tickets
-            : registrations.filter(reg => (reg.registrationType === 'invitee' || reg.registration_type === 'invitee')).length;
+          const inviteeRegistrations = registrations.filter(reg => 
+            reg.registrationType === 'invitee' || (reg as any).registration_type === 'invitee'
+          ).length;
           
           // Calculate attendance rate
           const attendedCount = event.eventType === 'ticket'
@@ -184,6 +193,24 @@ export function registerMongoRoutes(app: Express) {
             : 0;
           
           console.log(`Stats for ${event.name}: total=${totalRegistrations}, members=${memberRegistrations}, guests=${guestRegistrations}, invitees=${inviteeRegistrations}`);
+          
+          // Calculate dynamic status based on current date
+          const now = new Date();
+          const startDate = new Date(event.startDate);
+          const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+          
+          let dynamicStatus = event.status;
+          if (event.status !== 'cancelled') {
+            if (now >= startDate && now <= endDate) {
+              dynamicStatus = 'ongoing';
+            } else if (now < startDate) {
+              dynamicStatus = 'upcoming';
+            } else {
+              dynamicStatus = 'completed';
+            }
+          }
+          
+          console.log(`Event ${event.name}: status calculation - now: ${now.toISOString()}, start: ${startDate.toISOString()}, end: ${endDate.toISOString()}, status: ${dynamicStatus}`);
           
           // Create base event object and remove existing statistics fields
           const baseEvent = (event as any).toObject();
@@ -199,7 +226,8 @@ export function registerMongoRoutes(app: Express) {
             id: (event as any)._id?.toString(),
             organizationId: event.organizationId?.toString(),
             createdBy: event.createdBy?.toString(),
-            // Add calculated statistics
+            // Add calculated statistics and dynamic status
+            status: dynamicStatus,
             totalRegistrations: totalRegistrations || 0,
             memberRegistrations: memberRegistrations || 0,
             guestRegistrations: guestRegistrations || 0,
@@ -265,6 +293,16 @@ export function registerMongoRoutes(app: Express) {
             allowInvitees: plainEvent.allowInvitees,
             ticketCategories: plainEvent.ticketCategories || [],
             paymentSettings: plainEvent.paymentSettings,
+            // Essential fields for editing
+            registrationStartDate: plainEvent.registrationStartDate,
+            registrationEndDate: plainEvent.registrationEndDate,
+            eligibleAuxiliaryBodies: plainEvent.eligibleAuxiliaryBodies || [],
+            customRegistrationFields: plainEvent.customRegistrationFields || [],
+            invitations: plainEvent.invitations || [],
+            reminderSettings: plainEvent.reminderSettings,
+            faceRecognitionSettings: plainEvent.faceRecognitionSettings,
+            requiresPayment: plainEvent.requiresPayment,
+            paymentAmount: plainEvent.paymentAmount,
             createdAt: plainEvent.createdAt,
             updatedAt: plainEvent.updatedAt
           };
@@ -327,7 +365,7 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
-  // Global reports endpoint
+  // Global reports endpoint - Enhanced for ticket-based events
   app.get("/api/reports", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const organizationId = req.user?.organizationId;
@@ -339,11 +377,146 @@ export function registerMongoRoutes(app: Express) {
         report.organizationId?.toString() === organizationId
       );
       
-      console.log(`Found ${organizationReports.length} reports for organization ${organizationId}`);
-      res.json(organizationReports);
+      // Optimize: Batch fetch events and tickets to avoid N+1 queries
+      const enhancedReports = await (async () => {
+        // Get unique event IDs to batch fetch
+        const eventIds = [...new Set(organizationReports.map(r => r.eventId).filter(Boolean))];
+        
+        if (eventIds.length === 0) {
+          return organizationReports;
+        }
+        
+        try {
+          // Batch fetch all events at once
+          const eventsPromise = Promise.all(eventIds.map(async (eventId) => {
+            try {
+              const event = await mongoStorage.getEventById(eventId);
+              return event ? [eventId, event] : null;
+            } catch (error) {
+              console.warn('Could not fetch event:', eventId, error);
+              return null;
+            }
+          }));
+          
+          // Batch fetch all tickets for ticket-based events
+          const ticketsPromise = Promise.all(eventIds.map(async (eventId) => {
+            try {
+              const event = await mongoStorage.getEventById(eventId);
+              if (event && event.eventType === 'ticket') {
+                const tickets = await mongoStorage.getTickets({ eventId });
+                return [eventId, tickets || []];
+              }
+              return [eventId, []];
+            } catch (error) {
+              console.warn('Could not fetch tickets for event:', eventId, error);
+              return [eventId, []];
+            }
+          }));
+          
+          // Wait for both batch operations to complete
+          const [eventsResults, ticketsResults] = await Promise.all([eventsPromise, ticketsPromise]);
+          
+          // Create lookup maps for efficient access
+          const eventsMap = new Map(eventsResults.filter(Boolean));
+          const ticketsMap = new Map(ticketsResults);
+          
+          // Map reports to enhanced objects using the lookup data
+          return organizationReports.map(report => {
+            try {
+              const event = eventsMap.get(report.eventId);
+              
+              // Enhanced report object
+              const enhancedReport = {
+                ...report,
+                event: event ? {
+                  id: event._id?.toString(),
+                  name: event.name,
+                  eventType: event.eventType || 'registration',
+                  location: event.location,
+                  startDate: event.startDate
+                } : null
+              };
+
+              // Add ticket information for ticket-based events
+              if (report.reporterEmail && event?.eventType === 'ticket' && ticketsMap.has(report.eventId)) {
+                const eventTickets = ticketsMap.get(report.eventId);
+                const userTicket = eventTickets.find(ticket => ticket.ownerEmail === report.reporterEmail);
+                
+                if (userTicket) {
+                  enhancedReport.ticketInfo = {
+                    ticketNumber: userTicket.ticketNumber,
+                    category: userTicket.category,
+                    status: userTicket.status,
+                    paymentStatus: userTicket.paymentStatus
+                  };
+                }
+              }
+
+              return enhancedReport;
+            } catch (enhancementError) {
+              console.warn('Error enhancing report:', enhancementError);
+              return report; // Return original report if enhancement fails
+            }
+          });
+          
+        } catch (batchError) {
+          console.error('Error in batch processing:', batchError);
+          return organizationReports; // Return original reports if batch enhancement fails
+        }
+      })();
+      
+      console.log(`Found ${enhancedReports.length} reports for organization ${organizationId}`);
+      res.json(enhancedReports);
     } catch (error) {
       console.error('Error fetching all reports:', error);
       res.status(500).json({ message: "Failed to fetch reports" });
+    }
+  });
+
+  // Update report status endpoint
+  app.put("/api/reports/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const reportId = req.params.id;
+      const { status, reviewNotes } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      const validStatuses = ['pending', 'reviewed', 'closed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      // First, verify the report belongs to the user's organization
+      const existingReport = await mongoStorage.getReportById(reportId);
+      if (!existingReport) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      
+      // Check organization access
+      const userOrganizationId = req.user?.organizationId?.toString();
+      if (existingReport.organizationId?.toString() !== userOrganizationId) {
+        return res.status(403).json({ message: "Access denied: Report belongs to different organization" });
+      }
+      
+      const updates: any = { status };
+      if (reviewNotes) {
+        updates.reviewNotes = reviewNotes;
+      }
+      
+      console.log('Updating report with data:', { reportId, updates });
+      const updatedReport = await mongoStorage.updateEventReport(reportId, updates);
+      console.log('Update result:', updatedReport);
+      
+      if (!updatedReport) {
+        return res.status(500).json({ message: "Failed to update report" });
+      }
+      
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("Error updating report:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -620,8 +793,8 @@ export function registerMongoRoutes(app: Express) {
                 id: reg._id?.toString(),
                 eventId: reg.eventId?.toString(),
                 registrationType: reg.registrationType,
-                firstName: reg.firstName,
-                lastName: reg.lastName,
+                firstName: reg.firstName || '',
+                lastName: reg.lastName || '',
                 email: reg.email,
                 uniqueId: reg.uniqueId,
                 status: reg.status,
@@ -649,8 +822,13 @@ export function registerMongoRoutes(app: Express) {
         const registrations = await mongoStorage.getEventRegistrations();
         
         if (uniqueId) {
-          const foundRegistrations = registrations.filter(reg => reg.uniqueId === uniqueId);
-          for (const reg of foundRegistrations) {
+          // Use the comprehensive database search instead of in-memory filtering
+          const normalizedCode = String(uniqueId || '').trim().toUpperCase();
+          const foundRegistration = await mongoStorage.getEventRegistrationByAnyCode(normalizedCode);
+          
+          if (foundRegistration) {
+            const foundRegistrations = [foundRegistration];
+            for (const reg of foundRegistrations) {
             let eventId = reg.eventId;
             if (typeof eventId === 'object' && eventId?._id) {
               eventId = eventId._id.toString();
@@ -680,6 +858,7 @@ export function registerMongoRoutes(app: Express) {
                 status: event?.status
               }
             });
+            }
           }
         }
         
@@ -780,12 +959,10 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
-      // Generate unique identifiers  
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      let uniqueId = '';
-      for (let i = 0; i < 6; i++) {
-        uniqueId += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
+      // Generate unique identifiers - use nanoid for consistency with RegistrationService
+      const uniqueId = await generateValidationCode();
+      
+      console.log('Generated uniqueId for secured event (nanoid):', uniqueId);
       const qrCode = nanoid(16);
 
       // Determine initial status based on payment requirements
@@ -892,17 +1069,9 @@ export function registerMongoRoutes(app: Express) {
         }
       }
 
-      // Generate manual verification code - alphabetic for registration events, numeric for ticket events
-      let manualVerificationCode;
-      if (event.eventType === 'registration') {
-        // Generate 6-character alphabetic code for secured registration events
-        manualVerificationCode = Array.from({length: 6}, () => 
-          String.fromCharCode(65 + Math.floor(Math.random() * 26))
-        ).join('');
-      } else {
-        // Generate 6-digit numeric code for ticket-based events
-        manualVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      }
+      // Use uniqueId as the manual verification code for consistency
+      // This ensures the same code is stored in database and shown to user
+      const manualVerificationCode = uniqueId;
       
       // Store manual verification code at root level for validation lookup
       registrationData.manualVerificationCode = manualVerificationCode;
@@ -1003,6 +1172,28 @@ export function registerMongoRoutes(app: Express) {
         qrImageBase64: qrImageBase64.replace('data:image/png;base64,', '')
       });
 
+      // Send registration confirmation email
+      try {
+        const { EmailService } = await import('./services/email-service');
+        const emailService = new EmailService();
+        
+        const recipientEmail = registration.email;
+        await emailService.sendRegistrationConfirmationEmail(recipientEmail, {
+          participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
+          eventName: event.name,
+          eventDate: event.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD',
+          eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString() : 'TBD',
+          eventLocation: event.location || 'TBD',
+          registrationId: registration.uniqueId,
+          qrCode: qrImageBase64,
+          eventUrl: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/events/${eventId}/public`
+        });
+        
+        console.log(`✅ Registration confirmation email sent to ${recipientEmail}`);
+      } catch (emailError) {
+        console.error('❌ Failed to send registration confirmation email:', emailError);
+      }
+
       // Send success response
       res.status(201).json({
         success: true,
@@ -1010,10 +1201,12 @@ export function registerMongoRoutes(app: Express) {
         registration: {
           id: registration._id.toString(),
           uniqueId: registration.uniqueId,
+          manualVerificationCode: registration.manualVerificationCode,
           registrationType: registration.registrationType,
           firstName: registration.firstName,
           lastName: registration.lastName,
           email: registration.email,
+          auxiliaryBody: registration.auxiliaryBody,
           status: registration.status,
           paymentStatus: registration.paymentStatus,
           qrCode: registration.qrCode,
@@ -1061,10 +1254,22 @@ export function registerMongoRoutes(app: Express) {
           id: regObj._id.toString(),
           eventId: regObj.eventId?.toString(),
           registrationType: regObj.registrationType || 'member',
-          firstName: regObj.firstName,
-          lastName: regObj.lastName,
+          firstName: regObj.firstName || regObj.registrationData?.firstName || regObj.registrationData?.FirstName || '',
+          lastName: regObj.lastName || regObj.registrationData?.lastName || regObj.registrationData?.LastName || '',
           email: regObj.email,
-          auxiliaryBody: regObj.auxiliaryBody || regObj.registrationData?.auxiliaryBody || regObj.registrationData?.AuxiliaryBody || regObj.registrationData?.Gender || regObj.registrationData?.gender || regObj.registrationData?.Student || regObj.registrationData?.student || '',
+          auxiliaryBody: regObj.auxiliaryBody || 
+            regObj.registrationData?.auxiliaryBody || 
+            regObj.registrationData?.AuxiliaryBody || 
+            regObj.registrationData?.Gender || 
+            regObj.registrationData?.gender || 
+            (Array.isArray(regObj.registrationData?.Student) ? regObj.registrationData?.Student[0] : regObj.registrationData?.Student) ||
+            (Array.isArray(regObj.registrationData?.student) ? regObj.registrationData?.student[0] : regObj.registrationData?.student) ||
+            regObj.registrationData?.auxiliary_body || 
+            regObj.registrationData?.['Auxiliary Body'] || 
+            regObj.registrationData?.['auxiliary body'] || 
+            regObj.customData?.auxiliaryBody || 
+            regObj.guestAuxiliaryBody || 
+            regObj.member?.auxiliaryBody || 'N/A',
           status: regObj.status || 'registered',
           paymentStatus: regObj.paymentStatus || 'not_required',
           paymentAmount: regObj.paymentAmount,
@@ -1078,17 +1283,16 @@ export function registerMongoRoutes(app: Express) {
       });
 
       // Add logging to debug auxiliary body extraction
-      console.log('Sample registration auxiliary body extraction:');
-      if (formattedRegistrations.length > 0) {
-        const sampleReg = registrations[0];
-        const regObj = sampleReg.toObject();
-        console.log('Sample registration:', {
-          name: `${regObj.firstName} ${regObj.lastName}`,
-          directAuxiliaryBody: regObj.auxiliaryBody,
-          registrationDataKeys: Object.keys(regObj.registrationData || {}),
-          extractedAuxiliaryBody: regObj.auxiliaryBody || regObj.registrationData?.auxiliaryBody || regObj.registrationData?.AuxiliaryBody || regObj.registrationData?.Gender || regObj.registrationData?.gender || regObj.registrationData?.Student || regObj.registrationData?.student || ''
-        });
-      }
+      console.log(`DEBUG: Processing ${formattedRegistrations.length} registrations for auxiliary body data`);
+      formattedRegistrations.forEach((reg, index) => {
+        if (index < 3) { // Log first 3 registrations
+          console.log(`Registration ${index + 1}:`, {
+            name: `${reg.firstName} ${reg.lastName}`,
+            auxiliaryBody: reg.auxiliaryBody,
+            isNA: reg.auxiliaryBody === 'N/A'
+          });
+        }
+      });
 
       // Disable caching for registrations to always get fresh data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -1429,7 +1633,7 @@ export function registerMongoRoutes(app: Express) {
       const amountInKobo = Math.round(amountInNaira * 100);
       
       // Generate unique identifiers for registration
-      const uniqueId = `${registrationType.toUpperCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const uniqueId = await generateValidationCode();
       const qrCode = nanoid(16);
       const paymentReference = `REG_${Date.now()}_${nanoid(8)}`;
 
@@ -1956,6 +2160,7 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+
   // Test notification endpoint (for demonstration)
   app.post("/api/notifications/create-test", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -2008,17 +2213,127 @@ export function registerMongoRoutes(app: Express) {
   // Register organization
   app.post("/api/organizations/register", async (req: Request, res: Response) => {
     try {
+      // Map frontend field names to MongoDB schema field names
+      const {
+        organizationName,
+        contactEmail,
+        description,
+        contactPhone,
+        address,
+        website,
+        adminUsername,
+        adminEmail,
+        adminPassword,
+        adminFirstName,
+        adminLastName,
+        ...rest
+      } = req.body;
+
+      // Validate required fields
+      if (!organizationName) {
+        return res.status(400).json({ 
+          message: "Organization name is required" 
+        });
+      }
+
+      if (!contactEmail) {
+        return res.status(400).json({ 
+          message: "Contact email is required" 
+        });
+      }
+
+      // Validate admin user required fields
+      if (!adminUsername || !adminEmail || !adminPassword || !adminFirstName || !adminLastName) {
+        return res.status(400).json({ 
+          message: "Admin user details are required (username, email, password, first name, last name)" 
+        });
+      }
+
+      // Check if admin username already exists
+      const existingUser = await mongoStorage.getUserByUsername(adminUsername);
+      if (existingUser) {
+        return res.status(400).json({ 
+          message: "Admin username already exists" 
+        });
+      }
+
+      // Check if admin email already exists
+      const existingAdminUser = await mongoStorage.getUserByEmail(adminEmail);
+      if (existingAdminUser) {
+        return res.status(400).json({ 
+          message: "Admin email already exists" 
+        });
+      }
+
+      // Map organizationName to name for MongoDB schema
       const organizationData = {
-        ...req.body,
+        name: organizationName, // This is the key fix!
+        description,
+        contactEmail,
+        contactPhone,
+        address,
+        website,
         status: 'pending',
-        createdAt: new Date()
+        subscriptionPlan: 'basic',
+        subscriptionStatus: 'active',
+        maxEvents: 10,
+        maxMembers: 500,
+        isVerified: false,
+        ...rest
       };
 
       const organization = await mongoStorage.createOrganization(organizationData);
+
+      // Hash admin password and create admin user for the organization  
+      const bcrypt = (await import('bcrypt')).default;
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+      const adminUserData = {
+        username: adminUsername,
+        email: adminEmail,
+        password: hashedPassword,
+        firstName: adminFirstName,
+        lastName: adminLastName,
+        role: 'admin',
+        organizationId: organization._id.toString(),
+        status: 'pending', // Will be activated when organization is approved
+        twoFactorEnabled: false,
+        emailVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const adminUser = await mongoStorage.createUser(adminUserData);
+
+      // Send registration confirmation email
+      try {
+        const { EmailService } = await import('./services/email-service');
+        const emailService = new EmailService();
+        
+        await emailService.sendOrganizationRegistrationEmail(contactEmail, {
+          organizationName: organizationName,
+          contactPerson: `${adminFirstName} ${adminLastName}`.trim(),
+          contactEmail: contactEmail,
+          adminUsername: adminUsername
+        });
+        
+        console.log(`✅ Registration confirmation email sent to ${contactEmail}`);
+      } catch (emailError) {
+        console.error('❌ Failed to send registration confirmation email:', emailError);
+        // Don't fail the registration if email fails
+      }
       
       res.status(201).json({
         id: organization._id.toString(),
-        ...organization.toObject()
+        organization: organization.toObject(),
+        adminUser: {
+          id: adminUser._id.toString(),
+          username: adminUser.username,
+          email: adminUser.email,
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName
+        },
+        message: "Organization and admin user registered successfully. Registration confirmation email sent. Awaiting approval."
       });
     } catch (error) {
       console.error("Error registering organization:", error);
@@ -2046,10 +2361,15 @@ export function registerMongoRoutes(app: Express) {
   // Ticket Purchase API (MongoDB-based)
   app.post("/api/tickets/purchase", async (req: Request, res: Response) => {
     try {
-      const { eventId, ownerEmail, ownerPhone, ticketCategoryId, paymentMethod } = req.body;
+      const { eventId, ownerEmail, ownerPhone, ticketCategoryId, quantity = 1, paymentMethod } = req.body;
       
       if (!eventId || !ownerEmail || !ticketCategoryId || !paymentMethod) {
         return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Validate quantity
+      if (!quantity || quantity < 1 || quantity > 50) {
+        return res.status(400).json({ message: "Invalid quantity. Must be between 1 and 50" });
       }
 
       // Generate owner name from email if not provided (for privacy)
@@ -2088,48 +2408,60 @@ export function registerMongoRoutes(app: Express) {
         return res.status(400).json({ message: "This ticket category is no longer available" });
       }
 
-      // Generate ticket data
-      const ticketNumber = `TKT${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      
-      // Generate QR code data
-      const qrData = {
-        eventId,
-        ticketNumber,
-        ownerEmail,
-        issuedAt: new Date().toISOString()
-      };
+      // Calculate total amount for all tickets
+      const totalAmount = ticketCategory.price * quantity;
 
+      // Create multiple tickets if quantity > 1
+      const createdTickets = [];
       const QRCode = await import('qrcode');
-      const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData));
 
-      // Create ticket record
-      const ticketData = {
-        eventId: new mongoose.Types.ObjectId(eventId),
-        organizationId: new mongoose.Types.ObjectId(event.organizationId),
-        ownerEmail,
-        ownerPhone: ownerPhone || '',
-        ownerName,
-        ticketNumber,
-        category: ticketCategory.name,
-        price: ticketCategory.price,
-        currency: ticketCategory.currency,
-        status: "pending",
-        paymentStatus: paymentMethod === "manual" ? "pending" : "pending",
-        paymentMethod,
-        qrCode: qrCodeImage,
-        qrCodeImage: paymentMethod === "manual" ? qrCodeImage : undefined, // Provide QR image for manual payments immediately
-        transferHistory: []
-      };
+      for (let i = 0; i < quantity; i++) {
+        // Generate unique ticket data for each ticket
+        const ticketNumber = `TKT${await generateValidationCode()}`;
+        
+        // Generate QR code data for this specific ticket
+        const qrData = {
+          eventId,
+          ticketNumber,
+          ownerEmail,
+          ticketIndex: i + 1,
+          totalTickets: quantity,
+          issuedAt: new Date().toISOString()
+        };
 
-      const ticket = await mongoStorage.createTicket(ticketData);
+        const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData));
 
-      if (paymentMethod === "paystack" && ticketCategory.price > 0) {
+        // Create individual ticket record
+        const ticketData = {
+          eventId: new mongoose.Types.ObjectId(eventId),
+          organizationId: new mongoose.Types.ObjectId(event.organizationId),
+          ownerEmail,
+          ownerPhone: ownerPhone || '',
+          ownerName,
+          ticketNumber,
+          category: ticketCategory.name,
+          price: ticketCategory.price,
+          currency: ticketCategory.currency,
+          status: "pending",
+          paymentStatus: paymentMethod === "manual" ? "pending" : "pending",
+          paymentMethod,
+          qrCode: qrCodeImage,
+          qrCodeImage: paymentMethod === "manual" ? qrCodeImage : undefined, // Provide QR image for manual payments immediately
+          transferHistory: []
+        };
+
+        const ticket = await mongoStorage.createTicket(ticketData);
+        createdTickets.push(ticket);
+      }
+
+      // Handle payment for all tickets
+      if (paymentMethod === "paystack" && totalAmount > 0) {
         // Initialize Paystack payment
         const { initializePaystackPayment } = await import('./paystack');
         const { nanoid } = await import('nanoid');
         
         const reference = `TKT_${Date.now()}_${nanoid(8)}`;
-        const amount = ticketCategory.price * 100; // Convert to kobo
+        const amount = totalAmount * 100; // Convert total amount to kobo
 
         try {
           const paymentData = await initializePaystackPayment(
@@ -2137,43 +2469,56 @@ export function registerMongoRoutes(app: Express) {
             amount,
             reference,
             {
-              ticketId: ticket._id.toString(),
+              ticketIds: createdTickets.map(t => t._id.toString()),
               eventId,
               ticketCategoryId,
-              ticketNumber,
+              quantity,
+              totalAmount,
               ownerName,
               eventName: event.name,
-              type: 'ticket_purchase'
+              type: 'ticket_purchase_multiple'
             }
           );
 
           if (paymentData.status) {
-            // Update ticket with payment reference
-            await mongoStorage.updateTicket(ticket._id.toString(), {
-              paymentReference: reference
-            });
+            // Update all tickets with payment reference
+            for (const ticket of createdTickets) {
+              await mongoStorage.updateTicket(ticket._id.toString(), {
+                paymentReference: reference
+              });
+            }
 
             res.json({
-              ticketId: ticket._id.toString(),
+              ticketIds: createdTickets.map(t => t._id.toString()),
+              quantity,
+              totalAmount,
               paymentUrl: paymentData.data.authorization_url,
               reference,
             });
           } else {
-            // Delete ticket if payment initialization failed
-            await mongoStorage.deleteTicket(ticket._id.toString());
+            // Delete all tickets if payment initialization failed
+            for (const ticket of createdTickets) {
+              await mongoStorage.deleteTicket(ticket._id.toString());
+            }
             res.status(400).json({ message: "Payment initialization failed" });
           }
         } catch (paymentError) {
-          // Delete ticket if payment initialization failed
-          await mongoStorage.deleteTicket(ticket._id.toString());
+          // Delete all tickets if payment initialization failed
+          for (const ticket of createdTickets) {
+            await mongoStorage.deleteTicket(ticket._id.toString());
+          }
           console.error("Payment initialization error:", paymentError);
           res.status(500).json({ message: "Payment initialization failed" });
         }
       } else {
         // For manual payment or free tickets
         res.json({
-          ticketId: ticket._id.toString(),
-          message: paymentMethod === "manual" ? "Ticket reserved. Complete payment to activate." : "Free ticket created successfully.",
+          ticketIds: createdTickets.map(t => t._id.toString()),
+          quantity,
+          totalAmount,
+          message: paymentMethod === "manual" 
+            ? `${quantity} ticket(s) reserved. Complete payment to activate.` 
+            : `${quantity} free ticket(s) created successfully.`,
         });
       }
     } catch (error) {
@@ -2196,7 +2541,28 @@ export function registerMongoRoutes(app: Express) {
       const { verifyPaystackPayment } = await import('./paystack');
       const verificationData = await verifyPaystackPayment(paymentReference as string);
 
-      if (verificationData.status && verificationData.data.status === 'success') {
+      console.log('Payment verification result:', JSON.stringify(verificationData, null, 2));
+
+      // More robust verification check - handle different status formats
+      const isVerificationSuccessful = (
+        verificationData && 
+        (
+          // Standard Paystack response format
+          (verificationData.status === true && verificationData.data?.status === 'success') ||
+          // Alternative status formats
+          (verificationData.status === 'success') ||
+          (verificationData.success === true && verificationData.data?.status === 'success') ||
+          // Check if payment was actually successful based on amount and gateway response
+          (verificationData.data?.gateway_response === 'Successful' && verificationData.data?.amount > 0)
+        )
+      );
+
+      console.log('Verification successful?', isVerificationSuccessful);
+      console.log('Verification data status:', verificationData?.status);
+      console.log('Verification data.status:', verificationData?.data?.status);
+      console.log('Gateway response:', verificationData?.data?.gateway_response);
+
+      if (isVerificationSuccessful) {
         const metadata = verificationData.data.metadata;
         const amount = verificationData.data.amount / 100; // Convert from kobo
 
@@ -2249,13 +2615,169 @@ export function registerMongoRoutes(app: Express) {
                 updatedTicket.ownerName,
                 'ticket_purchase'
               );
+
+              // Send email confirmation to ticket purchaser
+              try {
+                const { EmailService } = await import('./services/email-service');
+                const emailService = new EmailService();
+                
+                await emailService.sendPaymentSuccessEmail(updatedTicket.ownerEmail, {
+                  participantName: updatedTicket.ownerName,
+                  eventName: event.name,
+                  eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
+                  eventLocation: event.location || 'TBD',
+                  amount: amount.toString(),
+                  currency: updatedTicket.currency,
+                  transactionId: paymentReference as string,
+                  paymentDate: new Date().toLocaleDateString()
+                });
+                
+                console.log(`✅ Payment confirmation email sent to ${updatedTicket.ownerEmail}`);
+              } catch (emailError) {
+                console.error('❌ Failed to send payment confirmation email:', emailError);
+              }
             }
 
             // Redirect to ticket success page with QR code
             const encodedQRCode = encodeURIComponent(qrImageBase64);
             return res.redirect(`/payment/success?type=ticket&ticketId=${ticketId}&ticketNumber=${encodeURIComponent(updatedTicket.ticketNumber)}&qrCode=${encodedQRCode}&eventName=${encodeURIComponent(event?.name || 'Event')}&ownerName=${encodeURIComponent(updatedTicket.ownerName)}`);
           }
-        } else if (metadata.type === 'event_registration' && metadata.registrationId) {
+        } else if (metadata.type === 'ticket_purchase_multiple') {
+          // Handle multiple ticket purchase payment
+          const ticketIds = metadata.ticketIds;
+          
+          if (!ticketIds || !Array.isArray(ticketIds)) {
+            return res.redirect("/payment/failed?error=invalid_ticket_data");
+          }
+
+          console.log(`Processing multiple ticket payment for ${ticketIds.length} tickets`);
+          
+          // Process each ticket
+          const updatedTickets = [];
+          let event = null;
+          
+          for (const ticketId of ticketIds) {
+            // Get the ticket
+            const ticket = await mongoStorage.getTicketById(ticketId);
+            if (!ticket) {
+              console.error(`Ticket not found: ${ticketId}`);
+              continue;
+            }
+
+            // Generate QR code for each ticket
+            const qrCodeData = JSON.stringify({
+              ticketId: ticket._id.toString(),
+              ticketNumber: ticket.ticketNumber,
+              eventId: ticket.eventId.toString(),
+              timestamp: Date.now()
+            });
+            
+            const QRCode = await import('qrcode');
+            const qrImageBase64 = await QRCode.toDataURL(qrCodeData, {
+              width: 200,
+              margin: 2,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              }
+            });
+
+            // Update ticket payment status
+            const updatedTicket = await mongoStorage.updateTicket(ticketId, {
+              paymentStatus: 'paid',
+              paymentReference: paymentReference as string,
+              status: 'paid',
+              qrCodeImage: qrImageBase64
+            });
+
+            if (updatedTicket) {
+              updatedTickets.push(updatedTicket);
+              
+              // Get event details (same for all tickets)
+              if (!event) {
+                event = await mongoStorage.getEvent(updatedTicket.eventId.toString());
+              }
+            }
+          }
+
+          if (updatedTickets.length > 0 && event) {
+            // Send payment notification to organization admin
+            await NotificationService.createPaymentNotification(
+              event.organizationId.toString(),
+              event._id.toString(),
+              amount,
+              'NGN',
+              metadata.ownerName || 'Customer',
+              'ticket_purchase_multiple'
+            );
+
+            // Send email confirmation to ticket purchaser with PDF attachments
+            try {
+              const { EmailService } = await import('./services/email-service');
+              const { pdfService } = await import('./services/pdf-service');
+              const emailService = new EmailService();
+              
+              // Get first ticket for email address
+              const ownerEmail = updatedTickets[0].ownerEmail;
+              
+              // Generate PDF attachments for each ticket
+              const ticketPDFs = [];
+              for (const ticket of updatedTickets) {
+                try {
+                  const ticketData = {
+                    eventName: event.name || 'Event',
+                    eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'Date TBD',
+                    eventTime: event.startDate ? event.startDate.toLocaleTimeString() : 'Time TBD',
+                    eventLocation: event.location || 'Location TBD',
+                    participantName: ticket.ownerName || 'Ticket Holder',
+                    registrationId: ticket.ticketNumber || 'N/A',
+                    qrCodeData: JSON.stringify({
+                      ticketId: ticket._id.toString(),
+                      ticketNumber: ticket.ticketNumber,
+                      eventId: ticket.eventId.toString(),
+                      ownerEmail: ticket.ownerEmail,
+                      timestamp: Date.now()
+                    }),
+                    ticketType: ticket.category || 'General',
+                    organizationName: event.organizationName || 'EventValidate'
+                  };
+                  
+                  const pdfBuffer = await pdfService.generateEventTicket(ticketData);
+                  ticketPDFs.push({
+                    filename: `ticket-${ticket.ticketNumber}.pdf`,
+                    content: pdfBuffer,
+                    contentType: 'application/pdf'
+                  });
+                } catch (pdfError) {
+                  console.error(`❌ Failed to generate PDF for ticket ${ticket.ticketNumber}:`, pdfError);
+                }
+              }
+              
+              await emailService.sendPaymentSuccessEmailWithAttachments(ownerEmail, {
+                participantName: metadata.ownerName || 'Customer',
+                eventName: event.name,
+                eventDate: event.startDate ? event.startDate.toLocaleDateString() : 'TBD',
+                eventLocation: event.location || 'TBD',
+                amount: amount.toString(),
+                currency: 'NGN',
+                transactionId: paymentReference as string,
+                paymentDate: new Date().toLocaleDateString(),
+                ticketCount: updatedTickets.length,
+                ticketNumbers: updatedTickets.map(t => t.ticketNumber).join(', ')
+              }, ticketPDFs);
+              
+              console.log(`✅ Payment confirmation email with ${ticketPDFs.length} ticket PDFs sent to ${ownerEmail}`);
+            } catch (emailError) {
+              console.error('❌ Failed to send payment confirmation email:', emailError);
+            }
+
+            // Redirect to success page with multiple ticket data
+            const ticketNumbers = updatedTickets.map(t => t.ticketNumber).join(',');
+            const firstTicketQR = updatedTickets[0].qrCodeImage;
+            
+            return res.redirect(`/payment/success?type=ticket_multiple&ticketCount=${updatedTickets.length}&ticketNumbers=${encodeURIComponent(ticketNumbers)}&qrCode=${encodeURIComponent(firstTicketQR)}&eventName=${encodeURIComponent(event?.name || 'Event')}&ownerName=${encodeURIComponent(metadata.ownerName || 'Customer')}&amount=${amount}&currency=NGN`);
+          }
+        } else if ((metadata.type === 'event_registration' || metadata.type === 'existing_registration_payment') && metadata.registrationId) {
           // Handle event registration payment
           const registrationId = metadata.registrationId;
           const eventId = metadata.eventId;
@@ -2294,28 +2816,39 @@ export function registerMongoRoutes(app: Express) {
             // Get event details for notification
             const event = await mongoStorage.getEvent(eventId);
             if (event) {
-              // Send registration notification
+              // Send registration notification to organization admin
               await NotificationService.createRegistrationNotification(
                 event.organizationId.toString(),
                 eventId,
                 registration._id!.toString(),
-                registration.firstName + ' ' + registration.lastName,
+                `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
                 registration.registrationType || 'member'
               );
+
+              // Send registration confirmation email to the user with QR code and event card
+              try {
+                const { EmailService } = await import('./services/email-service');
+                const emailService = new EmailService();
+                
+                await emailService.sendRegistrationConfirmationEmail(registration.email, {
+                  participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
+                  eventName: event.name,
+                  eventDate: event.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD',
+                  eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString() : 'TBD',
+                  eventLocation: event.location || 'TBD',
+                  registrationId: registration.uniqueId,
+                  qrCode: qrImageBase64,
+                  eventUrl: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/event-view/${eventId}`
+                });
+                
+                console.log(`✅ Registration confirmation email sent to ${registration.email}`);
+              } catch (emailError) {
+                console.error('❌ Failed to send registration confirmation email:', emailError);
+              }
             }
 
-            // Generate manual verification code - alphabetic for registration events, numeric for ticket events
-            let shortCode;
-            // Reuse the event variable that was already fetched above
-            if (event && event.eventType === 'registration') {
-              // Generate 6-character alphabetic code for secured registration events
-              shortCode = Array.from({length: 6}, () => 
-                String.fromCharCode(65 + Math.floor(Math.random() * 26))
-              ).join('');
-            } else {
-              // Generate 6-digit numeric code for ticket-based events
-              shortCode = Math.floor(100000 + Math.random() * 900000).toString();
-            }
+            // Generate manual verification code using consistent alphanumeric approach
+            const shortCode = await generateValidationCode();
             
             // Update registration with short verification code
             await mongoStorage.updateEventRegistration(registration._id.toString(), {
@@ -2338,7 +2871,7 @@ export function registerMongoRoutes(app: Express) {
           const registrationData = JSON.parse(metadata.registrationData || '{}');
           
           // Generate registration ID and QR code
-          const registrationId = `REG${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+          const registrationId = `REG${Date.now()}${await generateValidationCode()}`;
           
           const qrData = {
             eventId,
@@ -2501,8 +3034,8 @@ export function registerMongoRoutes(app: Express) {
         id: registration._id.toString(),
         registrationId: registration.registrationId,
         uniqueId: registration.uniqueId,
-        firstName: registration.firstName,
-        lastName: registration.lastName,
+        firstName: registration.firstName || '',
+        lastName: registration.lastName || '',
         email: registration.email,
         phone: registration.phone,
         status: registration.status,
@@ -2557,8 +3090,8 @@ export function registerMongoRoutes(app: Express) {
         id: registration._id.toString(),
         registrationId: registration.registrationId,
         uniqueId: registration.uniqueId,
-        firstName: registration.firstName,
-        lastName: registration.lastName,
+        firstName: registration.firstName || '',
+        lastName: registration.lastName || '',
         email: registration.email,
         phone: registration.phone,
         status: registration.status,
@@ -2613,6 +3146,21 @@ export function registerMongoRoutes(app: Express) {
       const event = await mongoStorage.getEvent(eventId);
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
+      }
+
+      // SECURITY: Check organization ownership - prevent cross-organization validation
+      if (req.user?.role !== 'super_admin') {
+        const userOrgId = req.user?.organizationId?.toString();
+        const eventOrgId = event.organizationId?.toString();
+        
+        if (!userOrgId || !eventOrgId || userOrgId !== eventOrgId) {
+          console.log(`[AUDIT] Access denied - User org ${userOrgId} attempted validation for event org ${eventOrgId}`);
+          return res.status(403).json({ 
+            success: false,
+            message: "Access denied. You can only validate events from your organization.",
+            validationStatus: "unauthorized"
+          });
+        }
       }
 
       let validationResult = {
@@ -2716,7 +3264,7 @@ export function registerMongoRoutes(app: Express) {
             details: {
               registrationId: registration._id!.toString(),
               status: registration.paymentStatus,
-              participantName: `${registration.firstName} ${registration.lastName}`,
+              participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
               eventName: event.name
             }
           });
@@ -2729,7 +3277,7 @@ export function registerMongoRoutes(app: Express) {
             message: "Registration has already been validated for entry",
             details: {
               registrationId: registration._id!.toString(),
-              participantName: `${registration.firstName} ${registration.lastName}`,
+              participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
               eventName: event.name,
               attendedAt: registration.updatedAt
             }
@@ -2749,7 +3297,7 @@ export function registerMongoRoutes(app: Express) {
           details: {
             type: 'registration',
             registrationId: registration._id!.toString(),
-            participantName: `${registration.firstName} ${registration.lastName}`,
+            participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
             email: registration.email,
             eventName: event.name,
             registrationType: registration.registrationType,
@@ -2871,7 +3419,7 @@ export function registerMongoRoutes(app: Express) {
 
       // Try to find as registration
       const registration = await mongoStorage.getEventRegistration(identifier);
-      if (registration && registration.eventId.toString() === eventId) {
+      if (registration && registration.eventId && registration.eventId.toString() === eventId) {
         if (event.paymentSettings?.requiresPayment && registration.paymentStatus !== 'paid' && registration.paymentStatus !== 'not_required') {
           return res.json({
             validationStatus: "invalid",
@@ -2886,20 +3434,28 @@ export function registerMongoRoutes(app: Express) {
           });
         }
 
-        await mongoStorage.updateEventRegistration(registration._id.toString(), {
+        // Safely handle ObjectId conversion
+        const validatedById = req.user?.id ? new mongoose.Types.ObjectId(req.user.id) : undefined;
+        
+        await mongoStorage.updateEventRegistration(registration._id ? registration._id.toString() : '', {
           status: 'online',
           attendedAt: new Date(),
-          validatedBy: new mongoose.Types.ObjectId(req.user!.id),
+          validatedBy: validatedById,
           validationMethod: 'manual_unique_id'
         });
+
+        // Safely get participant name
+        const participantName = `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 
+                               registration.registrationData?.fullName || 
+                               'Unknown Participant';
 
         return res.json({
           validationStatus: "valid",
           message: "Registration validated successfully",
           details: {
             type: 'registration',
-            participantName: `${registration.firstName} ${registration.lastName}` || registration.fullName || registration.FullName,
-            eventName: event.name,
+            participantName,
+            eventName: event.name || 'Unknown Event',
             validationMethod: 'manual_unique_id'
           }
         });
@@ -2951,6 +3507,16 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Debug endpoint to get full registration data
+  app.get("/api/debug/get-registration/:id", async (req: Request, res: Response) => {
+    try {
+      const registration = await mongoStorage.getEventRegistration(req.params.id);
+      res.json(registration);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Manual ID validation endpoint - matches frontend call to /api/validate-id
   app.post("/api/validate-id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -2962,12 +3528,107 @@ export function registerMongoRoutes(app: Express) {
 
       console.log(`Validating unique ID: ${uniqueId}`);
 
-      // Find registration by unique ID
+      // First, try to find as a ticket (ticket numbers usually start with TKT)
+      let ticket = null;
+      try {
+        ticket = await mongoStorage.getTicketByNumber(uniqueId);
+      } catch (error) {
+        console.log('Not a ticket number, trying registration...');
+      }
+
+      if (ticket) {
+        console.log(`Found ticket: ${ticket.ticketNumber}`);
+        
+        // Validate ticket using same logic as QR scanner
+        if (ticket.status === "used") {
+          return res.status(200).json({ 
+            success: false,
+            message: "Ticket has already been used for entry",
+            validationStatus: "already_used",
+            details: {
+              type: 'ticket',
+              ticketNumber: ticket.ticketNumber,
+              ownerName: ticket.ownerName,
+              usedAt: ticket.validatedAt
+            }
+          });
+        }
+
+        if (ticket.paymentStatus !== "paid" && ticket.paymentStatus !== "completed") {
+          return res.status(200).json({ 
+            success: false,
+            message: "Payment required. Please complete payment before entry.",
+            validationStatus: "payment_required",
+            details: {
+              type: 'ticket',
+              ticketNumber: ticket.ticketNumber,
+              paymentStatus: ticket.paymentStatus
+            }
+          });
+        }
+
+        // Get event details BEFORE marking ticket as used
+        const eventId = ticket.eventId ? ticket.eventId.toString() : '';
+        const event = await mongoStorage.getEvent(eventId);
+
+        // SECURITY: Fail fast if event doesn't exist - prevent ticket state changes without valid event
+        if (!event) {
+          console.log(`[SECURITY] Event ${eventId} not found for ticket ${ticket.ticketNumber} - access denied`);
+          return res.status(404).json({ 
+            success: false,
+            message: "Event not found",
+            validationStatus: "invalid"
+          });
+        }
+
+        // SECURITY: Check organization ownership - prevent cross-organization validation
+        if (req.user?.role !== 'super_admin') {
+          const userOrgId = req.user?.organizationId?.toString();
+          const eventOrgId = event.organizationId?.toString();
+          
+          if (!userOrgId || !eventOrgId || userOrgId !== eventOrgId) {
+            console.log(`[AUDIT] Access denied - User org ${userOrgId} attempted to validate ticket for event org ${eventOrgId}`);
+            return res.status(403).json({ 
+              success: false,
+              message: "Access denied. You can only validate events from your organization.",
+              validationStatus: "unauthorized"
+            });
+          }
+        }
+
+        // Mark ticket as used only after organization check passes
+        const ticketId = ticket._id ? ticket._id.toString() : '';
+        const validatedById = req.user?.id || '';
+        
+        await mongoStorage.updateTicket(ticketId, {
+          status: 'used',
+          validatedAt: new Date(),
+          validatedBy: validatedById
+        });
+
+        return res.json({
+          success: true,
+          message: "Ticket validated successfully",
+          validationStatus: "valid",
+          details: {
+            type: 'ticket',
+            ticketNumber: ticket.ticketNumber,
+            ownerName: ticket.ownerName,
+            ownerEmail: ticket.ownerEmail,
+            category: ticket.category,
+            price: ticket.price,
+            currency: ticket.currency,
+            eventName: event?.name || 'Unknown Event'
+          }
+        });
+      }
+
+      // If not a ticket, try to find as registration by unique ID
       const registration = await mongoStorage.getEventRegistrationByUniqueId(uniqueId);
       if (!registration) {
-        console.log(`Registration not found for ID: ${uniqueId}`);
+        console.log(`Neither ticket nor registration found for ID: ${uniqueId}`);
         return res.status(404).json({ 
-          message: "Registration not found",
+          message: "Ticket or registration not found",
           validationStatus: "invalid" 
         });
       }
@@ -2989,10 +3650,24 @@ export function registerMongoRoutes(app: Express) {
         });
       }
 
+      // SECURITY: Check organization ownership - prevent cross-organization validation
+      if (req.user?.role !== 'super_admin') {
+        const userOrgId = req.user?.organizationId?.toString();
+        const eventOrgId = event.organizationId?.toString();
+        
+        if (!userOrgId || !eventOrgId || userOrgId !== eventOrgId) {
+          return res.status(403).json({ 
+            success: false,
+            message: "Access denied. You can only validate events from your organization.",
+            validationStatus: "unauthorized"
+          });
+        }
+      }
+
       console.log(`Found registration:`, {
         id: registration._id?.toString(),
-        firstName: registration.firstName,
-        lastName: registration.lastName,
+        firstName: registration.firstName || '',
+        lastName: registration.lastName || '',
         status: registration.status,
         eventId: registration.eventId
       });
@@ -3185,7 +3860,7 @@ export function registerMongoRoutes(app: Express) {
           message: "Registration validated successfully",
           details: {
             type: 'registration',
-            participantName: `${registration.firstName} ${registration.lastName}`,
+            participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
             email: registration.email,
             eventName: event.name,
             registrationType: registration.registrationType,
@@ -3242,6 +3917,21 @@ export function registerMongoRoutes(app: Express) {
           message: "Event not found",
           validationStatus: "invalid" 
         });
+      }
+
+      // SECURITY: Check organization ownership - prevent cross-organization validation
+      if (req.user?.role !== 'super_admin') {
+        const userOrgId = req.user?.organizationId?.toString();
+        const eventOrgId = event.organizationId?.toString();
+        
+        if (!userOrgId || !eventOrgId || userOrgId !== eventOrgId) {
+          console.log(`[AUDIT] Access denied - User org ${userOrgId} attempted validation for event org ${eventOrgId}`);
+          return res.status(403).json({ 
+            success: false,
+            message: "Access denied. You can only validate events from your organization.",
+            validationStatus: "unauthorized"
+          });
+        }
       }
 
       // Find member registrations for this event
@@ -3327,7 +4017,7 @@ export function registerMongoRoutes(app: Express) {
           message: `${memberName} validated successfully (face recognition not available)`,
           details: {
             type: 'registration',
-            participantName: `${registration.firstName} ${registration.lastName}`,
+            participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
             email: registration.email,
             eventName: event.name,
             confidence: 0,
@@ -3360,7 +4050,7 @@ export function registerMongoRoutes(app: Express) {
           message: bestMatch.result.message,
           details: {
             type: 'registration',
-            participantName: `${registration.firstName} ${registration.lastName}`,
+            participantName: `${registration.firstName || ''} ${registration.lastName || ''}`.trim() || 'Member',
             email: registration.email,
             eventName: event.name,
             confidence: Math.round(bestMatch.result.confidence * 100),
@@ -3665,6 +4355,116 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // Validate ticket endpoint (for QR scanner)
+  app.post("/api/tickets/:ticketId/validate", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { ticketId } = req.params;
+      console.log('🎫 Ticket validation request for:', ticketId);
+      
+      if (!ticketId) {
+        return res.status(400).json({ 
+          message: "Ticket ID is required",
+          success: false
+        });
+      }
+
+      // Try to get ticket by ID first (only if it looks like an ObjectId)
+      let ticket = null;
+      
+      // Check if ticketId looks like a valid ObjectId (24 hex characters)
+      if (/^[a-f\d]{24}$/i.test(ticketId)) {
+        try {
+          ticket = await mongoStorage.getTicketById(ticketId);
+          console.log('🎫 Found ticket by ID:', ticket?._id);
+        } catch (error) {
+          console.log('Failed to get ticket by ID, trying by number...');
+        }
+      }
+      
+      // If not found by ID, try by ticket number
+      if (!ticket) {
+        ticket = await mongoStorage.getTicketByNumber(ticketId);
+        console.log('🎫 Found ticket by number:', ticket?.ticketNumber);
+      }
+      
+      if (!ticket) {
+        console.log('❌ Ticket not found');
+        return res.status(404).json({ 
+          message: "Ticket not found",
+          success: false
+        });
+      }
+
+      console.log('🎫 Found ticket:', {
+        id: ticket._id,
+        ticketNumber: ticket.ticketNumber,
+        status: ticket.status,
+        paymentStatus: ticket.paymentStatus,
+        validatedAt: ticket.validatedAt
+      });
+
+      // Check if ticket has already been used
+      if (ticket.status === "used") {
+        return res.status(400).json({ 
+          message: "Ticket already used",
+          validatedAt: ticket.validatedAt,
+          success: false
+        });
+      }
+
+      // Check payment status
+      if (ticket.paymentStatus !== "paid") {
+        return res.status(400).json({ 
+          message: "Payment required. Please complete payment before entry.",
+          paymentStatus: ticket.paymentStatus,
+          success: false,
+          requiresPayment: true
+        });
+      }
+
+      // Check if ticket is active
+      if (ticket.status === "expired" || ticket.status === "cancelled") {
+        return res.status(400).json({ 
+          message: `Ticket is ${ticket.status}`,
+          success: false 
+        });
+      }
+
+      // Mark ticket as used - validation successful
+      const updatedTicket = await mongoStorage.updateTicket(ticket._id.toString(), {
+        status: 'used',
+        validatedAt: new Date(),
+        validatedBy: req.user!.id
+      });
+
+      const responseData = { 
+        message: "Ticket validated successfully",
+        success: true,
+        ticket: {
+          id: ticket._id?.toString(),
+          ticketNumber: ticket.ticketNumber,
+          ownerName: ticket.ownerName,
+          ownerEmail: ticket.ownerEmail,
+          ownerPhone: ticket.ownerPhone,
+          category: ticket.category,
+          price: ticket.price,
+          currency: ticket.currency,
+          status: "used",
+          validatedAt: new Date(),
+        },
+      };
+      
+      console.log('🎫 Ticket validation success response:', JSON.stringify(responseData, null, 2));
+      res.json(responseData);
+    } catch (error) {
+      console.error("Validate ticket error:", error);
+      res.status(500).json({ 
+        message: "Failed to validate ticket",
+        success: false 
+      });
+    }
+  });
+
   // Get tickets for a specific event (for admin dashboard)
   app.get("/api/events/:eventId/tickets", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -3847,6 +4647,112 @@ export function registerMongoRoutes(app: Express) {
     } catch (error) {
       console.error("Error fixing face recognition settings:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Export attendance data as CSV
+  app.get("/api/events/:eventId/export-attendance", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const eventId = req.params.eventId;
+      const organizationId = req.user?.organizationId;
+
+      // Get event details
+      const event = await mongoStorage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Check if user has access to this event
+      if (req.user?.role !== 'super_admin' && event.organizationId?.toString() !== organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get registrations for this event
+      const registrations = await mongoStorage.getEventRegistrations(eventId);
+      
+      // Get attendance records
+      const attendance = await mongoStorage.getAttendance(eventId);
+      
+      // Create CSV data
+      const csvHeaders = [
+        'Registration ID',
+        'First Name',
+        'Last Name', 
+        'Email',
+        'Registration Type',
+        'Auxiliary Body',
+        'Status',
+        'Payment Status',
+        'Payment Amount',
+        'Attended',
+        'Attendance Time',
+        'Registered At',
+        'Unique ID',
+        'Phone Number'
+      ];
+
+      const csvRows = registrations.map(reg => {
+        const attendanceRecord = attendance.find(att => 
+          att.registrationId === reg._id?.toString() || 
+          att.uniqueId === reg.uniqueId
+        );
+        
+        // Extract data from registration object
+        const regObj = reg.toObject ? reg.toObject() : reg;
+        
+        return [
+          regObj._id?.toString() || '',
+          regObj.firstName || regObj.registrationData?.firstName || regObj.registrationData?.FirstName || '',
+          regObj.lastName || regObj.registrationData?.lastName || regObj.registrationData?.LastName || '',
+          regObj.email || regObj.registrationData?.email || regObj.registrationData?.Email || '',
+          regObj.registrationType || 'member',
+          regObj.auxiliaryBody || 
+            regObj.registrationData?.auxiliaryBody || 
+            regObj.registrationData?.AuxiliaryBody || 
+            regObj.registrationData?.Gender || 
+            regObj.registrationData?.gender || 
+            regObj.customData?.auxiliaryBody || 
+            regObj.guestAuxiliaryBody || 
+            regObj.member?.auxiliaryBody || 'N/A',
+          regObj.status || 'registered',
+          regObj.paymentStatus || 'not_required',
+          regObj.paymentAmount || '',
+          attendanceRecord ? 'Yes' : 'No',
+          attendanceRecord?.scannedAt ? new Date(attendanceRecord.scannedAt).toISOString() : '',
+          regObj.createdAt ? new Date(regObj.createdAt).toISOString() : '',
+          regObj.uniqueId || '',
+          regObj.phoneNumber || regObj.registrationData?.phoneNumber || regObj.registrationData?.PhoneNumber || ''
+        ];
+      });
+
+      // Convert to CSV format
+      const csvContent = [csvHeaders, ...csvRows]
+        .map(row => row.map(field => {
+          // Escape fields that contain commas or quotes
+          const fieldStr = String(field || '');
+          if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n')) {
+            return `"${fieldStr.replace(/"/g, '""')}"`;
+          }
+          return fieldStr;
+        }).join(','))
+        .join('\n');
+
+      // Set CSV headers
+      const eventName = event.name.replace(/[^a-zA-Z0-9]/g, '_');
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `${eventName}_attendance_${timestamp}.csv`;
+      
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Add BOM for proper Excel encoding
+      res.write('\uFEFF');
+      res.end(csvContent);
+      
+    } catch (error) {
+      console.error("Error exporting attendance:", error);
+      res.status(500).json({ message: "Failed to export attendance data" });
     }
   });
 }

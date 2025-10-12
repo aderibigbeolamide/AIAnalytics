@@ -1,7 +1,7 @@
-# EventValidate - Pitch Deck
+# Eventify AI - Pitch Deck
 
 ## Slide 1: Title Slide
-**EventValidate**
+**Eventify AI**
 *AI-Powered Member Validation & Event Management Platform*
 
 **Transforming Event Operations with Smart Technology**
@@ -28,7 +28,7 @@
 ---
 
 ## Slide 3: Solution Overview
-### EventValidate: The Complete Solution
+### Eventify AI: The Complete Solution
 
 **Core Platform Features:**
 - **AI-Powered Validation**: Facial recognition + QR code + manual verification
@@ -67,7 +67,7 @@
 ---
 
 ## Slide 5: Product Demo
-### See EventValidate in Action
+### See Eventify AI in Action
 
 **Live Platform Highlights:**
 1. **Instant Registration**: 30-second member sign-up process
@@ -162,7 +162,7 @@
 ### Clear Competitive Advantage
 
 **Direct Competitors:**
-| Feature | EventValidate | Eventbrite | Whova | Cvent |
+| Feature | Eventify AI | Eventbrite | Whova | Cvent |
 |---------|---------------|------------|-------|-------|
 | AI Validation | ✅ | ❌ | ❌ | ❌ |
 | Multi-Tenant | ✅ | ❌ | ❌ | ✅ |
@@ -496,7 +496,7 @@
 2. **Due Diligence Process** (14 days)
 3. **Legal Documentation** (7 days)
 4. **Funds Transfer & Equity Assignment** (3 days)
-5. **Welcome to the EventValidate Family!** 🎉
+5. **Welcome to the Eventify AI Family!** 🎉
 
 **COMMISSION REVENUE GUARANTEE:**
 *We guarantee 5% minimum commission rate for first 3 years. If market rates drop below 5%, we maintain rate through cost optimization, not investor dilution.*

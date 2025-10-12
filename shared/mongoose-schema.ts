@@ -49,7 +49,7 @@ export interface IOrganization extends Document {
   approvedBy?: mongoose.Types.ObjectId;
   approvedAt?: Date;
   rejectionReason?: string;
-  subscriptionPlan: string; // basic, premium, enterprise
+  subscriptionPlan: string; // basic, pro
   subscriptionStatus: string; // active, suspended, cancelled
   maxEvents: number;
   maxMembers: number;
@@ -85,7 +85,7 @@ const OrganizationSchema = new Schema<IOrganization>({
   subscriptionPlan: { type: String, required: true, default: "basic" },
   subscriptionStatus: { type: String, required: true, default: "active" },
   maxEvents: { type: Number, required: true, default: 10 },
-  maxMembers: { type: Number, required: true, default: 500 },
+  maxMembers: { type: Number, required: true, default: 5000 },
   settings: { type: Schema.Types.Mixed, default: {} },
   paystackSubaccountCode: { type: String },
   bankName: { type: String },
@@ -334,13 +334,18 @@ export interface IEventRegistration extends Document {
   phoneNumber?: string;
   auxiliaryBody?: string;
   qrCode: string;
+  qrImage?: string; // Base64 QR code image with data URL
+  qrCodeImage?: string; // Base64 QR code image with data URL
+  qrImageBase64?: string; // Base64 QR code image without data URL prefix
   uniqueId: string;
+  manualVerificationCode?: string; // Short alphanumeric verification code
   status: string; // pending, confirmed, attended, cancelled
   registrationData: any;
   paymentStatus: string; // pending, paid, failed
   paymentReference?: string;
   paymentMethod?: string;
   paymentAmount?: number;
+  paymentVerifiedAt?: Date; // When payment was verified
   ticketNumber?: string;
   validatedAt?: Date;
   validatedBy?: mongoose.Types.ObjectId;
@@ -360,13 +365,18 @@ const EventRegistrationSchema = new Schema<IEventRegistration>({
   phoneNumber: { type: String },
   auxiliaryBody: { type: String },
   qrCode: { type: String, required: true },
+  qrImage: { type: String }, // Base64 QR code image with data URL
+  qrCodeImage: { type: String }, // Base64 QR code image with data URL
+  qrImageBase64: { type: String }, // Base64 QR code image without data URL prefix
   uniqueId: { type: String, required: true, unique: true },
+  manualVerificationCode: { type: String }, // Short alphanumeric verification code
   status: { type: String, required: true, default: "pending" },
   registrationData: { type: Schema.Types.Mixed, required: true },
   paymentStatus: { type: String, required: true, default: "pending" },
   paymentReference: { type: String },
   paymentMethod: { type: String },
   paymentAmount: { type: Number },
+  paymentVerifiedAt: { type: Date }, // When payment was verified
   ticketNumber: { type: String },
   validatedAt: { type: Date },
   validatedBy: { type: Schema.Types.ObjectId, ref: 'User' },

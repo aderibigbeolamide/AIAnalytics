@@ -49,6 +49,7 @@ export function getQRUrl(registrationId: number, req?: Request): string {
 
 /**
  * Generate a unique 6-character ID using only letters (A-Z)
+ * @deprecated Use generateValidationCode() instead for consistency
  */
 export function generateUniqueId(): string {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -57,4 +58,17 @@ export function generateUniqueId(): string {
     result += letters.charAt(Math.floor(Math.random() * letters.length));
   }
   return result;
+}
+
+/**
+ * Generate a consistent validation code for registrations
+ * This is the ONLY function that should be used for validation codes
+ * Uses only alphanumeric characters (A-Z, 0-9) - no special characters
+ */
+export async function generateValidationCode(): Promise<string> {
+  // Use nanoid with custom alphabet containing only letters and numbers
+  const { customAlphabet } = await import('nanoid');
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const nanoid = customAlphabet(alphabet, 6);
+  return nanoid();
 }

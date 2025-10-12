@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Ticket, Calendar, MapPin, Users, DollarSign, Clock } from "lucide-react";
+import { Ticket, Calendar, MapPin, Users, DollarSign, Clock, MessageSquare } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { CountdownTimer } from "@/components/countdown-timer";
 
@@ -18,6 +18,7 @@ const ticketPurchaseSchema = z.object({
   ownerEmail: z.string().email("Valid email is required"),
   ownerPhone: z.string().optional(),
   ticketCategoryId: z.string().min(1, "Please select a ticket category"),
+  quantity: z.number().min(1, "Quantity must be at least 1").max(50, "Maximum 50 tickets per purchase"),
   paymentMethod: z.enum(["paystack", "manual"]),
 });
 
@@ -29,6 +30,7 @@ export default function BuyTicket() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [paymentInitialized, setPaymentInitialized] = useState(false);
+  const [totalAmount, setTotalAmount] = useState(0);
 
   const form = useForm<TicketPurchaseData>({
     resolver: zodResolver(ticketPurchaseSchema),
@@ -36,6 +38,7 @@ export default function BuyTicket() {
       ownerEmail: "",
       ownerPhone: "",
       ticketCategoryId: "",
+      quantity: 1,
       paymentMethod: "paystack",
     },
   });
@@ -52,6 +55,22 @@ export default function BuyTicket() {
     },
     enabled: !!eventId,
   });
+
+  // Watch form values to calculate total
+  const watchedValues = form.watch(["ticketCategoryId", "quantity"]);
+  
+  // Calculate total amount when category or quantity changes
+  useEffect(() => {
+    const [categoryId, quantity] = watchedValues;
+    if (categoryId && quantity && event?.ticketCategories) {
+      const selectedCategory = event.ticketCategories.find((cat: any) => cat.id === categoryId);
+      if (selectedCategory) {
+        setTotalAmount(selectedCategory.price * quantity);
+      }
+    } else {
+      setTotalAmount(0);
+    }
+  }, [watchedValues, event?.ticketCategories]);
 
   const purchaseTicketMutation = useMutation({
     mutationFn: async (data: TicketPurchaseData) => {
@@ -313,6 +332,46 @@ export default function BuyTicket() {
 
                   <FormField
                     control={form.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantity</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="50"
+                            placeholder="Enter number of tickets"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Total Amount Display */}
+                  {totalAmount > 0 && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-blue-900">Total Amount:</span>
+                        <span className="text-xl font-bold text-blue-900">
+                          {event.ticketCategories?.find((cat: any) => cat.id === form.watch("ticketCategoryId"))?.currency || 'NGN'} {totalAmount.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-sm text-blue-700 mt-1">
+                        {form.watch("quantity")} ticket(s) × {
+                          event.ticketCategories?.find((cat: any) => cat.id === form.watch("ticketCategoryId"))?.currency || 'NGN'
+                        } {
+                          event.ticketCategories?.find((cat: any) => cat.id === form.watch("ticketCategoryId"))?.price?.toLocaleString() || 0
+                        } each
+                      </div>
+                    </div>
+                  )}
+
+                  <FormField
+                    control={form.control}
                     name="paymentMethod"
                     render={({ field }) => (
                       <FormItem>
@@ -335,6 +394,7 @@ export default function BuyTicket() {
                     type="submit" 
                     className="w-full" 
                     disabled={purchaseTicketMutation.isPending || paymentInitialized}
+                    data-testid="button-purchase-ticket"
                   >
                     {purchaseTicketMutation.isPending ? (
                       <LoadingSpinner />
@@ -352,6 +412,28 @@ export default function BuyTicket() {
             </CardContent>
           </Card>
         )}
+
+        {/* Feedback Section - Always visible */}
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold mb-2">Have Feedback About This Event?</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                We'd love to hear your thoughts, suggestions, or any issues you've encountered.
+              </p>
+              <Link href={`/report/${eventId}`}>
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  data-testid="button-event-feedback"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Provide Event Feedback
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

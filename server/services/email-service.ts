@@ -17,7 +17,7 @@ export interface EmailConfig {
 export interface OrganizationApprovalEmailData {
   organizationName: string;
   contactPerson: string;
-  status: 'approved' | 'rejected';
+  status: 'approved' | 'rejected' | 'suspended';
   reason?: string;
   loginUrl?: string;
   adminEmail?: string;
@@ -49,6 +49,8 @@ export interface PaymentSuccessEmailData {
   paymentDate: string;
   eventDate: string;
   eventLocation: string;
+  ticketCount?: number;
+  ticketNumbers?: string;
 }
 
 export interface RegistrationConfirmationEmailData {
@@ -63,7 +65,7 @@ export interface RegistrationConfirmationEmailData {
   eventUrl?: string;
 }
 
-class EmailService {
+export class EmailService {
   private transporter!: nodemailer.Transporter;
   private isConfigured: boolean = false;
 
@@ -117,7 +119,7 @@ class EmailService {
 
     try {
       const mailOptions = {
-        from: `"EventValidate" <${process.env.SMTP_USER}>`,
+        from: `"Eventify AI" <${process.env.SMTP_USER}>`,
         to: Array.isArray(config.to) ? config.to.join(', ') : config.to,
         subject: config.subject,
         text: config.text,
@@ -137,10 +139,10 @@ class EmailService {
   // Organization approval/rejection email
   async sendOrganizationApprovalEmail(email: string, data: OrganizationApprovalEmailData): Promise<boolean> {
     const subject = data.status === 'approved' 
-      ? `Welcome to EventValidate - ${data.organizationName} Approved!`
+      ? `Welcome to Eventify AI - ${data.organizationName} Approved!`
       : data.status === 'suspended'
       ? `Account Suspended - ${data.organizationName}`
-      : `EventValidate Application Update - ${data.organizationName}`;
+      : `Eventify AI Application Update - ${data.organizationName}`;
 
     const html = data.status === 'approved' ? `
       <!DOCTYPE html>
@@ -159,11 +161,11 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Welcome to EventValidate!</h1>
+              <h1>🎉 Welcome to Eventify AI!</h1>
             </div>
             <div class="content">
               <h2>Congratulations ${data.contactPerson}!</h2>
-              <p>We're excited to inform you that <strong>${data.organizationName}</strong> has been approved for EventValidate!</p>
+              <p>We're excited to inform you that <strong>${data.organizationName}</strong> has been approved for Eventify AI!</p>
               
               <p><strong>What's next?</strong></p>
               <ul>
@@ -181,7 +183,7 @@ class EmailService {
               <p>Welcome to the future of event management!</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>Transform your events with AI-powered validation</p>
             </div>
           </div>
@@ -207,7 +209,7 @@ class EmailService {
             </div>
             <div class="content">
               <h2>Hello ${data.contactPerson},</h2>
-              <p>We are writing to inform you that your organization, <strong>${data.organizationName}</strong>, has been suspended on EventValidate.</p>
+              <p>We are writing to inform you that your organization, <strong>${data.organizationName}</strong>, has been suspended on Eventify AI.</p>
               
               ${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ''}
               
@@ -225,7 +227,7 @@ class EmailService {
               <p>We apologize for any inconvenience this may cause.</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -246,11 +248,11 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>EventValidate Application Update</h1>
+              <h1>Eventify AI Application Update</h1>
             </div>
             <div class="content">
               <h2>Hello ${data.contactPerson},</h2>
-              <p>Thank you for your interest in EventValidate.</p>
+              <p>Thank you for your interest in Eventify AI.</p>
               
               <p>After careful review, we're unable to approve <strong>${data.organizationName}</strong> at this time.</p>
               
@@ -258,10 +260,10 @@ class EmailService {
               
               <p>If you have questions or would like to reapply in the future, please contact us at ${data.adminEmail || 'admin@eventifyai.com'}.</p>
               
-              <p>Thank you for considering EventValidate.</p>
+              <p>Thank you for considering Eventify AI.</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -335,7 +337,7 @@ class EmailService {
               <p>We look forward to seeing you at the event!</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>You're receiving this because you're registered for this event.</p>
             </div>
           </div>
@@ -403,7 +405,7 @@ class EmailService {
               <p>If you have any questions about your payment or the event, please don't hesitate to contact us.</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>Keep this email for your records</p>
             </div>
           </div>
@@ -508,7 +510,7 @@ class EmailService {
               <p>Looking forward to seeing you at the event!</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>You're receiving this confirmation for your event registration</p>
             </div>
           </div>
@@ -570,10 +572,10 @@ class EmailService {
               
               <p><strong>Questions?</strong> Our support team is here to help! Contact us at admin@eventifyai.com</p>
               
-              <p>Thank you for choosing EventValidate!</p>
+              <p>Thank you for choosing Eventify AI!</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>Transform your events with AI-powered validation</p>
             </div>
           </div>
@@ -632,7 +634,7 @@ class EmailService {
               <p>Need help? Contact our support team at admin@eventifyai.com</p>
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
               <p>Secure email verification for organization registration</p>
             </div>
           </div>
@@ -665,13 +667,13 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>EventValidate Notification</h1>
+              <h1>Eventify AI Notification</h1>
             </div>
             <div class="content">
               ${message.replace(/\n/g, '<br>')}
             </div>
             <div class="footer">
-              <p>&copy; 2025 EventValidate. All rights reserved.</p>
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -682,6 +684,93 @@ class EmailService {
       to: email,
       subject,
       html: emailContent
+    });
+  }
+
+  // Payment success email with PDF attachments for multiple tickets
+  async sendPaymentSuccessEmailWithAttachments(email: string, data: PaymentSuccessEmailData, attachments: Array<{filename: string, content: Buffer, contentType: string}>): Promise<boolean> {
+    const subject = `Payment Confirmed - ${data.eventName} ${data.ticketCount ? `(${data.ticketCount} Tickets)` : 'Ticket'}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4F46E5; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
+            .success-badge { background: #10B981; color: white; padding: 10px 20px; border-radius: 20px; display: inline-block; margin: 20px 0; }
+            .ticket-info { background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
+            .highlight { color: #4F46E5; font-weight: bold; }
+            .attachment-note { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Payment Successful!</h1>
+            </div>
+            <div class="content">
+              <div class="success-badge">✅ Payment Confirmed</div>
+              
+              <h2>Hi ${data.participantName}!</h2>
+              <p>Great news! Your payment has been successfully processed and your ${data.ticketCount ? `${data.ticketCount} tickets have` : 'ticket has'} been confirmed.</p>
+              
+              <div class="ticket-info">
+                <h3>🎫 ${data.ticketCount ? 'Tickets' : 'Ticket'} Details</h3>
+                <p><strong>Event:</strong> ${data.eventName}</p>
+                <p><strong>Date:</strong> ${data.eventDate}</p>
+                <p><strong>Location:</strong> ${data.eventLocation}</p>
+                ${data.ticketCount ? `<p><strong>Number of Tickets:</strong> ${data.ticketCount}</p>` : ''}
+                ${data.ticketNumbers ? `<p><strong>Ticket Numbers:</strong> ${data.ticketNumbers}</p>` : ''}
+                <p><strong>Amount Paid:</strong> <span class="highlight">${data.currency} ${data.amount}</span></p>
+                <p><strong>Transaction ID:</strong> ${data.transactionId}</p>
+                <p><strong>Payment Date:</strong> ${data.paymentDate}</p>
+              </div>
+              
+              <div class="attachment-note">
+                <h4>📎 Your Ticket${data.ticketCount && data.ticketCount > 1 ? 's' : ''} ${data.ticketCount && data.ticketCount > 1 ? 'are' : 'is'} Attached!</h4>
+                <p>We've attached ${data.ticketCount ? `all ${data.ticketCount} of your tickets` : 'your ticket'} as PDF files to this email. Each ticket includes:</p>
+                <ul>
+                  <li>✅ Your unique QR code for entry</li>
+                  <li>📅 Complete event details</li>
+                  <li>🎫 Individual ticket numbers</li>
+                  <li>🔒 Security features for validation</li>
+                </ul>
+                <p><strong>Please save these tickets and bring them (digital or printed) to the event!</strong></p>
+              </div>
+
+              <h3>🎯 What's Next?</h3>
+              <ul>
+                <li>📱 Save your ticket PDFs to your phone or print them</li>
+                <li>🆔 Bring a valid ID that matches your ticket details</li>
+                <li>⏰ Arrive 15-20 minutes early for smooth check-in</li>
+                <li>📱 Present your QR code for quick entry</li>
+              </ul>
+
+              <p><strong>Important:</strong> Each ticket has a unique QR code. Make sure to bring ${data.ticketCount && data.ticketCount > 1 ? 'all tickets' : 'your ticket'} for entry validation.</p>
+              
+              <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
+              
+              <p>Thank you for choosing Eventify AI!</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2025 Eventify AI. All rights reserved.</p>
+              <p>For support: admin@eventifyai.com</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject,
+      html,
+      attachments
     });
   }
 }
