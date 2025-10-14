@@ -280,6 +280,13 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                   </DropdownMenuItem>
                   {user?.role === 'admin' && (
                     <DropdownMenuItem asChild>
+                      <Link href="/bank-account-setup">
+                        <span className="w-full cursor-pointer" data-testid="menu-bank-account">Bank Account</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {user?.role === 'admin' && (
+                    <DropdownMenuItem asChild>
                       <Link href="/organization-profile">
                         <span className="w-full cursor-pointer" data-testid="menu-organization-profile">Organization Profile</span>
                       </Link>
