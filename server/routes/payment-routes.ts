@@ -146,6 +146,32 @@ export function registerPaymentRoutes(app: Express) {
         });
       }
 
+      // Check payment timeout (20 minutes = 1200000 milliseconds)
+      const PAYMENT_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
+      
+      if (registration.paymentCreatedAt) {
+        const paymentAge = Date.now() - new Date(registration.paymentCreatedAt).getTime();
+        
+        if (paymentAge > PAYMENT_TIMEOUT_MS) {
+          console.log(`Payment expired - Age: ${Math.floor(paymentAge / 1000 / 60)} minutes`);
+          return res.status(400).json({
+            status: 'failed',
+            message: "Payment session expired. Please initialize a new payment.",
+            error: 'PAYMENT_TIMEOUT',
+            details: {
+              paymentCreatedAt: registration.paymentCreatedAt,
+              timeoutMinutes: 20,
+              elapsedMinutes: Math.floor(paymentAge / 1000 / 60)
+            }
+          });
+        }
+        
+        console.log(`Payment is within timeout - Age: ${Math.floor(paymentAge / 1000 / 60)} minutes`);
+      } else {
+        // Backwards compatibility: Allow verification if no paymentCreatedAt exists
+        console.log('No paymentCreatedAt found - allowing verification for backwards compatibility');
+      }
+
       // Update registration with payment info
       await mongoStorage.updateEventRegistration(metadata.registrationId, {
         paymentStatus: 'paid',
@@ -231,6 +257,32 @@ export function registerPaymentRoutes(app: Express) {
         return res.status(404).json({ message: "Registration or event not found" });
       }
 
+      // Check payment timeout (20 minutes = 1200000 milliseconds)
+      const PAYMENT_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
+      
+      if (registration.paymentCreatedAt) {
+        const paymentAge = Date.now() - new Date(registration.paymentCreatedAt).getTime();
+        
+        if (paymentAge > PAYMENT_TIMEOUT_MS) {
+          console.log(`Payment expired - Age: ${Math.floor(paymentAge / 1000 / 60)} minutes`);
+          return res.status(400).json({
+            success: false,
+            message: "Payment session expired. Please initialize a new payment.",
+            error: 'PAYMENT_TIMEOUT',
+            details: {
+              paymentCreatedAt: registration.paymentCreatedAt,
+              timeoutMinutes: 20,
+              elapsedMinutes: Math.floor(paymentAge / 1000 / 60)
+            }
+          });
+        }
+        
+        console.log(`Payment is within timeout - Age: ${Math.floor(paymentAge / 1000 / 60)} minutes`);
+      } else {
+        // Backwards compatibility: Allow verification if no paymentCreatedAt exists
+        console.log('No paymentCreatedAt found - allowing verification for backwards compatibility');
+      }
+
       // Update registration with payment info
       await mongoStorage.updateEventRegistration(registrationId!, {
         paymentStatus: 'paid',
@@ -299,6 +351,136 @@ export function registerPaymentRoutes(app: Express) {
     } catch (error) {
       console.error("Webhook processing error:", error);
       res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
+  // Verify ticket payment by reference (POST route)
+  app.post("/api/payment/verify-ticket", async (req: Request, res: Response) => {
+    try {
+      const { reference } = req.body;
+      
+      if (!reference) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Payment reference is required" 
+        });
+      }
+      
+      console.log(`Verifying ticket payment for reference: ${reference}`);
+      
+      // Import Paystack verification function
+      const { verifyPaystackPayment } = await import('../paystack');
+      
+      // Actually verify with Paystack API
+      const paystackResponse = await verifyPaystackPayment(reference);
+      console.log(`Paystack verification response:`, JSON.stringify(paystackResponse, null, 2));
+      
+      // Check verification success
+      const isVerificationSuccessful = (
+        paystackResponse && 
+        (
+          (paystackResponse.status === true && paystackResponse.data?.status === 'success') ||
+          (paystackResponse.data?.gateway_response === 'Successful' && paystackResponse.data?.amount > 0)
+        )
+      );
+
+      if (!isVerificationSuccessful) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Payment verification failed",
+          details: paystackResponse.message || "Payment was not successful"
+        });
+      }
+      
+      // Get ticket details from metadata
+      const metadata = paystackResponse.data.metadata;
+      console.log(`Ticket payment metadata:`, JSON.stringify(metadata, null, 2));
+      
+      if (!metadata || !metadata.ticketId) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid payment metadata"
+        });
+      }
+      
+      // Get ticket
+      const ticket = await mongoStorage.getTicketById(metadata.ticketId);
+      
+      if (!ticket) {
+        return res.status(404).json({ 
+          success: false,
+          message: "Ticket not found" 
+        });
+      }
+
+      // Check payment timeout (20 minutes = 1200000 milliseconds)
+      const PAYMENT_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
+      
+      if (ticket.paymentCreatedAt) {
+        const paymentAge = Date.now() - new Date(ticket.paymentCreatedAt).getTime();
+        
+        if (paymentAge > PAYMENT_TIMEOUT_MS) {
+          console.log(`Ticket payment expired - Age: ${Math.floor(paymentAge / 1000 / 60)} minutes`);
+          return res.status(400).json({
+            success: false,
+            message: "Payment session expired. Please initialize a new payment.",
+            error: 'PAYMENT_TIMEOUT',
+            details: {
+              paymentCreatedAt: ticket.paymentCreatedAt,
+              timeoutMinutes: 20,
+              elapsedMinutes: Math.floor(paymentAge / 1000 / 60)
+            }
+          });
+        }
+        
+        console.log(`Ticket payment is within timeout - Age: ${Math.floor(paymentAge / 1000 / 60)} minutes`);
+      } else {
+        // Backwards compatibility: Allow verification if no paymentCreatedAt exists
+        console.log('No paymentCreatedAt found on ticket - allowing verification for backwards compatibility');
+      }
+
+      // Update ticket with payment info
+      await mongoStorage.updateTicket(metadata.ticketId, {
+        paymentStatus: 'paid',
+        paymentReference: reference,
+        status: 'paid'
+      });
+
+      // Get event details for notification
+      const event = await mongoStorage.getEventById(ticket.eventId.toString());
+      if (event) {
+        // Send payment notification to organization admin
+        const { NotificationService } = await import('../notification-service');
+        await NotificationService.createPaymentNotification(
+          event.organizationId.toString(),
+          event._id.toString(),
+          paystackResponse.data.amount / 100,
+          paystackResponse.data.currency,
+          ticket.ownerName,
+          'ticket_purchase'
+        );
+      }
+
+      res.json({
+        success: true,
+        message: "Ticket payment verified successfully",
+        data: {
+          payment: {
+            reference,
+            amount: (paystackResponse.data.amount / 100).toString(),
+            currency: paystackResponse.data.currency,
+            verifiedAt: new Date()
+          },
+          ticket,
+          event
+        }
+      });
+    } catch (error: any) {
+      console.error("Error verifying ticket payment:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Internal server error" 
+      });
     }
   });
 

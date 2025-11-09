@@ -1551,11 +1551,12 @@ export function registerMongoRoutes(app: Express) {
         );
 
         if (paymentResponse.status) {
-          // Update registration with payment reference
+          // Update registration with payment reference and timestamp
           await mongoStorage.updateEventRegistration(registrationId, {
             paymentReference,
             paymentAmount: amountInNaira,
-            paymentCurrency: 'NGN'
+            paymentCurrency: 'NGN',
+            paymentCreatedAt: new Date() // Store payment initialization timestamp for timeout tracking
           });
 
           res.json({
@@ -1765,9 +1766,10 @@ export function registerMongoRoutes(app: Express) {
       );
 
       if (paymentResponse.status) {
-        // Update registration with payment reference
+        // Update registration with payment reference and timestamp
         await mongoStorage.updateEventRegistration(registration._id.toString(), {
-          paymentReference: paymentReference
+          paymentReference: paymentReference,
+          paymentCreatedAt: new Date() // Store payment initialization timestamp for timeout tracking
         });
         
         res.json({
@@ -1799,7 +1801,235 @@ export function registerMongoRoutes(app: Express) {
     }
   });
 
+  // New dedicated endpoint: Initialize payment for existing registration
+  app.post("/api/payment/initialize-registration", async (req: Request, res: Response) => {
+    try {
+      const { registrationId, amount, email } = req.body;
 
+      // Validate required fields
+      if (!registrationId || !email) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Registration ID and email are required" 
+        });
+      }
+
+      // Get registration details
+      const registration = await mongoStorage.getEventRegistration(registrationId);
+      if (!registration) {
+        return res.status(404).json({ 
+          success: false,
+          message: "Registration not found" 
+        });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEvent(registration.eventId);
+      if (!event) {
+        return res.status(404).json({ 
+          success: false,
+          message: "Event not found" 
+        });
+      }
+
+      // Validate payment is required
+      if (!event.paymentSettings?.requiresPayment) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Payment not required for this event" 
+        });
+      }
+
+      // Get payment amount
+      const amountInNaira = amount || parseFloat(event.paymentSettings.amount?.toString() || '5000');
+      const amountInKobo = Math.round(amountInNaira * 100);
+      
+      // Generate payment reference
+      const paymentReference = `REG_${Date.now()}_${nanoid(8)}`;
+
+      // Prepare metadata for Paystack
+      const metadata = {
+        registrationId: registration._id.toString(),
+        eventId: event._id.toString(),
+        registrationType: registration.registrationType,
+        type: 'registration_payment',
+        eventName: event.name,
+        userEmail: email,
+        firstName: registration.firstName,
+        lastName: registration.lastName,
+        custom_fields: [
+          {
+            display_name: "Event",
+            variable_name: "event_name",
+            value: event.name
+          },
+          {
+            display_name: "Registration Type", 
+            variable_name: "registration_type",
+            value: registration.registrationType
+          }
+        ]
+      };
+
+      // Import paystack module
+      const { initializePaystackPayment } = await import('./paystack');
+
+      // Initialize payment with Paystack
+      const paymentResponse = await initializePaystackPayment(
+        email,
+        amountInKobo,
+        paymentReference,
+        metadata,
+        undefined, // subaccountCode
+        undefined, // splitConfig
+        undefined  // platformFeePercentage
+      );
+
+      if (paymentResponse.status) {
+        // Update registration with payment reference and timestamp
+        await mongoStorage.updateEventRegistration(registrationId, {
+          paymentReference,
+          paymentAmount: amountInNaira,
+          paymentCurrency: 'NGN',
+          paymentCreatedAt: new Date() // Store payment initialization timestamp for timeout tracking
+        });
+
+        res.json({
+          success: true,
+          data: {
+            authorization_url: paymentResponse.data.authorization_url,
+            access_code: paymentResponse.data.access_code,
+            reference: paymentReference
+          },
+          registrationId: registration._id.toString(),
+          message: "Payment initialized successfully"
+        });
+      } else {
+        console.error("Paystack initialization failed:", paymentResponse);
+        res.status(400).json({
+          success: false,
+          message: paymentResponse.message || "Payment initialization failed"
+        });
+      }
+    } catch (error) {
+      console.error("Registration payment initialization error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Payment initialization failed: " + (error instanceof Error ? error.message : 'Unknown error')
+      });
+    }
+  });
+
+  // New dedicated endpoint: Initialize payment for ticket purchase
+  app.post("/api/payment/initialize-ticket", async (req: Request, res: Response) => {
+    try {
+      const { ticketId, amount, email } = req.body;
+
+      // Validate required fields
+      if (!ticketId || !email) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Ticket ID and email are required" 
+        });
+      }
+
+      // Get ticket details
+      const ticket = await mongoStorage.getTicketById(ticketId);
+      if (!ticket) {
+        return res.status(404).json({ 
+          success: false,
+          message: "Ticket not found" 
+        });
+      }
+
+      // Get event details
+      const event = await mongoStorage.getEventById(ticket.eventId.toString());
+      if (!event) {
+        return res.status(404).json({ 
+          success: false,
+          message: "Event not found" 
+        });
+      }
+
+      // Check if ticket is already paid
+      if (ticket.paymentStatus === 'paid') {
+        return res.status(400).json({ 
+          success: false,
+          message: "Ticket is already paid" 
+        });
+      }
+
+      // Get payment amount
+      const amountInNaira = amount || ticket.price;
+      const amountInKobo = Math.round(amountInNaira * 100);
+      
+      // Generate payment reference
+      const paymentReference = `TKT_${Date.now()}_${nanoid(8)}`;
+
+      // Get organization to check for subaccount
+      const organization = await mongoStorage.getOrganization(event.organizationId.toString());
+      
+      // Get current platform fee from settings
+      const platformSettings = await mongoStorage.getPlatformSettings();
+      const platformFeeRate = platformSettings.platformFee || 2;
+
+      // Prepare metadata for Paystack
+      const metadata = {
+        ticketId: ticket._id.toString(),
+        eventId: event._id.toString(),
+        eventName: event.name,
+        ticketNumber: ticket.ticketNumber,
+        type: 'ticket_payment',
+        ownerEmail: email,
+        ownerName: ticket.ownerName
+      };
+
+      // Import paystack module
+      const { initializePaystackPayment } = await import('./paystack');
+
+      // Initialize payment with Paystack
+      const paymentResponse = await initializePaystackPayment(
+        email,
+        amountInKobo,
+        paymentReference,
+        metadata,
+        organization?.paystackSubaccountCode || undefined,
+        undefined, // splitConfig
+        platformFeeRate
+      );
+
+      if (paymentResponse.status) {
+        // Update ticket with payment reference and timestamp
+        await mongoStorage.updateTicket(ticketId, {
+          paymentReference,
+          paymentCreatedAt: new Date() // Store payment initialization timestamp for timeout tracking
+        });
+
+        res.json({
+          success: true,
+          data: {
+            authorization_url: paymentResponse.data.authorization_url,
+            access_code: paymentResponse.data.access_code,
+            reference: paymentReference
+          },
+          ticketId: ticket._id.toString(),
+          message: "Payment initialized successfully"
+        });
+      } else {
+        console.error("Paystack initialization failed:", paymentResponse);
+        res.status(400).json({
+          success: false,
+          message: paymentResponse.message || "Payment initialization failed"
+        });
+      }
+    } catch (error) {
+      console.error("Ticket payment initialization error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Payment initialization failed: " + (error instanceof Error ? error.message : 'Unknown error')
+      });
+    }
+  });
 
   // Payment verification route commented out - now handled in payment-routes.ts
   /*
@@ -1954,9 +2184,10 @@ export function registerMongoRoutes(app: Express) {
       );
 
       if (paymentData.status) {
-        // Update ticket with payment reference
+        // Update ticket with payment reference and timestamp
         await mongoStorage.updateTicket(ticket._id.toString(), {
-          paymentReference: reference
+          paymentReference: reference,
+          paymentCreatedAt: new Date() // Store payment initialization timestamp for timeout tracking
         });
 
         res.json({
