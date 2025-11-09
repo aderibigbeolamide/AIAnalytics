@@ -345,6 +345,7 @@ export interface IEventRegistration extends Document {
   paymentReference?: string;
   paymentMethod?: string;
   paymentAmount?: number;
+  paymentCreatedAt?: Date; // When payment was initialized (for timeout tracking)
   paymentVerifiedAt?: Date; // When payment was verified
   ticketNumber?: string;
   validatedAt?: Date;
@@ -376,6 +377,7 @@ const EventRegistrationSchema = new Schema<IEventRegistration>({
   paymentReference: { type: String },
   paymentMethod: { type: String },
   paymentAmount: { type: Number },
+  paymentCreatedAt: { type: Date }, // When payment was initialized (for timeout tracking)
   paymentVerifiedAt: { type: Date }, // When payment was verified
   ticketNumber: { type: String },
   validatedAt: { type: Date },
@@ -442,6 +444,7 @@ export interface ITicket extends Document {
   paymentStatus: string; // pending, paid, failed, refunded
   paymentReference?: string;
   paymentMethod?: string;
+  paymentCreatedAt?: Date; // When payment was initialized (for timeout tracking)
   qrCode: string;
   qrCodeImage?: string; // Base64 encoded QR code image
   validatedAt?: Date;
@@ -470,6 +473,7 @@ const TicketSchema = new Schema<ITicket>({
   paymentStatus: { type: String, required: true, default: "pending" },
   paymentReference: { type: String },
   paymentMethod: { type: String },
+  paymentCreatedAt: { type: Date }, // When payment was initialized (for timeout tracking)
   qrCode: { type: String, required: true },
   qrCodeImage: { type: String }, // Base64 encoded QR code image
   validatedAt: { type: Date },
