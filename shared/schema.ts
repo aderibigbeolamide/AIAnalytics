@@ -202,6 +202,7 @@ export const eventRegistrations = pgTable("event_registrations", {
   paymentStatus: text("payment_status").default("pending"), // pending, paid, verified, rejected
   paymentMethod: text("payment_method"), // paystack, manual_receipt
   paystackReference: text("paystack_reference"), // Paystack transaction reference
+  paymentCreatedAt: timestamp("payment_created_at"), // When payment was initialized
   paymentVerifiedAt: timestamp("payment_verified_at"),
   paymentVerifiedBy: integer("payment_verified_by").references(() => users.id),
   
@@ -433,6 +434,7 @@ export const tickets = pgTable("tickets", {
   paymentMethod: text("payment_method"), // paystack, manual, transfer
   paymentReference: text("payment_reference"),
   paymentAmount: text("payment_amount"),
+  paymentCreatedAt: timestamp("payment_created_at"), // When payment was initialized
   
   // Ticket Status
   status: text("status").notNull().default("active"), // active, used, expired, cancelled, transferred
