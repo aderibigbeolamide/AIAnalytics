@@ -20,7 +20,8 @@ import {
   LogOut, 
   User,
   Menu,
-  ScanLine
+  ScanLine,
+  CreditCard
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -230,6 +231,15 @@ export const Navbar: React.FC = () => {
                     <Link href={ROUTES.ORGANIZATION_PROFILE} className="w-full">
                       <User className="mr-2 h-4 w-4" />
                       <span>Organization Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
+                {user.role === 'admin' && user.organization && (
+                  <DropdownMenuItem asChild>
+                    <Link href={ROUTES.BANK_ACCOUNT_SETUP} className="w-full">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      <span>Bank Account</span>
                     </Link>
                   </DropdownMenuItem>
                 )}
