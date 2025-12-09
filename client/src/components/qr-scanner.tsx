@@ -131,7 +131,7 @@ export function QRScanner({ onClose }: QRScannerProps) {
         };
       }
       
-      return { ...result, validationType: 'registration' };
+      return { ...result, validationType: 'registration', validationStatus: 'valid' };
     },
     onSuccess: (data) => {
       console.log('QR validation response:', data);
