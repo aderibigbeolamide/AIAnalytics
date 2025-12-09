@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import { MemberForm } from "@/components/member-form";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { getAuthHeaders } from "@/lib/auth";
-import { UserPlus, Edit, QrCode, Users, Filter, Trash2 } from "lucide-react";
+import { UserPlus, Edit, QrCode, Users, Filter, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -22,6 +22,8 @@ export default function Members() {
   const [eventFilter, setEventFilter] = useState("all");
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const queryClient = useQueryClient();
 
   const deleteMemberMutation = useMutation({
@@ -101,6 +103,17 @@ export default function Members() {
 
   // Display either general members or event registrations based on filter
   const displayItems = eventFilter === "all" ? members : eventRegistrations;
+
+  const totalPages = Math.ceil(displayItems.length / itemsPerPage);
+  const effectiveCurrentPage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (effectiveCurrentPage - 1) * itemsPerPage;
+  const paginatedItems = displayItems.slice(startIndex, startIndex + itemsPerPage);
+  
+  useEffect(() => {
+    if (currentPage !== effectiveCurrentPage && effectiveCurrentPage > 0) {
+      setCurrentPage(effectiveCurrentPage);
+    }
+  }, [currentPage, effectiveCurrentPage]);
 
   const getAuxiliaryBodyBadge = (auxiliaryBody: string) => {
     // Generate consistent colors based on auxiliary body name
@@ -201,7 +214,7 @@ export default function Members() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center">
                 <Users className="h-5 w-5 mr-2" />
-                {eventFilter === "all" ? "All Members" : `${events.find(e => e.id === eventFilter)?.name || "Event"} Registrations`}
+                {eventFilter === "all" ? "All Members" : `${events.find((e: any) => e.id === eventFilter)?.name || "Event"} Registrations`}
               </CardTitle>
               <Dialog open={isMemberModalOpen} onOpenChange={setIsMemberModalOpen}>
                 <DialogTrigger asChild>
@@ -235,15 +248,15 @@ export default function Members() {
                   <Input
                     placeholder="Search members..."
                     value={memberSearch}
-                    onChange={(e) => setMemberSearch(e.target.value)}
+                    onChange={(e) => { setMemberSearch(e.target.value); setCurrentPage(1); }}
                   />
                 </div>
                 <AuxiliaryBodyFilter 
                   value={memberFilter} 
-                  onValueChange={setMemberFilter} 
+                  onValueChange={(value) => { setMemberFilter(value); setCurrentPage(1); }} 
                 />
                 <div className="w-[200px]">
-                  <Select value={eventFilter} onValueChange={setEventFilter}>
+                  <Select value={eventFilter} onValueChange={(value) => { setEventFilter(value); setCurrentPage(1); }}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select event to view registrations" />
                     </SelectTrigger>
@@ -272,7 +285,7 @@ export default function Members() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {displayItems.map((item: any) => {
+                  {paginatedItems.map((item: any) => {
                     // Handle both member and registration display
                     const displayName = eventFilter === "all" ? 
                       `${item.firstName} ${item.lastName}` : 
@@ -384,6 +397,33 @@ export default function Members() {
                       "No registrations found for this event."
                     }
                   </p>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t mt-4">
+                  <div className="text-sm text-gray-500">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, displayItems.length)} of {displayItems.length} {eventFilter === "all" ? "members" : "registrations"} (Page {effectiveCurrentPage} of {totalPages})
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                      disabled={effectiveCurrentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Previous
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                      disabled={effectiveCurrentPage === totalPages}
+                    >
+                      Next <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
