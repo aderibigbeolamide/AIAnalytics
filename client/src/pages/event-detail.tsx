@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar, MapPin, Users, QrCode, User, Share, Copy, FileText, Camera, Upload, Eye, Trash2, Ticket } from "lucide-react";
+import { Calendar, MapPin, Users, QrCode, User, Share, Copy, FileText, Camera, Upload, Eye, Trash2, Ticket, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthStore, getAuthHeaders } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +29,13 @@ export default function EventDetail() {
   const [showPaymentReceipt, setShowPaymentReceipt] = useState(false);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string>("");
   const [selectedReceiptUser, setSelectedReceiptUser] = useState<string>("");
+
+  const [registrationSearch, setRegistrationSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { data: event, isLoading } = useQuery<any>({
     queryKey: ["/api/events", id],
@@ -329,7 +337,38 @@ export default function EventDetail() {
       )}
 
       {/* Traditional Registration Events */}
-      {event?.eventType !== "ticket" && registrations && registrations.length > 0 && (
+      {event?.eventType !== "ticket" && registrations && registrations.length > 0 && (() => {
+        const getRegName = (reg: any) => {
+          return reg.firstName && reg.lastName ? `${reg.firstName} ${reg.lastName}` : 
+                 reg.guestName || reg.guest_name || 
+                 (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Guest");
+        };
+        const getRegEmail = (reg: any) => reg.email || reg.guestEmail || "";
+        const getRegType = (reg: any) => reg.registrationType || reg.registration_type || "member";
+        const getPaymentStatus = (reg: any) => {
+          if (reg.paymentReceiptUrl) return "paid";
+          if (reg.paymentStatus === 'completed' || reg.paymentStatus === 'paid') return "paid";
+          if (reg.paymentStatus === 'not_required') return "not_required";
+          if (reg.paymentStatus === 'pending') return "pending";
+          return "none";
+        };
+
+        const filteredRegistrations = registrations.filter((reg: any) => {
+          const name = getRegName(reg).toLowerCase();
+          const email = getRegEmail(reg).toLowerCase();
+          const searchLower = registrationSearch.toLowerCase();
+          const matchesSearch = name.includes(searchLower) || email.includes(searchLower);
+          const matchesType = typeFilter === "all" || getRegType(reg) === typeFilter;
+          const matchesStatus = statusFilter === "all" || reg.status === statusFilter;
+          const matchesPayment = paymentFilter === "all" || getPaymentStatus(reg) === paymentFilter;
+          return matchesSearch && matchesType && matchesStatus && matchesPayment;
+        });
+
+        const totalPages = Math.ceil(filteredRegistrations.length / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedRegistrations = filteredRegistrations.slice(startIndex, startIndex + itemsPerPage);
+
+        return (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -338,120 +377,197 @@ export default function EventDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2 font-medium">Name</th>
-                    <th className="text-left p-2 font-medium">Type</th>
-                    <th className="text-left p-2 font-medium">Auxiliary Body</th>
-                    <th className="text-left p-2 font-medium">Status</th>
-                    <th className="text-left p-2 font-medium">Payment</th>
-                    {user?.role === "admin" && <th className="text-left p-2 font-medium">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {registrations.map((reg: any) => (
-                    <tr key={reg.id} className="border-b">
-                      <td className="p-2">
-                        <span className="font-medium">
-                          {reg.firstName && reg.lastName ? `${reg.firstName} ${reg.lastName}` : 
-                           reg.guestName || reg.guest_name || 
-                           (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Guest")}
-                        </span>
-                        {(reg.email || reg.guestEmail) && (
-                          <div className="text-sm text-muted-foreground">{reg.email || reg.guestEmail}</div>
-                        )}
-                      </td>
-                      <td className="p-2">
-                        <Badge variant="outline">
-                          {reg.registrationType || reg.registration_type || "member"}
-                        </Badge>
-                      </td>
-                      <td className="p-2">
-                        {(reg.auxiliaryBody && reg.auxiliaryBody !== 'N/A') || 
-                         (reg.guestAuxiliaryBody && reg.guestAuxiliaryBody !== 'N/A') || 
-                         (reg.guest_auxiliary_body && reg.guest_auxiliary_body !== 'N/A') ? (
-                          <Badge variant="secondary">
-                            {reg.auxiliaryBody || reg.guestAuxiliaryBody || reg.guest_auxiliary_body}
-                          </Badge>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="p-2">
-                        <Badge variant={reg.status === "attended" ? "default" : "secondary"}>
-                          {reg.status}
-                        </Badge>
-                      </td>
-                      <td className="p-2">
-                        {reg.paymentReceiptUrl ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-green-600">
-                              ${reg.paymentAmount || 'N/A'}
-                            </span>
+            <div className="space-y-4">
+              <div className="flex flex-col lg:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search by name or email..."
+                    value={registrationSearch}
+                    onChange={(e) => { setRegistrationSearch(e.target.value); setCurrentPage(1); }}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}>
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="member">Member</SelectItem>
+                      <SelectItem value="guest">Guest</SelectItem>
+                      <SelectItem value="invitee">Invitee</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+                    <SelectTrigger className="w-[130px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="registered">Registered</SelectItem>
+                      <SelectItem value="attended">Attended</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="online">Online</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={paymentFilter} onValueChange={(v) => { setPaymentFilter(v); setCurrentPage(1); }}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Payment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Payment</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="not_required">Not Required</SelectItem>
+                      <SelectItem value="none">No Payment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {filteredRegistrations.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No registrations found matching your filters.
+                </div>
+              ) : (
+                <>
+                  <div className="text-sm text-gray-500">
+                    Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredRegistrations.length)} of {filteredRegistrations.length} registrations
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2 font-medium">Name</th>
+                          <th className="text-left p-2 font-medium">Type</th>
+                          <th className="text-left p-2 font-medium">Auxiliary Body</th>
+                          <th className="text-left p-2 font-medium">Status</th>
+                          <th className="text-left p-2 font-medium">Payment</th>
+                          {user?.role === "admin" && <th className="text-left p-2 font-medium">Actions</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedRegistrations.map((reg: any) => (
+                          <tr key={reg.id} className="border-b">
+                            <td className="p-2">
+                              <span className="font-medium">{getRegName(reg)}</span>
+                              {getRegEmail(reg) && (
+                                <div className="text-sm text-muted-foreground">{getRegEmail(reg)}</div>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              <Badge variant="outline">{getRegType(reg)}</Badge>
+                            </td>
+                            <td className="p-2">
+                              {(reg.auxiliaryBody && reg.auxiliaryBody !== 'N/A') || 
+                               (reg.guestAuxiliaryBody && reg.guestAuxiliaryBody !== 'N/A') || 
+                               (reg.guest_auxiliary_body && reg.guest_auxiliary_body !== 'N/A') ? (
+                                <Badge variant="secondary">
+                                  {reg.auxiliaryBody || reg.guestAuxiliaryBody || reg.guest_auxiliary_body}
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              <Badge variant={reg.status === "attended" ? "default" : "secondary"}>
+                                {reg.status}
+                              </Badge>
+                            </td>
+                            <td className="p-2">
+                              {reg.paymentReceiptUrl ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-green-600">
+                                    ${reg.paymentAmount || 'N/A'}
+                                  </span>
+                                  {user?.role === "admin" && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setSelectedReceiptUrl(reg.paymentReceiptUrl);
+                                        setSelectedReceiptUser(getRegName(reg));
+                                        setShowPaymentReceipt(true);
+                                      }}
+                                    >
+                                      <Eye className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ) : reg.paymentStatus === 'completed' || reg.paymentStatus === 'paid' ? (
+                                <Badge variant="default" className="bg-green-100 text-green-800">
+                                  Paid
+                                </Badge>
+                              ) : reg.paymentStatus === 'not_required' ? (
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                  Not Required
+                                </Badge>
+                              ) : reg.paymentStatus === 'pending' ? (
+                                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                  Pending
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">No payment</span>
+                              )}
+                            </td>
                             {user?.role === "admin" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedReceiptUrl(reg.paymentReceiptUrl);
-                                  setSelectedReceiptUser(
-                                    reg.firstName && reg.lastName ? `${reg.firstName} ${reg.lastName}` :
-                                    reg.guestName || reg.guest_name || 
-                                    (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Unknown")
-                                  );
-                                  setShowPaymentReceipt(true);
-                                }}
-                              >
-                                <Eye className="h-3 w-3" />
-                              </Button>
+                              <td className="p-2">
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete the registration for ${getRegName(reg)}?`)) {
+                                      deleteRegistrationMutation.mutate(reg.id);
+                                    }
+                                  }}
+                                  disabled={deleteRegistrationMutation.isPending}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </td>
                             )}
-                          </div>
-                        ) : reg.paymentStatus === 'completed' || reg.paymentStatus === 'paid' ? (
-                          <Badge variant="default" className="bg-green-100 text-green-800">
-                            Paid
-                          </Badge>
-                        ) : reg.paymentStatus === 'not_required' ? (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                            Not Required
-                          </Badge>
-                        ) : reg.paymentStatus === 'pending' ? (
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                            Pending
-                          </Badge>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">No payment</span>
-                        )}
-                      </td>
-                      {user?.role === "admin" && (
-                        <td className="p-2">
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to delete the registration for ${
-                                reg.firstName && reg.lastName ? `${reg.firstName} ${reg.lastName}` :
-                                reg.guestName || reg.guest_name || 
-                                (reg.member ? `${reg.member.firstName} ${reg.member.lastName}` : "Unknown")
-                              }?`)) {
-                                deleteRegistrationMutation.mutate(reg.id);
-                              }
-                            }}
-                            disabled={deleteRegistrationMutation.isPending}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <div className="text-sm text-gray-500">
+                        Page {currentPage} of {totalPages}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
-      )}
+        );
+      })()}
 
       {/* Admin Tools for Validation */}
       {user?.role === "admin" && event && (

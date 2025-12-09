@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Progress } from "@/components/ui/progress";
 import { getAuthHeaders } from "@/lib/auth";
 import { apiRequest } from "@/lib/queryClient";
-import { Calendar, Edit, QrCode, Users, Download, BarChart3, Eye, UserCheck, Ticket } from "lucide-react";
+import { Calendar, Edit, QrCode, Users, Download, BarChart3, Eye, UserCheck, Ticket, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EventImage } from "@/lib/event-utils";
 import QRCode from "qrcode";
@@ -21,6 +21,8 @@ export default function Events() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const queryClient = useQueryClient();
@@ -179,6 +181,17 @@ export default function Events() {
     return matchesSearch && matchesStatus;
   });
 
+  const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
+  const effectiveCurrentPage = Math.min(currentPage, Math.max(totalPages, 1));
+  const startIndex = (effectiveCurrentPage - 1) * itemsPerPage;
+  const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
+  
+  useEffect(() => {
+    if (currentPage !== effectiveCurrentPage && effectiveCurrentPage > 0) {
+      setCurrentPage(effectiveCurrentPage);
+    }
+  }, [currentPage, effectiveCurrentPage]);
+
   const handleShowQR = async (eventId: number, eventName: string) => {
     try {
       const qrData = `${window.location.origin}/register/${eventId}`;
@@ -304,10 +317,10 @@ export default function Events() {
                   <Input
                     placeholder="Search events..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                   />
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setCurrentPage(1); }}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
@@ -353,7 +366,7 @@ export default function Events() {
             {/* Events Grid */}
             {!isLoading && filteredEvents.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredEvents.map((event: any) => (
+                {paginatedEvents.map((event: any) => (
                 <Card key={event.id} className="hover:shadow-lg transition-shadow overflow-hidden">
                   {/* Event Image */}
                   <div className="h-48 overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative">
@@ -562,6 +575,33 @@ export default function Events() {
                   </CardContent>
                 </Card>
                 ))}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {!isLoading && totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 border-t mt-6">
+                <div className="text-sm text-gray-500">
+                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredEvents.length)} of {filteredEvents.length} events (Page {effectiveCurrentPage} of {totalPages})
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                    disabled={effectiveCurrentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Previous
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                    disabled={effectiveCurrentPage === totalPages}
+                  >
+                    Next <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
