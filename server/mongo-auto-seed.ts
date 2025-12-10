@@ -1,8 +1,15 @@
 import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 import { User, Organization } from "@shared/mongoose-schema";
 
 export async function mongoAutoSeed() {
   console.log("🌱 Auto-seeding: Checking if database needs seeding...");
+  
+  // Skip seeding if MongoDB is not connected
+  if (mongoose.connection.readyState !== 1) {
+    console.log("⚠️  MongoDB not connected - skipping auto-seed");
+    return;
+  }
   
   try {
     // Check if super admin user exists

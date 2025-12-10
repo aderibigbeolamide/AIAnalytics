@@ -448,17 +448,64 @@ export function registerPaymentRoutes(app: Express) {
 
       // Get event details for notification
       const event = await mongoStorage.getEventById(ticket.eventId.toString());
+      
+      // Generate QR code for the ticket if not already present
+      let qrCodeImage = (ticket as any).qrCodeImage;
+      if (!qrCodeImage) {
+        const QRCode = await import('qrcode');
+        const qrCodeData = JSON.stringify({
+          ticketId: (ticket as any)._id?.toString() || metadata.ticketId,
+          ticketNumber: ticket.ticketNumber,
+          eventId: ticket.eventId.toString(),
+          timestamp: Date.now()
+        });
+        qrCodeImage = await QRCode.toDataURL(qrCodeData, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
+        
+        // Update ticket with QR code
+        await mongoStorage.updateTicket(metadata.ticketId, {
+          qrCodeImage: qrCodeImage
+        });
+      }
+      
       if (event) {
         // Send payment notification to organization admin
         const { NotificationService } = await import('../notification-service');
         await NotificationService.createPaymentNotification(
-          event.organizationId.toString(),
-          event._id.toString(),
+          (event as any).organizationId?.toString() || '',
+          (event as any)._id?.toString() || ticket.eventId.toString(),
           paystackResponse.data.amount / 100,
           paystackResponse.data.currency,
           ticket.ownerName,
           'ticket_purchase'
         );
+        
+        // Send ticket confirmation email to the purchaser with QR code
+        try {
+          const { EmailService } = await import('../services/email-service');
+          const emailService = new EmailService();
+          
+          await emailService.sendRegistrationConfirmationEmail(ticket.ownerEmail, {
+            participantName: ticket.ownerName || 'Ticket Holder',
+            eventName: event.name,
+            eventDate: event.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD',
+            eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString() : 'TBD',
+            eventLocation: event.location || 'TBD',
+            registrationId: ticket.ticketNumber,
+            qrCode: qrCodeImage,
+            eventUrl: `${process.env.APP_DOMAIN || 'http://localhost:5000'}/event-view/${ticket.eventId.toString()}`
+          });
+          
+          console.log(`Ticket confirmation email sent to ${ticket.ownerEmail}`);
+        } catch (emailError) {
+          console.error('Failed to send ticket confirmation email:', emailError);
+        }
       }
 
       res.json({
@@ -471,7 +518,10 @@ export function registerPaymentRoutes(app: Express) {
             currency: paystackResponse.data.currency,
             verifiedAt: new Date()
           },
-          ticket,
+          ticket: {
+            ...ticket.toObject ? ticket.toObject() : ticket,
+            qrCodeImage: qrCodeImage
+          },
           event
         }
       });

@@ -138,8 +138,29 @@ export class RegistrationService {
   static async getRegistrationByQRCode(qrCode: string) {
     try {
       console.log('🔍 QR validation - parsing QR code:', qrCode);
-      const qrData = JSON.parse(qrCode);
-      console.log('🔍 QR validation - parsed data:', qrData);
+      
+      let qrData: any;
+      
+      // Try decryptQRData first (legacy Base64 encoded format from PostgreSQL routes)
+      const { decryptQRData } = await import('../qr');
+      const decryptedData = decryptQRData(qrCode);
+      
+      if (decryptedData) {
+        console.log('🔍 QR validation - decoded with decryptQRData (legacy format):', decryptedData);
+        qrData = decryptedData;
+      } else {
+        // Try parsing as plain JSON (MongoDB format)
+        try {
+          qrData = JSON.parse(qrCode);
+          console.log('🔍 QR validation - parsed as plain JSON:', qrData);
+        } catch (jsonError) {
+          // Not JSON or Base64, try as raw uniqueId
+          console.log('🔍 QR validation - not JSON, treating as raw uniqueId:', qrCode);
+          qrData = { uniqueId: qrCode };
+        }
+      }
+      
+      console.log('🔍 QR validation - final parsed data:', qrData);
       
       // Try to find registration - registrationId in QR actually contains uniqueId
       let registration = null;

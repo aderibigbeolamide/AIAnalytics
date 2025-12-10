@@ -1149,9 +1149,9 @@ export function registerMongoRoutes(app: Express) {
       // Create registration
       const registration = await mongoStorage.createEventRegistration(registrationData);
       
-      // Generate QR code image
+      // Generate QR code data - use uniqueId as registrationId for consistency with validation
       const qrCodeData = JSON.stringify({
-        registrationId: registration._id.toString(),
+        registrationId: registration.uniqueId, // Use uniqueId for consistency with validation lookup
         eventId,
         uniqueId: registration.uniqueId,
         timestamp: Date.now()
@@ -1166,9 +1166,10 @@ export function registerMongoRoutes(app: Express) {
         }
       });
 
-      // Update registration with QR code image
+      // Update registration with QR code data and image (use qrCodeImage for consistency with rest of codebase)
       await mongoStorage.updateEventRegistration(registration._id.toString(), {
-        qrImage: qrImageBase64,
+        qrCode: qrCodeData,
+        qrCodeImage: qrImageBase64,
         qrImageBase64: qrImageBase64.replace('data:image/png;base64,', '')
       });
 
@@ -2951,7 +2952,7 @@ export function registerMongoRoutes(app: Express) {
               // Get first ticket for email address
               const ownerEmail = updatedTickets[0].ownerEmail;
               
-              // Generate PDF attachments for each ticket
+              // Generate PDF attachments for each ticket - use stored qrCodeImage for consistency
               const ticketPDFs = [];
               for (const ticket of updatedTickets) {
                 try {
@@ -2962,12 +2963,13 @@ export function registerMongoRoutes(app: Express) {
                     eventLocation: event.location || 'Location TBD',
                     participantName: ticket.ownerName || 'Ticket Holder',
                     registrationId: ticket.ticketNumber || 'N/A',
+                    // Use stored qrCodeImage for consistency across display, download, and email
+                    qrCodeImage: ticket.qrCodeImage,
                     qrCodeData: JSON.stringify({
                       ticketId: ticket._id.toString(),
                       ticketNumber: ticket.ticketNumber,
                       eventId: ticket.eventId.toString(),
-                      ownerEmail: ticket.ownerEmail,
-                      timestamp: Date.now()
+                      ownerEmail: ticket.ownerEmail
                     }),
                     ticketType: ticket.category || 'General',
                     organizationName: event.organizationName || 'EventValidate'
@@ -3017,9 +3019,9 @@ export function registerMongoRoutes(app: Express) {
           const registration = await mongoStorage.getEventRegistration(registrationId);
           
           if (registration) {
-            // Generate QR code for the confirmed registration
+            // Generate QR code for the confirmed registration - use uniqueId for consistency with validation
             const qrCodeData = JSON.stringify({
-              registrationId: registration._id.toString(),
+              registrationId: registration.uniqueId, // Use uniqueId for consistency with validation lookup
               eventId,
               uniqueId: registration.uniqueId,
               timestamp: Date.now()
@@ -3035,12 +3037,13 @@ export function registerMongoRoutes(app: Express) {
               }
             });
 
-            // Update registration payment status
+            // Update registration payment status and QR code data
             await mongoStorage.updateEventRegistration(registration._id.toString(), {
               paymentStatus: 'completed',
               status: 'confirmed',
               paymentVerifiedAt: new Date(),
               paymentReference: paymentReference as string,
+              qrCode: qrCodeData,
               qrCodeImage: qrImageBase64
             });
 
@@ -3101,28 +3104,37 @@ export function registerMongoRoutes(app: Express) {
           const userEmail = metadata.userEmail;
           const registrationData = JSON.parse(metadata.registrationData || '{}');
           
-          // Generate registration ID and QR code
-          const registrationId = `REG${Date.now()}${await generateValidationCode()}`;
+          // Generate unique ID for validation (use same format as other registrations)
+          const uniqueId = await generateValidationCode();
           
-          const qrData = {
+          // Generate QR code data using uniqueId for consistency with validation
+          const qrCodeData = JSON.stringify({
+            registrationId: uniqueId, // Use uniqueId for consistency with validation lookup
             eventId,
-            registrationId,
-            userEmail,
-            issuedAt: new Date().toISOString()
-          };
+            uniqueId,
+            timestamp: Date.now()
+          });
 
-          const qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrData));
+          const qrCodeImage = await QRCode.toDataURL(qrCodeData, {
+            width: 200,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          });
 
           // Create registration with payment data
           const registration = await mongoStorage.createEventRegistration({
             ...registrationData,
             eventId,
-            registrationId,
+            uniqueId,
             paymentStatus: 'paid',
             paymentReference: paymentReference as string,
             paymentAmount: amount,
             paymentCurrency: 'NGN',
-            qrCode: qrCodeImage,
+            qrCode: qrCodeData,
+            qrCodeImage: qrCodeImage,
             status: 'confirmed',
             paymentMethod: 'paystack',
             createdAt: new Date()
@@ -3177,7 +3189,7 @@ export function registerMongoRoutes(app: Express) {
           let qrImageBase64 = registration.qrCodeImage;
           if (!qrImageBase64) {
             const qrCodeData = JSON.stringify({
-              registrationId: registration._id.toString(),
+              registrationId: registration.uniqueId, // Use uniqueId for consistency with validation lookup
               eventId,
               uniqueId: registration.uniqueId,
               timestamp: Date.now()
@@ -3193,8 +3205,9 @@ export function registerMongoRoutes(app: Express) {
               }
             });
 
-            // Update registration with QR code
+            // Update registration with QR code data and image
             await mongoStorage.updateEventRegistration(registrationId, {
+              qrCode: qrCodeData,
               qrCodeImage: qrImageBase64
             });
           }

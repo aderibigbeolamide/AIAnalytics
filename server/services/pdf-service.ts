@@ -9,6 +9,7 @@ export interface TicketData {
   participantName: string;
   registrationId: string;
   qrCodeData: string;
+  qrCodeImage?: string; // Pre-generated QR code image (data URL) - use this for consistency
   organizationName?: string;
   ticketType?: string;
   seatInfo?: string;
@@ -89,12 +90,19 @@ class PDFService {
         doc.text(`Seat: ${ticketData.seatInfo}`, 120, 115);
       }
       
-      // QR Code
-      const qrCodeDataURL = await QRCode.toDataURL(ticketData.qrCodeData, {
-        errorCorrectionLevel: 'M',
-        width: 120,
-        margin: 1
-      });
+      // QR Code - Use pre-generated image if available for consistency across display, download, and email
+      let qrCodeDataURL: string;
+      if (ticketData.qrCodeImage && ticketData.qrCodeImage.startsWith('data:image')) {
+        // Use the pre-generated QR code image for consistency
+        qrCodeDataURL = ticketData.qrCodeImage;
+      } else {
+        // Fallback: generate QR code from data (should rarely happen if stored properly)
+        qrCodeDataURL = await QRCode.toDataURL(ticketData.qrCodeData, {
+          errorCorrectionLevel: 'M',
+          width: 120,
+          margin: 1
+        });
+      }
       
       // Position QR code on the right side
       doc.addImage(qrCodeDataURL, 'PNG', pageWidth - 70, 130, 50, 50);

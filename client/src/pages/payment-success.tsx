@@ -465,10 +465,10 @@ export default function PaymentSuccess() {
             >
               Back to Events
             </Button>
-            {isTicket && (
+            {isTicket && (eventId || data?.event?.id || (data?.event as any)?._id) && (
               <Button 
                 variant="outline" 
-                onClick={() => setLocation(`/events/${data?.event?.id}`)}
+                onClick={() => setLocation(`/event-view/${eventId || data?.event?.id || (data?.event as any)?._id}`)}
               >
                 View Event Details
               </Button>
@@ -480,14 +480,17 @@ export default function PaymentSuccess() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
           <Button 
             variant="outline" 
-            onClick={() => setLocation(eventId ? `/event-view/${eventId}` : '/')}
+            onClick={() => {
+              const resolvedEventId = eventId || data?.event?.id || (data?.event as any)?._id || multipleTickets?.[0]?.event?.id || (multipleTickets?.[0]?.event as any)?._id;
+              setLocation(resolvedEventId ? `/event-view/${resolvedEventId}` : '/');
+            }}
           >
             Register Another User
           </Button>
-          {(data?.event?.id || multipleTickets?.[0]?.event?.id) && (
+          {(eventId || data?.event?.id || (data?.event as any)?._id || multipleTickets?.[0]?.event?.id || (multipleTickets?.[0]?.event as any)?._id) && (
             <Button 
               variant="outline" 
-              onClick={() => setLocation(`/events/${data?.event?.id || multipleTickets?.[0]?.event?.id}`)}
+              onClick={() => setLocation(`/event-view/${eventId || data?.event?.id || (data?.event as any)?._id || multipleTickets?.[0]?.event?.id || (multipleTickets?.[0]?.event as any)?._id}`)}
             >
               View Event Details
             </Button>
