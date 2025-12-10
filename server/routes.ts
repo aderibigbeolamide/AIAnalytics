@@ -1229,7 +1229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event not found" });
       }
 
-      // Generate QR data for validation
+      // Generate QR data for validation - use Base64 encoded format for PostgreSQL routes
       const qrData: QRData = {
         registrationId: registration.id,
         eventId: registration.eventId,
@@ -1238,6 +1238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: Date.now(),
       };
       
+      // Use Base64 encoded data for PostgreSQL routes (compatible with /api/scan endpoint)
       const qrImageData = await generateQRImage(encryptQRData(qrData));
       const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
 
@@ -2172,6 +2173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Registration not found" });
       }
 
+      // Use Base64 encoded format for PostgreSQL routes (compatible with /api/scan endpoint)
       const qrData: QRData = {
         registrationId: registration.id,
         eventId: registration.eventId!,
