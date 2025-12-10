@@ -193,9 +193,9 @@ export function registerRegistrationRoutes(app: Express) {
 
       const testRegistration = registrations[0];
       
-      // Generate test QR code data
+      // Generate test QR code data - use uniqueId for consistency with validation
       const qrCodeData = JSON.stringify({
-        registrationId: testRegistration.id,
+        registrationId: testRegistration.uniqueId, // Use uniqueId for consistency with validation lookup
         eventId: testRegistration.eventId,
         uniqueId: testRegistration.uniqueId,
         timestamp: Date.now()

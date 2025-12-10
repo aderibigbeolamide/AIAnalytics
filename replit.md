@@ -58,6 +58,7 @@ Business focus: Strong emphasis on investor attraction through compelling pitch 
 - **Comprehensive Documentation System**: Multi-tabbed documentation covering Getting Started, Features, Pricing, API, Support, and FAQ sections to guide users through the platform.
 - **About Page**: Professional company overview showcasing mission, vision, goals, achievements, technology stack, and value propositions with investor-focused content.
 - **Enhanced Event Feedback System (January 2025)**: Improved accessibility of the existing reporting system by adding "Provide Feedback" navigation links to all public event detail pages and ticket purchase flows, enabling users to easily submit feedback, complaints, suggestions, and reports for both registration-based and ticket-based events.
+- **QR Code Consistency Fix (December 2025)**: Fixed critical issue where QR codes were regenerated with different timestamps at multiple touchpoints (display, PDF download, email), causing scan failures. Now QR codes are generated once at registration/payment confirmation and stored (both qrCodeData and qrCodeImage base64). All downstream consumers use stored values. QR validation updated to use event-based expiry (event end date + 24hr buffer) for enhanced security instead of arbitrary timestamp checks.
 
 ## Replit Deployment (September 2025)
 ### Setup Status

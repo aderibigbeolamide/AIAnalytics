@@ -426,13 +426,14 @@ export class EmailService {
 
     const attachments = [];
     
-    // Add QR code as attachment if provided
+    // Add QR code as attachment if provided (with content ID for inline display)
     if (data.qrCode) {
       const qrBuffer = Buffer.from(data.qrCode.split(',')[1], 'base64');
       attachments.push({
         filename: `qr-code-${data.registrationId}.png`,
         content: qrBuffer,
-        contentType: 'image/png'
+        contentType: 'image/png',
+        cid: `qr-code-${data.registrationId}.png` // Content ID for inline embedding
       });
     }
 
