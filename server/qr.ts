@@ -54,10 +54,32 @@ export function decryptQRData(encoded: string): QRData | null {
   }
 }
 
-export function validateQRData(data: QRData): boolean {
-  // Check if QR code is not too old (e.g., 24 hours)
-  const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+/**
+ * Validates QR code data based on event end date or a default expiry period.
+ * @param data - The QR code data to validate
+ * @param eventEndDate - Optional event end date. If provided, QR is valid until this date.
+ *                       If not provided, uses a 30-day default expiry from QR creation.
+ * @returns boolean indicating if the QR code is valid
+ */
+export function validateQRData(data: QRData, eventEndDate?: Date | string | null): boolean {
   const now = Date.now();
   
-  return (now - data.timestamp) <= maxAge;
+  // If timestamp is 0 or missing, consider it valid (legacy support)
+  if (!data.timestamp || data.timestamp === 0) {
+    return true;
+  }
+  
+  // If eventEndDate is provided, validate against it (with 24-hour buffer after event end)
+  if (eventEndDate) {
+    const endDate = typeof eventEndDate === 'string' ? new Date(eventEndDate) : eventEndDate;
+    if (!isNaN(endDate.getTime())) {
+      // QR code is valid until 24 hours after event ends
+      const bufferMs = 24 * 60 * 60 * 1000; // 24 hours buffer
+      return now <= endDate.getTime() + bufferMs;
+    }
+  }
+  
+  // Default: 30-day expiry from QR creation
+  const defaultMaxAge = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+  return (now - data.timestamp) <= defaultMaxAge;
 }

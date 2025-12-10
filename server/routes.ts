@@ -1095,10 +1095,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const qrImageData = await generateQRImage(encryptQRData(qrData));
       
-      // Store QR image data with the registration
+      // Store QR image data in the qrCode field for consistency across display, PDF, and email
+      // The qrCode field stores the full data URL (base64 image) for reuse
       await storage.updateEventRegistration(registration.id, {
-        qrImage: qrImageData,
-        qrImageBase64: qrImageData.replace('data:image/png;base64,', '')
+        qrCode: qrImageData
       });
       
       // Get the full registration with member data if available
@@ -1214,7 +1214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get QR code for existing registration
+  // Get QR code for existing registration - always use stored QR code for consistency
   app.get("/api/registrations/:registrationId/qr", async (req: Request, res: Response) => {
     try {
       const registrationId = parseInt(req.params.registrationId);
@@ -1229,21 +1229,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event not found" });
       }
 
-      // Generate QR data for validation - use Base64 encoded format for PostgreSQL routes
-      const qrData: QRData = {
-        registrationId: registration.id,
-        eventId: registration.eventId,
-        memberId: registration.memberId,
-        type: registration.registrationType as "member" | "guest" | "invitee",
-        timestamp: Date.now(),
-      };
+      // Use stored QR code if it's a valid data URL (base64 image)
+      // qrCode field should contain the full data URL for consistency
+      let qrImageData = registration.qrCode;
+      const isValidDataUrl = qrImageData && qrImageData.startsWith('data:image');
       
-      // Use Base64 encoded data for PostgreSQL routes (compatible with /api/scan endpoint)
-      const qrImageData = await generateQRImage(encryptQRData(qrData));
+      // Only generate new QR code if not already stored as a proper image data URL
+      if (!isValidDataUrl) {
+        // Generate QR data for validation - use Base64 encoded format for PostgreSQL routes
+        // Use registration.id as the stable identifier with original creation timestamp
+        const qrData: QRData = {
+          registrationId: registration.id,
+          eventId: registration.eventId,
+          memberId: registration.memberId,
+          type: registration.registrationType as "member" | "guest" | "invitee",
+          timestamp: registration.createdAt ? new Date(registration.createdAt).getTime() : Date.now(),
+        };
+        
+        // Generate the QR code image
+        qrImageData = await generateQRImage(encryptQRData(qrData));
+        
+        // Store the QR code image for future consistency across display, download, and email
+        try {
+          await storage.updateEventRegistration(registrationId, {
+            qrCode: qrImageData
+          });
+          console.log(`Stored QR code image for registration ${registrationId}`);
+        } catch (updateError) {
+          console.log("Could not store QR code, but continuing with generated one");
+        }
+      }
+      
       const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
 
       res.json({ 
         qrImage: qrImageData,
+        qrImageData: qrImageData,
         qrImageBase64: qrImageBase64,
         registration,
         event
@@ -1271,13 +1292,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (!validateQRData(qrData)) {
-        return res.status(400).json({ 
-          message: "QR code expired",
-          validationStatus: "invalid" 
-        });
-      }
-
       // Get registration by ID first, then find by QR code if not found
       let registration = await storage.getEventRegistration(qrData.registrationId.toString());
       if (!registration) {
@@ -1291,19 +1305,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if already attended
-      if (registration.status === "online" || registration.status === "attended") {
-        return res.status(400).json({ 
-          message: "This registration has already been validated",
-          validationStatus: "duplicate" 
-        });
-      }
-
+      // Get event first so we can use its endDate for validation
       const event = await storage.getEvent(qrData.eventId.toString());
       if (!event) {
         return res.status(404).json({ 
           message: "Event not found",
           validationStatus: "invalid" 
+        });
+      }
+
+      // Validate QR code using event's endDate for proper expiry
+      if (!validateQRData(qrData, event.endDate)) {
+        return res.status(400).json({ 
+          message: "QR code expired",
+          validationStatus: "invalid" 
+        });
+      }
+
+      // Check if already attended
+      if (registration.status === "online" || registration.status === "attended") {
+        return res.status(400).json({ 
+          message: "This registration has already been validated",
+          validationStatus: "duplicate" 
         });
       }
 
@@ -1737,13 +1760,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const qrImageData = await generateQRImage(encryptQRData(qrData));
         const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
 
+        // Store QR image data in the qrCode field for consistency across display, PDF, and email
+        await storage.updateEventRegistration(registration.id, {
+          qrCode: qrImageData
+        });
+
         res.json({
           status: "success",
           message: "Payment verified and registration completed",
           data: {
             ...verificationData.data,
-            registration,
+            registration: { ...registration, qrCode: qrImageData },
             qrImage: qrImageData,
+            qrImageData: qrImageData,
             qrImageBase64: qrImageBase64,
           },
         });
@@ -1842,13 +1871,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const qrImageData = await generateQRImage(encryptQRData(qrData));
         const qrImageBase64 = qrImageData.replace('data:image/png;base64,', '');
 
+        // Store QR image data in the qrCode field for consistency across display, PDF, and email
+        await storage.updateEventRegistration(registration.id, {
+          qrCode: qrImageData
+        });
+
         res.json({
           success: true,
           message: "Payment verified and registration completed",
           data: {
             ...verificationData.data,
-            registration,
+            registration: { ...registration, qrCode: qrImageData },
             qrImage: qrImageData,
+            qrImageData: qrImageData,
             qrImageBase64: qrImageBase64,
           },
         });

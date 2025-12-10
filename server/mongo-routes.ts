@@ -2952,7 +2952,7 @@ export function registerMongoRoutes(app: Express) {
               // Get first ticket for email address
               const ownerEmail = updatedTickets[0].ownerEmail;
               
-              // Generate PDF attachments for each ticket
+              // Generate PDF attachments for each ticket - use stored qrCodeImage for consistency
               const ticketPDFs = [];
               for (const ticket of updatedTickets) {
                 try {
@@ -2963,12 +2963,13 @@ export function registerMongoRoutes(app: Express) {
                     eventLocation: event.location || 'Location TBD',
                     participantName: ticket.ownerName || 'Ticket Holder',
                     registrationId: ticket.ticketNumber || 'N/A',
+                    // Use stored qrCodeImage for consistency across display, download, and email
+                    qrCodeImage: ticket.qrCodeImage,
                     qrCodeData: JSON.stringify({
                       ticketId: ticket._id.toString(),
                       ticketNumber: ticket.ticketNumber,
                       eventId: ticket.eventId.toString(),
-                      ownerEmail: ticket.ownerEmail,
-                      timestamp: Date.now()
+                      ownerEmail: ticket.ownerEmail
                     }),
                     ticketType: ticket.category || 'General',
                     organizationName: event.organizationName || 'EventValidate'

@@ -289,7 +289,7 @@ class NotificationService {
 
     if (!email) return;
 
-    // Generate ticket PDF
+    // Generate ticket PDF - use stored qrCodeImage for consistency across display, download, and email
     let ticketPdf: Buffer | undefined;
     try {
       ticketPdf = await pdfService.generateEventTicket({
@@ -299,6 +299,8 @@ class NotificationService {
         eventLocation: event.location || 'Location TBD',
         participantName: name || 'Participant',
         registrationId: registration.uniqueId || registration._id?.toString() || 'N/A',
+        // Use stored qrCodeImage for consistency across display, download, and email
+        qrCodeImage: registration.qrCodeImage || qrCode,
         qrCodeData: registration.qrCode || qrCode || '{}',
         organizationName: event.organizationName || 'Eventify AI',
         ticketType: registration.registrationType || 'Standard'
